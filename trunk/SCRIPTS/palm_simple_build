@@ -106,7 +106,8 @@ print_help() {
 }
 
 build_config=unknown
-SCRIPT_LOCATION=~/palm/current_version/trunk/SCRIPTS
+location=`pwd`
+SCRIPT_LOCATION=$location/trunk/SCRIPTS
 clean="false"
 work_dir=unknown
 
@@ -132,16 +133,13 @@ if [[ ${build_config} == "unknown" ]]; then
    exit 1
 fi
 
-echo $SCRIPT_LOCATION
-echo $work_dir
 working_dir=$work_dir
 if [[ ${work_dir} == "unknown" ]]; then
    working_dir=${SCRIPT_LOCATION}/../../
 fi
 trunk_dir=${SCRIPT_LOCATION}/../
 
-build_dir=${working_dir}/BUILD_$build_config
-
+build_dir=${working_dir}BUILD_$build_config
 
 # Check, if include file exists
 build_config_file=${trunk_dir}/INSTALL/MAKE.inc.$build_config
@@ -150,7 +148,6 @@ if [[ ! -f ${build_config_file} ]]; then
    echo "    \"${build_config_file}\""
    exit 1
 fi
-
 
 # Create the make depository
 if [[ ! -d ${build_dir} ]]; then

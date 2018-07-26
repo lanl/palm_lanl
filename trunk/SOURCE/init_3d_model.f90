@@ -2442,9 +2442,7 @@
        CALL location_message( 'finished', .TRUE. )
 
 !
-!--    Find all discretized apparent solar positions for radiation interaction.
-!--    This must be done after radiation_init.
-       IF ( radiation_interactions )  CALL radiation_presimulate_solar_pos
+!--    Find all discretized apparent solar_pos
 
 !
 !--    If required, read or calculate and write out the SVF 

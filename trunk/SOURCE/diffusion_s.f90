@@ -121,8 +121,8 @@
 ! ------------
 !> Call for all grid points
 !------------------------------------------------------------------------------!
-    SUBROUTINE diffusion_s( s, s_flux_def_h_up,    s_flux_def_h_down,          &
-                               s_flux_t,                                       &
+    SUBROUTINE diffusion_s( s, s_flux_def_h_up,                       &
+                               s_flux_def_h_down, s_flux_t,                    &
                                s_flux_lsm_h_up,    s_flux_usm_h_up,            &
                                s_flux_def_v_north, s_flux_def_v_south,         &
                                s_flux_def_v_east,  s_flux_def_v_west,          &
@@ -135,7 +135,7 @@
            ONLY:  ddzu, ddzw, kh, tend, drho_air, rho_air_zw
        
        USE control_parameters,                                                 & 
-           ONLY: use_surface_fluxes, use_top_fluxes
+           ONLY: use_surface_fluxes, use_top_fluxes, idealized_diurnal
        
        USE grid_variables,                                                     &
            ONLY:  ddx, ddx2, ddy, ddy2
@@ -184,6 +184,7 @@
        REAL(wp), DIMENSION(1:surf_usm_v(2)%ns) ::  s_flux_usm_v_east  !< flux at east-facing vertical urban-type surfaces
        REAL(wp), DIMENSION(1:surf_usm_v(3)%ns) ::  s_flux_usm_v_west  !< flux at west-facing vertical urban-type surfaces
        REAL(wp), DIMENSION(1:surf_def_h(2)%ns) ::  s_flux_t           !< flux at model top
+
 #if defined( __nopointer )
        REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  s  !< 
 #else
@@ -360,7 +361,6 @@
                                                               * flag
              ENDDO
 
-!
 !--          Vertical diffusion at horizontal walls.
              IF ( use_surface_fluxes )  THEN
 !
@@ -441,13 +441,15 @@
                                s_flux_lsm_v_north, s_flux_lsm_v_south,         &
                                s_flux_lsm_v_east,  s_flux_lsm_v_west,          &
                                s_flux_usm_v_north, s_flux_usm_v_south,         &
-                               s_flux_usm_v_east,  s_flux_usm_v_west )       
+                               s_flux_usm_v_east,  s_flux_usm_v_west,          &
+                               s_flux_solar_t)       
 
        USE arrays_3d,                                                          &
            ONLY:  ddzu, ddzw, kh, tend, drho_air, rho_air_zw
            
        USE control_parameters,                                                 & 
-           ONLY: use_surface_fluxes, use_top_fluxes
+           ONLY: use_surface_fluxes, use_top_fluxes, ideal_solar_division,     &
+                 ideal_solar_efolding1, ideal_solar_efolding2
        
        USE grid_variables,                                                     &
            ONLY:  ddx, ddx2, ddy, ddy2
@@ -470,6 +472,9 @@
        INTEGER(iwp) ::  surf_e        !< End index of surface elements at (j,i)-gridpoint
        INTEGER(iwp) ::  surf_s        !< Start index of surface elements at (j,i)-gridpoint
 
+       REAL(wp) ::  zval              !< depth_variable for solar penetration
+       REAL(wp) ::  flux1             !< solar flux temp variable
+       REAL(wp) ::  flux2             !< solar flux temp variable
        REAL(wp) ::  flag              !< flag to mask topography grid points
        REAL(wp) ::  mask_bottom       !< flag to mask vertical upward-facing surface     
        REAL(wp) ::  mask_east         !< flag to mask vertical surface east of the grid point 
@@ -501,6 +506,7 @@
        REAL(wp), DIMENSION(:,:,:), POINTER ::  s  !< 
 #endif
 
+       REAL(wp), DIMENSION(1:surf_def_h(2)%ns),INTENT(IN),OPTIONAL :: s_flux_solar_t  !<solar flux at sfc
 !
 !--    Compute horizontal diffusion
        DO  k = nzb+1, nzt
@@ -731,6 +737,25 @@
              tend(k,j,i) = tend(k,j,i)                                         &
                            + ( - s_flux_t(m) ) * ddzw(k) * drho_air(k)
           ENDDO
+
+          !LPV adding solar forcing with depth
+          IF ( PRESENT(s_flux_solar_t )) THEN
+            DO m = surf_s, surf_e
+              zval = 0.0_wp
+              DO k = nzt,nzb+1,-1
+                flux1 = (1.0_wp - ideal_solar_division)*exp(ideal_solar_efolding2*zval) + &
+                   ideal_solar_division*exp(ideal_solar_efolding2*zval)
+                zval = zval - ddzw(k)
+                flux2 = (1.0_wp - ideal_solar_division)*exp(ideal_solar_efolding2*zval) + &
+                   ideal_solar_division*exp(ideal_solar_efolding2*zval)
+
+                tend(k,j,i) = tend(k,j,i) + s_flux_solar_t(m)*(flux1 - flux2) / ddzw(k)
+                if (maxval(s_flux_solar_t(:)) > 0.05) then
+                   print *, zval, flux1, flux2, ddzw(k)
+                 endif
+              ENDDO
+            ENDDO
+          ENDIF
        ENDIF
 
     END SUBROUTINE diffusion_s_ij

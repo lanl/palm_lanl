@@ -1331,6 +1331,9 @@
     LOGICAL ::  nudging = .FALSE.                                !< namelist parameter
     LOGICAL ::  ocean = .FALSE.                                  !< namelist parameter
     LOGICAL ::  idealized_diurnal = .FALSE.                      !< flag for diurnal cycle
+    REAL(wp) :: ideal_solar_division = 0.67_wp                   !< value for breakdown of double exponential
+    REAL(wp) :: ideal_solar_efolding1 = 1.0_wp/1.0_wp            !< efolding depth for IR in solar (m^-1)
+    REAL(wp) :: ideal_solar_efolding2 = 1.0_wp/17.0_wp           !< efolding depth for blue in solar (m^-1)
     LOGICAL ::  outflow_l = .FALSE.                              !< left domain boundary has non-cyclic outflow?
     LOGICAL ::  outflow_n = .FALSE.                              !< north domain boundary has non-cyclic outflow?
     LOGICAL ::  outflow_r = .FALSE.                              !< right domain boundary has non-cyclic outflow?

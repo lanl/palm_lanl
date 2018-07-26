@@ -530,9 +530,6 @@
                  tod = simulated_time / 86400.0_wp
                  arg1 = cos(2.0_wp*pi*(tod - 0.5_wp))
                  surf_def_h(2)%shf_sol(m) = wb_sfc*pi*max(arg1,0.0_wp)
-                 if(tod > 0.5 .and. tod < 0.6) then
-                    print *, 'flux = ',tod,wb_sfc
-                 endif
              ENDIF
        enddo
     enddo
@@ -782,7 +779,8 @@
                                surf_lsm_v(0)%shf, surf_lsm_v(1)%shf,           &
                                surf_lsm_v(2)%shf, surf_lsm_v(3)%shf,           &
                                surf_usm_v(0)%shf, surf_usm_v(1)%shf,           &
-                               surf_usm_v(2)%shf, surf_usm_v(3)%shf )
+                               surf_usm_v(2)%shf, surf_usm_v(3)%shf,           &
+                               surf_def_h(2)%shf_sol )
 !
 !--          If required compute heating/cooling due to long wave radiation
 !--          processes

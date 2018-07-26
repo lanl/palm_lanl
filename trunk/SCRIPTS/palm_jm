@@ -1,0 +1,423 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#--------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018  Leibniz Universitaet Hannover
+##--------------------------------------------------------------------------------#
+#
+# Current revisions:
+# -----------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: palm_jm 2825 2018-02-20 21:48:27Z maronga $
+# Modified header
+# 
+# 2718 2018-01-02 08:49:38Z maronga
+# Corrected "Former revisions" section
+# 
+# 2696 2017-12-14 17:12:51Z kanani
+# Change in file header (GPL part)
+#
+# 2504 2017-09-27 10:36:13Z maronga
+# Bugfix: jobs were not loaded on start.
+# 
+# 2484 2017-09-20 14:22:42Z maronga
+# Adapted for palmrun with USER_CODE always stored under /JOBS/name/USER_CODE/.
+# Added PALM logo
+# 
+# 2068 2016-11-11 21:59:39Z maronga
+#
+# 2067 2016-11-11 21:55:49Z maronga
+# Minor bugfix: palm_jm can now be called from any location
+#
+# 2065 2016-11-11 12:25:10Z maronga
+# Initial revision
+#
+#
+# Description:
+# ------------
+# PALM job manager works a file manager for PALM input files. It lists all jobs in
+# the working directory and displays associated input and user code files, which
+# can be opened directly from the interface. Also, it is possible to copy jobs and
+# to create entire new sets of jobs based on a reference job.
+# 
+# Instructions:
+# -------------
+# 1) Start palm_jm either from mrungui or from shell by "nohup palm_jm&"
+#
+# To do:
+# ------
+# 1) Add display for the MONITORING and OUTPUT folder
+# 2) Add zip function to export single or multiple jobs
+# 3) Allow for copying INPUT files to a remote host
+#------------------------------------------------------------------------------!
+
+import os
+from PyQt4 import QtGui, QtCore, uic
+from PyQt4.QtCore import pyqtSlot,SIGNAL,SLOT
+import shutil
+import subprocess as sub
+import sys
+
+set_list = []
+
+
+# Determine PALM directories
+try: 
+   devnull = open(os.devnull, 'w')
+   out = sub.check_output("echo $PALM_BIN", shell=True, stderr=sub.STDOUT)
+   palm_bin = out.rstrip()
+   palm_dir = out.split("palm")[0] + "palm/" + out.split("palm")[1].split("/")[1]
+   out = None
+      
+   job_dir = palm_dir + '/JOBS'
+   user_dir = palm_dir + '/USER_CODE'
+   
+except:   
+   print "Error. $PALM_BIN is not set."
+   raise SystemExit
+
+
+
+# MainWindow class
+class JobManager(QtGui.QMainWindow):
+    
+    def __init__(self):
+        super(JobManager, self).__init__()
+        
+        self.InitUi()   
+        
+   
+    # Initialized MainWindow UI
+    def InitUi(self):
+
+        # Load predefined mainwindow
+        uic.loadUi(palm_bin + '/palm_jm_files/palm_jm.ui', self)
+
+        self.palm_logo.setPixmap(QtGui.QPixmap(palm_dir  + "/trunk/SCRIPTS/palmrungui_files/logo.png"))
+
+
+    
+        # Display MainWindow
+        self.show()
+        QtGui.QApplication.processEvents()
+
+        self.load_jobs()
+
+    
+    def update_all(self):
+ 
+       self.setEnabled(False)
+       self.list_input.clear() 
+       self.list_user.clear()
+       self.load_jobs()
+       self.setEnabled(True)
+
+    # Load jobs into list
+    def load_jobs(self):
+       
+       self.list_jobs.clear() 
+       self.push_copy.setEnabled(False)
+       self.push_create_set.setEnabled(False)      
+      
+       self.line_path.setText(job_dir + "/")
+       
+       list_of_files = os.listdir(job_dir)
+             
+       for i in range(0,len(list_of_files)):
+          tmp_file = job_dir + "/" + list_of_files[i]
+
+          if ( os.path.isdir(tmp_file) ):
+	     self.list_jobs.addItem(str(list_of_files[i]))
+
+
+    # Update input and user code lists
+    def update_input(self):
+      
+       self.list_input.clear() 
+       self.list_user.clear()
+       self.push_copy.setEnabled(True)
+       self.push_create_set.setEnabled(True)
+      
+       job_to_show = job_dir + "/" + self.list_jobs.currentItem().text() + "/INPUT"
+
+       if ( os.path.isdir(job_to_show) ):
+
+          list_of_files = os.listdir(job_to_show)
+         
+          for i in range(0,len(list_of_files)):
+             tmp_file = job_to_show + "/" + list_of_files[i]
+             
+             if ( os.path.isfile(tmp_file) ):
+	        self.list_input.addItem(str(list_of_files[i]))
+  
+       job_to_show = job_dir + "/" + self.list_jobs.currentItem().text() + "/USER_CODE"
+       
+       if ( os.path.isdir(job_to_show) ):
+          
+          list_of_files = os.listdir(job_to_show)
+          
+          for i in range(0,len(list_of_files)):
+             tmp_file = job_to_show + "/" + list_of_files[i]
+
+             if ( os.path.isfile(tmp_file) ):
+	        self.list_user.addItem(str(list_of_files[i]))
+  
+  
+    # Make a copy of a job
+    def copy_job(self):
+  
+       self.setEnabled(False)
+       old_job_name = self.list_jobs.currentItem().text()
+       
+       text, ret = QtGui.QInputDialog.getText(self, "Copy job", "Enter new job name:", mode = QtGui.QLineEdit.Normal, text = old_job_name)
+       
+       if ( ret ):
+          new_job_name = str(text)
+       else:
+	   self.setEnabled(True)
+	   return
+	 
+       new_input_dir  = job_dir + "/" + new_job_name + "/INPUT"
+
+#      check if a job exists with the new job name  
+       if ( os.path.isdir(new_input_dir) ):
+	   notify = QtGui.QMessageBox.warning(self,'Create new job directory',"Error. Could not create job directory. A job with the new name already exists.")
+	   self.setEnabled(True)
+	   return
+       else:
+	   os.makedirs(new_input_dir)
+
+#      copy and rename input files (if present)       
+       job_to_copy = job_dir + "/" + old_job_name + "/INPUT"
+
+       if ( os.path.isdir(job_to_copy) ):
+
+          list_of_files = os.listdir(job_to_copy)
+         
+          for i in range(0,len(list_of_files)):
+
+             tmp_file = job_to_copy + "/" + list_of_files[i]          
+             new_file = new_input_dir + "/" + list_of_files[i].replace(old_job_name, new_job_name)
+             shutil.copy(tmp_file, new_file)
+
+
+
+
+       new_user_dir  = job_dir + "/" + new_job_name + "/USER_CODE"
+       
+#      check if user code exists in the new job directory 
+       if ( os.path.isdir(new_user_dir) ):
+	   notify = QtGui.QMessageBox.warning(self,'Create new user code directory',"Error. Could not create user code directory. A user code directiory with the new name already exists.")
+	   self.setEnabled(True)
+	   return
+       else:
+	   os.makedirs(new_user_dir)
+
+
+#      copy user code files (if present)       
+       user_to_copy = job_dir + "/" + old_job_name + "/USER_CODE"
+
+       if ( os.path.isdir(user_to_copy) ):
+
+          list_of_files = os.listdir(user_to_copy)
+         
+          for i in range(0,len(list_of_files)):
+
+             tmp_file = user_to_copy + "/" + list_of_files[i]          
+             new_file = new_user_dir + "/" + list_of_files[i]
+             shutil.copy(tmp_file, new_file)
+
+       self.load_jobs()
+       self.list_input.clear() 
+       self.list_user.clear()
+       self.setEnabled(True)
+
+
+    # Create a whole set of jobs
+    def create_set(self):
+  
+       global set_list
+#      disable mainwindow  
+       self.setEnabled(False)
+      
+#      show Options Dialog      
+       opt = CreateSetBox()
+       opt.exec_()
+
+       old_job_name = self.list_jobs.currentItem().text()
+
+       for j in range(0,len(set_list)):
+
+          if ( set_list[j] != "" ):
+	     new_job_name   = str(set_list[j])
+             new_input_dir  = job_dir + "/" + str(set_list[j]) + "/INPUT"
+          else:
+	     continue
+
+#         check if a job exists with the new job name  
+          if ( os.path.isdir(new_input_dir) ):
+	     notify = QtGui.QMessageBox.warning(self,'Create new job directory',"Error. Could not create job directory. A job with the new name already exists.")
+	     self.setEnabled(True)
+	     return
+          else:
+	     os.makedirs(new_input_dir)
+
+#         copy and rename input files (if present)       
+          job_to_copy = job_dir + "/" + old_job_name + "/INPUT"
+
+          if ( os.path.isdir(job_to_copy) ):
+
+             list_of_files = os.listdir(job_to_copy)
+         
+             for i in range(0,len(list_of_files)):
+
+                tmp_file = job_to_copy + "/" + list_of_files[i]          
+                new_file = new_input_dir + "/" + list_of_files[i].replace(old_job_name, new_job_name)
+                shutil.copy(tmp_file, new_file)
+
+
+          new_user_dir  = job_dir + "/" + new_job_name + "/USER_CODE"
+       
+#         check if user code exists in the new job directory 
+          if ( os.path.isdir(new_user_dir) ):
+	      notify = QtGui.QMessageBox.warning(self,'Create new user code directory',"Error. Could not create user code directory. A user code directiory with the new name already exists.")
+	      self.setEnabled(True)
+	      return
+          else:
+	      os.makedirs(new_user_dir)
+
+
+#         copy user code files (if present)       
+          user_to_copy = job_dir + "/" + old_job_name + "/USER_CODE"
+
+          if ( os.path.isdir(user_to_copy) ):
+
+             list_of_files = os.listdir(user_to_copy)
+         
+             for i in range(0,len(list_of_files)):
+
+                tmp_file = user_to_copy + "/" + list_of_files[i]          
+                new_file = new_user_dir + "/" + list_of_files[i]
+                shutil.copy(tmp_file, new_file)
+
+          self.load_jobs()
+          self.list_input.clear() 
+          self.list_user.clear()
+
+       self.setEnabled(True) 
+   
+   
+ # Add a custom context menu
+    def openmenuinput(self, position):
+
+        menu = QtGui.QMenu()
+
+        selection = self.list_input.selectedItems()
+        
+        if ( len(selection) != 0 ):
+
+           openAction = menu.addAction('Open selected files')     
+           openAction.setStatusTip('Open file(s) in your favorite editor')
+           openAction.triggered.connect(self.OpenFilesInput)
+           action = menu.exec_(self.list_input.mapToGlobal(position))
+
+ # Add a custom context menu
+    def openmenuuser(self, position):
+
+        menu = QtGui.QMenu()
+
+        selection = self.list_user.selectedItems()
+        
+        if ( len(selection) != 0 ):
+
+           openAction = menu.addAction('Open selected files')     
+           openAction.setStatusTip('Open file(s) in your favorite editor')
+           openAction.triggered.connect(self.OpenFilesUser)
+           action = menu.exec_(self.list_user.mapToGlobal(position))
+
+
+    def OpenFilesInput(self):
+   
+       sel_job = self.list_jobs.currentItem().text()
+       sel_files = self.list_input.selectedItems()
+       
+       input_dir = job_dir + "/" + sel_job + "/INPUT/"
+       
+       open_files = ""
+       for i in range(0,len(sel_files)):
+          open_files = open_files + "xdg-open " + input_dir +  sel_files[i].text() + "; "
+
+       os.system(str(open_files))
+
+    def OpenFilesUser(self):
+   
+       sel_job = self.list_jobs.currentItem().text()
+       sel_files = self.list_user.selectedItems()
+       
+       input_dir = job_dir + "/" + sel_job + "/USER_CODE/"
+       
+       open_files = ""
+       for i in range(0,len(sel_files)):
+          open_files = open_files + "xdg-open " + input_dir +  sel_files[i].text() + "; "
+
+       os.system(str(open_files)) 
+       selection = self.list_jobs.selectedItems()
+  
+  
+  
+# Message box for showing RUN_CONTROL output
+class CreateSetBox(QtGui.QDialog):
+    def __init__(self):
+      
+        super(CreateSetBox, self).__init__()
+        
+        uic.loadUi(palm_bin + '/palm_jm_files/palm_jm_create_set.ui', self)
+        
+        self.show()
+        
+        return
+
+#   Cancel button
+    def rejected(self):
+      
+       self.close()
+     
+       return
+  
+
+#   OK button
+    def accept(self):
+      
+       global set_list
+       
+       text = self.list.toPlainText() 
+       set_list = text.split('\n')
+       self.close()
+     
+       return
+  
+# Main loop       
+def main():
+    
+    app = QtGui.QApplication(sys.argv)
+    res = JobManager() 
+    sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    main()   

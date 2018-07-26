@@ -1,0 +1,183 @@
+#!/usr/bin/env bash
+#--------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018  Leibniz Universitaet Hannover
+#--------------------------------------------------------------------------------#
+#
+# Current revisions:
+# -----------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: palm_simple_build 2875 2018-03-13 11:00:25Z knoop $
+# added file update functionality
+# 
+# 2868 2018-03-09 13:25:09Z hellstea
+# Bugfix: adjusted name of build_dir
+# 
+# 2852 2018-03-05 14:43:22Z knoop
+# Refactoring of the palm_simple_ build and run scripts
+# 
+# 2718 2018-01-02 08:49:38Z maronga
+# Corrected "Former revisions" section
+#
+# 2696 2017-12-14 17:12:51Z kanani
+# Change in file header (GPL part)
+#
+# 2225 2017-05-16 11:36:20Z raasch
+# shell changed to bash
+#
+# 1310 2014-03-14 08:01:56Z raasch
+# update GPL copyright
+#
+# 1046 2012-11-09 14:38:45Z maronga
+# code put under GPL (PALM 3.9)
+#
+# palm_simple_install - a script for simple installation and compilation of
+#                       the palm code without using mbuild
+# This script creates (from the working copy of the palm repository)
+# a subdirectory MAKE_DEPOSITORY_simple which contains a copy of the
+# palm source code and  a modified makefile which loads required compiler
+# and preprocessor settings via "include MAKE.inc"
+
+# Options: -i <include file>
+#          one of the include files in ~/palm/current_version/trunk/INSTALL
+
+# Last changes:
+# 25/01/10 - Siggi - Generating the first version
+# 18/03/10 - Siggi - switch to palm/current_version removed: working
+#                    copy can be in any directory
+#------------------------------------------------------------------------------#
+# LPV -- Commenting out -- this block does not work well
+#SOURCE="${BASH_SOURCE[0]}"
+#echo $SOURCE
+#while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+#DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+#SOURCE="$(readlink "$SOURCE")"
+
+  # if $SOURCE was a relative symlink, we need to resolve it
+  # relative to the path where the symlink file was located
+#[[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+#done
+#SCRIPT_LOCATION="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+#echo $SOURCE
+#echo $SCRIPT_LOCATION
+#working_dir=$("${SCRIPT_LOCATION}/../../")
+#trunk_dir=$(readlink -f "${SCRIPT_LOCATION}/../")
+
+
+get_number_of_cpu_cores() {
+   {
+      n=$(sysctl -n machdep.cpu.core_count 2> /dev/null)
+   } || {
+      n=$(grep -c ^processor /proc/cpuinfo 2> /dev/null)
+   } || {
+   if ! [[ $n =~ ^-?[0-9]+$ ]]; then
+      n=1
+   fi
+   }
+   echo $n
+}
+
+print_help() {
+   echo "Usage: palm_simple_run -b <build-config> -s <script-directory> -w <working-directory> [-x]"
+   echo ""
+   echo "List of allowed option:"
+   echo ""
+   echo "   -b <build-config>   Suffix of any MAKE.inc.<build-config> file in the trunk/INSTALL dir."
+   echo "   -s <script-directory> SCRIPTS directory, defaults to ~/palm/current_version/trunk/SCRIPTS"
+   echo "   -w <working-directory> directory where model will be built defaults to SCRIPTS/../../"
+   echo "   -x                  Clean the build directory from last build attempts"
+   echo ""
+}
+
+build_config=unknown
+SCRIPT_LOCATION=~/palm/current_version/trunk/SCRIPTS
+clean="false"
+work_dir=unknown
+
+# Read shellscript options
+while  getopts  :b:s:w:xh  option
+do
+  case  $option  in
+      (b)   build_config=$OPTARG;;
+      (s)   SCRIPT_LOCATION=$OPTARG;;
+      (w)   work_dir=$OPTARG;;   
+      (x)   clean="true";;
+      (h)   print_help
+            exit 0;;
+      (\?)  echo "Unknown option -$OPTARG"
+            print_help
+            exit 1;;
+  esac
+done
+
+if [[ ${build_config} == "unknown" ]]; then
+   echo "Missing option -b <build-config>"
+   print_help
+   exit 1
+fi
+
+echo $SCRIPT_LOCATION
+echo $work_dir
+working_dir=$work_dir
+if [[ ${work_dir} == "unknown" ]]; then
+   working_dir=${SCRIPT_LOCATION}/../../
+fi
+trunk_dir=${SCRIPT_LOCATION}/../
+
+build_dir=${working_dir}/BUILD_$build_config
+
+
+# Check, if include file exists
+build_config_file=${trunk_dir}/INSTALL/MAKE.inc.$build_config
+if [[ ! -f ${build_config_file} ]]; then
+   echo "+++ ERROR: no such make include file:"
+   echo "    \"${build_config_file}\""
+   exit 1
+fi
+
+
+# Create the make depository
+if [[ ! -d ${build_dir} ]]; then
+   mkdir -p ${build_dir}
+else
+   if [[ ${clean} == "true" ]]; then
+      echo "Cleaning the build directory..."
+      rm -rf ${build_dir}/*
+   fi
+fi
+
+
+# Copy makefile and all source code files to make depository
+cp -r ${trunk_dir}/SOURCE/Makefile  ${build_dir}/Makefile_in
+cp -r ${build_config_file}          ${build_dir}/MAKE.inc
+cp -r ${trunk_dir}/SOURCE/*.f90     ${build_dir}
+
+
+# Replace comment in makefile by include statement
+sed  's/#to_be_replaced_by_include/include MAKE.inc/g'  ${build_dir}/Makefile_in  >  ${build_dir}/Makefile
+rm  ${build_dir}/Makefile_in
+
+cd ${build_dir}
+make -j $(get_number_of_cpu_cores)
+cd ../
+
+
+echo "*** PALM build finished. Executable can be found in:"
+echo "    \"${build_dir}\""
+exit 0

@@ -1,0 +1,41 @@
+---
+# this is a palmtest build configuration file
+
+compiler:
+  executable: ifort
+  definitions:
+    - "MPI_REAL=MPI_DOUBLE_PRECISION"
+    - "MPI_2REAL=MPI_2DOUBLE_PRECISION"
+    - "__parallel"
+    - "__netcdf"
+    - "__fftw"
+    - "__intel_compiler"
+  options:
+    - "-cpp"
+    - "-g"
+    - "-debug"
+    - "-traceback"
+    - "-fpe0"
+    - "-C"
+    - "-check nooutput_conversion"
+    - "-w"
+    - "-xT"
+    - "-O0"
+    - "-ftz"
+    - "-fno-alias"
+    - "-no-prec-div"
+    - "-no-prec-sqrt"
+    - "-ip"
+    - "-nbs"
+    - "-convert little_endian"
+    - "-diag-disable 8290,8291"
+  includes:
+    - "/muksoft/packages/mpich/3.1_ifc_icc/include"
+    - "/home/knoop/opt/netcdf-fortran/include"
+    - "/muksoft/packages/fftw/3.3.4/include"
+
+linker:
+  options:
+    - "/muksoft/packages/mpich/3.1_ifc_icc/lib64/libmpich.so"
+    - "/home/knoop/opt/netcdf-fortran/lib64/libnetcdff.so"
+    - "/muksoft/packages/fftw/3.3.4/lib64/libfftw3.so"

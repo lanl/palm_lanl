@@ -1,0 +1,2943 @@
+#!/bin/bash
+
+# palmrun - script for running PALM jobs
+
+#--------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2017-2018  Leibniz Universitaet Hannover
+#--------------------------------------------------------------------------------#
+#
+# Current revisions:
+# ------------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: palmrun 3043 2018-05-25 10:47:54Z raasch $
+# check for setting of fast_io_catalog
+# 
+# 3033 2018-05-23 15:26:19Z raasch
+# -T option not required for interactive runs (tasks per node =
+# total number of cores is assumed as default, if option is not given),
+# reformatting of a few messages,
+# bugfix: destination output directory is created if attribute "pe" is set in
+# .palm.iofiles
+# 
+# 2718 2018-01-02 08:49:38Z maronga
+# bugfix of r2990
+# 
+# 2718 2018-01-02 08:49:38Z maronga
+# bugfix: temporary SOURCES_FOR_RUN_CATALOG now created in base_directory and
+#         not in the working directory from where palmrun is called
+# 
+# 2718 2018-01-02 08:49:38Z maronga
+# svfout in the activation string will be replaced now by svfin in case of 
+# automatic restarts
+# 
+# 2718 2018-01-02 08:49:38Z maronga
+# Introduction of new ENVIRONMENT variables read_svf and write_svf to consider
+# the possible output or input of sky view factors
+# 
+# 2718 2018-01-02 08:49:38Z maronga
+# "fname" renamed to "jobname"
+# 
+# 2718 2018-01-02 08:49:38Z maronga
+# parameters are allowed in output commands (OC:)
+# 
+# 2718 2018-01-02 08:49:38Z maronga
+# bugfix: exit if no queue has been given neither with option -q nor in the
+# configuration file 
+# 
+# 2718 2018-01-02 08:49:38Z maronga
+# file connection file from trunk/SCRIPTS is taken by default
+# 
+# 2718 2018-01-02 08:49:38Z maronga
+# Corrected "Former revisions" section
+# 
+# 2696 2017-12-14 17:12:51Z kanani
+# Change in file header (GPL part)
+#
+# 2693 2017-12-13 12:33:49Z raasch
+# replacement of variables given by {{<variable>}} in configuration file is now
+# done in a more general way, variable names are written in small letters
+# 
+# 2670 2017-12-06 16:32:19Z raasch
+# test printouts removed
+# 
+# 2669 2017-12-06 16:03:27Z raasch
+# file attributes in .palm.iofiles restructured, "loc" attribute completely
+# removed,
+# wildcard (*) allowed in .palm.iofiles as file activation string for output
+# files,
+# informative messages in case of missing optional input files shortened
+# bugfix: variable cycle explicitly interpreted with 10 as the number base
+# 
+# 2638 2017-11-23 12:44:23Z raasch
+# use of wildcards in file connection statements enabled
+# 
+# 2605 2017-11-09 15:31:46Z raasch
+# in case of remote jobs, input files with "job" or "jobopt" (new) attribute
+# will not be sent with the job file any more, but copied into the
+# SOURCES_FOR_RUN... folder on the remote host, before the job is submitted
+# 
+# 2600 2017-11-01 14:11:20Z raasch
+# cycle numbers are made three digits wide
+# 
+# 2566 2017-10-20 08:50:47Z raasch
+# execute command for combine_plot_fields added
+# "TEMPDIR" renamed "tempdir"
+# temporary working directory for local batch jobs is created immediately within
+# the user's palmrun call, due to a requirement of the "grid engine" batch
+# system, where the working directory is given with batch directive -wd and must
+# already exist when the job is submitted,
+# informative messages in non-trace mode reduced and partly reformatted
+# 
+# 2551 2017-10-18 07:25:11Z raasch
+# TEMPDIR added as replacement string to be used in batch directives
+# 
+# 2512 2017-10-04 08:26:59Z raasch
+# bugfix for determining cycle numbers of NetCDF input files
+# 
+# 2506 2017-09-29 08:30:37Z raasch
+# option -V added to check for an existing SOURCES_FOR_RUN_... folder
+# host configuration added to SOURCES_FOR_RUN_... folder name
+# host_identifier renamed host_configuration
+# option -W added to allow for job dependencies
+# 
+# 2501 2017-09-26 11:41:55Z raasch
+# default value for number of cores (option -X) set to 1
+# bugfix for mechanism which overwrites configuration file settings with values
+# provided by palmrun options
+# 
+# 2499 2017-09-22 16:47:58Z kanani
+# option -h named configuration identifier
+# 
+# 2480 2017-09-19 06:24:14Z maronga
+# bugfix for last revision
+# 
+# 2479 2017-09-19 06:12:16Z raasch
+# option -A (project account number) added
+# 
+# 2422 2017-09-08 08:25:41Z raasch
+# initial revision
+# 
+#--------------------------------------------------------------------------------#
+# palmrun - script for running PALM jobs on local and remote hosts
+#--------------------------------------------------------------------------------#
+
+
+ 
+    # DECLARATION OF VARIABLES AND THEIR DEFAULT VALUES
+
+ set +o allexport    # SUPPRESS EXPORT OF ALL VARIABLES, SINCE IN THE PAST THIS
+                     # LEAD TO PROBLEMS IN ROUTINES CALLED BY PALMRUN
+                     # (TOO MANY ARGUMENTS - PROBLEM)
+ set +o noclobber    # EXISTING FILES ARE ALLOWED TO BE OVERWRITTEN
+
+ typeset -i  ibd=0 ibdt=0 iec=0 iic=0 iin=0 ioc=0 iout=0 nr_of_input_files=0
+ typeset -i  nr_of_output_files=0
+ typeset -x -i  memory=0   # HAS TO BE EXPORTED HERE, OTHERWISE AN UNKNOWN SIDE
+                           # SIDE EFFECT MAY CAUSE DATA LOSS WHEN GETOPTS IS READING THE
+                           # SCRIPT-OPTION ARGUMENTS
+ typeset -i  cores cputime cpu_hours cpu_minutes cpu_seconds i ii iia iii iio
+ typeset -i  icycle inode ival maxcycle mpi_tasks
+ typeset -i  nodes remaining_cores run_number tasks_per_node threads_per_task
+
+ activation_string_list=""
+ AddFilenames=""
+ combine_plot_fields=true
+ compiler_name=""
+ compiler_name_ser=""
+ compiler_options=""
+ cores=1
+ cores_atmos=0
+ cores_ocean=0
+ coupled_dist=""
+ cpp_options=""
+ cpumax=0
+ create_batch_job=false
+ create_jobfile_only=false
+ create_remote_batch_job=false
+ dashes="  ----------------------------------------------------------------------------"
+ defaultqueue=""
+ delete_temporary_catalog=true
+ do_compile=true
+ do_trace=false
+ executable=""
+ execute_command=""
+ execution_error=false
+ fileconnection_file=trunk/SCRIPTS/.palm.iofiles
+ jobname=test
+ global_revision=""
+ host_configuration="default"
+ hostfile=""
+ hp=""
+ keep_data_from_previous_run=false
+ link_local_input=false
+ link_local_output=false
+ linker_options=""
+ local_jobcatalog=""
+ locat=normal
+ makefile=""
+ max_par_io_str=""
+ prc=$0
+ while [[ $(echo $prc | grep -c "/") != 0 ]]
+ do
+    prc=`echo $prc | cut -f2- -d"/"`
+ done
+ module_calls=""
+ palmrun_memory=""
+ palmrun_script_name=$prc
+ openmp=false
+ previous_job=""
+ project_account=""
+ queue=none
+ read_svf=""
+ restart_run=false
+ return_address=""
+ remote_jobcatalog=""
+ remote_username=""
+ running_in_batch_mode=false
+ run_coupled_model=false
+ run_id=""
+ silent=false
+ source_list=""
+ source_path=""
+ tasks_per_node=0
+ threads_per_task=1
+ transfer_problems=false
+ user_source_path=""
+ use_existing_sources_folder=""
+ use_openmp=false
+ version="palmrun  1.0 Rev$Rev: 3043 $"
+ working_directory=`pwd`
+ write_binary=""
+ write_svf=""
+
+
+    # ERROR HANDLING IN CASE OF EXIT
+ trap 'if [[ $locat != normal  &&  $locat != control_c ]]
+       then
+
+              # CARRY OUT ERROR-COMMANDS GIVEN IN THE CONFIGURATION FILE (EC:)
+          (( i = 0 ))
+          while (( i < iec ))
+          do
+             (( i = i + 1 ))
+             printf "\n  *** Execution of ERROR-command:\n"
+             printf "  >>> ${err_command[$i]}\n"
+             eval  ${err_command[$i]}
+          done
+          [[ $delete_temporary_catalog = true ]]  &&  (cd; rm -rf $tempdir)
+          printf "\n\n+++ palmrun killed \n\n"
+       elif [[ $locat != control_c ]]
+       then
+          printf "\n --> palmrun finished\n\n"
+       fi' exit
+
+
+    # ACTIONS IN CASE OF TERMINAL-BREAK (CONTROL-C):
+ trap 'cd; rm -rf $tempdir
+       printf "\n+++ palmrun killed by \"^C\" \n\n"
+       locat=control_c
+       exit
+      ' 2
+
+
+    # READ SHELLSCRIPT-OPTIONS AND REBUILD THE PALMRUN-COMMAND STRING (prc),
+    # WHICH WILL BE USED TO START RESTART-JOBS
+ while  getopts  :a:A:bBCd:FG:h:jkm:M:O:q:r:R:s:t:T:u:U:vVw:W:xX:yY:Z option
+ do
+   case  $option  in
+       (a)   activation_string_list=$OPTARG; prc="$prc -a'$OPTARG'";;
+       (A)   project_account=$OPTARG; prc="$prc -A'$OPTARG'";;
+       (b)   create_batch_job=true; prc="$prc -b";;
+       (B)   delete_temporary_catalog=false; prc="$prc -B";;
+       (C)   restart_run=true; prc="$prc -C";;
+       (d)   jobname=$OPTARG; prc="$prc -d$OPTARG";;
+       (F)   create_jobfile_only=true;;
+       (G)   global_revision=$OPTARG; prc="$prc -G'$OPTARG'";;
+       (h)   host_configuration=$OPTARG; prc="$prc -h$OPTARG";;
+       (j)   running_in_batch_mode=true;;
+       (k)   keep_data_from_previous_run=true; prc="$prc -k";;
+       (m)   palmrun_memory=$OPTARG; prc="$prc -m$OPTARG";;
+       (M)   makefile=$OPTARG; prc="$prc -M$OPTARG";;
+       (O)   use_openmp=true; threads_per_task=$OPTARG; prc="$prc -O$OPTARG";;
+       (q)   queue=$OPTARG; prc="$prc -q$OPTARG";;
+       (r)   run_id=$OPTARG;;
+       (R)   return_address=$OPTARG;;
+       (s)   source_list=$OPTARG;;
+       (t)   palmrun_cpumax=$OPTARG; prc="$prc -t$OPTARG";;
+       (T)   palmrun_tasks_per_node=$OPTARG; prc="$prc -T$OPTARG";;
+       (u)   remote_username=$OPTARG; prc="$prc -u$OPTARG";;
+       (U)   return_username=$OPTARG; prc="$prc -U$OPTARG";;
+       (v)   silent=true; prc="$prc -v";;
+       (V)   use_existing_sources_folder="-V";;
+       (w)   max_par_io_str=$OPTARG; prc="$prc -w$OPTARG";;
+       (W)   previous_job=$OPTARG;;
+       (x)   do_trace=true;set -x; prc="$prc -x";;
+       (X)   palmrun_cores=$OPTARG; prc="$prc -X$OPTARG";;
+       (y)   ocean_file_appendix=true; prc="$prc -y";;
+       (Y)   run_coupled_model=true; coupled_dist=$OPTARG; prc="$prc -Y'$OPTARG'";;
+       (Z)   combine_plot_fields=false; prc="$prc -Z";;
+       (\?)  printf "\n  +++ unknown option $OPTARG \n"
+             printf "\n  --> type \"$0 ?\" for available options \n"
+             locat=parameter;exit;;
+   esac
+ done
+
+
+    # SKIP GIVEN OPTIONS TO READ POSITIONAL PARAMETER, IF GIVEN
+    # CURRENTLY ONLY PARAMETER ? (TO OUTPUT A SHORT COMMAND INFO) IS ALLOWED
+ (( to_shift = $OPTIND - 1 ))
+ shift $to_shift
+
+    # PRINT SHORT DESCRIPTION OF PALMRUN OPTIONS
+ if [[ "$1" = "?" ]]
+ then
+   (printf "\n  *** Description of available palmrun options:\n"
+    printf "\n      Option  Description                              Default-Value"
+    printf "\n        -a    activation string list                   \"\" "
+    printf "\n        -A    project account number                   ---"
+    printf "\n        -b    batch-job on local machine               ---"
+    printf "\n        -B    do not delete temporary directory at end ---"
+    printf "\n        -d    run identifier                           test"
+    printf "\n        -F    create batch job file only               ---"
+    printf "\n        -h    host configuration                       \"default\" "
+    printf "\n        -k    keep data from previous run"
+    printf "\n        -m    memory demand in MB (batch-jobs)         0 MB"
+    printf "\n        -M    Makefile name                            Makefile"
+    printf "\n        -O    threads per openMP task                  ---"
+    printf "\n        -q    queue                                    \"$queue\" "
+    printf "\n        -s    filenames of routines to be compiled     \"\" "
+    printf "\n              must end with .f, .f90, .F, or .c !"
+    printf "\n              use \"..\" for more than one file and wildcards"
+    printf "\n              -s LM compiles all locally modified files"
+    printf "\n        -t    allowed cpu-time in seconds (batch)      0"
+    printf "\n        -T    tasks per node                           ---"
+    printf "\n        -u    username on remote machine               \"\" "
+    printf "\n        -v    no prompt for confirmation               ---"
+    printf "\n        -V    check if SOURCES_FOR_RUN_... exists      ---"
+    printf "\n        -w    maximum parallel io streams              as given by -X"
+    printf "\n        -W    name of job to wait for                  ---"
+    printf "\n        -x    tracing of palmrun for debug purposes    ---"
+    printf "\n        -X    # of processors (on parallel machines)   1"
+    printf "\n        -y    add appendix \"_O\" to all local output"
+    printf "\n              files (ocean precursor runs followed by"
+    printf "\n              coupled atmosphere-ocean runs)           ---"
+    printf "\n        -Y    run coupled model, \"#1 #2\" with" 
+    printf "\n              #1 atmosphere and #2 ocean processors    \"#/2 #/2\" depending on -X"
+    printf "\n        -Z    skip combine_plot_fields at the end of      "
+    printf "\n              the simulation                           ---"
+    printf "\n "
+    printf "\n      Possible values of positional parameter <modus>:"
+    printf "\n        \"?\"       -  this outline \n\n") | more
+    exit
+ elif [[ "$1" != "" ]]
+ then
+    printf "\n  +++ positional parameter $1 unknown \n"
+    locat=parameter; exit
+ fi
+
+
+
+    # SHORT STARTING MESSAGE
+ printf "\n*** $version "
+ printf "\n    will be executed.     Please wait ..."
+
+
+    # FOR COMPATIBILITY REASONS SET OLD ENVIRONMENT VARIABLE
+ export fname=$jobname
+
+
+    # BUILD THE CONFIGURATION-FILE NAME AND THE SOURCES_FOR_RUN-FOLDER NAME
+ config_file=.palm.config.$host_configuration
+ sources_for_run_catalog=SOURCES_FOR_RUN_${host_configuration}_$jobname
+
+
+    # CHECK, IF CONFIGURATION FILE EXISTS
+ if [[ ! -f $config_file ]]
+ then
+    printf "\n\n  +++ configuration file: "
+    printf "\n           $config_file"
+    printf "\n      does not exist"
+    locat=connect; exit  
+ fi
+
+
+    # CHECK, IF USER PROVIDES OWN FILE CONNECTION FILE
+ if [[ -f .palm.iofiles ]]
+ then
+    fileconnection_file=.palm.iofiles
+ fi
+
+
+    # CHECK, IF FILE CONNECTION FILE EXISTS
+ if [[ ! -f $fileconnection_file ]]
+ then
+    printf "\n\n  +++ file connection file: "
+    printf "\n           $fileconnection_file"
+    printf "\n      does not exist"
+    locat=connect; exit  
+ fi
+
+
+    # CHECK, IF THE ACTIVATION_STRING_LIST HAS BEEN GIVEN
+ if [[ "$activation_string_list" = "" ]]
+ then
+    printf "\n\n  +++ no activation string list given: "
+    printf "\n        please set palmrun option \"-a\" "
+    locat=palmrun_option; exit  
+ fi
+
+
+    # SET VARIABLE TO ACTIVATE PALM BINARY OUTPUT FOR RESTARTS
+ if [[ $(echo $activation_string_list | grep -c "restart") != 0 ]]
+ then
+    write_binary=true
+ else
+    write_binary=false
+ fi
+
+    # SET VARIABLE TO ACTIVATE WRITING OF SVF DATA
+ if [[ $(echo $activation_string_list | grep -c "svfout") != 0 ]]
+ then
+    write_svf=true
+ else
+    write_svf=false
+ fi
+
+    # SET VARIABLE TO ACTIVATE READING OF SVF DATA 
+ if [[ $(echo $activation_string_list | grep -c "svfin") != 0 ]]
+ then
+    read_svf=true
+ else
+    read_svf=false
+ fi
+
+
+    # READ AND EVALUATE THE CONFIGURATION-FILE
+ [[ $silent = false ]]  &&  printf "\n\n    Reading the configuration file... "
+
+    # READ VARIABLE SETTINGS FROM CONFIG FILE LINE BY LINE
+ while  read line
+ do
+
+       # FIRST REPLACE ENVIRONMENT-VARIABLES BY THEIR RESPECTIVE VALUES
+    eval  line=\"$line\"
+
+
+       # INTERPRET THE LINE
+    if [[ "$(echo $line)" = "" ]]
+    then
+
+          # EMPTY LINE, NO ACTION
+       continue
+
+    elif [[ "$(echo $line | cut -c1)"  =  "#" ]]
+    then
+
+          # LINE IS A COMMENT LINE
+       continue
+
+    elif [[ "$(echo $line | cut -c1)"  =  "%" ]]
+    then
+
+          # LINE DEFINES AN ENVIRONMENT-VARIABLE
+       var=`echo $line | cut -d" " -s -f1 | cut -c2-`
+       value=`echo $line | cut -d" " -s -f2-`
+
+
+          # VALUE FROM THE CONFIGURATION-FILE IS ASSIGNED TO THE
+          # ENVIRONMENT-VARIABLE, BUT ONLY IF NO VALUE HAS BEEN ALREADY
+          # ASSIGNED WITHIN THIS SCRIPT (E.G. BY SCRIPT-OPTIONS).
+          # NON-ASSIGNED VARIABLES HAVE VALUE "" OR 0 (IN CASE OF INTEGER).
+          # HENCE THE GENERAL RULE IS: SCRIPT-OPTION OVERWRITES THE
+          # CONFIGURATION-FILE.
+       if [[ "$(eval echo \$$var)" = ""  ||  "$(eval echo \$$var)" = "0" ]]
+       then
+          eval  export  $var="\$value"
+
+             # TERMINAL OUTPUT OF ENVIRONMENT-VARIABLES, IF TRACEBACK IS SWITCHED on
+          if [[ $do_trace = true ]]
+          then
+             printf "\n*** ENVIRONMENT-VARIABLE $var = $value"
+          fi
+       fi
+
+    elif [[ "$(echo $line | cut -c1-3)" = "BD:" ]]
+    then
+
+          # LINE DEFINES BATCH-DIRECTIVE
+       (( ibd = ibd + 1 ))
+       line=$(echo $line | cut -c4-)
+       batch_directive[$ibd]="$line"
+
+    elif [[ "$(echo $line | cut -c1-4)" = "BDT:" ]]
+    then
+
+          # LINE DEFINES BATCH-DIRECTIVE FOR SENDING BACK THE JOBFILE FROM A
+          # REMOTE TO A LOCAL HOST
+       (( ibdt = ibdt + 1 ))
+       line=$(echo $line | cut -c5-)
+       batch_directive_transfer[$ibdt]="$line"
+
+    elif [[ "$(echo $line | cut -c1-3)" = "EC:" ]]
+    then
+
+          # LINE DEFINES ERROR-COMMAND
+       (( iec = iec + 1 ))
+       line=$(echo $line | cut -c4-)
+       err_command[$iec]="$line"
+
+    elif [[ "$(echo $line | cut -c1-3)" = "IC:" ]]
+    then
+
+          # LINE DEFINES INPUT-COMMAND
+       (( iic = iic + 1 ))
+       line=$(echo $line | cut -c4-)
+       in_command[$iic]="$line"
+
+    elif [[ "$(echo $line | cut -c1-3)" = "OC:" ]]
+    then
+
+          # LINE DEFINES OUTPUT-COMMAND
+       (( ioc = ioc + 1 ))
+       line=$(echo $line | cut -c4-)
+       out_command[$ioc]="$line"
+
+    else
+
+          # SKIP ALL OTHER LINES
+       continue
+
+    fi
+
+ done < $config_file
+
+
+    # CHECK SETTING OF REQUIRED PARAMETERS
+ if [[ "$fast_io_catalog" = "" ]]
+ then
+    printf "\n  +++ no fast_io_catalog found in $config_file"
+    printf "\n      Please add line \"fast_io_catalog ...\" to that file."
+    locat=config_file; exit
+ fi
+ if [[ "$compiler_name" = "" ]]
+ then
+    printf "\n  +++ no compiler name found in $config_file"
+    printf "\n      Please add line \"compiler_name ...\" to that file."
+    locat=config_file; exit
+ fi
+ if [[ "$compiler_name_ser" = "" ]]
+ then
+    printf "\n  +++ no compiler name for non-paralle compilation found in $config_file"
+    printf "\n      Please add line \"compiler_name_ser ...\" to that file."
+    locat=config_file; exit
+ fi
+ if [[ "$compiler_options" = "" ]]
+ then
+    printf "\n  +++ no compiler options found in $config_file"
+    printf "\n      Please add line \"compiler_options ...\" to that file."
+    locat=config_file; exit
+ fi
+ if [[ "$linker_options" = "" ]]
+ then
+    printf "\n  +++ no linker options found in $config_file"
+    printf "\n      Please add line \"linker_options ...\" to that file."
+    locat=config_file; exit
+ fi
+ if [[ "$execute_command" = "" ]]
+ then
+    printf "\n  +++ no execute command found in $config_file"
+    printf "\n      Please add line \"execute_command ...\" to that file."
+    locat=config_file; exit
+ fi
+
+ if [[ "$hostfile" != "" ]]
+ then
+    if [[ $hostfile != auto  &&  ! -f $hostfile ]]
+    then
+       printf "\n  +++ no hostfile \"$hostfile\" found"
+       printf "\n      Please check line \"%hostfile ...\" in $config_file"
+       locat=config_file; exit    
+    fi
+ fi
+
+
+    # DETERMINE THE CALL STATUS
+ if [[ "$return_address" != "" ]]
+ then
+ 
+       # I AM RUNNING ON A REMOTE HOST, WHICH ALSO MEANS THAT I AM RUNNING IN
+       # BATCH MODE AND ...
+    running_on_remote=true
+ 
+ else
+
+       # I HAVE BEEN CALLED INTERACTIVELY ON THIS HOST
+     if [[ "$remote_ip" != "" ]]
+     then
+
+           # I HAVE TO CREATE A BATCH JOB TO RUN PALM ON THE REMOTE HOST
+        create_remote_batch_job=true
+
+     fi
+     running_on_remote=false
+ fi
+
+
+
+    # READ AND EVALUATE THE I/O-FILE LIST
+ [[ $silent = false ]]  &&  printf "\n    Reading the I/O files... "
+
+    # READ THE FILE CONNECTION FILE LINE BY LINE
+ while  read line
+ do
+
+       # REPLACE REPEATING SPACES BETWEEN THE COLUMNS BY A SINGLE SPACE
+    line=`echo "$line" | sed -e "s/\s\{1,\}/ /g"`
+
+       # INTERPRET THE LINE
+    if [[ "$(echo $line)" = "" ]]
+    then
+          # EMPTY LINE, NO ACTION
+       continue
+
+    elif [[ "$(echo $line | cut -c1)"  =  "#" ]]
+    then
+
+          # LINE IS A COMMENT LINE
+       true
+
+    else
+
+          # LINE DEFINES FILE CONNECTION. READ THE FILE ATTRIBUTES.
+          # s2a: in/out - field
+          # s2b: action - field (optional)
+       s1=`echo "$line" | cut -d" " -f1`
+       s2=`echo "$line" | cut -d" " -s -f2`
+       if [[ $(echo $s2 | grep -c ":") = 0 ]]
+       then
+          s2a=$s2
+          s2b=""
+       else
+          s2a=`echo $s2 | cut -d":" -f1`
+          s2b=`echo $s2 | cut -d":" -f2`
+       fi
+       s3=`echo "$line" | cut -d" " -f3 | sed 's/*/wildcard /g'`
+       s4=`echo "$line" | cut -d" " -s -f4`
+       eval s4=\"$s4\"    # REPLACE ENVIRONMENT-VARIABLES IN PATH BY THEIR RESPECTIVE VALUES
+       s5=`echo "$line" | cut -d" " -s -f5`
+       s6=`echo "$line" | cut -d" " -s -f6`
+
+       
+          # STORE FILE CONNECTION, IF ACTIVATED BY ACTIVATION-STRING FROM
+          # INPUT- OR OUTPUT-LIST.
+          # VARIABLE S3 MAY CONTAIN A LIST OF ACTIVATION STRINGS (FIELD-SEPERATOR ":").
+          # IF EXECUTION IS SCHEDULED FOR A REMOTE-MACHINE AND THE FILE IS ONLY
+          # LOCALLY REQUIRED ON THAT MACHINE (I.E. s2b != tr), THE FILE CONNECTION
+          # IS NOT CHECKED AND STORED.
+       IFSALT="$IFS"; IFS="$IFS:"      # ADD ":" AS FIELD SEPARATOR
+       if [[ ( "$s2a" = in  || "$s2a" = inopt )  &&  ! ( $create_remote_batch_job = true  &&  "$s2b" != tr ) ]]
+       then
+          found=false
+          for  actual  in  $activation_string_list
+          do
+             for  formal  in  $s3
+             do
+                [[ $actual = $formal  ||  "$formal" = "-" ]]  &&  found=true
+             done
+          done
+          if [[ $found = true ]]
+          then
+             (( iin = iin + 1 ))
+             localin_pre[$iin]=$s1; actionin_pre[$iin]=$s2b;
+             pathin_pre[$iin]=$s4; endin_pre[$iin]=$s5; extin_pre[$iin]=$s6
+             if [[ "$s2a" = inopt ]]
+             then
+                optin_pre[$iin]=yes
+             else
+                optin_pre[$iin]=no
+             fi 
+
+                # FILES WITH JOB-ATTRIBUTE ARE STORED IN THE SOURCES_FOR_RUN
+                # FOLDER IF THE JOB IS RUNNING ON A REMOTE HOST
+             if [[ $running_on_remote = true  &&  "$s2b" = tr ]]
+             then
+                pathin_pre[$iin]=${fast_io_catalog}/${sources_for_run_catalog}
+             fi
+
+                # CHECK FOR MULTIPLE FILES, SET A RESPECTIVE FLAG AND REMOVE
+                # THE WILDCARD FROM THE ENDING
+             if [[ "${s5: -1}" = "*" ]]
+             then
+                if [[ "$s2b" = "di" ]]
+                then
+                   printf "\n    +++ wildcards (*) not allowed with \"di\" file attribute."
+                   printf "\n        see file \"$fileconnection_file\", line"
+                   printf "\n$line"
+                   locat=iofiles_file; exit
+                fi
+                multin[$iin]=true
+                string=${endin_pre[$iin]}
+                endin_pre[$iin]="${string%?}"
+             else
+                multin[$iin]=false
+             fi
+          fi
+       elif [[ "$s2a" = out  &&  ! ( $create_remote_batch_job = true ) ]]
+       then
+          found=false
+          for  actual  in  $activation_string_list
+          do
+             for  formal  in  $s3  
+             do
+                [[ $actual = $formal  ||  $formal = wildcard  ]]  &&  found=true
+             done
+          done
+          if [[ $found = true ]]
+          then
+             (( iout = iout + 1 ))
+             localout_pre[$iout]=$s1; actionout_pre[$iout]=$s2b
+             pathout_pre[$iout]=$s4; endout_pre[$iout]=$s5; extout_pre[$iout]=$s6
+
+                # CHECK IF WILDCARD IS USED AS ACTIVATION STRING
+                # IN SUCH CASES, NO WARNING WILL LATER BE OUTPUT IF LOCAL FILES DO NOT EXIST
+             if [[ $formal = wildcard  ]]
+             then
+                warnout_pre[$iout]=false
+             else
+                warnout_pre[$iout]=true
+             fi
+
+                # CHECK FOR MULTIPLE FILES, SET A RESPECTIVE FLAG AND REMOVE
+                # THE WILDCARD FROM THE LOCAL FILENAME
+             if [[ "${s1: -1}" = "*" ]]
+             then
+                if [[ "$s2b" = "di" ]]
+                then
+                   printf "\n    +++ wildcards (*) not allowed with \"di\" file attribute."
+                   printf "\n        see file \"$fileconnection_file\", line"
+                   printf "\n$line"
+                   locat=iofiles_file; exit
+                fi
+                multout[$iout]=true
+                string=${localout_pre[$iout]}
+                localout_pre[$iout]="${string%?}"
+             else
+                multout[$iout]=false
+             fi
+          fi
+       elif [[ "$s2a" != in  &&  "$s2a" != inopt  &&  "$s2a" != out ]]
+       then
+          printf "\n  +++ I/O-attribute in file $fileconnection_file has invalid"
+          printf "\n      value \"$s2\". Only \"in\", \"inopt\", and \"out\" are allowed!"
+          locat=connect; exit
+       fi
+       IFS="$IFSALT"
+    fi
+
+ done < $fileconnection_file
+
+
+
+    # VALUES OF PALMRUN-OPTIONS OVERWRITE THOSE FROM THE CONFIGURATION-FILE
+ [[ "$palmrun_memory" != "" ]]  &&  memory=$palmrun_memory
+ [[ "$palmrun_cpumax" != "" ]]  &&  cpumax=$palmrun_cpumax
+ [[ "$palmrun_cores"  != "" ]]  &&  cores=$palmrun_cores
+ [[ "$max_par_io_str" != "" ]]  &&  maximum_parallel_io_streams=$max_par_io_str
+ [[ "$palmrun_tasks_per_node" != "" ]]  &&  tasks_per_node=$palmrun_tasks_per_node
+
+
+
+      # EVALUATE MODEL COUPLING FEATURES (OPTION -Y)
+ if [[ $run_coupled_model = true ]] 
+ then
+
+    cores_atmos=`echo $coupled_dist | cut -d" " -s -f1`
+    cores_ocean=`echo $coupled_dist | cut -d" " -s -f2`
+
+    if (( $cores_ocean + $cores_atmos != $cores ))
+    then
+
+       printf "\n  +++ number of processors does not fit to specification by \"-Y\"."
+       printf "\n      PEs (total)     : $cores"
+       printf "\n      PEs (atmosphere): $cores_atmos"
+       printf "\n      PEs (ocean)     : $cores_ocean"
+       locat=coupling; exit
+
+    fi
+
+ fi
+
+
+    # IF I AM IN BATCH MODE, CHECK IF EXECUTABLE AND OTHER REQUIRED FILES
+    # HAVE BEEN GENERATED BY PALMBUILD AND STORED IN THE SOURCES_FOR_RUN_...
+    # FOLDER
+ if [[ $running_in_batch_mode = true ]]
+ then
+ 
+    if [[ ! -d ${fast_io_catalog}/${sources_for_run_catalog} ]]
+    then
+       printf "\n  +++ directory ${fast_io_catalog}/${sources_for_run_catalog} is missing"
+       printf "\n      Please check the output of the palmrun-call"
+       printf "\n      that you did on your local host."
+       locat=SOURCES_FOR_RUN; exit
+    fi
+
+ else
+
+       # CREATE THE SOURCES_FOR_RUN_... FOLDER, BUT NOT IF I AM PART OF AN
+       # AUTOMATIC RESTART RUN
+       # AUTOMATIC RESTART RUNS JUST ACCESS THE DIRECTORY CREATED BY THE INITIAL RUN
+    if [[ $restart_run = false ]]
+    then
+
+          # COLLECT FILES TO BE COMPILED IN THE SOURCES_FOR_RUN_... FOLDER ON
+          # THE LOCAL HOST
+       if [[ ! -d $source_path ]]
+       then
+          printf "\n\n  +++ source path \"$source_path\" on local host"
+          printf "\n      \"$(hostname)\" does not exist"
+          locat=source_path; exit
+       fi
+
+       rm -rf   ${base_directory}/${sources_for_run_catalog}
+       mkdir -p ${base_directory}/${sources_for_run_catalog}
+
+       if [[ "$source_list" = LM ]]
+       then
+
+             # DETERMINE MODIFIED FILES OF THE SVN WORKING COPY
+          source_list=""
+          cd  $source_path
+
+
+             # CHECK, IF TRUNK-DIRECTORY IS UNDER SVN CONTROL
+          if [[ ! -d ../.svn ]]
+          then
+             printf "\n\n  +++ source directory"
+             printf "\n         \"$source_path\" "
+             printf "\n         is not under control of \"subversion\"."
+             printf "\n         Please do not use palmrun-option \"-s LM\"\n"
+          fi
+
+
+             # LIST ALL MODIFIED SOURCE CODE FILES
+          Filenames=""
+          svn status  >  tmp_svnstatus
+          while  read line
+          do
+             firstc=`echo $line | cut -c1`
+             if [[ $firstc = M  ||  $firstc = "?" ]]
+             then
+                Name=`echo "$line" | cut -c8-`
+                extension=`echo $Name | cut -d. -f2`
+                if [[ "$extension" = f90 || "$extension" = F90 || "$extension" = f || "$extension" = F || "$extension" = c ]]
+                then
+                   Filenames="$Filenames "$Name
+                fi
+             fi
+          done < tmp_svnstatus
+          rm -rf  tmp_svnstatus
+
+
+             # COPY FILES TO SOURCES_FOR_RUN_...
+          for  filename  in  $Filenames
+          do
+             cp  $filename  ${base_directory}/${sources_for_run_catalog}
+             source_list=$source_list"$filename "
+          done
+
+          cd -  > /dev/null
+
+
+          # COPY FILES GIVEN BY OPTION -s TO DIRECTORY SOURCES_FOR_RUN_...
+       elif [[ "$source_list" != "" ]]
+       then
+
+          cd  $source_path
+
+          for  filename  in  $source_list
+          do
+
+                # SOURCE CODE FILE IS NOT ALLOWED TO INCLUDE PATH
+             if [[ $(echo $filename | grep -c "/") != 0 ]]
+             then
+                printf "\n  +++ source code file:  $filename"
+                printf "\n      must not contain (\"/\") "
+                locat=source; exit
+             fi
+
+             if [[ ! -f $filename ]]
+             then
+                printf "\n  +++ source code file:  $filename"
+                printf "\n      does not exist"
+                locat=source; exit
+             else
+                cp  $filename  ${base_directory}/${sources_for_run_catalog}
+             fi
+
+          done
+
+          cd -  > /dev/null
+
+       fi
+
+          # CHECK, IF MAKEFILE EXISTS AND COPY IT TO THE SOURCES_FOR_RUN... DIRECTORY
+       [[ "$makefile" = "" ]]  &&  makefile=$source_path/Makefile
+       if [[ ! -f $makefile ]]
+       then
+          printf "\n  +++ file \"$makefile\" does not exist"
+          locat=make; exit
+       else
+          cp  $makefile  ${base_directory}/${sources_for_run_catalog}/Makefile 
+       fi
+
+
+          # COPY FILES FROM OPTIONAL SOURCE PATH GIVEN IN THE CONFIGURATION FILE
+       if [[ "$user_source_path" != "" ]]
+       then
+
+             # DOES THE DIRECTORY EXIST?
+          if [[ ! -d $user_source_path ]]
+          then
+
+             printf "\n\n  *** INFORMATIVE: additional source code directory"
+             printf "\n      \"$user_source_path\" "
+             printf "\n      does not exist or is not a directory."
+             printf "\n      No source code will be used from this directory!\n"
+             user_source_path=""
+             if [[ $silent == false ]]
+             then
+                sleep 2
+             fi
+
+          else
+
+             cd $user_source_path
+             found=false
+
+             Names=$(ls -1 *.f90 2>&1)
+             [[ $(echo $Names | grep -c '*.f90') = 0 ]]  &&  AddFilenames="$Names"
+             Names=$(ls -1 *.F90 2>&1)
+             [[ $(echo $Names | grep -c '*.F90') = 0 ]]  &&  AddFilenames="$AddFilenames $Names"
+             Names=$(ls -1 *.F 2>&1)
+             [[ $(echo $Names | grep -c '*.F') = 0   ]]  &&  AddFilenames="$AddFilenames $Names"
+             Names=$(ls -1 *.f 2>&1)
+             [[ $(echo $Names | grep -c '*.f') = 0   ]]  &&  AddFilenames="$AddFilenames $Names"
+             Names=$(ls -1 *.c 2>&1)
+             [[ $(echo $Names | grep -c '*.c') = 0   ]]  &&  AddFilenames="$AddFilenames $Names"
+
+             cd -  > /dev/null
+             cd  ${base_directory}/${sources_for_run_catalog}
+
+                # COPY MAKEFILE IF EXISTING
+             if [[ -f $user_source_path/Makefile ]]
+             then
+                printf "\n\n  *** user Makefile from directory"
+                printf "\n      \"$user_source_path\" is used \n"
+                if [[ $silent == false ]]
+                then
+                   sleep 1
+                fi
+                cp  $user_source_path/Makefile  .
+             fi
+
+             for  filename  in  $AddFilenames
+             do
+                if [[ -f $filename ]]
+                then
+                   printf "\n  +++ source code file \"$filename\" found in additional"
+                   printf "\n      source code directory \"$user_source_path\" "
+                   printf "\n      but was also given with option \"-s\" which means that it should be taken"
+                   printf "\n      from directory \"$source_path\"."
+                   locat=source; exit
+                fi
+
+                cp  $user_source_path/$filename  .
+                source_list="$source_list $filename"
+
+                   # CHECK IF FILE IS CONTAINED IN MAKEFILE
+                if [[ $(grep -c $filename Makefile) = 0 ]]
+                then
+                   printf "\n\n  +++ user file \"$filename\" "
+                   printf "\n      is not listed in Makefile \n"
+                   locat=source; exit
+                else
+
+                   if [[ $found = false ]]
+                   then
+                      found=true
+                      printf "\n\n  *** following user file(s) added to the"
+                      printf " files to be translated:\n      "
+                   fi
+                   printf "$filename  "
+                   if [[ $silent == false ]]
+                   then
+                      sleep 0.5
+                   fi
+
+                fi
+             done
+             [[ $found = true ]]  &&  printf "\n"
+             cd -  > /dev/null
+          fi
+       fi
+
+          # COPY CONFIGURATION FILES
+       cp  $config_file  ${base_directory}/${sources_for_run_catalog}
+       cp  $fileconnection_file  ${base_directory}/${sources_for_run_catalog}
+
+          # COPY SHELLSCRIPTS
+       cp  ${source_path}/../SCRIPTS/palmrun    ${base_directory}/${sources_for_run_catalog}
+       cp  ${source_path}/../SCRIPTS/batch_scp  ${base_directory}/${sources_for_run_catalog}
+
+    fi
+
+ fi
+
+
+    # GET THE GLOBAL REVISION-NUMBER OF THE SVN-REPOSITORY
+    # (HANDED OVER TO RESTART-RUNS USING OPTION -G)
+ if [[ "$global_revision" = "" ]]
+ then
+    global_revision=`svnversion $source_path  2>/dev/null`
+    global_revision="Rev: $global_revision"
+ fi
+
+
+    # IN CASE OF PARALLEL EXECUTION, CHECK SOME SPECIFICATIONS CONCERNING PROCESSOR NUMBERS
+ if [[ -n $cores ]]
+ then
+
+       # CHECK, IF THE NUMBER OF CORES PER NODE HAS BEEN GIVEN UND IF IT IS AN
+       # INTEGRAL DIVISOR OF THE TOTAL NUMBER OF CORES GIVEN BY OPTION -X
+    if [[ $tasks_per_node = 0 ]]
+    then
+       if [[ $create_batch_job = true  ||  $create_remote_batch_job = true ]]
+       then
+          printf "\n"
+          printf "\n  +++ option \"-T\" (tasks per node) is missing"
+          printf "\n      set -T option or define tasks_per_node in the config file"
+          locat=tasks_per_node; (( iec = 0 )); exit
+       else
+             # DEFAULT FOR INTERACTIVE RUN
+          tasks_per_node=$cores
+       fi
+    fi
+
+    if (( cores < tasks_per_node ))
+    then
+       printf "\n"
+       printf "\n  +++ tasks per node (-T) cannot exceed total number of cores (-X)"
+       printf "\n      given values: -T $tasks_per_node  -X $cores"
+       locat=tasks_per_node; (( iec = 0 )); exit 
+    fi
+
+    (( nodes = cores / ( tasks_per_node * threads_per_task ) ))
+    (( mpi_tasks = cores / threads_per_task ))
+    [[ $mpi_tasks = 0 ]]  &&  (( mpi_tasks = 1 ))
+    (( ii = cores / tasks_per_node ))
+    (( remaining_cores =  cores - ii * tasks_per_node ))
+    if (( remaining_cores > 0 ))
+    then
+       printf "\n"
+       printf "\n  +++ WARNING: tasks per node (option \"-T\") is not an integral"
+       printf "\n      divisor of the total number of cores (option \"-X\")"
+       printf "\n      values of this palmrun-call: \"-T $tasks_per_node\" \"-X $cores\""
+       printf "\n      One of the nodes is filled with $remaining_cores instead of $tasks_per_node tasks"
+       (( nodes = nodes + 1 ))
+    fi
+
+ fi
+
+
+    # SET DEFAULT VALUE FOR THE MAXIMUM NUMBER OF PARALLEL IO STREAMS
+ if [[ "$maximum_parallel_io_streams" = "" ]]
+ then
+    maximum_parallel_io_streams=$cores
+ fi
+
+
+    # SET PORT NUMBER OPTION FOR CALLS OF SSH/SCP AND batch_scp SCRIPT
+ if [[ "$scp_port" != "" ]]
+ then
+    PORTOPT="-P $scp_port"
+    SSH_PORTOPT="-p $scp_port"
+ fi
+
+
+    # DETERMINE THE SSH-OPTION IN CASE THAT AN SSH-KEY IS EXPLICITLY GIVEN IN THE
+    # CONFIG-FILE
+ if [[ "$ssh_key" != "" ]]
+ then
+    ssh_key="-i $HOME/.ssh/$ssh_key"
+ fi
+
+
+    # SET QUEUE, IF NOT GIVEN
+ if [[ $create_batch_job = true  ||  $create_remote_batch_job = true ]]
+ then
+
+    if [[ $queue = none  &&  "$defaultqueue" = "" ]]
+    then
+       printf "\n"
+       printf "\n  +++ no default queue given in configuration file and no queue"
+       printf "\n      given with option -q"
+       locat=queue; exit
+    fi
+    if [[ $queue = none ]]
+    then
+       queue=$defaultqueue
+    fi
+
+ fi
+
+
+    # GENERATE FULL FILENAMES OF INPUT-FILES, INCLUDING THEIR PATH
+    # CHECK, IF INPUT-FILES EXIST, AND DETERMINE HIGHEST CYCLE NUMBER (IF CYCLES EXIST)
+ (( i = 0 ))
+ (( nr_of_input_files = 0 ))
+ while (( i < iin ))
+ do
+    (( i = i + 1 ))
+
+       # GENERATE PATH AND FULL FILE NAME (then-BRANCH: FIXED FULL NAME IS GIVEN, I.E. THE
+       # FILE IDENTIFIER IS NOT PART OF THE FILENAME))
+    if [[ "${actionin_pre[$i]}" = di ]]
+    then
+       eval filename=${pathin_pre[$i]}/${endin_pre[$i]}
+    else
+       eval filename=${pathin_pre[$i]}/${jobname}${endin_pre[$i]}
+    fi
+
+
+       # CHECK IF FILE EXISTS
+    if ! ls $filename* 1>/dev/null 2>&1
+    then
+
+          # FILES WITH ATTRIBUTE opt ARE OPTIONAL. NO ABORT, IF THEY DO NOT EXIST.
+       if [[ "${optin_pre[$i]}" != "yes" ]]
+       then
+          printf "\n\n  +++ INPUT-file: "
+          if [[ "${extin_pre[$i]}" = ""  ||  "${extin_pre[$i]}" = " " ]]
+          then
+             printf "\n           $filename"
+          else
+             printf "\n           $filename.${extin_pre[$i]}"
+          fi
+          printf "\n      does not exist\n"
+          locat=input; exit
+       else
+          (( nr_of_input_files = nr_of_input_files + 1 ))
+          localin[$nr_of_input_files]="${localin_pre[$i]}"
+          optin[$nr_of_input_files]="${optin_pre[$i]}"
+          actionin[$nr_of_input_files]="unavailable"
+          pathin[$nr_of_input_files]="${pathin_pre[$i]}"
+          endin[$nr_of_input_files]="${endin_pre[$i]}"
+          extin[$nr_of_input_files]="${extin_pre[$i]}"
+       fi
+
+    else
+
+          # FIRST CHECK FOR MULTIPLE NAMES WITH THE SAME BASENAME ($jobname) AND
+          # CREATE A LIST FOR THE DETECTED BASENAME ENDINGS
+       if [[ "${multin[$i]}" = true ]]
+       then
+             # DETERMINE THE EXISTING EXTENSIONS FROM THE LIST OF FILES
+          ls -1 -d ${filename}    >   filelist  2>/dev/null
+          ls -1 -d ${filename}.*  >>  filelist  2>/dev/null
+          ls -1 -d ${filename}_*  >>  filelist  2>/dev/null
+
+          endings=""
+          while  read line
+          do
+                 # filename without path (i.e. after the last "/")
+              basefilename=$(basename ${line})
+
+                 # check if there is an extension and remove it
+              ext=${basefilename##*.}
+              if [[ "$ext" = "${extin_pre[$i]}" ]]
+              then
+                 basefilename=${basefilename%.*}
+              fi
+
+                 # check for an existing cycle number and remove it
+              cycle=${basefilename##*.}
+              if [[ $cycle =~ ^-?[0-9]+$ ]]
+              then
+                 basefilename=${basefilename%.*}
+              fi
+
+                 # remove the jobname from the beginning
+              length_jobname=${#jobname}
+              ending=${basefilename:${length_jobname}}
+
+                 # remove the ending given in the .iofiles from the beginning
+              endingstring="${endin_pre[$i]}"
+              length_ending=${#endingstring}
+              ending=${ending:${length_ending}}
+
+              if [[ "$ending" = "" ]]
+              then
+                    # standard ending as given in the .iofiles
+                 if [[ $(echo $endings | grep -c DEFAULT) = 0 ]]
+                 then
+                    endings="$endings DEFAULT"
+                 fi
+              else
+                    # ending must start with "_", otherwise its a different file
+                 if [[ "${ending:0:1}" = "_" ]]
+                 then
+                    if [[ $(echo $endings | grep -c "$ending") = 0 ]]
+                    then
+                       endings="$endings $ending"
+                    fi
+                 fi
+              fi
+ 
+          done <filelist
+
+          rm filelist
+
+       else
+
+             # SINGLE NAME
+          endings=DEFAULT
+
+       fi
+
+          # FOR EACH BASENAME ENDING CREATE AN ENTRY IN THE FINAL INPUT FILE LIST
+       for  ending  in  $endings
+       do
+
+             # DEFAULT MEANS THAT THE ENDING GIVEN IN .iofiles SHALL BE USED
+          if [[ $ending = DEFAULT ]]
+          then
+             ending=""
+          fi
+
+             # NEW ENTRY (ENDING IS ALSO ADDED TO LOCAL FILENAME READ BY PALM!)
+          (( nr_of_input_files = nr_of_input_files + 1 ))
+          localin[$nr_of_input_files]="${localin_pre[$i]}"$ending
+          optin[$nr_of_input_files]="${optin_pre[$i]}"
+          actionin[$nr_of_input_files]="${actionin_pre[$i]}"
+          pathin[$nr_of_input_files]="${pathin_pre[$i]}"
+          endin[$nr_of_input_files]="${endin_pre[$i]}"$ending
+          extin[$nr_of_input_files]="${extin_pre[$i]}"
+
+
+             # GENERATE PATH AND FULL FILE NAME (then-BRANCH: FIXED FULL NAME IS GIVEN, I.E. THE
+             # FILE IDENTIFIER IS NOT PART OF THE FILENAME))
+          if [[ "${actionin[$nr_of_input_files]}" = di ]]
+          then
+             eval filename=${pathin[$nr_of_input_files]}/${endin[$nr_of_input_files]}
+          else
+             eval filename=${pathin[$nr_of_input_files]}/${jobname}${endin[$nr_of_input_files]}
+          fi
+
+             # DETERMINE THE FILE'S CYCLE NUMBER
+          (( maxcycle = 0 ))
+          ls -1 -d $filename    >   filelist  2>/dev/null
+          ls -1 -d $filename.*  >>  filelist  2>/dev/null
+          while  read line
+          do
+                 # filename without path (i.e. after the last "/")
+              basefilename=$(basename ${line})
+   
+                 # check if there is an extension
+              extension=${basefilename##*.}
+              if [[ "$extension" = "${extin[$nr_of_input_files]}" ]]
+              then
+                 basefilename=${basefilename%.*}
+              fi
+   
+                 # check for an existing cycle number
+              cycle=${basefilename##*.}
+              if [[ $cycle =~ ^-?[0-9]+$ ]]
+              then
+                    # NUMBERS WITH LEADING ZEROS ARE INTERPRETED AS OCTAL NUMBERS
+                    # 10# EXPLICITLY SPECIFIES THE NUMBER BASE AS 10
+                 (( icycle = $((10#$cycle)) ))
+              else
+                 (( icycle = 0 ))
+              fi
+   
+              if (( icycle > maxcycle ))
+              then
+                 (( maxcycle = icycle ))
+   
+                    # FOR COMPATIBILITY REASONS WITH OLDER VERSIONS
+                    # CHECK IF CYCLE NUMBER CONTAINS LEADING ZEROS
+                 if [[ $(echo $cycle | cut -c1) = 0 ]]
+                 then
+                    leading_zero=true
+                 else
+                    leading_zero=false
+                 fi
+              fi
+   
+          done <filelist
+          rm filelist
+   
+             # MAKE CYCLE NUMBER THREE DIGITS WIDE
+          if [[ $leading_zero = true ]]
+          then
+             cyclestring=`printf "%03d" $maxcycle`
+          else
+             cyclestring=$maxcycle
+          fi
+   
+             # APPEND CYCLE NUMBER TO FILENAME
+          if (( maxcycle > 0 ))
+          then
+             if [[ "${extin[$nr_of_input_files]}" != " "  &&   "${extin[$nr_of_input_files]}" != "" ]]
+             then
+                filename=${filename}.$cyclestring.${extin[$nr_of_input_files]}
+             else
+                filename=${filename}.$cyclestring
+             fi
+          else
+             if [[ "${extin[$nr_of_input_files]}" != " "  &&   "${extin[$nr_of_input_files]}" != "" ]]
+             then
+                filename=${filename}.${extin[$nr_of_input_files]}
+             fi
+          fi
+          
+             # STORE FILENAME WITHOUT PATH BUT WITH CYCLE NUMBER,
+             # IS LATER USED FOR TRANSFERRING FILES WIHIN THE JOB (SEE END OF FILE)
+          absnamein[$nr_of_input_files]=$filename
+          if (( maxcycle > 0 ))
+          then
+             if [[ "${actionin[$nr_of_input_files]}" = di ]]
+             then
+                frelin[$nr_of_input_files]=${endin[$nr_of_input_files]}.$cyclestring
+             else
+                frelin[$nr_of_input_files]=${jobname}${endin[$nr_of_input_files]}.$cyclestring
+             fi
+          else
+             if [[ "${actionin[$nr_of_input_files]}" = di ]]
+             then
+                frelin[$nr_of_input_files]=${endin[$nr_of_input_files]}
+             else
+                frelin[$nr_of_input_files]=${jobname}${endin[$nr_of_input_files]}
+             fi
+          fi
+
+       done
+
+    fi
+
+ done
+
+
+    # GENERATE FULL FILENAMES OF OUTPUT-FILES (WITHOUT $ OR ~),
+    # CHECK, IF OUTPUT-FILES EXIST, AND DETERMINE HIGHEST CYCLE NUMBER (IF CYCLES EXIST),
+    # OR, IN CASE THAT FILE DOES NOT EXIST, CHECK, IF IT CAN BE CREATED  
+    # THESE ACTIONS ARE NOT CARRIED OUT, IF FILES SHALL BE TRANSFERRED FROM THE REMOTE TO
+    # THE LOCAL HOST (BECAUSE THEIR IS NO DIRECT ACCESS TO THE LOCAL DIRECTORIES FROM THE
+    # REMOTE HOST)
+ (( i = 0 ))
+ while (( i < iout ))
+ do
+    (( i = i + 1 ))
+    if [[ ! ( $running_on_remote = true  &&  ( "${actionout_pre[$i]}" = tr || "${actionout_pre[$i]}" = tra || "${actionout_pre[$i]}" = trpe ) ) ]]
+    then
+       if [[ "${actionout_pre[$i]}" = tr ]]
+       then
+          actionout_pre[$i]=""
+       elif [[ "${actionout_pre[$i]}" = trpe ]]
+       then
+          actionout_pre[$i]=pe
+       elif [[ "${actionout_pre[$i]}" = tra ]]
+       then
+          actionout_pre[$i]=a
+       fi
+       (( maxcycle = 0 ))
+       eval filename=${pathout_pre[$i]}/${jobname}${endout_pre[$i]}
+       eval catalogname=${pathout_pre[$i]}
+       if ! ls $filename* 1>/dev/null 2>&1
+       then
+      
+             # IF OUTPUT-FILE DOES NOT EXIST CHECK, IF IT CAN BE CREATED
+          if  cat /dev/null > $filename  
+          then
+             rm  $filename
+          else
+
+                # CHECK, IF THE DIRECTORY WHERE FILE SHALL BE COPIED TO EXISTS
+                # IF IT DOES NOT EXIST, TRY TO CREATE IT
+             if [[ ! -d $catalogname ]]
+             then
+                if  mkdir -p  $catalogname
+                then
+                   printf "\n\n  *** directory:"
+                   printf "\n           $catalogname"
+                   printf "\n      was created\n"
+                else
+                   printf "\n\n  +++ OUTPUT-file:"
+                   printf "\n           $filename"
+                   printf "\n      cannot be created, because directory does not exist"
+                   printf "\n      and cannot be created either"
+                   printf "\n"
+                   locat=output  ; exit
+                fi 2>/dev/null 
+             else
+                printf "\n\n  +++ OUTPUT-file:"
+                printf "\n           $filename"
+                printf "\n      cannot be created, although directory exists"
+                printf "\n"
+                locat=output  ; exit
+             fi
+          fi 2>/dev/null
+
+       fi
+
+    fi
+ done
+
+
+    # DETERMINE THE NAME OF PALMRUN'S TEMPORARY WORKING DIRECTORY
+ if [[ $running_in_batch_mode = false ]]
+ then
+    run_id=$RANDOM
+    job_id=${jobname}.$run_id
+
+    tempdir=$fast_io_catalog/$job_id
+ fi
+
+
+    # CHECK SETTINGS REQUIRED FOR BATCH JOBS
+ if [[ $create_batch_job = true  ||  $create_remote_batch_job = true ]]
+ then
+
+       # CHECK, IF JOB DIRECTIVES HAVE BEEN GIVEN IN CONFIGURATION FILE
+    if [[ $ibd = 0 ]]
+    then
+       printf "\n"
+       printf "\n  +++ no batch directives found in configuration file"
+       locat=config_file_batch_directives; (( iec = 0 )); exit 
+    fi
+
+       # CHECK IF CPUTIME IS GIVEN FOR JOB
+    done=false
+    cputime=$cpumax
+    while [[ $done = false ]]
+    do
+       if (( cputime == 0 ))
+       then
+          printf "\n  +++ cpu-time is undefined"
+          printf "\n  >>> Please type CPU-time in seconds as INTEGER:"
+          printf "\n  >>> "
+          read  cputime   1>/dev/null  2>&1
+       else
+          done=true
+       fi
+    done
+    cpumax=$cputime
+
+       # CHECK THE MEMORY DEMAND
+    done=false
+    while [[ $done = false ]]
+    do
+       if (( memory == 0 ))
+       then
+          printf "\n  +++ memory demand is undefined"
+          printf "\n  >>> Please type memory in  MByte per process  as INTEGER:"
+          printf "\n  >>> "
+          read  memory  1>/dev/null  2>&1
+       else
+          done=true
+       fi
+    done
+
+       # IN CASE OF REMOTE-JOBS CHECK, IF A USERNAME FOR THE REMOTE HOST IS GIVEN
+    if [[ $create_remote_batch_job = true  &&  -z $remote_username ]]
+    then
+       while [[ -z $remote_username ]]
+       do
+          printf "\n  +++ username on remote host with IP \"$remote_ip\" is undefined"
+          printf "\n  >>> Please type username:"
+          printf "\n  >>> "
+          read  remote_username
+       done
+    fi
+
+ else
+
+    if [[ $running_in_batch_mode = false ]]
+    then
+       cputime=10000000  # NO LIMT FOR INTERACTIVE RUNS
+       cpumax=$cputime
+    else
+       cputime=$cpumax
+    fi
+
+ fi
+
+
+    # CALCULATE HOURS/MINUTES/SECONDS, E.G. FOR BATCH-DIRECTIVES
+ (( cpu_hours  = cputime / 3600 ))
+ (( resttime = cputime - cpu_hours * 3600 ))
+ (( cpu_minutes  = resttime / 60 ))
+ (( cpu_seconds = resttime - cpu_minutes * 60 ))
+ timestring=${cpu_hours}:${cpu_minutes}:${cpu_seconds}
+
+
+    # OUTPUT OF THE PALMRUN-HEADER
+ calltime=$(date)
+ printf "\n"
+ printf "#------------------------------------------------------------------------# \n"
+ printf "| %-35s%35s | \n" "$version" "$calltime"
+ printf "|                                                                        | \n"
+ column1="called on:"; column2=$(hostname)
+ printf "| %-25s%-45s | \n" "$column1" "$column2"
+ if [[ $create_remote_batch_job = true ]]
+ then
+    column1="execution on:"; column2="$host_configuration (username: $remote_username)"
+ else
+    if [[ $running_on_remote = true ]]
+    then
+       column1="host identifier:"; column2="$host_configuration (execute on IP: $remote_ip)"
+    else
+       column1="host identifier:"; column2="$host_configuration (execute on IP: $local_ip)"
+    fi
+ fi
+ printf "| %-25s%-45s | \n" "$column1" "$column2"
+
+ column1="running in:"
+ if [[ $running_in_batch_mode = true ]]
+ then
+    column2="batch job mode"
+ else
+    if [[ $create_batch_job = true  ||  $create_remote_batch_job = true ]]
+    then
+       column2="job creation mode"
+    else
+       column2="interactive run mode"
+    fi
+ fi
+ printf "| %-25s%-45s | \n" "$column1" "$column2"
+
+ if  [[ $running_in_batch_mode = true  ||  $create_batch_job = true  ||  $create_remote_batch_job = true ]]
+ then
+    if [[ "$project_account" != "" ]]
+    then
+       column1="project account number:"
+       column2="$project_account"
+       printf "| %-25s%-45s | \n" "$column1" "$column2"
+    fi
+ fi
+
+ if [[ -n $cores ]]
+ then
+    if [[ $run_coupled_model = false ]]
+    then
+       column1="number of cores:"; column2=$cores
+    else
+       column1="number of cores:"; column2="$cores  (atmosphere: $cores_atmos, ocean: $cores_ocean)"
+    fi
+    printf "| %-25s%-45s | \n" "$column1" "$column2"
+ fi
+ if [[ -n $tasks_per_node ]]
+ then
+    column1="tasks per node:"; column2="$tasks_per_node (number of nodes: $nodes)"
+    printf "| %-25s%-45s | \n" "$column1" "$column2"
+    if (( remaining_cores > 0 ))
+    then
+       column1=" "; column2="one of the nodes only filled with $remaining_cores tasks"
+       printf "| %-25s%-45s | \n" "$column1" "$column2"
+    fi
+ fi
+ if [[ $maximum_parallel_io_streams != $cores ]]
+ then
+    column1="max par io streams:"; column2="$maximum_parallel_io_streams"
+    printf "| %-25s%-45s | \n" "$column1" "$column2"
+ fi
+ if [[ $use_openmp = true ]]
+ then
+    column1="threads per task:"; column2="$threads_per_task"
+    printf "| %-25s%-45s | \n" "$column1" "$column2"
+ fi
+ if [[ $create_batch_job = true  ||  $create_remote_batch_job = true  ||  $running_in_batch_mode = true ]]
+ then
+    column1="memory demand / PE":; column2="$memory MB"
+    printf "| %-25s%-45s | \n" "$column1" "$column2"
+    column1="job cpu time (h:m:s):"; column2="$timestring"
+    printf "| %-25s%-45s | \n" "$column1" "$column2"
+ fi
+ printf "|                                                                        | \n"
+ if [[ "$source_list" != "" ]]
+ then
+    if [[ "$make_options" != "" ]]
+    then
+       column1="make options:"; column2=$(echo "$make_options" | cut -c-45)
+       printf "| %-25s%-45s | \n" "$column1" "$column2"
+       line=$(echo "$make_options" | cut -c46-)
+       while [[ "$line" != "" ]]
+       do
+          column1=""
+          column2=$(echo "$line" | cut -c-45)
+          printf "| %-25s%-45s | \n" "$column1" "$column2"
+          line=$(echo "$line" | cut -c46-)
+       done
+    fi
+ fi
+
+ column1="cpp directives:"; column2=$(echo "$cpp_options" | cut -c-45)
+ printf "| %-25s%-45s | \n" "$column1" "$column2"
+ line=$(echo "$cpp_options" | cut -c46-)
+ while [[ "$line" != "" ]]
+ do
+    column1=""
+    column2=$(echo "$line" | cut -c-45)
+    printf "| %-25s%-45s | \n" "$column1" "$column2"
+    line=$(echo "$line" | cut -c46-)
+ done
+
+ column1="compiler options:"; column2=$(echo "$compiler_options" | cut -c-45)
+ printf "| %-25s%-45s | \n" "$column1" "$column2"
+ line=$(echo "$compiler_options" | cut -c46-)
+ while [[ "$line" != "" ]]
+ do
+    column1=""
+    column2=$(echo "$line" | cut -c-45)
+    printf "| %-25s%-45s | \n" "$column1" "$column2"
+    line=$(echo "$line" | cut -c46-)
+ done
+
+ column1="linker options:"; column2=$(echo "$linker_options" | cut -c-45)
+ printf "| %-25s%-45s | \n" "$column1" "$column2"
+ line=$(echo "$linker_options" | cut -c46-)
+ while [[ "$line" != "" ]]
+ do
+    column1=""
+    column2=$(echo "$line" | cut -c-45)
+    printf "| %-25s%-45s | \n" "$column1" "$column2"
+    line=$(echo "$line" | cut -c46-)
+ done
+
+ if [[ "$login_init_cmd" != "" ]]
+ then
+    column1="login init commands:"; column2=$(echo "$login_init_cmd" | cut -c-45)
+    printf "| %-25s%-45s | \n" "$column1" "$column2"
+    line=$(echo "$login_init_cmd" | cut -c46-)
+    while [[ "$line" != "" ]]
+    do
+       column1=""
+       column2=$(echo "$line" | cut -c-45)
+       printf "| %-25s%-45s | \n" "$column1" "$column2"
+       line=$(echo "$line" | cut -c46-)
+    done
+ fi
+
+ if [[ "$module_commands" != "" ]]
+ then
+    column1="module commands:"; column2=$(echo "$module_commands" | cut -c-45)
+    printf "| %-25s%-45s | \n" "$column1" "$column2"
+    line=$(echo "$module_commands" | cut -c46-)
+    while [[ "$line" != "" ]]
+    do
+       column1=""
+       column2=$(echo "$line" | cut -c-45)
+       printf "| %-25s%-45s | \n" "$column1" "$column2"
+       line=$(echo "$line" | cut -c46-)
+    done
+ fi
+ printf "|                                                                        | \n"
+ column1="run identifier:"; column2=$jobname
+ printf "| %-25s%-45s | \n" "$column1" "$column2"
+ column1="activation string list:"; column2=$(echo $activation_string_list)
+ printf "| %-25s%-45s | \n" "$column1" "$column2"
+
+ if [[ "$ocean_file_appendix" = true ]]
+ then
+    printf "| %-35s%-35s | \n" "suffix \"_O\" is added to local files" " "
+ fi
+
+ if [[ "$source_list" != "" ]]
+ then
+    printf "|                                                                        | \n"
+    printf "| Files to be compiled:                                                  | \n"
+    line=$source_list
+    while [[ "$line" != "" ]]
+    do
+       linestart=$(echo $line | cut -c-70)
+       printf "| %-70s | \n" "$linestart"
+       line=$(echo "$line" | cut -c71-)
+    done
+ fi
+ printf "#------------------------------------------------------------------------#"
+
+
+
+    # OUTPUT OF FILE CONNECTIONS IN CASE OF TRACEBACK
+ if [[ $do_trace = true ]]
+ then
+    (( i = 0 ))
+    while (( i < nr_of_input_files ))
+    do
+       (( i = i + 1 ))
+       if (( i == 1 ))
+       then
+          printf "\n\n >>> INPUT-file assignments:\n"
+       fi
+       printf "\n     ${localin[$i]} :  ${absnamein[$i]}"
+    done
+    (( i = 0 ))
+    while (( i < iout ))
+    do
+       (( i = i + 1 ))
+       if (( i == 1 ))
+       then
+          printf "\n\n >>> OUTPUT-file assignments:\n"
+       fi
+       printf "\n     ${localout[$i]} :  ${pathout[$i]}"
+    done
+    (( i = 0 ))
+    while (( i < iic ))
+    do
+       (( i = i + 1 ))
+       if (( i == 1 ))
+       then
+          printf "\n\n >>> INPUT-commands:\n"
+       fi
+       printf "\n     ${in_command[$i]}" 
+    done
+    (( i = 0 ))
+    while (( i < ioc ))
+    do
+       (( i = i + 1 ))
+       if (( i == 1 ))
+       then
+          printf "\n\n >>> OUTPUT-commands:\n"
+       fi
+       printf "\n     ${out_command[$i]}" 
+    done
+ fi
+
+    # QUERY FOR CONTINUE
+ if [[ $silent = false  &&  $running_in_batch_mode = false ]]
+ then
+    antwort=dummy
+    printf "\n\n"
+    printf " >>> everything o.k. (y/n) ?  "
+    while  read antwort
+    do
+       if [[ "$antwort" != y  &&  "$antwort" != Y  &&  "$antwort" != n  &&  "$antwort" != N ]]
+       then
+          printf " >>> everything o.k. (y/n) ?  "
+       else
+          break
+       fi
+    done
+    if [[ $antwort = n  ||  $antwort = N ]]
+    then
+       locat=user_abort; (( iec = 0 )); exit
+    fi
+    if [[ $create_batch_job = true  ||  $create_remote_batch_job = true ]]
+    then
+       printf "\n ***  batch-job will be created and submitted"
+    else
+       printf "\n ***  PALMRUN will now continue to execute on this machine"
+    fi
+ fi
+
+ 
+
+    # PROVIDE FILES TO EXECUTE PALM AND CREATE THE EXECUTABLE
+ if [[ $restart_run = false  &&  $running_in_batch_mode = false ]]
+ then
+
+    if [[ $create_batch_job = true  ||  $create_remote_batch_job  = true ]]
+    then
+       printf "\n\n  *** creating executable and other sources for the remote host\n"
+    else
+       printf "\n\n  *** creating executable and other sources for the local host\n"
+    fi
+
+       # FIRST CHECK, IF A MAKE DEPOSITORY EXISTS, AND IF NOT, ASK THE USER IF
+       # IT SHALL BE CREATED
+    ask_for_make_depository=false
+    if [[ $create_remote_batch_job = true ]]
+    then
+
+       line=`grep %base_directory $config_file`
+       make_depository=`echo $line | cut -d" " -s -f2`/MAKE_DEPOSITORY_${host_configuration}
+       echo  "[[ ! -d ${make_depository} ]]  &&  echo depository not found" | ssh  -q  $ssh_key  ${remote_username}@${remote_ip} 2>&1  | tee ${host_configuration}_last_make_protokoll
+
+       if [[ $(grep -c "depository not found" ${host_configuration}_last_make_protokoll) != 0 ]]
+       then
+          printf "\n\n  +++ make depository \"${make_depository}\""
+          printf "\n      on remote host not found!"
+          ask_for_make_depository=true
+       fi
+       rm ${host_configuration}_last_make_protokoll
+
+    else
+
+          # CHECK FOR MAKE_DEPOSITORY ON THE LOCAL HOST
+       make_depository=${base_directory}/MAKE_DEPOSITORY_${host_configuration}
+       if [[ ! -d ${make_depository} ]]
+       then
+          printf "\n\n  +++ make depository \"${make_depository}\""
+          printf "\n      on local host not found!"
+          ask_for_make_depository=true
+       fi
+
+    fi
+
+    if [[ $ask_for_make_depository = true ]]
+    then
+
+       antwort=dummy
+       printf "\n\n"
+       printf "  >>> Create a new one (y/n) ?  "
+       while  read antwort
+       do
+          if [[ "$antwort" != y  &&  "$antwort" != Y  &&  "$antwort" != n  &&  "$antwort" != N ]]
+          then
+             printf "  >>> Create a new one (y/n) ?  "
+          else
+             break
+          fi
+       done
+       if [[ $antwort = n  ||  $antwort = N ]]
+       then
+          locat=user_abort; (( iec = 0 )); exit
+       fi
+
+       if [[ $do_trace = true ]]
+       then
+          palmbuild  -h $host_configuration
+       else
+          palmbuild  -v  -h $host_configuration
+       fi
+
+       if [[ $? != 0 ]]
+       then
+   
+              # ABORT IN CASE OF COMPILATION PROBLEMS
+          printf "\n  +++ error while compiling for the MAKE_DEPOSITORY"
+          locat=make_depository
+          exit
+       else
+          echo "  *** now continue with creating executable and other sources"
+       fi
+
+    fi
+
+       # NOW CREATE THE SOURCES_FOR_RUN FOLDER
+    palmbuild  -v  $use_existing_sources_folder  -h $host_configuration  -d $jobname
+
+    if [[ $? != 0 ]]
+    then
+
+           # ABORT IN CASE OF COMPILATION PROBLEMS
+       printf "\n  +++ error while creating executable and/or other sources"
+       locat=execution
+       rm -rf  ${base_directory}/${sources_for_run_catalog}
+       exit
+
+    else
+
+       printf "  *** executable and other sources created\n"
+       rm -rf  ${base_directory}/${sources_for_run_catalog}
+
+    fi
+
+ fi
+
+
+    # WHEN CREATING A REMOTE BATCH JOB, THOSE INPUT FILES WITH TRANSFER-ATTRIBUT
+    # WILL BE COPIED TO THE REMOTE HOST
+ if [[ $create_remote_batch_job = true ]]
+ then
+    (( i = 0 ))
+    while (( i < nr_of_input_files ))
+    do
+       (( i = i + 1 ))
+       if [[ "${actionin[$i]}" = tr ]]
+       then
+          eval inputfile=${pathin[$i]}/${frelin[$i]}
+          scp  -q $ssh_key  $PORTOPT  $inputfile  ${remote_username}@${remote_ip}:${fast_io_catalog}/${sources_for_run_catalog}/${frelin[$i]}
+       fi
+    done
+    if (( i > 0 ))
+    then
+       printf "\n\n  *** input files have been copied to the remote host\n"
+    fi
+ fi
+ 
+
+    # NOW PERFORM THOSE ACTIONS REQUIRED TO EXECUTE THE PROGRAM (PALM) ON THIS MACHINE
+    # (COMPILING/LINKING, EXECUTING, COPYING I/O FILES)
+ if [[ $create_batch_job = false  &&  $create_remote_batch_job = false ]]
+ then
+
+       # CHANGE TO THE TEMPORARY WORKING DIRECTORY
+    if [[ $running_in_batch_mode = false ]]
+    then
+          # CREATE THE DIRECTORY AND COPY FILES FROM SOURCES_FOR_RUN_... TO THAT
+          # FOLDER
+       mkdir -p  $tempdir
+       chmod  go+rx  $tempdir
+       cd  $tempdir
+       cp  ${fast_io_catalog}/${sources_for_run_catalog}/{*,.[!.]*}  $tempdir
+       printf "\n  *** changed to temporary directory: $tempdir"
+
+    else
+
+          # IN BATCH MODE PALMRUN IS CALLED FROM TEMPDIR
+       printf "\n  *** running in temporary directory: $tempdir"
+
+    fi
+
+
+       # PROVIDE THE INPUT FILES
+       # LOOP OVER ALL ACTIVATED FILES (LISTED IN THE CONFIGURATION FILE)
+    optional_files_missing=false
+    (( i = 0 ))
+    while (( i < nr_of_input_files ))
+    do
+       (( i = i + 1 ))
+       if (( i == 1 ))
+       then
+          printf "\n\n  *** providing INPUT-files:\n$dashes"
+       fi
+
+
+          # SKIP OPTIONAL FILES, IF THEY DO NOT EXIST
+       if [[ "${actionin[$i]}" = unavailable ]]
+       then
+          optional_files_missing=true
+          continue
+       fi
+
+          # CHECK FOR SINGLE FILE (SERIAL RUN) OR DIRECTORY (ONE FILE PER CORE FOR PARELLEL EXECUTION)
+       files_for_cores=false; filetype=file
+       if [[ "${actionin[$i]}" = pe  &&  -n $cores ]]
+       then
+          files_for_cores=true; filetype=files
+          actionin[$i]=""
+       elif [[ "${actionin[$i]}" = pe  &&  ! -n $cores ]]
+       then
+          actionin[$i]=""
+       elif [[ "${actionin[$i]}" = lnpe  &&  -n $cores ]]
+       then
+          files_for_cores=true; filetype=files
+          actionin[$i]="ln"
+       elif [[ "${actionin[$i]}" = lnpe  &&  ! -n $cores ]]
+       then
+          actionin[$i]="ln"
+       fi
+
+       if [[ $files_for_cores = true ]]
+       then
+          printf "\n  >>> INPUT: ${absnamein[$i]}/....  to  ${localin[$i]}"
+       else
+          printf "\n  >>> INPUT: ${absnamein[$i]}  to  ${localin[$i]}"
+       fi
+
+          # INPUT-FILES TO BE LINKED
+       if [[ "${actionin[$i]}" = ln ]]
+       then
+
+          printf "\n      $filetype will be linked"
+          if [[ $files_for_cores = false ]]
+          then
+             if [[ -f "${absnamein[$i]}" ]]
+             then
+                ln  ${absnamein[$i]}  ${localin[$i]}
+                got_tmp[$i]=true
+             fi
+          else
+             if [[ -d "${absnamein[$i]}" ]]
+             then
+                mkdir -p ${localin[$i]}
+                cd ${absnamein[$i]}
+                for file in $(ls *)
+                do
+                   ln $file $tempdir/${localin[$i]}
+                done >|/dev/null 2>&1
+                cd $tempdir
+             fi
+
+                # IF "ln -f" HAS FAILED DO A NORMAL COPY "cp -r"
+             if [[ ! -f "${localin[$i]}/_000000" ]]
+             then
+                printf "\n  --- WARNING: ln failed, using cp instead (might be time consuming...)"
+                cp -r  ${absnamein[$i]}/*  ${localin[$i]}
+             fi
+
+             got_tmp[$i]=true
+          fi
+       fi
+
+          # FILE IS STORED IN THE RESPECTIVE DIRECTORY GIVEN IN THE CONFIGURATION FILE
+       if [[ "${actionin[$i]}" = ""  ||  "${actionin[$i]}" = "di"  ||  "${actionin[$i]}" = "tr"  ||  "${actionin[$i]}" = "npe" ]]
+       then
+
+          if [[ "${actionin[$i]}" = "npe"  &&  -n $cores ]]
+          then
+
+                # FILE COPIES ARE PROVIDED FOR ALL CORES
+                # EACH FILE GETS A UNIQUE FILENAME WITH A FOUR DIGIT NUMBER
+             printf "\n      file will be provided for $cores processors"
+             mkdir -p ${localin[$i]}
+             ival=$cores
+             (( ii = 0 ))
+             while (( ii <= ival-1 ))
+             do
+                if (( ii < 10 ))
+                then
+                   cp  ${absnamein[$i]}  ${localin[$i]}/_000$ii
+                elif (( ii < 100 ))
+                then
+                   cp  ${absnamein[$i]}  ${localin[$i]}/_00$ii
+                elif (( ii < 1000 ))
+                then
+                   cp  ${absnamein[$i]}  ${localin[$i]}/_0$ii
+                else
+                   cp  ${absnamein[$i]}  ${localin[$i]}/_$ii
+                fi
+                (( ii = ii + 1 ))
+             done
+
+          else
+
+             if [[ $files_for_cores = true ]]
+             then
+
+                   # PROVIDE FILES FOR EACH CORE
+                   # FIRST CREATE THE LOCAL DIRECTORY, THEN COPY FILES
+                   # FROM THE PERMANENT DIRECTORY BY LINKING THEM TO THE LOCAL ONE
+                printf "\n      providing $cores files for the respective cores"
+                mkdir -p ${localin[$i]}
+	              	if [[ $link_local_input = true ]]
+		              then
+		                 printf "      files will be linked\n"
+		                 cd ${absnamein[$i]}
+		                 for file in $(ls *)
+		                 do
+		                    ln -f $file  ${localin[$i]}
+		                 done
+		                 cd $tempdir
+		              fi
+
+                   # IF "ln -f" FAILED OR IF "$link_local_input = false" DO A NORMAL "cp -r"
+		              if [[ ! -f "${localin[$i]}/_000000" ]]
+		              then
+		                 if [[ $link_local_input = true ]]
+		                	then
+	                   		printf "\n  --- WARNING: ln failed, using cp instead (might be time consuming...)"
+		                 fi
+		                 cp -r  ${absnamein[$i]}/*  ${localin[$i]}
+		              fi
+
+             else
+
+                   # PROVIDE FILE FOR RUNS ON A SINGLE CORE
+              		if [[ $link_local_input = true ]]
+	              	then
+		                 printf "      file will be linked\n"
+		                 ln -f  ${absnamein[$i]}  ${localin[$i]}
+	              	fi
+	                 	# If "ln -f" fails or if "$link_local_input = false" do a normal "cp"
+	              	if [[ ! -f "${localin[$i]}" ]]
+                then
+		                 if [[ $link_local_input = true ]]
+	                  then
+                      printf "\n  --- WARNING: ln failed, using cp instead (might be time consuming...)"
+		                 fi
+                   if [[ $running_on_remote = true  &&  "${actionin[$i]}" = tr ]]
+                   then
+                      mv  ${absnamein[$i]}  ${localin[$i]}
+                   else
+   		                 cp  ${absnamein[$i]}  ${localin[$i]}
+                   fi
+                fi
+             fi
+          fi
+       fi
+
+    done
+    if (( i != 0 ))
+    then
+       if [[ $optional_files_missing = true ]]
+       then
+          printf "\n  *** INFORMATIVE: some optional INPUT-files are not present"
+       fi
+       printf "\n$dashes\n  *** all INPUT-files provided \n"
+    fi
+
+
+       # EXECUTE INPUT-COMMANDS GIVEN IN THE CONFIGURATION FILE
+    (( i = 0 ))
+    while (( i < iic ))
+    do
+       (( i = i + 1 ))
+       if (( i == 1 ))
+       then
+          printf "\n\n  *** execution of INPUT-commands:\n$dashes"
+       fi
+       printf "\n  >>> ${in_command[$i]}"
+       eval  ${in_command[$i]}
+       if (( i == iic ))
+       then
+          printf "\n$dashes\n"
+       fi
+    done
+
+
+       # CREATE THE NAMELIST-FILE WITH VALUES OF ENVIRONMENT-VARIABLES REQUIRED BY PALM
+       # (FILE ENVPAR WILL BE READ BY PALM)
+    cat  >  ENVPAR  <<  EOF
+ &envpar  run_identifier = '$jobname', host = '$host_configuration',
+          write_svf = .${write_svf}., write_binary = .${write_binary}., 
+          read_svf = .${read_svf}., tasks_per_node = $tasks_per_node,
+          maximum_parallel_io_streams = $maximum_parallel_io_streams,
+          maximum_cpu_time_allowed = ${cpumax}.,
+          revision = '$global_revision',
+          batch_job = .${running_in_batch_mode}. /
+
+EOF
+
+
+       # STARTING THE EXECUTABLE
+    printf "\n\n  *** execution starts in directory\n      \"`pwd`\"\n$dashes\n"
+    PATH=$PATH:$tempdir
+
+
+       # REPLACE PARAMETERS IN THE EXECUTION COMMAND WITH REAL VALUES
+    line=`echo  "${execute_command}" | sed 's/{{/$/g' | sed 's/}}//g'`
+    line2=`echo  "${execute_command}" | sed 's/{{mpi_tasks}}/1/g' | sed 's/{{tasks_per_node}}/1/g' | sed 's/palm/combine_plot_fields.x/g'`
+    eval line=\"$line\"
+    execute_command="$line"
+
+
+       # EXECUTION COMMAND FOR COMBINE_PLOT_FIELDS
+    if [[ "$execute_command_for_combine" = "" ]]
+    then
+       eval line2=\"$line2\"
+       execute_command_for_combine="$line2"
+    fi
+    
+
+
+       # PROVIDE A HOSTFILE, IF REQUIRED
+    if [[ "$hostfile" != "" ]]
+    then
+
+       if [[ $hostfile = auto ]]
+       then
+             # CREATE A NEW HOSTFILE
+          (( ii = 1 ))
+          while (( ii <= cores / threads_per_task ))
+          do
+             echo  $(hostname)  >>  hostfile
+             (( ii = ii + 1 ))
+          done
+          if (( cores / threads_per_task == 0 ))
+          then
+             echo  $(hostname)  >>  hostfile
+          fi
+       
+       else
+          cp  $hostfile  hostfile
+       fi
+       eval line=\"`head -n $ii  hostfile`\"
+       printf "\n  *** running on: $line"
+    fi
+
+
+
+       # SET THE NUMBER OF OPENMP-THREADS
+    if [[ $use_openmp = true ]]
+    then
+       export OMP_NUM_THREADS=$threads_per_task
+       printf "\n  *** number of OpenMP threads per MPI-task: $OMP_NUM_THREADS"
+    else
+       export OMP_NUM_THREADS=1
+    fi
+
+
+       # PROVIDE DATA FOR ATMOSPHERE OCEAN COUPLING
+    if [[ $run_coupled_model = false ]]
+    then
+       if [[ "$ocean_file_appendix" = true ]]
+       then
+          echo "precursor_ocean"  >  coupling_steering
+       else
+          echo "precursor_atmos"  >  coupling_steering
+      fi
+    else
+       (( iia = $cores_atmos / $threads_per_task ))
+       (( iio = $cores_ocean / $threads_per_task ))
+       printf "\n      coupled run ($iia atmosphere, $iio ocean)"
+       printf "\n\n"
+       echo "coupled_run $iia $iio"  >  coupling_steering
+    fi
+
+    printf "\n  *** execute command:"
+    printf "\n      \"$execute_command\" \n\n"
+
+    $execute_command  <  coupling_steering
+
+    if [[ $? != 0 ]]
+    then
+
+           # ABORT IN CASE OF RUNTIME ERRORS
+       printf "\n  +++ runtime error occured"
+       locat=execution
+       exit
+
+    else
+
+       printf "\n$dashes\n  *** execution finished \n"
+
+    fi
+
+
+       # CALL OF combine_plot_fields IN ORDER TO MERGE SINGLE FILES WRITTEN
+       # BY EACH CORE INTO ONE FILE
+   if [[ ! -f combine_plot_fields.x ]]
+   then
+
+      printf "\n\n\n  +++ WARNING: no combine_plot_fields found"
+      printf "\n      2d- and/or 3d-data may be incomplete!"
+      printf "\n      Your previous palmbuild may have failed. Please check.\n"
+
+   elif [[ "$combine_plot_fields" == true ]]
+   then
+
+      printf "\n\n\n *** post-processing: now executing \"$execute_command_for_combine\" ..."
+      $execute_command_for_combine
+
+   else
+
+         # TEMPORARY SOLUTION TO SKIP combine_plot_fields. THIS IS REQUIRED IN CASE OF HUGE AMOUNT OF
+         # DATA OUTPUT
+      printf "\n\n\n *** post-processing: skipping combine_plot_fields (-Z option set) ..."
+   fi
+
+
+
+       # EXECUTE OUTPUT-COMMANDS GIVEN IN THE CONFIGURATION FILE
+    (( i = 0 ))
+    while (( i < ioc ))
+    do
+       (( i = i + 1 ))
+       if (( i == 1 ))
+       then
+          printf "\n\n  *** execution of OUTPUT-commands:\n$dashes"
+       fi
+
+          # REPLACE PARAMETERS IN THE OUTPUT COMMAND WITH REAL VALUES
+       out_command[$i]=`echo  "${out_command[$i]}" | sed 's/{{/$/g' | sed 's/}}//g'`
+
+       printf "\n  >>> ${out_command[$i]}"
+       eval  ${out_command[$i]}
+       if (( i == ioc ))
+       then
+          printf "\n$dashes\n"
+       fi
+    done
+
+
+       # IN A FIRST PASS, ADD ADDITIONAL OUTPUT FILE CONNECTIONS IN CASE OF
+       # WILDCARDS
+    (( i = 0 ))
+    (( nr_of_output_files = 0 ))
+
+    while (( i < iout ))
+    do
+
+       (( i = i + 1 ))
+
+          # FIRST CHECK FOR MULTIPLE NAMES WITH THE SAME LOCAL NAME AND
+          # CREATE A LIST FOR THE DETECTED ENDINGS
+       if [[ "${multout[$i]}" = true ]]
+       then
+             # DETERMINE THE EXISTING EXTENSIONS FROM THE LIST OF FILES
+          ls -1 -d ${localout_pre[$i]}    >   filelist  2>/dev/null
+          ls -1 -d ${localout_pre[$i]}_*  >>  filelist  2>/dev/null
+
+          endings="DEFAULT"
+          while  read line
+          do
+                 # remove the local name from the beginning
+              localnamestring="${localout_pre[$i]}"
+              length_localname=${#localnamestring}
+              ending=${line:${length_localname}}
+
+              if [[ "$ending" != "" ]]
+              then
+                 endings="$endings $ending"
+              fi
+ 
+          done <filelist
+
+          rm filelist
+
+       else
+
+             # SINGLE NAME
+          endings=DEFAULT
+
+       fi
+
+          # FOR EACH BASENAME ENDING CREATE AN ENTRY IN THE FINAL OUTPUT FILE LIST
+       for  ending  in  $endings
+       do
+
+             # DEFAULT MEANS THAT THE ENDING GIVEN IN .iofiles SHALL BE USED
+          if [[ $ending = DEFAULT ]]
+          then
+             ending=""
+          fi
+
+             # NEW ENTRY (ENDING IS ALSO ADDED TO LOCAL FILENAME READ BY PALM!)
+          (( nr_of_output_files = nr_of_output_files + 1 ))
+          localout[$nr_of_output_files]="${localout_pre[$i]}"$ending
+          transout[$nr_of_output_files]="${transout_pre[$i]}"
+          actionout[$nr_of_output_files]="${actionout_pre[$i]}"
+          pathout[$nr_of_output_files]="${pathout_pre[$i]}"
+          endout[$nr_of_output_files]="${endout_pre[$i]}"$ending
+          extout[$nr_of_output_files]="${extout_pre[$i]}"
+          warnout[$nr_of_output_files]="${warnout_pre[$i]}"
+
+       done
+
+    done
+
+
+
+
+       # COPY LOCAL OUTPUT-FILES TO THEIR PERMANENT DESTINATIONS
+    (( i = 0 ))
+    while (( i < nr_of_output_files ))
+    do
+       (( i = i + 1 ))
+       if (( i == 1 ))
+       then
+          printf "\n\n  *** saving OUTPUT-files:"
+
+             # GET RUN NUMBER ASSIGNED BY PALM
+          if [[ -f RUN_NUMBER ]]
+          then
+              read  run_number  <  RUN_NUMBER
+              printf "\n  *** PALM generated run_number = "$run_number" will be used as unified cycle number for all output files"
+              usecycle_option="-U $run_number"
+          else
+              run_number=0
+              usecycle_option=""
+          fi
+          if [[ $running_on_remote = true  &&  "$remote_loginnode" != "" ]]
+          then
+             printf "\n  *** in case of SCP transfers to local host"
+             printf "\n      they will be done via remote login-node \"$remote_loginnode\" "
+          fi
+          printf "\n$dashes"
+       fi
+
+       if [[ ! ( $running_on_remote = true  &&  ( "${actionout[$i]}" = tr || "${actionout[$i]}" = tra || "${actionout[$i]}" = trpe ) ) ]]
+       then
+
+          eval filename=${pathout[$i]}/${jobname}${endout[$i]}
+
+             # DETERMINE THE CYCLE NUMBER
+          ls -1 -d $filename    >   filelist  2>/dev/null
+          ls -1 -d $filename.*  >>  filelist  2>/dev/null
+          while  read line
+          do
+   
+                # filename without path (i.e. after the last "/")
+             basefilename=$(basename ${line})
+   
+                # check if there is an extension
+             extension=${basefilename##*.}
+             if [[ "$extension" = "${extout[$i]}" ]]
+             then
+                basefilename=${basefilename%.*}
+             fi
+   
+                # check for an existing cycle number
+             cycle=${basefilename##*.}
+             if [[ $cycle =~ ^-?[0-9]+$ ]]
+             then
+                   # NUMBERS WITH LEADING ZEROS ARE INTERPRETED AS OCTAL NUMBERS
+                   # 10# EXPLICITLY SPECIFIES THE NUMBER BASE AS 10
+                (( icycle = $((10#$cycle)) + 1 ))
+             else
+                (( icycle = 1 ))
+             fi
+   
+             if (( icycle > maxcycle ))
+             then
+                (( maxcycle = icycle ))
+             fi
+   
+          done <filelist
+          rm filelist
+
+   
+             # SET THE CYCLE NUMBER
+             # IN CASE OF FILE-APPEND, IT MUST BE THE HIGHEST EXISTING CYCLE NUMBER
+          if [[ "${actionout[$i]}" = a ]]
+          then
+             (( maxcycle = maxcycle - 1 ))
+          fi
+          
+          (( cycnum[$i] = maxcycle ))
+          pathout[$i]=$filename
+
+
+             # ADD CYCLE NUMBER TO FILENAME
+             # IN APPEND MODE, FILES KEEP THEIR CURRENT CYCLE NUMBER
+          if [[ "${actionout[$i]}" != "a" ]]
+          then
+                # SET RUN NUMBER AS CYCLE NUMBER, IF THERE IS NOT A CONFLICT
+                # WITH AN EXISTING CYCLE NUMBER
+             if (( run_number >= cycnum[$i] ))
+             then
+                (( cycnum[$i] = run_number ))
+             else
+                if (( run_number > 0 ))
+                then
+                   printf "\n  --- INFORMATIVE: The following file cannot get a unified cycle number"
+                fi
+             fi
+          fi
+          if (( cycnum[$i] > 0 ))
+          then
+             cyclestring=`printf "%03d" ${cycnum[$i]}`
+             pathout[$i]=${pathout[$i]}.$cyclestring
+          fi
+       fi           
+
+          # CHECK FOR SINGLE FILE (SERIAL RUN) OR DIRECTORY (ONE FILE PER CORE FOR PARELLEL EXECUTION)
+       files_for_cores=false; filetype=file
+       link_local_output=false
+       if [[ "${actionout[$i]}" = pe  &&  -n $cores ]]
+       then
+          files_for_cores=true; filetype=directory
+          actionout[$i]=""
+       elif [[ "${actionout[$i]}" = pe  &&  ! -n $cores ]]
+       then
+          actionout[$i]=""
+       elif [[ "${actionout[$i]}" = lnpe  &&  -n $cores ]]
+       then
+          files_for_cores=true; filetype=directory
+          link_local_output=true
+          actionout[$i]=""
+       elif [[ "${actionout[$i]}" = lnpe  &&  ! -n $cores ]]
+       then
+          link_local_output
+          actionout[$i]=""
+       elif [[ "${actionout[$i]}" = trpe  &&  -n $cores ]]
+       then
+          files_for_cores=true; filetype=directory
+          actionout[$i]="tr"
+       elif [[ "${actionout[$i]}" = trpe  &&  ! -n $cores ]]
+       then
+          actionout[$i]="tr"
+       fi
+
+       if [[ ! -f ${localout[$i]}  &&  $files_for_cores = false ]]
+       then
+          if [[ ${warnout[$i]} = true ]]
+          then
+             printf "\n  +++ temporary OUTPUT-file  ${localout[$i]}  does not exist\n"
+          fi
+       elif [[ ! -d ${localout[$i]}  &&  $files_for_cores = true ]]
+       then
+          if [[ ${warnout[$i]} = true ]]
+          then
+             printf "\n  +++ temporary OUTPUT-file  ${localout[$i]}/....  does not exist\n"
+          fi
+       else
+
+
+             # COPY VIA SCP TO LOCAL HOST (ALWAYS IN BINARY MODE USING batch_scp option -m)
+             # IF TARGET DIRECTORY DOES NOT EXISTS, TRY TO CREATE IT
+          if [[ "${actionout[$i]}" = tr  ||  "${actionout[$i]}" = tra ]]
+          then
+             if [[ $running_on_remote = true ]]
+             then
+
+                   # SET OPTIONS FOR TRANSFER
+                if [[ "${actionout[$i]}" = tr ]]
+                then
+                   if [[ $files_for_cores = false ]]
+                   then
+                      catalog_option=""
+                      catalog_string=""
+                   else
+                      catalog_option="-c"
+                      catalog_string="/"
+                   fi
+                   append_option=""
+                   append_string=""
+                else
+                   append_option="-A"
+                   append_string="append"
+                fi
+
+                transfer_failed=false
+                printf "\n  >>> OUTPUT: ${localout[$i]}$catalog_string  $append_string by SCP to"
+                printf "\n              ${pathout[$i]}/${host_configuration}_${jobname}${endout[$i]}$catalog_string\n"
+
+                   # TRANSFER VIA SCP
+                if [[ "$remote_loginnode" != "" ]]
+                then
+                   echo "cd $tempdir; ${fast_io_catalog}/${sources_for_run_catalog}/batch_scp $PORTOPT $catalog_option $append_option -b -m $usecycle_option -u $local_username $return_address  ${localout[$i]} \"${pathout[$i]}\" ${host_configuration}_${jobname}${endout[$i]}  ${extout[$i]}"  |  ssh -q $remote_username@$remote_loginnode
+                else
+                   batch_scp $PORTOPT $catalog_option $append_option -b -m $usecycle_option -u $local_username $return_address  ${localout[$i]} "${pathout[$i]}" ${host_configuration}_${jobname}${endout[$i]}  ${extout[$i]}
+                fi
+                [[ $? != 0 ]]  &&  transfer_failed=true
+
+
+                   # IF TRANSFER FAILED, CREATE BACKUP COPY ON THIS MACHINE
+                if [[ $transfer_failed = true ]]
+                then
+                   printf "  +++ transfer failed. Trying to save a copy on this host under:\n"
+                   printf "      ${pathout[$i]}/${host_configuration}_${jobname}${endout[$i]}_$run_id\n"
+
+                      # FIRST CHECK, IF DIRECTORY EXISTS, AND CREATE IT, IF NECESSARY
+                   eval  local_catalog=${pathout[$i]}
+                   if [[ ! -d $local_catalog ]]
+                   then
+                      printf "  *** local directory does not exist. Trying to create:\n"
+                      printf "      $local_catalog \n"
+                      mkdir -p  $local_catalog
+                   fi
+                   eval  cp  ${localout[$i]}  ${pathout[$i]}/${host_configuration}_${jobname}${endout[$i]}_$run_id
+                   transfer_problems=true
+                fi
+
+             else
+
+                   # UNSET actionout. DUE TO THIS SETTING, FILE WILL LATER JUST
+                   # BE COPIED OR APPENDED ON THIS MACHINE
+                if [[ "${actionout[$i]}" = tr ]]
+                then
+                   actionout[$i]=""
+                else
+                   actionout[$i]="a"
+                fi
+             fi
+          fi
+
+
+             # APPEND ON THIS MACHINE
+          if [[ "${actionout[$i]}" = "a" ]]
+          then
+             if [[ "${extout[$i]}" != " "  &&  "${extout[$i]}" != "" ]]
+             then
+                printf "\n  >>> OUTPUT: ${localout[$i]}  append to"
+                printf "\n              ${pathout[$i]}.${extout[$i]}\n"
+                cat  ${localout[$i]}  >>  ${pathout[$i]}.${extout[$i]}
+             else
+                printf "\n  >>> OUTPUT: ${localout[$i]}  append to"
+                printf "\n              ${pathout[$i]}\n"
+                cat  ${localout[$i]}  >>  ${pathout[$i]}
+             fi
+          fi
+
+             # COPY ON THIS MACHINE
+             # COPY HAS TO BE USED, BECAUSE MOVE DOES NOT WORK IF FILE-ORIGIN AND TARGET ARE
+             # ON DIFFERENT FILE-SYSTEMS
+          if [[ "${actionout[$i]}" = ""  &&  $files_for_cores = false ]]
+          then
+
+                # COPY IN CASE OF RUNS ON SINGLE CORES
+             if [[ "${extout[$i]}" != " "  &&  "${extout[$i]}" != "" ]]
+             then
+                printf "\n  >>> OUTPUT: ${localout[$i]}  to"
+                printf "\n              ${pathout[$i]}.${extout[$i]}\n"
+		              if [[ $link_local_output = true ]]
+		              then
+		                 printf "      file will be linked\n"
+		                 ln -f  ${localout[$i]}  ${pathout[$i]}.${extout[$i]}
+		              fi
+		                 # If "ln -f" fails of if "$link_local_output = false" do a normal "cp"
+		              if [[ ! -f "${pathout[$i]}.${extout[$i]}" ]]
+                then
+		                 if [[ $link_local_output = true ]]
+	                  then
+                      printf "  --- WARNING: ln failed, using cp instead (might be time consuming...)\n"
+		                 fi
+		                 cp  ${localout[$i]}  ${pathout[$i]}.${extout[$i]}
+		              else
+                   printf "+++ no copy because file ${pathout[$i]}.${extout[$i]} exists\n"
+                fi
+             else
+                printf "\n  >>> OUTPUT: ${localout[$i]}  to"
+                printf "\n              ${pathout[$i]}\n"
+		              if [[ $link_local_output = true ]]
+		              then
+		                 printf "      file will be linked\n"
+		                 ln -f  ${localout[$i]}  ${pathout[$i]}
+		              fi
+		                 # If "ln -f" fails of if "$link_local_output = false" do a normal "cp"
+	              	if [[ ! -f "${pathout[$i]}" ]]
+                then
+		                 if [[ $link_local_output = true ]]
+	                  then
+                      printf "  --- WARNING: ln failed, using cp instead (might be time consuming...)\n"
+		                 fi
+		                 cp  ${localout[$i]}  ${pathout[$i]}
+		              else
+		                 printf "+++ no copy because file ${pathout[$i]} exists\n"
+                fi
+             fi
+
+          elif [[ "${actionout[$i]}" = ""  &&  $files_for_cores = true ]]
+          then
+
+                # FILES FROM THE DIFFERENT CORES ARE MOVED WITH ln-COMMAND TO THE PERMANENT DIRECTORY
+                # AS A FIRST STEP, THE PERMANENT DIRECTORY IS CREATED
+             printf "\n  >>> OUTPUT: ${localout[$i]}/_....  to"
+             printf "\n              ${pathout[$i]}\n"
+	            if [[ $link_local_output = true ]]
+	            then
+		              printf "      files will be linked\n"
+		              mkdir -p ${pathout[$i]}
+		              cd ${localout[$i]}
+		              for file in $(ls *)
+		              do
+		                 ln -f $file  ${pathout[$i]}
+		              done >|/dev/null 2>&1
+		              cd $tempdir
+	            fi
+
+                # IF "ln -f" HAS FAILED OR IF "$link_local_output = false" DO A NORMAL COPY "cp -r"
+	            if [[ ! -f "${pathout[$i]}/_000000" ]]
+             then
+		              if [[ $link_local_output = true ]]
+		              then
+                   printf "  --- WARNING: ln failed, using cp instead (might be time consuming...)\n"
+		              fi
+		              [[ ! -d "${pathout[$i]}" ]]  &&  mkdir  ${pathout[$i]}
+		              cp -r  ${localout[$i]}/*  ${pathout[$i]}
+       	     fi
+
+          fi
+       fi
+    done
+
+    if (( i != 0 ))
+    then
+       if [[ $transfer_problems = true ]]
+       then
+          printf "\n$dashes\n  *** OUTPUT-files saved"
+          printf "\n  +++ WARNING: some data transfers failed! \n"
+       else
+          printf "\n$dashes\n  *** all OUTPUT-files saved \n"
+       fi
+    fi
+
+
+       # IF REQUIRED, START A RESTART-JOB
+       # FILE CONTINUE_RUN MUST HAVE BEEN CREATED BY THE EXECUTABLE (PALM)
+    if [[ -f CONTINUE_RUN ]]
+    then
+
+          # ADD RESTART-OPTIONS TO THE PALMRUN-CALL (IF THEY ARE NOT USED ALREADY):
+          # -C TELLS PALMRUN THAT IT IS A RESTART-RUN
+          # -v SILENT MODE WITHOUT INTERACTIVE QUERIES
+          # -b START A BATCH JOB
+       [[ $(echo $prc | grep -c "\-C") = 0 ]]  &&  prc="$prc -C"
+       [[ $(echo $prc | grep -c "\-v") = 0 ]]  &&  prc="$prc -v"
+       [[ $(echo $prc | grep -c "\-b") = 0 ]]  &&  prc="$prc -b"
+
+          # REPLACE SVFOUT IN THE ACTIVATION STRINGS (GIVEN WITH OPTION -a)
+          # SO THAT RESTARTS USE SVF DATA CREATED BY THE INITIAL RUN
+       if [[ $(echo $prc | grep -c "svfout") != 0 ]]
+       then
+          prc=`echo $prc | sed 's/svfout/svfin/g'`
+       fi
+
+          # REPLACE THE HASH IN THE ACTIVATION STRINGS (GIVEN WITH OPTION -a)
+          # SO THAT RESTARTS ACCESS DIFFERENT FILES THAN THE INITIAL RUN
+       if [[ $(echo $prc | grep -c "#") != 0 ]]
+       then
+          prc=`echo $prc | sed 's/#/r/g'`
+       fi
+
+
+          # START THE RESTART-JOB
+       printf "\n\n  *** initiating restart-run on \"$local_ip\" using command:\n"
+       echo "      $prc"
+       printf "\n$dashes\n"
+       if [[ $running_on_remote = true ]]
+       then
+
+          echo "*** ssh will be used to initiate restart-runs!"
+          echo "    return_address=\"$return_address\" "
+          echo "    return_username=\"$local_username\" "
+
+          if [[ "$remote_loginnode" != "" ]]
+          then
+             echo "echo \" PATH=\\\$PATH:$LOCAL_PALMRUN_PATH; cd $LOCAL_PWD; $prc\" |  ssh -q $SSH_PORTOPT  $local_username@$return_address  " |  ssh -q $remote_username@$remote_loginnode
+          else
+             echo \" PATH=\\\$PATH:$LOCAL_PALMRUN_PATH; cd $LOCAL_PWD; $prc\" |  ssh -q $SSH_PORTOPT  $local_username@$return_address
+          fi
+
+             # WAIT TO ALLOW THE RESTART-JOB TO BE QUEUED, BEFORE THE CURRENT JOB IS FINISHED
+          sleep 30
+
+       else
+
+             # START THE RESTART JOB ON THE LOCAL HOST
+          eval  $prc                # THE ' MUST BE EVALUATED
+          cd -  > /dev/null
+
+       fi
+       printf "\n$dashes\n  *** restart-run initiated \n"
+
+
+          # DELETE INPUT-(RESTART)FILES, WHICH HAVE BEEN FETCHED FROM THE TEMPORARY DATA
+          # DIRECTORY, BACAUSE THEY ARE NOT REQUIRED BY THE RESTART-JOB.
+          # THIS IS DONE IN ORDER TO AVOID EXCEEDING DISC QUOTAS OR DISC SPACE (RESTART-FILES
+          # MAY BE VERY HUGE)
+       (( i = 0 ))
+       while (( i < nr_of_input_files ))
+       do
+          (( i = i + 1 ))
+          if [[ "${got_tmp[$i]}" = true   &&  $keep_data_from_previous_run = false ]]
+          then
+             rm -r  ${absnamein[$i]}
+          fi
+       done
+
+    fi
+
+
+       # ALL ACTIONS FINISHED, TEMPORARY WORKING-DIRECTORY CAN BE DELETED
+    cd  $HOME
+    [[ $delete_temporary_catalog = true ]]  &&  rm -rf $tempdir
+
+
+ else
+
+
+       # PREPARING ACTIONS,
+       # IF A BATCH-JOB IS TO BE GENERATED AND TO BE STARTED ON A LOCAL OR REMOTE-MACHINE
+
+       # BUILD THE PALMRUN-COMMAND TO BE CALLED IN THE BATCH-JOB
+    palmrun_com="$palmrun_script_name -d $jobname -h $host_configuration -m $memory -t $cpumax -q $queue -r $run_id -U $local_username"
+    [[ "$activation_string_list" != "" ]]  &&  palmrun_com=${palmrun_com}" -a \"$activation_string_list\""
+    [[ "$global_revision" != "" ]]  &&  palmrun_com=${palmrun_com}" -G \"$global_revision\""
+    [[ $keep_data_from_previous_run = true ]]  &&  palmrun_com=${palmrun_com}" -k"
+    [[ $do_trace = true ]]        &&  palmrun_com=${palmrun_com}" -x"
+    [[ "$cores" != "" ]]       &&  palmrun_com=${palmrun_com}" -X $cores"
+    [[ $use_openmp = true ]]  &&  palmrun_com=${palmrun_com}" -O $threads_per_task"
+    [[ $tasks_per_node != 0 ]]  &&  palmrun_com=${palmrun_com}" -T $tasks_per_node"
+    [[ $delete_temporary_catalog = false ]]  &&  palmrun_com=${palmrun_com}" -B"
+    [[ "$ocean_file_appendix" = true ]]  &&  palmrun_com=${palmrun_com}" -y"
+    [[ $run_coupled_model = true ]]  &&  palmrun_com=${palmrun_com}" -Y \"$coupled_dist\""
+    [[ "$combine_plot_fields" = false ]]  &&  palmrun_com=${palmrun_com}" -Z"
+    [[ "$max_par_io_str" != "" ]]  &&  palmrun_com=${palmrun_com}" -w $max_par_io_str"
+    [[ "$project_account" != "" ]]  &&  palmrun_com=${palmrun_com}" -A $project_account"
+    if [[ $create_remote_batch_job = true ]]
+    then
+       palmrun_com=${palmrun_com}" -j -u $remote_username -R $local_ip"
+       if [[ $do_trace = true ]]
+       then
+          printf "\n *** PALMRUN-command on remote host:\n     $palmrun_com \n"
+       fi
+    elif [[ $create_batch_job = true ]]
+    then
+       palmrun_com=${palmrun_com}" -j"
+       if [[ $do_trace = true ]]
+       then
+          printf "\n *** PALMRUN-command on local host:\n     $palmrun_com \n"
+       fi
+    fi
+
+
+       # DETERMINE THE FULL PATHS FOR THE JOB PROTOCOL FILES ON THE LOCAL AND
+       # REMOTE HOST
+    job_protocol_file_local=${local_jobcatalog}/${host_configuration}_${job_id}
+    job_protocol_file=$job_protocol_file_local
+    if [[ $create_remote_batch_job = true ]]
+    then
+       job_protocol_file_remote=${remote_jobcatalog}/${host_configuration}_${job_id}
+       job_protocol_file=$job_protocol_file_remote
+       job_transfer_protocol_file=${remote_jobcatalog}/last_job_transfer_protocol
+       scpjob_file=${remote_jobcatalog}/scpjob.$run_id
+    fi
+
+
+       # BUILD THE JOB-SCRIPTS ON FILE jobfile
+    jobfile=jobfile.$run_id
+
+
+       # FIRST CREATE THE BATCH DIRECTIVES
+    (( i = 0 ))
+    while (( i < ibd ))
+    do
+       (( i = i + 1 ))
+       line=`echo  "${batch_directive[$i]}" | sed 's/{{/$/g' | sed 's/}}//g'`
+       eval line=\"$line\"
+       echo  "$line"                               >>  $jobfile
+    done
+    echo " "                                       >>  $jobfile
+
+
+       # FOR BATCH JOBS ON REMOTE HOSTS, ADD THE JOBFILE TO SEND BACK THE JOB
+       # PROTOCOL
+    if [[ $create_remote_batch_job = true ]]
+    then
+       echo "set +vx"                              >>  $jobfile
+       echo "trap '"                               >>  $jobfile
+       echo "set +vx"                              >>  $jobfile
+       echo "cd ${remote_jobcatalog}"              >>  $jobfile
+       echo "cat >  scpjob.$run_id << %%END%%"     >>  $jobfile
+
+          # ADD THE BATCH DIRECTIVES
+       (( i = 0 ))
+       while (( i < ibdt ))
+       do
+          (( i = i + 1 ))
+          line=`echo  "${batch_directive_transfer[$i]}" | sed 's/{{/$/g' | sed 's/}}//g'`
+          eval line=\"$line\"
+          echo  "$line"                            >>  $jobfile
+       done
+       echo " "                                    >>  $jobfile
+
+       echo "set -x"                               >>  $jobfile
+       echo "${fast_io_catalog}/${sources_for_run_catalog}/batch_scp  $PORTOPT  -d  -w 10  -u $local_username $local_ip  $job_protocol_file_remote  \"$local_jobcatalog\"  ${host_configuration}_${jobname}"  >>  $jobfile
+       echo "%%END%%"                              >>  $jobfile
+       echo "echo \" *** submitting job for transfering the job protocol file to $local_ip\" "  >>  $jobfile
+       echo "$submit_command  $scpjob_file"        >>  $jobfile
+       echo "rm $scpjob_file"                      >>  $jobfile
+       echo "rm -rf $job_transfer_protocol_file"   >>  $jobfile
+       echo "set -x"                               >>  $jobfile
+       echo "     ' exit"                          >>  $jobfile
+    fi
+
+
+       # ACTIVATE ERROR-TRACEBACK
+    if [[ $do_trace = true ]]
+    then
+       echo  "set -x"                                    >>  $jobfile
+    else
+       echo  "set +vx"                                   >>  $jobfile
+    fi
+
+
+       # INITIALIZE THE ENVIRONMENT AND LOAD MODULES
+    if [[ "$login_init_cmd" != "" ]]
+    then
+       echo  "$login_init_cmd"        >>  $jobfile
+    fi
+    if [[ "$module_commands" != "" ]]
+    then
+       echo  "$module_commands"     >>  $jobfile
+    fi
+
+
+       # CREATE TEMPORARY DIRECTORY AND SWITCH TO IT
+    if [[ $create_remote_batch_job = true ]]
+    then
+       echo  "mkdir  $tempdir"           >>  $jobfile
+       echo  "chmod  go+rx  $tempdir"    >>  $jobfile
+    else
+          # DIRECTORY FOR LOCAL BATCH JOBS IS CREATED NOW, DUE TO A
+          # REQUIREMENT OF THE GRID ENGINE BATCH SYSTEM (WORKING DIR IS GIVEN IN
+          # BATCH DIRECTIVE -wd AND MUST ALREADY EXIST WHEN THE JOB IS SUBMITTED)
+       mkdir  $tempdir
+       chmod  go+rx  $tempdir
+    fi
+    echo  "cd  $tempdir"                 >>  $jobfile
+    echo  "export tempdir=$tempdir"      >>  $jobfile
+    echo  "cp  ${fast_io_catalog}/${sources_for_run_catalog}/{*,.[!.]*}  ."  >>  $jobfile
+    echo  "export PATH=.:\$PATH"         >>  $jobfile
+    echo  "export execute_palmrun=true"  >>  $jobfile
+
+
+       # PROVIDE NAME OF THE CURRENT WORKING-DIRECTORY ON THE LOCAL MACHINE (FROM WHERE THE JOB IS
+       # STARTED) BY SETTING AN ENVIRONMENT-VARIABLE. THIS INFORMATION IS USED IN THE JOB BY PALMRUN
+       # IN CASE THAT RESTART-RUNS HAVE TO BE GENERATED
+    echo  "LOCAL_PWD=$working_directory"                >>  $jobfile
+    echo  "export LOCAL_PWD"                            >>  $jobfile
+
+
+       # PROVIDE THE PATH OF THE LOCAL PALMRUN-SCRIPT FOR THE SAME REASON 
+    echo  "LOCAL_PALMRUN_PATH=${source_path}/../SCRIPTS"   >>  $jobfile
+    echo  "export LOCAL_PALMRUN_PATH"                      >>  $jobfile
+
+
+       # CALL PALMRUN WITHIN THE JOB
+       # AS FINAL ACTION, REMOVE THE TEMPORARY DIRECTORY CREATED AT THE BEGINNING OF THE JOB
+    echo  "set -x"                                              >>  $jobfile
+    echo  "[[ \$execute_palmrun = true ]]  &&  $palmrun_com"    >>  $jobfile
+
+
+       # TRANSFER JOBFILE TO THE TARGET HOST
+    if [[ $create_jobfile_only = false ]]
+    then
+
+       if [[ $create_remote_batch_job = true ]]
+       then
+
+          echo " "
+          echo " *** transfer of job to remote host via scp"
+          if [[ $do_trace = true ]]
+          then
+             echo "     scp $ssh_key $PORTOPT $jobfile ${remote_username}@${remote_ip}:${remote_jobcatalog}/${host_configuration}_${job_id}"
+          fi
+          scp $ssh_key $PORTOPT $jobfile ${remote_username}@${remote_ip}:${remote_jobcatalog}/${host_configuration}_${job_id}  >  /dev/null
+
+          printf " *** submit the job (output of submit command, e.g. the job-id, may follow)"
+          if [[ $do_trace = true ]]
+          then
+             echo "     cd $remote_jobcatalog; $submit_command ${host_configuration}_${job_id}; rm ${host_configuration}_${job_id}  |  ssh  -q  $ssh_key $SSH_PORTOPT  ${remote_username}@${remote_ip}  2>&1"
+          fi
+          echo "cd $remote_jobcatalog; $submit_command ${host_configuration}_${job_id}; rm ${host_configuration}_${job_id}"  |  ssh  -q  $ssh_key $SSH_PORTOPT  ${remote_username}@${remote_ip}  2>&1
+
+       elif [[ $create_batch_job = true ]]
+       then
+
+          eval  local_jobcatalog=$local_jobcatalog
+          cp  $jobfile  ${local_jobcatalog}/${host_configuration}_${job_id}
+          cd $local_jobcatalog
+          echo " "
+          echo " *** submit the job"
+          if [[ $do_trace = true ]]
+          then
+             echo "$submit_command ${host_configuration}_${job_id}"
+          fi
+          $submit_command ${host_configuration}_${job_id}
+          rm ${host_configuration}_${job_id}
+          cd -  > /dev/null
+
+       fi
+
+       rm -rf  $jobfile
+
+    else
+
+       printf "\n *** jobfile created under name \"$jobfile\" "
+       printf "\n     no batch-job has been sent!"
+
+    fi
+
+ fi  # END OF REMOTE-PART

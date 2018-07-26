@@ -1,0 +1,463 @@
+#!/bin/ksh
+#--------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018  Leibniz Universitaet Hannover
+#--------------------------------------------------------------------------------#
+#
+# Current revisions:
+# -----------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: process_dvr_output 2718 2018-01-02 08:49:38Z maronga $
+# Corrected "Former revisions" section
+#
+# 2696 2017-12-14 17:12:51Z kanani
+# Change in file header (GPL part)
+#
+# 1310 2014-03-14 08:01:56Z raasch
+# update GPL copyright
+#
+# 1046 2012-11-09 14:38:45Z maronga
+# code put under GPL (PALM 3.9)
+#
+# process_dvr_output - a script processing dvr steering + data files
+
+     # This script determines the number of streams opened by the dvr software
+     # and creates one single dvrs- and html-file which allow the dvr-plugin
+     # to display all streams in one sequence.
+
+     # Last changes:
+     # 16/03/09 - Siggi - Generating the first version
+
+
+
+    # Variable declarations + default values
+ camera=false
+ create_config_file=false
+ create_sequence_output=false
+ data_catalog=`pwd`
+ dvrp_output=rtsp
+ file_identifier=all_streams
+ groundplate=false
+ palm_run_identifier="unknown_run"
+ topography=false
+
+ typeset  -i  a acceleration=1 k i j nstream nscenes
+
+
+    # Read shellscript options
+ while  getopts  :a:cd:f:ls option
+ do
+   case  $option  in
+       (a)   acceleration=$OPTARG;;
+       (c)   create_config_file=true;;
+       (d)   data_catalog=$OPTARG;;
+       (f)   file_identifier=$OPTARG;;
+       (l)   dvrp_output=local;;
+       (s)   create_sequence_output=true;;
+       (\?)  printf "\n  +++ unknown option $OPTARG \n"
+             printf "\n      allowed option are -d, -f, -l, -s \n"
+             exit;;
+   esac
+ done
+
+
+    # Create the config file for the streaming server; do nothing else
+ if [[ $create_config_file = true ]]
+ then
+    cp  ${PALM_BIN}/.dvrserver.config  .
+
+       # Entering the BASEDIR, UID and GID into this file
+    user_id=`id -u`
+    group_id=`id -g`
+
+       # data directory is always the current working directory
+    sed "s/<replace by dvr data directory>/./g" .dvrserver.config > .dvrserver.1
+    sed "s/<replace by user id>/$user_id/g"    .dvrserver.1 > .dvrserver.2
+    sed "s/<replace by group id>/$group_id/g"  .dvrserver.2 > .dvrserver.3
+    mv  .dvrserver.3  .dvrserver.config
+    rm  .dvrserver.1  .dvrserver.2
+    exit
+ fi
+
+
+    # Find out the PALM run identifier
+ if [[ -f CPU_MEASURES ]]
+ then
+    palm_run_identifier=`head -1  CPU_MEASURES`
+ fi
+
+
+    # Process the streaming server output
+ if [[ $dvrp_output = rtsp ]]
+ then
+
+       # Change to the given directory
+    cd $data_catalog
+
+
+       # Find out the number of streams
+    (( i = 0 ))
+    while true
+    do
+       (( i = i + 1 ))
+       if (( i < 10 ))
+       then
+          cstream=0$i
+       else
+          cstream=$i
+       fi
+
+       if [[ $(ls -1 *.* | grep -c $cstream) = 0 ]]
+       then
+          (( i = i - 1 ))
+          break
+       fi
+
+          # find out the stream name
+       streamname[$i]=`ls -1 ${cstream}_*-ge.dvrs | cut -f1 -d"-"`
+
+          # get addres
+       adr[$i]=`grep ADR= ${streamname[$i]}.dvrs | grep '*' | cut -f2 -d"="`
+
+          # get maxbytes
+       maxbytes[$i]=`head -1 ${streamname[$i]}.max`
+
+          # get number of frames
+       frames[$i]=`tail -1 ${streamname[$i]}.max`
+
+    done
+
+    nstream=$i
+    nscenes=$nstream
+
+
+       # Check, if there are files containing the camera data, the ground plate
+       # and topography data.
+       # Check the first stream only, because all streams have the same files.
+    if [[ -f ${streamname[1]}_camera.max ]]
+    then
+       camera=true
+       adr_camera=`grep ADR= ${streamname[1]}.dvrs | grep 'camera' | cut -f2 -d"="`
+       maxbytes_camera=`head -1 ${streamname[1]}_camera.max`
+       (( nscenes = nscenes + 1 ))
+    fi
+    if [[ -f ${streamname[1]}_groundplate.max ]]
+    then
+       groundplate=true
+       adr_groundplate=`echo $adr_camera | sed "s/camera/groundplate/g"`
+       maxbytes_groundplate=`head -1 ${streamname[1]}_groundplate.max`
+       (( nscenes = nscenes + 1 ))
+    fi
+    if [[ -f ${streamname[1]}_topography.max ]]
+    then
+       topography=true
+       adr_topography=`echo $adr_camera | sed "s/camera/topography/g"`
+       maxbytes_topography=`head -1 ${streamname[1]}_topography.max`
+       (( nscenes = nscenes + 1 ))
+    fi
+
+
+
+       # Start with writing the dvrs file for the combined streams
+    dvr_file=${file_identifier}_streaming.dvrs
+
+    echo  "SCENES=$nscenes"  >  $dvr_file
+
+       # First, add the static scenes
+    if [[ $camera = true ]]
+    then
+       echo  "MED=TCP"                    >>  $dvr_file
+       echo  "ADR=$adr_camera"            >>  $dvr_file
+       echo  "MAXBYTES=$maxbytes_camera"  >>  $dvr_file
+       echo  "FRAMES=1"                   >>  $dvr_file
+       echo  "FRAMES_P_SEC=0"             >>  $dvr_file
+       echo  "SCENEEND"                   >>  $dvr_file
+    fi
+
+    if [[ $groundplate = true ]]
+    then
+       echo  "MED=TCP"                         >>  $dvr_file
+       echo  "ADR=$adr_groundplate"            >>  $dvr_file
+       echo  "MAXBYTES=$maxbytes_groundplate"  >>  $dvr_file
+       echo  "FRAMES=1"                        >>  $dvr_file
+       echo  "FRAMES_P_SEC=0"                  >>  $dvr_file
+       echo  "SCENEEND"                        >>  $dvr_file
+    fi
+
+    if [[ $topography = true ]]
+    then
+       echo  "MED=TCP"                        >>  $dvr_file
+       echo  "ADR=$adr_topography"            >>  $dvr_file
+       echo  "MAXBYTES=$maxbytes_topography"  >>  $dvr_file
+       echo  "FRAMES=1"                       >>  $dvr_file
+       echo  "FRAMES_P_SEC=0"                 >>  $dvr_file
+       echo  "SCENEEND"                       >>  $dvr_file
+    fi
+
+
+       # Now add the streams
+    (( i = 0 ))
+    while (( i < nstream ))
+    do
+
+       (( i = i + 1 ))
+
+       echo  "MED=TCP"                   >>  $dvr_file
+       echo  "ADR=${adr[$i]}"            >>  $dvr_file
+       echo  "MAXBYTES=${maxbytes[$i]}"  >>  $dvr_file
+       echo  "FRAMES=${frames[$i]}"      >>  $dvr_file
+       echo  "FRAMES_P_SEC=25"           >>  $dvr_file
+       echo  "SCENEEND"                  >>  $dvr_file
+
+    done
+
+
+       # Change path to the current file identifier
+       # Remove path because BASEDIR of streaming server is set to "."
+#    sed  "s/DATA_DVR/${file_identifier}_dvr/g"  $dvr_file > tmp_file
+    sed  "s/DATA_DVR\///g"  $dvr_file > tmp_file
+    mv  tmp_file  $dvr_file
+
+
+       # If there is a dvr configuration file, set the BASEDIR to the parent
+       # directory of the above given path (i.e. ".")
+    if [[ -f .dvrserver.config ]]
+    then
+       old_path=`grep  BASEDIR  .dvrserver.config`
+       sed  "s&${old_path}&BASEDIR=.&g"  .dvrserver.config  >  .dvrserver.config.new
+       mv  .dvrserver.config.new  .dvrserver.config
+    fi
+
+
+       # Create the html file for the combined streames
+    cp  01_*-ge.html  tmp.html
+    replace=$(echo `grep src= tmp.html`)
+    sed "s&${replace}&src=\"${file_identifier}_streaming.dvrs\"&g" tmp.html > tmp1.html
+    if [[ "$palm_run_identifier" = "" ]]
+    then
+       cp  tmp1.html  ${file_identifier}_streaming.html
+    else
+       sed "s&DATA_DVR/${streamname[1]}/\*\*\*\*\*.dvr (DVR 3D Streaming)&DVR 3D streaming generated by $palm_run_identifier&g"  tmp1.html  >  ${file_identifier}_streaming.html
+    fi
+    rm  tmp.html  tmp1.html
+
+
+       # Informative messages
+    printf "\n\n  *** processing dvr stream output:"
+    printf "\n      number of detected streams = $nstream"
+    printf "\n      stream names:"
+
+    (( i = 0 ))
+    while (( i < nstream ))
+    do
+
+       (( i = i + 1 ))
+       printf " ${streamname[$i]}"
+
+    done
+    printf "\n"
+
+
+ else
+
+       # This is the branch for local output (dvrp_output=local).
+       # Find out the number of streams.
+    (( i = 0 ))
+    while true
+    do
+
+       (( i = i + 1 ))
+       if (( i < 10 ))
+       then
+          cstream=0$i
+       else
+          cstream=$i
+       fi
+
+       if [[ $(ls -1 *.* | grep -c ${cstream}_) = 0 ]]
+       then
+          (( i = i - 1 ))
+          break
+       fi
+
+          # find out the stream name
+       streamname[$i]=`ls -1 ${cstream}_*.camera.dvr | cut -f1 -d"."`
+
+    done
+
+       # Exit, if there are no streams.
+    [[ $i = 0 ]]  &&  exit
+
+    nstream=$i
+
+    mkdir -p  ${data_catalog}/sequence_data
+
+
+       # First, merge static scenes into one file
+    if [[ -f ${streamname[1]}.camera.dvr ]]
+    then
+       cat  ${streamname[1]}.camera.dvr  >>  ${data_catalog}/sequence_data/static_scenes.dvr
+    fi
+
+    if [[ -f ${streamname[1]}.groundplate.dvr ]]
+    then
+       cat  ${streamname[1]}.groundplate.dvr  >>  ${data_catalog}/sequence_data/static_scenes.dvr
+    fi
+
+    if [[ -f ${streamname[1]}.topography.dvr ]]
+    then
+       cat  ${streamname[1]}.topography.dvr  >>  ${data_catalog}/sequence_data/static_scenes.dvr
+    fi
+
+
+       # Find out the number of frames
+    frames[1]=`grep sequence ${streamname[1]}_00000.html | cut -f2 -d";" | cut -f1 -d'"' | cut -f2 -d"-"`
+
+
+       # Now, merge the data, frame by frame
+    (( j = 0 ))
+    while (( j < ${frames[1]} ))
+    do
+
+       nframe=`printf "%05d" $j`
+
+       (( i = 0 ))
+       while (( i < nstream ))
+       do
+          (( i = i + 1 ))
+          cat  ${streamname[$i]}_$nframe.dvr  >>  ${data_catalog}/sequence_data/$nframe.dvr
+       done
+
+       (( j = j + 1 ))
+
+    done
+
+
+       # Create the html file to be used for the sequence mode
+    cp  ${streamname[1]}_00000.html  tmp1.html
+    sed  "s&${streamname[1]}_camera.dvr&sequence_data/static_scenes.dvr&g"  tmp1.html  >  tmp2.html
+    sed  "s&${streamname[1]}_&sequence_data/&g"  tmp2.html  >  tmp3.html
+    if [[ "$palm_run_identifier" = "" ]]
+    then
+       cp  tmp3.html  ${file_identifier}_sequence.html
+    else
+       sed "s&sequence_data/%05d.dvr (DVR 3D Sequence)&DVR 3D sequence generated by $palm_run_identifier&g"  tmp3.html  >  ${file_identifier}_sequence.html
+    fi
+    rm  tmp1.html  tmp2.html  tmp3.html
+    mv  ${file_identifier}_sequence.html  ${data_catalog}
+
+
+       # Informative messages
+    printf "\n\n  *** processing dvr local output (using dvrp_output=local):"
+    printf "\n      number of detected streams = $nstream"
+    printf "\n      stream names:"
+
+    (( i = 0 ))
+    while (( i < nstream ))
+    do
+
+       (( i = i + 1 ))
+       printf " ${streamname[$i]}"
+
+    done
+    printf "\n"
+
+ fi
+
+
+    # Create output for viewing dvr data in sequence mode
+ if [[ $create_sequence_output = true ]]
+ then
+
+    rm -rf  sequence_data
+    mkdir  sequence_data
+
+       # First, merge static scenes into one file
+    if [[ $camera = true ]]
+    then
+       cat  ${streamname[1]}/camera.dvr  >>  sequence_data/static_scenes.dvr
+    fi
+
+    if [[ $groundplate = true ]]
+    then
+       cat  ${streamname[1]}/groundplate.dvr  >>  sequence_data/static_scenes.dvr
+    fi
+
+    if [[ $topography = true ]]
+    then
+       cat  ${streamname[1]}/topography.dvr  >>  sequence_data/static_scenes.dvr
+    fi
+
+
+       # Now, merge the data, frame by frame
+    (( j = 0 ))
+    (( k = 0 ))
+    (( a = 0 ))
+    while (( j < ${frames[1]} ))
+    do
+
+       rframe=`printf "%05d" $j`
+
+       if (( a == 0 ))
+       then
+
+          wframe=`printf "%05d" $k`
+          (( k = k + 1 ))
+
+          (( i = 0 ))
+          while (( i < nstream ))
+          do
+             (( i = i + 1 ))
+             cat  ${streamname[$i]}/$rframe.dvr  >>  sequence_data/$wframe.dvr
+          done
+
+
+       fi
+
+       (( a = a + 1 ))
+       if (( a == acceleration ))
+       then
+          (( a = 0 ))
+       fi
+
+       (( j = j + 1 ))
+
+    done
+
+
+       # Create the html file to be used for the sequence mode
+    cp  ${streamname[1]}.html  tmp1.html
+    sed  "s/camera.dvr/static_scenes.dvr/g"  tmp1.html  >  tmp2.html
+    sed  "s&${streamname[1]}&sequence_data&g"  tmp2.html  >  tmp3.html
+    sed  "s/;0-0/;0-$wframe/g"  tmp3.html  >  tmp4.html
+    if [[ "$palm_run_identifier" = "" ]]
+    then
+       cp  tmp4.html  ${file_identifier}_sequence.html
+    else
+       sed "s&DATA_DVR/sequence_data/\*\*\*\*\*.dvr (DVR 3D Sequence)&DVR 3D sequence generated by $palm_run_identifier&g"  tmp4.html  >  ${file_identifier}_sequence.html
+    fi
+    rm  tmp1.html  tmp2.html  tmp3.html  tmp4.html
+
+    printf "      data for using sequence mode generated"
+
+ fi
+
+
+
+    # Change back to directory from where script has been called
+ cd - > /dev/null  2>&1

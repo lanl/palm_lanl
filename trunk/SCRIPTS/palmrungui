@@ -1,0 +1,1049 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#--------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018  Leibniz Universitaet Hannover
+#--------------------------------------------------------------------------------#
+#
+# Current revisions:
+# -----------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: palmrungui 2825 2018-02-20 21:48:27Z maronga $
+# Adjusted to work with newest version of palmrun
+# 
+# 2718 2018-01-02 08:49:38Z maronga
+# Corrected "Former revisions" section
+# 
+# 2696 2017-12-14 17:12:51Z kanani
+# Change in file header (GPL part)
+#
+# 2484 2017-09-20 14:22:42Z maronga
+# Added PALM logo
+# 
+# 2480 2017-09-19 06:24:14Z maronga
+# option -A (project account number) added
+# 
+# 2477 2017-09-18 08:42:29Z maronga
+# Renamed restart run appendix from "f" to "r". Bugfix for displaying restart runs.>
+# Revised list of recently submitted jobs
+# 
+# 2413 2017-09-06 12:48:29Z maronga
+# Renamed to palmrungui and adapted for use with palmrun instead of mrun.
+# 
+# 2316 2017-07-20 07:53:42Z maronga
+# Initial revision in python
+# 
+# 
+#
+# Description:
+# ------------
+# Graphical user interface for the palmrun script.
+# @author Felix Gaschler
+# @author Björn Maronga (maronga@muk.uni-hannover.de)
+#
+# Instructions:
+# -------------
+#
+#------------------------------------------------------------------------------!
+
+import sys
+import subprocess
+from PyQt4 import QtCore, QtGui, uic
+from PyQt4.QtCore import QProcess
+from time import strftime
+import os
+
+
+# Determine PALM directories
+try: 
+   devnull = open(os.devnull, 'w')
+   out = subprocess.check_output("echo $PALM_BIN", shell=True, stderr=subprocess.STDOUT)
+   palm_bin = out.rstrip()
+   palm_dir = out.split("palm")[0] + "palm/" + out.split("palm")[1].split("/")[1]
+   out = None
+except:   
+   print "Error. $PALM_BIN is not set."
+   raise SystemExit
+
+
+palmrunline = ""
+name_of_file = os.path.basename(__file__)
+
+palmrungui_path = os.path.realpath(__file__)
+version_path = palmrungui_path[:len(palmrungui_path)-14-len(name_of_file)-1]
+
+Ui_MainWindow = uic.loadUiType("%s/palmrungui_files/mainwindow.ui" % (palm_bin))[0]
+Ui_helpDialog = uic.loadUiType("%s/palmrungui_files/help.ui" % (palm_bin))[0]
+Ui_aboutDialog = uic.loadUiType("%s/palmrungui_files/about.ui" % (palm_bin))[0]
+
+class HelpDialog(QtGui.QDialog,Ui_helpDialog):
+    def __init__(self, parent=None):
+        super(HelpDialog,self).__init__()
+        self.setupUi(self)
+        
+class AboutDialog(QtGui.QDialog,Ui_aboutDialog):
+    def __init__(self, parent=None):
+        super(AboutDialog,self).__init__()
+        self.setupUi(self)        
+
+class Mainwindow(QtGui.QMainWindow, Ui_MainWindow):
+    def __init__(self, parent=None):
+        super(Mainwindow, self).__init__()
+        self.setupUi(self)
+        
+        self.palm_logo.setPixmap(QtGui.QPixmap(palm_dir + "/trunk/SCRIPTS/palmrungui_files/logo.png"))   
+        
+        self.recent_jobs(50)
+        commandline = self.groupBox.findChild(QtGui.QLineEdit,"commandline")
+        commandline.setText("")
+        
+        self.tabWidget.setCurrentIndex(0)  
+        
+        
+        filename = "%s/.palmrun.gui.default" % (version_path)  
+        if os.path.exists(filename):
+            pass
+        else:
+            return
+        
+        file = open(filename, "r")
+        if ( file is not None ):
+            # File opened successfully
+            palmrunline = file.readline()
+            #if neue zeile zeichen
+            palmrunline = palmrunline[:len(palmrunline)-1]
+            file.close() 
+
+        # In case a palmrunline was found, load it to mainwindow
+        if ( palmrunline != ""):
+            palmrunline = palmrunline[17:] 
+            commandline.setText(palmrunline)
+            self.setup_gui(palmrunline)
+                      
+        
+    # starts xterm with palmrun commandline
+    #######################################
+    def startpalmrun(self):
+        palmrunline = str(self.groupBox.findChild(QtGui.QLineEdit,"commandline").text())
+        userline = str(self.group_advanced.findChild(QtGui.QLineEdit,"line_user").text())
+        
+        # Check for empty line
+        palmrunline_save = palmrunline;
+        if (userline != ""):
+            palmrunline = "%s %s" % (palmrunline,userline)
+        history_line = palmrunline       
+        
+        # Disable the main window
+        self.tabWidget.setEnabled(False)
+        self.groupBox.findChild(QtGui.QPushButton,"button_start").setEnabled(False)
+        self.groupBox.findChild(QtGui.QPushButton,"button_start").setText("wait...")      
+        self.groupBox.findChild(QtGui.QLineEdit,"commandline").setText("Executing palmrun in xterm...")        
+        
+        # Wait until all commands have been executed (ugly) ?
+        #for i in range(0,21):
+        #    qApp->processEvents()       
+        
+        # Start xterm as QProcess
+        palmrun = QProcess()
+        palmrun.setProcessChannelMode(QProcess.MergedChannels) # mergedChannels
+        palmrun.setWorkingDirectory(version_path)
+    
+        geomet = self.frameGeometry()
+        
+        posx = geomet.x()+geomet.width()
+        posy = geomet.y()
+      
+        s = " -title \"Executing palmrun...\" -fa \"Monospace\" -fs 11 -geometry \"80x38+%d+%d\" -e \"" % (posx,posy)
+        palmrunline = "%s%s;echo -n '--> Press enter to continue...';read yesno\"</dev/stdin" % (s, palmrunline.replace("\"","\'"))
+        
+        mString = "xterm %s" % (palmrunline)
+        palmrun.start(mString);
+    
+        if( palmrun.waitForStarted() is False ):
+            return
+        
+        # Wait until palmrun has finished or wait for 200 minutes
+        palmrun.waitForFinished(3600000);        
+        
+        # Jobs has been submitted or aborted. Continuing...
+        # Save the palmrun command to history file
+        filename = "%s/.palm.history" % (version_path)
+        tmstamp = strftime("%Y/%m/%d %H:%M")
+    
+        file = open(filename,"a")
+        s = "%s %s\n" % (tmstamp,history_line)
+        file.write(s)
+        file.close()              
+        
+        # Enable main window again
+        self.tabWidget.setEnabled(True)
+        self.groupBox.findChild(QtGui.QPushButton,"button_start").setEnabled(True)
+        self.groupBox.findChild(QtGui.QPushButton,"button_start").setText("Start palmrun") 
+        self.groupBox.findChild(QtGui.QLineEdit,"commandline").setText(palmrunline_save);
+        
+        # Reload recent jobs
+        self.recent_jobs(50)
+        
+        
+    # loads recent jobs 
+    ######################################
+    def recent_jobs(self, number):
+        fileDir = "%s/.palm.history" % (version_path)
+        if os.path.exists(fileDir):
+            pass
+        else:
+            return
+        
+        file = open(fileDir,"r")
+        history = file.readlines()
+        tmphistory = list()
+        file.close();
+        j = 0;
+
+        list_jobname = self.group_job.findChild(QtGui.QListWidget,"list_jobname")
+        list_jobname.clear()
+
+        # Read history entries and append to recent job list
+        i=len(history)-1
+        count = 0
+        while i>=0 and count<number:
+            timestamp = history[i][:16]
+            listitem = history[i][17:len(history[i])-1]
+            matchitems = list_jobname.findItems(listitem, QtCore.Qt.MatchExactly)
+
+            if ( len(matchitems) == 0 ):
+                listitem = filter(None,listitem.split(" -d"))[1]
+                listitem = filter(None,listitem.split(" -"))[0]
+                listitem = listitem.replace(" ",""); 
+                list_jobname.addItem(listitem);
+                s = "%s (%s)" % (listitem,timestamp)
+                tmphistory.append(s);
+                count = count +1
+                j = j+1
+                
+            if ( j == number ):
+                break
+            i = i-1
+            
+        # Send to list
+        list_jobname.clear();
+        
+        i=0
+        while i<len(tmphistory):
+            list_jobname.addItem(tmphistory[i]);
+            i = i+1
+            
+
+    # Enables coupled settings
+    ###############################
+    def enable_coupled(self):
+        coupledState = self.group_job.findChild(QtGui.QComboBox, "drop_job").currentText()
+        group = self.group_execution.findChild(QtGui.QGroupBox, "group_coupled")
+        
+        if (coupledState == "Restart run (coupled atmosphere ocean)" or coupledState == "Initial run (coupled atmosphere ocean)"):
+            self.group_coupled.setEnabled(True)
+        else: 
+            self.group_coupled.setEnabled(False)
+            
+            
+    # select a job via "select"-button
+    ################################
+    def choosejob(self):
+        jobDir = "%s/JOBS" % (version_path)        
+
+        # Pick a job from dialog
+        filename = QtGui.QFileDialog.getExistingDirectory(self, "Open a folder", jobDir, QtGui.QFileDialog.ShowDirsOnly)
+        
+        # If a file was selected, load it into mainwindow
+        if ( filename != ""):
+	    jobname = os.path.basename(unicode(filename))
+            self.group_job.findChild(QtGui.QLineEdit,"line_jobname").setText(jobname)
+            self.group_job.findChild(QtGui.QListWidget,"list_jobname").clearSelection()
+
+            # Change palmrunline accordingly
+            self.change_commandline("d","")
+            self.change_commandline("a","")
+            return
+        else:
+            return
+    
+        
+    # select a job via click from list
+    #################################
+    def choosejob_list(self):
+        #  Get selected item from list
+        list_jobname = self.group_job.findChild(QtGui.QListWidget,"list_jobname")
+        filename = str(list_jobname.currentItem().text())
+        itemint = list_jobname.currentRow()
+    
+        # Reload list
+        self.setupUi(self)
+        self.recent_jobs(50)
+    
+        # Set selected item to jobname
+        list_jobname.item(itemint).setSelected(True);
+    
+        timestamp = filename[len(filename)-17:][:16]
+        jobname = filename[:len(filename) - 19];
+    
+        fileDir = "%s/.palm.history" % (version_path)
+        file = open(fileDir,"r")
+        history = file.readlines()
+        tmphistory = list()
+        file.close();        
+    
+        i = len(history)
+        while i>=1:
+            listitem = history[i-1][17:len(history[i-1])-1]
+            listitem = filter(None,listitem.split(" -d"))[1]
+            listitem = filter(None,listitem.split(" -"))[0]
+            listitem = listitem.replace(" ","");                
+
+            # Select command line with correct timestamp and jobname
+            if (history[i-1][:16] == timestamp and listitem == jobname):
+                palmrunline = history[i-1]
+                palmrunline = palmrunline[17:]
+                palmrunline = palmrunline[:len(palmrunline)-1]
+                self.groupBox.findChild(QtGui.QLineEdit,"commandline").setText(palmrunline);
+                self.setup_gui(palmrunline);
+                self.list_jobname.item(itemint).setSelected(True);    
+                
+                return
+            i = i-1
+                
+    # Change run identifer (initial, restart, coupled...)
+    ######################################################
+    def change_rc_list(self):
+        drop_job = self.group_job.findChild(QtGui.QComboBox,"drop_job").currentText()    
+        self.change_commandline("a","")
+    
+        # Enable PE distribution for atmosphere/ocean
+        if ( drop_job == "Restart run (coupled atmosphere ocean)" or drop_job == "Initial run (coupled atmosphere ocean)"):
+            drop_atmos = self.group_coupled.findChild(QtGui.QLineEdit,"line_PE_atmos").text() 
+            drop_ocean = self.group_coupled.findChild(QtGui.QLineEdit,"line_PE_ocean").text() 
+            s = "%s %s" % (drop_atmos,drop_ocean)
+            self.change_commandline("Y",s)
+    
+    
+        if ( drop_job == "Restart run" or drop_job == "Restart run (coupled atmosphere ocean)"):
+           self.change_commandline("d","")
+
+        # Check of ocean runs
+        else:
+            self.delete_commandline("Y")
+            if (drop_job == "Precursor run (ocean)"):
+                self.activate_flag("y")
+            else:
+                self.deactivate_flag("y")
+            
+    # changes commandline depending on parameters
+    ##########################################################      
+    def change_commandline(self, id_str, fwt_str):
+        fwt_str = str(fwt_str) 
+        initialize = False
+        palmrunline = str(self.groupBox.findChild(QtGui.QLineEdit,"commandline").text())    
+        s = " -%s " % (id_str)
+        splitline = filter(None,palmrunline.split(s))
+
+        if ( len(splitline) == 0 ):
+                splitline.append("palmrun")
+                splitline.append(" ")
+                initialize = True
+
+        elif ( len(splitline) == 1 ):
+            splitline.append(" ")
+        
+        param = splitline[1].split("-")
+    
+        # Change in parameter "d" (jobname)
+        if (id_str == "d"):
+            filename = str(self.group_job.findChild(QtGui.QLineEdit,"line_jobname").text())
+            s = filename.split("JOBS/") 
+            param[0] = s[len(s)-1]
+     
+            if ( initialize == True ):#and self.group_runcontrol.isEnabled() == True ):
+                self.group_execution.setEnabled(True)
+                self.group_job.findChild(QtGui.QComboBox,"drop_job").setEnabled(True)
+                self.group_advanced.setEnabled(True)
+                self.groupBox.findChild(QtGui.QPushButton,"button_start").setEnabled(True) 
+                self.menuBar.findChild(QtGui.QMenu,"menuStart").actions()[3].setEnabled(True)
+            
+            elif ( param[0] == ""):            
+                self.group_execution.setEnabled(False)
+                self.group_job.findChild(QtGui.QComboBox,"drop_job").setEnabled(False)
+                self.groupBox.findChild(QtGui.QPushButton,"button_start").setEnabled(False) 
+                self.menuBar.findChild(QtGui.QMenu,"menuStart").actions()[3].setEnabled(False)
+                self.group_advanced.setEnabled(False)
+                self.delete_commandline("d")
+                self.change_commandline("a","remove")
+                self.group_job.findChild(QtGui.QLabel,"label_usercode").setText("")
+                return 1 
+            
+            else:
+                # Check if user code is available
+                usercode = "%s/JOBS/%s/USER_CODE" % (version_path,param[0])
+                                
+                if (os.path.exists(usercode) is True): 
+                    self.group_job.findChild(QtGui.QLabel,"label_usercode").setText("<font color='green'>User code found.</font>")
+               
+                else:               
+                    self.group_job.findChild(QtGui.QLabel,"label_usercode").setText("<font color='red'>Warning: no user code found!</font>")
+               
+
+                # Check if _pdf file is available, otherwise notice user
+                drop_job = self.group_job.findChild(QtGui.QComboBox,"drop_job").currentText()
+                if ( self.group_execution.findChild(QtGui.QCheckBox,"check_restarts").checkState() == 2 or 
+                     drop_job == "Restart run" or drop_job == "Restart run (coupled atmosphere ocean)"     ):
+
+                    jobname = self.group_job.findChild(QtGui.QLineEdit, "line_jobname").text()
+                    restartfile = "%s/JOBS/%s/INPUT/%s_p3dr" % (version_path,jobname,jobname)
+
+                    if (os.path.exists(restartfile) == True):                  
+                        self.group_execution.findChild(QtGui.QLabel,"label_restart").setText("")
+               
+
+                        if ( drop_job == "Restart run (coupled atmosphere ocean)" ):
+		            restartfileo = "%s/JOBS/%s/INPUT/%s_p3dor" % (version_path,jobname,jobname)
+                            if (os.path.exists(restartfileo) == True):                  
+                                self.group_execution.findChild(QtGui.QLabel,"label_restart").setText("hooo")
+                  
+                            else:       
+                                self.group_execution.findChild(QtGui.QLabel,"label_restart").setText("<font color='red'>Warning: No p3dor file found!</font>")   
+               
+                    else:       
+                        self.group_execution.findChild(QtGui.QLabel,"label_restart").setText("<font color='red'>Warning: No p3dr file found!</font>")
+         
+               
+                        
+                self.group_execution.setEnabled(True)
+                self.drop_job.setEnabled(True)
+                self.group_advanced.setEnabled(True)
+                   
+        # Change in parameter "a" (run control list)
+        elif (id_str == "a"): 
+    
+            drop_job = self.group_job.findChild(QtGui.QComboBox,"drop_job").currentText()
+            rc_flag = "#"
+    
+            if (drop_job == "Initial run"):
+                rc_flag = "#"
+            
+            elif (drop_job == "Restart run"):            
+                rc_flag = "r"
+            
+            elif (drop_job == "Precursor run (atmosphere)"):            
+                rc_flag = "#"
+            
+            elif (drop_job == "Precursor run (ocean)"):            
+                rc_flag = "o#"
+
+            elif (drop_job == "Initial run (coupled atmosphere ocean)"):            
+                rc_flag = "#"
+            
+            elif (drop_job == "Restart run (coupled atmosphere ocean)"):            
+                rc_flag = "r"
+            
+            param[0] = "\"d3%s" % (rc_flag)
+    
+    
+            if (drop_job == "Restart run (coupled atmosphere ocean)" or drop_job == "Initial run (coupled atmosphere ocean)"):
+                if (rc_flag == "#"):
+                   rc_flag = "o#"
+                else:
+                   rc_flag = "or"
+
+                param[0] = "%s d3%s" % (param[0],rc_flag)
+    
+            status_restarts = self.group_execution.findChild(QtGui.QCheckBox,"check_restarts").checkState()
+
+            if (status_restarts == 2):
+                param[0]="%s restart" % (param[0])
+    
+                # Check if _p3dr file is available, otherwise notice user
+                if (status_restarts == 2):
+                    jobname = str(self.group_job.findChild(QtGui.QLineEdit, "line_jobname").text())[len(version_path)+len("/JOBS/"):]
+                    restartfile = "%s/JOBS/%s/INPUT/%s_p3dr" % (version_path,jobname,jobname)
+                    
+                    if (os.path.exists(restartfile) == True):                   
+                        self.group_execution.findChild(QtGui.QLabel,"label_restart").setText("")
+                   
+                    else:                   
+                        self.group_execution.findChild(QtGui.QLabel,"label_restart").setText("<font color='red'>Warning: No p3dr file found!</font>")
+
+            else:  
+                self.group_execution.findChild(QtGui.QLabel,"label_restart").setText("")
+
+            status_cycfill = self.group_execution.findChild(QtGui.QCheckBox,"check_cycfill").checkState()
+    
+            if (status_cycfill == 2):            
+                param[0]="%s fill" % (param[0])
+            
+            status_svf = self.group_execution.findChild(QtGui.QCheckBox,"check_svf").checkState()
+    
+            if (status_svf == 2):            
+                param[0]="%s svf" % (param[0])
+
+            param[0]="%s\"" % (param[0])
+ 
+ 
+            if ( fwt_str == "remove"):            
+                self.delete_commandline(id_str)
+                return 1
+            
+            else:            
+                self.button_start.setEnabled(True)
+                self.action_save.setEnabled(True)
+
+        # Change in any other parameter
+        else:
+            if ( fwt_str != ""):            
+                param[0] = "\"%s\"" % (fwt_str)
+            
+            else:            
+                self.delete_commandline(id_str)
+                return 1
+                        
+        # Join the new palmrunline
+        splitline[1]= " -".join(param)
+                
+                
+        s = " -%s " % (id_str)
+        newpalmrunline = s.join(splitline)
+    
+        # Pr the new palmrunline to mainwindow
+        newpalmrunline = newpalmrunline.replace("  "," ")
+        self.groupBox.findChild(QtGui.QLineEdit,"commandline").setText(newpalmrunline)
+
+    # change lineinput depending on sender
+    ###################################################################################
+    def change_lineinput(self):
+        if ( self.sender() == self.group_execution.findChild(QtGui.QLineEdit, "line_host") ):
+            tmptext = self.group_execution.findChild(QtGui.QLineEdit,"line_host").text()
+            self.change_commandline("h",tmptext)
+
+        elif ( self.sender() == self.group_job.findChild(QtGui.QLineEdit, "line_jobname") ):
+            tmptext = self.group_job.findChild(QtGui.QLineEdit,"line_jobname").text()
+            self.change_commandline("d",tmptext)
+
+        elif ( self.sender() == self.group_execution.findChild(QtGui.QLineEdit,"line_q")):
+            tmptext = self.group_execution.findChild(QtGui.QLineEdit,"line_q").text()
+            self.change_commandline("q",tmptext)
+        
+        elif ( self.sender() == self.group_execution.findChild(QtGui.QLineEdit,"line_account")):
+            tmptext = self.group_execution.findChild(QtGui.QLineEdit,"line_account").text()
+            self.change_commandline("A",tmptext)
+        
+        elif ( self.sender() ==  self.group_execution.findChild(QtGui.QLineEdit,"line_pe")):
+            tmptext = self.group_execution.findChild(QtGui.QLineEdit,"line_pe").text()
+            self.change_commandline("X",tmptext)
+        
+        elif ( self.sender() == self.group_execution.findChild(QtGui.QLineEdit,"line_tpn")):
+            tmptext = self.group_execution.findChild(QtGui.QLineEdit,"line_tpn").text()
+            self.change_commandline("T",tmptext)
+                
+        elif ( self.sender() == self.group_execution.findChild(QtGui.QLineEdit,"line_time")):
+            tmptext = self.group_execution.findChild(QtGui.QLineEdit,"line_time").text()
+            self.change_commandline("t",tmptext)
+        
+        elif ( self.sender() == self.group_advanced.findChild(QtGui.QLineEdit,"line_M")):
+            tmptext = self.group_advanced.findChild(QtGui.QLineEdit,"line_M").text()
+            self.change_commandline("M",tmptext)
+        
+        elif ( self.sender() == self.group_advanced.findChild(QtGui.QLineEdit,"line_m")):
+            tmptext = self.group_advanced.findChild(QtGui.QLineEdit,"line_m").text()
+            self.change_commandline("m",tmptext)
+        
+        elif ( self.sender() == self.group_advanced.findChild(QtGui.QLineEdit,"line_D")):
+            tmptext = self.group_advanced.findChild(QtGui.QLineEdit,"line_D").text()
+            self.change_commandline("D",tmptext)
+        
+        elif ( self.sender() == self.group_advanced.findChild(QtGui.QLineEdit,"line_c")):
+            tmptext = self.group_advanced.findChild(QtGui.QLineEdit,"line_c").text()
+            if ( tmptext == ".palmgui.config"):
+                tmptext = ""
+            self.change_commandline("c",tmptext)
+        
+        elif ( self.sender() == self.group_advanced.findChild(QtGui.QLineEdit,"line_s")):
+            tmptext = self.group_advanced.findChild(QtGui.QLineEdit,"line_s").text()
+            self.change_commandline("s",tmptext)
+                
+        elif ( self.sender() == self.group_advanced.findChild(QtGui.QLineEdit,"line_w")):
+            tmptext = self.group_advanced.findChild(QtGui.QLineEdit,"line_w").text()
+            self.change_commandline("w",tmptext)
+        
+        elif ( self.sender() == self.group_coupled.findChild(QtGui.QLineEdit,"line_PE_atmos") or 
+               self.sender() == self.group_coupled.findChild(QtGui.QLineEdit,"line_PE_ocean")):
+            t1 = self.group_coupled.findChild(QtGui.QLineEdit,"line_PE_atmos").text()
+            t2 = self.group_coupled.findChild(QtGui.QLineEdit,"line_PE_ocean").text()            
+            tmptext = "%s %s" % (t1,t2)
+            
+            self.change_commandline("Y",tmptext)
+
+            # try catch sowas in der art
+            pe1 = 0
+            pe2 = 0
+            
+            try:
+                pe1 = int(t1)
+            except ValueError:            
+                pass
+                
+            try:
+                pe2 = int(t2)
+            except ValueError:
+                pass
+                
+            PE_total = pe1+pe2   
+            self.group_execution.findChild(QtGui.QLineEdit,"line_pe").setText(str(PE_total))
+            self.change_commandline("X",str(PE_total))
+          
+    # deletes parameter from commandline
+    ##################################################################################### 
+    def delete_commandline(self, id_str):   
+        # Read palmrunline
+        commandline = self.groupBox.findChild(QtGui.QLineEdit,"commandline")
+        palmrunline = str(commandline.text())
+        s = " -%s" % (id_str)
+        splitline = filter(None,palmrunline.split(s))
+        
+        if ( len(splitline) == 1):
+            return 1
+        else:
+            param = splitline[1].split("-")
+            param[0] = ""
+            splitline[1]= " -".join(param)
+            newpalmrunline = "".join(splitline)
+            newpalmrunline = newpalmrunline.replace("  "," ")
+    
+            # Print new palmrunline to screen
+            commandline.setText(newpalmrunline)
+        
+    # controls flags
+    ###################################################################################
+    def check_flags(self):
+        status = self.group_execution.findChild(QtGui.QCheckBox,"check_delete_tmp_files" ).checkState()
+        if (status == 2):      
+            self.activate_flag("B")
+        else:
+            self.deactivate_flag("B")
+    
+        status = self.group_execution.findChild(QtGui.QCheckBox,"check_verbose" ).checkState()
+        if (status == 2):
+            self.activate_flag("v") 
+        else:
+            self.deactivate_flag("v")
+        
+        status = self.group_advanced.findChild(QtGui.QCheckBox,"check_b" ).checkState() 
+        if (status == 2):
+            self.activate_flag("b")
+        else:
+            self.deactivate_flag("b")
+    
+        status = self.group_advanced.findChild(QtGui.QCheckBox,"check_F" ).checkState()   
+        if (status == 2):
+            self.activate_flag("F")
+        else:
+            self.deactivate_flag("F")
+            
+        status = self.group_advanced.findChild(QtGui.QCheckBox,"check_I" ).checkState() 
+        if (status == 2):
+            self.activate_flag("I")
+        else:
+            self.deactivate_flag("I")
+
+        status = self.group_advanced.findChild(QtGui.QCheckBox,"check_k" ).checkState() 
+        if (status == 2):
+            self.activate_flag("k")
+        else:
+            self.deactivate_flag("k")
+
+        status = self.group_advanced.findChild(QtGui.QCheckBox,"check_O" ).checkState() 
+        if (status == 2):
+            self.activate_flag("O")
+        else:
+            self.deactivate_flag("O")
+
+        status = self.group_advanced.findChild(QtGui.QCheckBox,"check_x" ).checkState() 
+        if (status == 2):
+            self.activate_flag("x")
+        else:
+            self.deactivate_flag("x")
+        
+        status = self.group_advanced.findChild(QtGui.QCheckBox,"check_Z" ).checkState() 
+        if (status == 2):
+            self.activate_flag("Z")
+        else:
+            self.deactivate_flag("Z")
+        
+    # changes flag to parameter 
+    ##################################################################################    
+    def activate_flag(self, id_str):
+        commandline = self.groupBox.findChild(QtGui.QLineEdit,"commandline")
+        palmrunline = str(commandline.text())
+        s = " -%s" % (id_str)
+        splitline = filter(None,palmrunline.split(s))
+        
+        if ( len(splitline) == 1):
+            splitline.append("")
+            s = " -%s" % (id_str)
+            newpalmrunline = s.join(splitline)
+            newpalmrunline = newpalmrunline.replace("  "," ")
+            commandline.setText(newpalmrunline)                
+        
+    # deletes flag in commandline
+    ####################################################################################    
+    def deactivate_flag(self, id_str):
+        commandline = self.groupBox.findChild(QtGui.QLineEdit,"commandline")
+        palmrunline = str(commandline.text())
+        s = " -%s" % (id_str)
+        splitline = filter(None,palmrunline.split(s))
+ 
+        newpalmrunline = "".join(splitline)
+        newpalmrunline = newpalmrunline.replace("  "," ")
+        commandline.setText(newpalmrunline)     
+
+    # Clears window 
+    #################################################################################
+    def reset_window(self):
+        self.setupUi(self)
+        self.tabWidget.setCurrentIndex(0)
+        self.recent_jobs(50)
+        
+    # Safes current commandline and user Parameters to .sav file
+    #################################################################################
+    def save_to_file(self):
+        user_string = self.group_advanced.findChild(QtGui.QLineEdit,"line_user").text()
+        cmd_string = self.groupBox.findChild(QtGui.QLineEdit,"commandline").text()
+        
+        string_to_file = cmd_string
+        if (user_string != ""): 
+            string_to_file = "%s%s" % (string_to_file,user_string)
+            
+        #filename = QtGui.QInputDialog.getText(self, "Save File naming Dialog", "Insert filename", QtGui.QLineEdit.Normal)
+        filename = str(QtGui.QFileDialog.getSaveFileName(self, "Save File","filename.sav"))
+        extension = ".sav"
+        filename = "%s%s" % (filename, "")
+        tmstamp = strftime("%Y/%m/%d %H:%M")
+        
+        file = open(filename,"w")
+        s = "%s %s" % (tmstamp, string_to_file)
+        file.write(s)
+        file.close()
+        
+    # Safes current commandline and user parameters to default file
+    ################################################################################
+    def save_default(self):
+        user_string = self.group_advanced.findChild(QtGui.QLineEdit,"line_user").text()
+        cmd_string = self.groupBox.findChild(QtGui.QLineEdit,"commandline").text()
+        
+        string_to_file = cmd_string
+        if (user_string != ""): 
+            string_to_file = "%s%s" % (string_to_file,user_string)
+        
+        filename ="%s/.palmgui.default" % (version_path)
+        tmstamp = strftime("%Y/%m/%d %H:%M")
+        
+        file = open(filename,"w")
+        s = "%s %s" % (tmstamp, string_to_file)
+        file.write(s)
+        file.close()        
+
+    # Execute command which starts jobmanager (start palm_jm)
+    #######################################################
+    def start_jobmanager(self):
+        subprocess.Popen(["nohup","palm_jm",">>","/dev/null", "2>&1","&"])        
+        
+    # Executes command which starts watchdog (start palm_wd)
+    ########################################################
+    def start_watchdog(self):
+        subprocess.Popen(["nohup","palm_wd",">>","/dev/null", "2>&1","&"])
+
+    # Opens "help" dialog
+    #################################
+    def help(self):        
+        dialog = HelpDialog()
+        dialog.exec_()
+
+    # Opens "about" dialog
+    ##################################
+    def about_gui(self):
+        dialog = AboutDialog()
+        dialog.exec_()
+
+    # commandline to buttons etc
+    ##############################
+    def setup_gui(self, palmrun_str):  
+      
+        self.palm_logo.setPixmap(QtGui.QPixmap(palm_dir + "/trunk/SCRIPTS/palmrungui_files/logo.png"))   
+      
+        #  Some initial settings
+        user = "" 
+        coupled_run = False 
+        ocean_run   = False 
+        nojob       = False 
+
+        #Split parameters in palmrunline
+        splitline = palmrun_str.split(" -")
+        
+        if ( splitline[0] != "palmrun"):
+            return 1
+
+        else:
+            self.group_job.setEnabled(True) 
+
+        # Loop for all parameters in palmrunline
+        i = len(splitline)-1
+        while i >= 1:
+
+            # Determine parameter
+            splitparameter = splitline[i].split(" ")
+
+            parameter = splitparameter[0] 
+            splitparameter.pop(0)
+            options = " ".join(splitparameter) 
+            options = options.replace("\"","") 
+
+            # Check for suitable switch
+            if ( parameter == "d"):
+              
+                if ( options != ""):
+                    self.group_job.findChild(QtGui.QLineEdit,"line_jobname").setText(options) 
+                    nojob = False 
+                
+                else:                 
+                    nojob = True 
+                
+            elif ( parameter == "h"):
+                self.group_execution.findChild(QtGui.QLineEdit,"line_host").setText(options) 
+             
+            elif ( parameter == "q"):
+                self.group_execution.findChild(QtGui.QLineEdit,"line_q").setText(options) 
+             
+            elif ( parameter == "A"):
+                self.group_execution.findChild(QtGui.QLineEdit,"line_account").setText(options) 
+             
+            elif ( parameter == "X"):
+                self.group_execution.findChild(QtGui.QLineEdit,"line_pe").setText(options) 
+             
+            elif ( parameter == "T"):
+                self.group_execution.findChild(QtGui.QLineEdit,"line_tpn").setText(options) 
+             
+            elif ( parameter == "t"):
+                self.group_execution.findChild(QtGui.QLineEdit,"line_time").setText(options) 
+             
+            elif ( parameter == "B"):
+                self.group_execution.findChild(QtGui.QCheckBox,"check_delete_tmp_files").setChecked(True) 
+             
+            elif ( parameter == "v"):
+                self.group_execution.findChild(QtGui.QCheckBox,"check_verbose").setChecked(True) 
+                          
+            elif ( parameter == "b"): 
+                self.group_advanced.findChild(QtGui.QCheckBox,"check_b").setChecked(True)  
+             
+            elif ( parameter == "F"):
+                self.group_advanced.findChild(QtGui.QCheckBox,"check_F").setChecked(True) 
+             
+            elif ( parameter == "I"):
+                self.group_advanced.findChild(QtGui.QCheckBox,"check_I").setChecked(True) 
+             
+            elif ( parameter == "k"):
+                self.group_advanced.findChild(QtGui.QCheckBox,"check_k").setChecked(True) 
+             
+            elif ( parameter == "O"): 
+                self.group_advanced.findChild(QtGui.QCheckBox,"check_O").setChecked(True) 
+             
+            elif ( parameter == "x"):              
+                self.group_advanced.findChild(QtGui.QCheckBox,"check_x").setChecked(True) 
+             
+            elif ( parameter == "Z"):
+                self.group_advanced.findChild(QtGui.QCheckBox,"check_Z").setChecked(True) 
+               
+            elif ( parameter == "m"):
+                self.group_advanced.findChild(QtGui.QLineEdit,"line_m").setText(options) 
+             
+            elif ( parameter == "M"):
+                self.group_advanced.findChild(QtGui.QLineEdit,"line_M").setText(options) 
+                          
+            elif ( parameter == "D"):
+                self.group_advanced.findChild(QtGui.QLineEdit,"line_D").setText(options) 
+             
+            elif ( parameter == "c"):
+                self.group_advanced.findChild(QtGui.QLineEdit,"line_c").setText(options) 
+                          
+            elif ( parameter == "s"):
+                self.group_advanced.findChild(QtGui.QLineEdit,"line_s").setText(options) 
+             
+            elif ( parameter == "w"):
+                self.group_advanced.findChild(QtGui.QLineEdit,"line_w").setText(options) 
+             
+
+            # Determine settings for coupled restart runs
+            elif ( parameter == "Y"):
+                optionssplit = options.split(" ") 
+                
+                group_coupled = self.group_execution.findChild(QtGui.QGroupBox,"group_coupled")
+                group_coupled.findChild(QtGui.QLineEdit,"line_PE_atmos").setEnabled(True) 
+                group_coupled.findChild(QtGui.QLineEdit,"line_PE_ocean").setEnabled(True) 
+                group_coupled.findChild(QtGui.QLabel,"label_coupled1").setEnabled(True) 
+                group_coupled.findChild(QtGui.QLabel,"label_coupled2").setEnabled(True) 
+                group_coupled.findChild(QtGui.QLabel,"label_coupled3").setEnabled(True) 
+                group_coupled.findChild(QtGui.QLabel,"label_coupling").setEnabled(True) 
+
+                if (optionssplit.count() == 2):
+                    group_coupled.findChild(QtGui.QLineEdit,"line_PE_atmos").setEnabled(optionssplit[0]) 
+                    group_coupled.findChild(QtGui.QLineEdit,"line_PE_ocean").setEnabled(optionssplit[1])
+                 
+                else:                  
+                    group_coupled.findChild(QtGui.QLineEdit,"line_PE_atmos").setText("") 
+                    group_coupled.findChild(QtGui.QLineEdit,"line_PE_ocean").setText("") 
+ 
+                 
+                coupled_run = True 
+            
+            elif ( parameter == "y"):              
+                self.group_job.findChild(QtGui.QComboBox, "drop_job").setCurrentIndex(3) 
+             
+
+            # Determine settings for the run control list
+            elif ( parameter == "a"):
+              
+                optionssplit = options.split(" ") 
+
+                options_2 = None
+                options_all = None
+                
+                j = 0
+                while j < len(optionssplit):
+                 
+                    options_all = optionssplit[j] 
+                    options_2 = optionssplit[j][:2] 
+                                              
+                    if (options_2 == "d3"):      
+                        if (options_all[:3][-1] == "#"):
+                            self.group_job.findChild(QtGui.QComboBox, "drop_job").setCurrentIndex(0) 
+                        elif (options_all[:3][-1] == "r"):
+                            self.group_job.findChild(QtGui.QComboBox, "drop_job").setCurrentIndex(1) 
+                        
+                        elif (options_all[:3][-1] == "o"):
+                            ocean_run = True 
+                        
+                    if (options_all == "restart"):
+                        self.group_execution.findChild(QtGui.QCheckBox,"check_restarts").setChecked(True) 
+                        # Check if _pdf file is available, otherwise notice user
+                        jobname = str(self.group_job.findChild(QtGui.QLineEdit,"line_jobname").text())[len(version_path)+len("/JOBS/"):] 
+                        
+                        restartfile = "%sJOBS/%s/INPUT/%s_p3dr" % (version_path,jobname,jobname)
+                        if (os.path.exists(restartfile) == True):   
+                            self.group_execution.findChild(QtGui.QLabel,"label_restart").setText("") 
+                       
+                        else:
+                            self.group_execution.findChild(QtGui.QLabel,"label_restart").setText("<font color='red'>Warning: No p3dr file \found!</font>") 
+                    j = j+1
+
+            # All unknown parameters are set as extra user parameters
+            else: 
+	        print parameter
+                user = "%s-%s \"%s\" " % (user,parameter,options)
+                splitline.removeAt(i) 
+
+            i = i-1
+        # Change drop box state in case of ocean precursor or coupled restart runs
+        if ( ocean_run == True ):
+            if ( coupled_run == True ):
+                self.group_job.findChild(QtGui.QComboBox, "drop_job").setCurrentIndex(4) 
+            
+            else:
+                self.group_job.findChild(QtGui.QComboBox, "drop_job").setCurrentIndex(3) 
+
+        if ( user != ""):
+            self.group_advanced.findChild(QtGui.QLineEdit,"line_user").setText(user)
+
+        # Join palmrunline and post it to mainwindow
+        palmrunline = " -".join(splitline) 
+        self.groupBox.findChild(QtGui.QLineEdit,"commandline").setText(palmrunline)          
+
+        # Disable mainwindow if no job was found, otherwise enable
+        if ( nojob == True ):
+            self.group_execution.setEnabled(False) 
+            self.groupBox.findChild(QtGui.QPushButton,"button_start").setEnabled(False) 
+            self.menuBar.findChild(QtGui.QMenu,"menuStart").actions()[3].setEnabled(False) 
+            self.group_job.findChild(QtGui.QComboBox, "drop_job").setEnabled(False) 
+            self.group_advanced.setEnabled(False) 
+            self.check_advanced.setEnabled(False) 
+         
+        else:
+            self.group_execution.setEnabled(True) 
+            self.groupBox.findChild(QtGui.QPushButton,"button_start").setEnabled(True) 
+            self.menuBar.findChild(QtGui.QMenu,"menuStart").actions()[3].setEnabled(True)
+            self.group_job.findChild(QtGui.QComboBox, "drop_job").setEnabled(True) 
+            self.group_advanced.setEnabled(True) 
+         
+        self.tabWidget.setCurrentIndex(0)
+         
+    # open saved commandline
+    ##################################
+    def open_from_file(self):
+        
+        # Select filename and open it
+        filename = QtGui.QFileDialog.getOpenFileName(self, "Open File","Save files (*.sav)") 
+        
+        if ( filename != ""):
+            file = open(filename, "r")
+          
+            if ( file is not None ):
+                # File opened successfully
+                palmrunline = file.read()
+                file.close() 
+    
+            # In case a palmrunline was found, load it to mainwindow
+            if ( palmrunline != ""):
+                palmrunline = palmrunline[17:] 
+                self.groupBox.findChild(QtGui.QLineEdit,"commandline").setText(palmrunline) 
+                self.setup_gui(palmrunline)
+         
+    # open saved commandline   
+    ##################################
+    def open_last(self): 
+        # Select filename and open it
+        filename = "%s/.palm.history" % (version_path)
+        
+        if os.path.exists(filename):
+            pass
+        else:
+            return
+        
+        file = open(filename, "r")  
+        if ( file is not None ):
+            # File opened successfully
+            lines = file.readlines()
+            palmrunline = lines[len(lines)-1]
+            palmrunline = palmrunline[:len(palmrunline)-1]
+            file.close() 
+
+        # In case a palmrunline was found, load it to mainwindow
+        if ( palmrunline != ""):
+            palmrunline = palmrunline[17:len(palmrunline)] 
+            self.groupBox.findChild(QtGui.QLineEdit,"commandline").setText(palmrunline) 
+            self.setup_gui(palmrunline)        
+        
+
+if __name__ == "__main__":
+    app = QtGui.QApplication(sys.argv)
+    window = Mainwindow()
+    window.show()
+    sys.exit(app.exec_())

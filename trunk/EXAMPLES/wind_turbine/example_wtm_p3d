@@ -1,0 +1,64 @@
+ &inipar nx = 191, ny = 191, nz = 192,
+    
+         dx = 5.0, dy = 5.0, dz = 5.0,
+
+         bc_lr = 'cyclic',
+         bc_ns = 'cyclic',
+
+         initializing_actions = 'set_constant_profiles',
+         ug_surface = 8.0, vg_surface = 0.0,
+
+         bc_uv_b = 'neumann',
+         fft_method = 'temperton-algorithm',
+         
+         constant_flux_layer = .F., /
+
+ &d3par  end_time = 60.0,
+
+         npex = 8, npey = 8,
+
+         termination_time_needed = 600.0,
+         
+         create_disturbances = .F.,
+         
+         dt_run_control = 1.,
+           
+         mask_x_loop(1,:) = 200.0, 800.0, 5.0,
+         mask_y_loop(1,:) = 200.0, 800.0, 5.0,
+         mask_z_loop(1,:) = 400.0, 560.0, 15.0,
+         
+         data_output_masks(1,:) = 'u', 'v','w',
+
+         dt_domask = 2.,/
+
+ &wind_turbine_par
+         time_turbine_on  = 1.0,
+
+         nturbines = 4,
+         rcx =   300.0, 600.0, 300.0, 600.0,
+         rcy =   300.0, 300.0, 600.0, 600.0,
+         rcz =   480.0, 480.0, 480.0, 480.0,
+         rr  =    63.0, 63.0, 63.0, 63.0,
+         rnac =    1.5, 1.5, 1.5, 1.5,
+         dtow =    4.0, 4.0, 4.0, 4.0,
+
+         omega_rot = 0.9, 0.9, 0.9, 0.9,
+         phi_yaw = -20.0, 10.0, 0.0, 30.0,
+         tilt = 0.0,
+         rated_power = 5296610.0,
+         speed_control = .T.,
+         pitch_control = .T.,
+         pitch_add = 0.0,
+         yaw_control = .T.,
+         yaw_speed = 0.01,
+        
+         turb_cd_nacelle = 0.85, 0.85, 0.85, 0.85,
+         turb_cd_tower   = 1.2, 1.2, 1.2, 1.2,
+        
+         segment_length = 1.0,
+         segment_width  = 0.5,
+        
+         nairfoils = 8, /
+            
+! mrun -d example_wtm -v -h lccrayb -q mpp1testq -K parallel -X 64 -T 24 -t 1200 -r "d3# ts# ma#"
+! mrun -d example_wtm -v -c .mrun.config.forwind_flow -h lcflow  -K parallel -X 64 -t 2000 -r "d3# ts# ma#"

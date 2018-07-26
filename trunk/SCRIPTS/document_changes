@@ -1,0 +1,306 @@
+#!/bin/ksh
+#------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the 
+# terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018 Leibniz Universitaet Hannover
+#------------------------------------------------------------------------------#
+#
+# Current revisions:
+# -----------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: document_changes 2718 2018-01-02 08:49:38Z maronga $
+# Corrected "Former revisions" section
+# 
+# 2696 2017-12-14 17:12:51Z kanani
+# Change in file header (GPL part)
+#
+# 2235 2017-05-31 08:03:49Z maronga
+# Changed the submission procedure in order to reduce the number of required
+# commits to one per change.
+# 
+# 2117 2017-01-16 16:28:44Z maronga
+# 
+# 1827 2016-04-07 12:12:23Z maronga
+# Added note that the script does not work on MAC OS
+# 
+# 1813 2016-04-06 09:38:56Z maronga
+# Added update of the copyright statements in the file headers.
+# 
+# 1810 2016-04-05 20:25:29Z maronga
+# document_changes now checks all subdirectories. Modified printing to screen.
+# 
+# 1804 2016-04-05 16:30:18Z maronga
+# Removed printing of "this is an alpha version"
+# 
+# 1326 2014-03-21 10:44:31Z maronga
+# Initial revision
+# 
+# Description:
+# ------------
+# This tool moves text from "Current Revisions:" to "Former Revisions:" and
+# adds the svn timestamp. It works with the folders SOURCE and SCRIPTS
+#
+# Usage:
+# a) go to the source directory (e.g. current_version/trunk and perform:
+#    "document_changes",
+# b) or call "document_changes" directly and add the path to the source code as
+#    argument
+#    (e.g. document_changes trunk)
+#
+# Note:
+# The script will only work properly if the two following conditions are met:
+# 1) the 2nd line after "Current Revisions:" must contain text,
+# 2) the last line before "Former Revisions:" must not contain text.
+#------------------------------------------------------------------------------#
+
+#
+#-- define variables
+    comments=""         #: variable contains the CR text
+    comment_char=="!"   #: comment character
+    count_changes=0     #: count the number of files with CR text
+    count_updates=0     #: count the number of files with copyright update
+    count_files=0       #: count the number of files
+    fn=""               #: current file name to be scanned
+    file_firstchar=""   #: first character of filename
+    file_lastchar=""    #: last character of filename
+    file_extension=""   #: filename extension
+    found_comment=false #: true/false if a CR text was found
+    IFS=''              #: set standard delimiter to empty string
+    input_dir=""        #: directory of the source code
+    line=""             #: containts the current line of filename
+    line_count=0        #: counter to the line no. of the file
+    line_start=9999999  #: line no. where CR text starts
+    line_stop=0         #: line no. where CR text ends
+    line_tmp=""         #: first 19 characters of line
+    list_delete=""      #: contains the line no. that must be deleted from CR
+    timestamp=""        #: the svn timestamp of the file
+    current_year=$(date +"%Y")
+
+#
+#-- get input directory
+    input_dir=$1
+    if  [[ "$input_dir" == "" ]]
+    then
+       input_dir=`pwd`
+    fi
+    
+    printf "\n"
+    printf "#------------------------------------------------------------------------# \n"
+    printf "| \e[1mdocument_changes\e[0m                                                       | \n"
+    printf "|                                                                        | \n"
+    printf "| This tool moves the change comments in the all PALM file headers from  | \n"
+    printf "| 'Current revisions' to 'Former revisions' and saves the time stamp.    | \n"  
+    printf "#------------------------------------------------------------------------# \n"
+    
+    printf "\n  *** Checking files in $input_dir and all recursive subdirectories...\n"
+
+    
+#
+#-- scan all (sub-)directories for files.
+    IFS=$'\n';
+    for fn in $(find $input_dir -not -name '*.pdf'  -and -not -name '*.x'      \
+                           -and -not -name '*.eps'  -and -not -name '*.png'    \
+                           -and -not -name '*.svn*' -and -not -name '*~'       \
+                           -and -not -name '*.tar'); do
+
+#
+#--    exclude invisible files
+       file_firstchar=${fn:0:1}
+       file_lastchar=`echo -n $fn| tail -c -1`
+       file_extension=${fn##*.}
+       if [[ "$file_firstchar" == "." ]]
+       then
+          continue
+       fi
+       
+       (( count_files = count_files + 1 ))
+
+       line_count=0
+       found_comment=false
+       list_delete=""
+       line_start=9999999
+       line_stop=0
+       comments=""
+
+#
+#--    read one line at a time and move revision comments
+       while read line
+       do
+
+          (( line_count = line_count + 1 ))
+          line_tmp=""
+          line_tmp=${line:2:17}
+
+#
+#--       check if stopping point is reached
+          if [[ $line_stop -eq 0 && "$line_tmp" == "Former revisions:" ]]
+          then
+             line_stop=$line_count
+          fi
+
+#
+#--       check if starting point is reached
+          if [[ $line_start -eq 9999999 && "$line_tmp" == "Current revisions" ]]
+          then
+             (( line_start = line_count + 2 ))
+             comment_char=${line:0:1}
+          fi
+
+#
+#--       read comment line
+          if [[ $line_count -ge $line_start && $line_stop -eq 0 ]]
+          then
+
+#
+#--          check for empty comments
+             line_no_space=`echo ${line:2:10} | sed -e 's/^[ \t]*//'`
+             if [[ $line_count -eq $line_start && "$line_no_space" != "" ]]
+             then
+
+             
+                printf "\r%$(tput cols)s" " "   
+                printf "\r  \e[1;92m*** Comments found in $fn\e[0m\n"
+             
+                found_comment=true
+                cp $fn $fn~
+             fi
+
+#
+#--          when comments are found, save comment lines to $comments
+             if [[ "$found_comment" == true ]]
+             then
+                comments="$comments\n$line"
+                list_delete="$list_delete;${line_count}d"
+             fi
+          fi
+          
+#
+#--       get the timestamp from the current revision
+          if [[ "$comments" != "" && $line_count -eq $line_stop+2 ]]
+          then
+            comments="$comment_char $line$comments"
+            timestamp=`echo $line | cut -d" " -s -f4-7`
+            timestamp_string="$comment_char $timestamp"
+          fi
+
+          
+          
+          
+       done <"$fn"
+
+       
+       
+#
+#--    check for updates of the copyright statement
+       found_update_year=false
+
+       while read line 
+       do 
+
+          line_tmp=""
+          line_tmp2=""     
+          line_tmp=${line:22:29}
+          line_tmp2=${line:2:15}
+          
+#           echo "$line_tmp $line_tmp2"
+          
+          if  [[ "$line_tmp" == "Leibniz Universitaet Hannover" && "$line_tmp2" == "Copyright 1997-" ]]
+          then
+          
+             year_in_file=${line:17:4}
+             if  [[ "$year_in_file" != "$current_year" ]]
+             then
+      
+                printf "\r%$(tput cols)s" " "   
+                printf "\r  \e[1;33m*** Copyright update required in $fn\e[0m\n"
+
+                comment_char=${line:0:1}
+                found_update_year=true             
+                cp $fn $fn~
+                
+             fi
+          fi
+       
+       done <"$fn"
+         
+       printf "\r%$(tput cols)s" " "   
+       printf "\r\e[1m  *** Searched files: $count_files. Comments found: $count_changes. Copyright updates found: $count_updates\e[0m"
+       
+#
+#--    move comments from current revisions to former revisions
+       if [[ "$found_comment" == true ]]
+       then
+
+          (( count_changes = count_changes + 1 ))
+
+#
+#--       remove leading \n characters in string
+          comments=${comments:2}
+ 
+ 
+          
+#
+#--       fix old time stamp
+          (( line_time = line_stop + 2 ))
+          sed -i "${line_time}d" $fn      
+          sed -i "${line_time}i$timestamp_string" $fn
+
+
+
+#
+#--       insert comments to Former Revisions
+          (( line_stop = line_stop + 2 ))
+          sed -i "${line_stop}i$comments" $fn
+          
+
+
+#
+#--       delete comments from current revisions and insert two blank lines
+          list_delete=${list_delete#?}
+          sed -i "$list_delete" $fn
+          sed -i "${line_start}i${comment_char} " $fn
+          sed -i "${line_start}i${comment_char} " $fn
+
+       fi
+
+#
+#--    move comments from current revisions to former revisions
+       if [[ "$found_update_year" == true ]]
+       then
+
+          (( count_updates = count_updates + 1 ))  
+          
+           sed -i "s/$comment_char Copyright 1997-.*Leibniz Universitaet Hannover/$comment_char Copyright 1997-$current_year Leibniz Universitaet Hannover/" $fn
+     
+       fi
+       
+    done
+
+#
+#-- inform the user about the changes
+    printf "\r%$(tput cols)s" " "
+    printf "\r\e[1m  *** Searched files: $count_files. Comments found: $count_changes. Copyright updates found: $count_updates\e[0m. - \e[1;32mfinished.\e[0m\n\n"
+
+    if  [[ $count_changes -gt 0 ]]
+    then
+       printf "  *** You can now proceed with\n      \e[0;91msvn commit -m 'your commit message' trunk\e[0m\n"
+       printf "  *** Please do not forget to commit your changes in the changelog at\n      \e[0;91mhttps://palm.muk.uni-hannover.de/trac/wiki/doc/tec/changelog\e[0m!\n"    
+    else
+        printf "  *** No comments found in files!\n"   
+    
+    fi

@@ -1,0 +1,899 @@
+#!/bin/bash
+
+# palmbuild - script for compiling the PALM code and its utility programs
+
+#------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2017-2018  Leibniz Universitaet Hannover
+#------------------------------------------------------------------------------#
+#
+# Current revisions:
+# ------------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: palmbuild 3033 2018-05-23 15:26:19Z raasch $
+# "fname" renamed to "jobname"
+# 
+# 2718 2018-01-02 08:49:38Z maronga
+# Corrected "Former revisions" section
+# 
+# 2696 2017-12-14 17:12:51Z kanani
+# Change in file header (GPL part)
+#
+# 2566 2017-10-20 08:50:47Z raasch
+# informative messages switched of almost completely in silent mode
+# two header blocks merged into one
+# 
+# 2506 2017-09-29 08:30:37Z raasch
+# option -V added to check for an existing SOURCES_FOR_RUN_... folder
+# host configuration added to SOURCES_FOR_RUN_... folder name
+# SOURCES_FOR_RUN_... folder is deleted in case of compilation errors
+# host_identifier renamed host_configuration
+# 
+# 2500 2017-09-25 11:10:03Z raasch
+# bugfix for r2492
+# 
+# 2492 2017-09-21 14:18:48Z raasch
+# ask for compilation, if SOURCES_FOR_RUN_... exists
+# 
+# 2487 2017-09-21 11:30:10Z raasch
+# bugfix: abort in case of compiling/linking errors in silent mode
+# 
+# 2422 2017-09-08 08:25:41Z raasch
+# initial revision
+# 
+#------------------------------------------------------------------------------#
+# palmbuild - script for compiling the PALM code and its utility programs
+#
+# Procedure to compile code on local and remote hosts using the
+# make-mechanism. The source code must be provided on the local host.
+#
+# @note This script does not work on MAC OS
+#------------------------------------------------------------------------------#
+
+
+    # VARIABLE DECLARATIONS + DEFAULT VALUES
+ calltime=""
+ column1=""
+ column2=""
+ host_configuration=default
+ locat=normal
+ makefile=""
+ make_options=""
+ module_commands=""
+ program_name=palm
+ remote_ip=""
+ silent=false
+ ssh_key=""
+ suf=f90
+ use_existing_sources_folder=false
+ version="palmbuild  1.0  Rev$Rev: 3033 $"
+ working_directory=`pwd`
+
+
+
+    # ERROR HANDLING
+    # IN CASE OF EXIT:
+ trap 'rm -rf  ${source_path}/${host_configuration}_last_make_protocol
+       if [[ $locat != normal ]]
+       then
+          printf "\n\n +++ palmbuild killed \n\n"
+          exit 1
+       else
+          if [[ $silent = false ]]
+          then
+             printf "\n\n *** palmbuild finished \n\n"
+          fi
+          exit 0
+       fi
+      ' exit
+
+
+    # IN CASE OF TERMINAL-BREAK:
+ trap 'printf "\n\n +++ palmbuild killed by \"^C\" \n\n"
+       rm  ${source_path}/${host_configuration}_last_make_protocol
+       exit
+      ' 2
+
+
+
+    # READ SHELLSCRIPT-OPTIONS
+ while  getopts  :d:h:m:s:S:uvV  option
+ do
+   case  $option  in
+       (d)   jobname=$OPTARG;;
+       (h)   host_configuration=$OPTARG;;
+       (m)   makefile=$OPTARG;;
+       (s)   suf=$OPTARG;;
+       (S)   source_list="$OPTARG";;
+       (v)   silent=true;;
+       (V)   use_existing_sources_folder=true;;
+       (\?)  printf "\n  +++ unknown option $OPTARG \n";
+             locat=parameter; exit;;
+   esac
+ done
+
+
+    # FOR COMPATIBILITY REASONS SET OLD ENVIRONMENT VARIABLE
+ export fname=$jobname
+
+
+    # BUILD THE CONFIGURATION-FILE NAME AND THE SOURCES_FOR_RUN-FOLDER NAME
+ config_file=.palm.config.$host_configuration
+ sources_for_run_catalog=SOURCES_FOR_RUN_${host_configuration}_$jobname
+
+
+    # CHECK, IF CONFIGURATION-FILE EXISTS
+ if [[ ! -f $config_file ]]
+ then
+    printf "\n  +++ configuration file: "
+    printf "\n           $config_file"
+    printf "\n      does not exist"
+    locat=configuration; exit  
+ fi
+
+
+    # ### is this really required?
+ config_file=$PWD/$config_file
+
+
+    # READ VARIABLE SETTINGS FROM CONFIG FILE LINE BY LINE
+ while  read line
+ do
+
+       # FIRST REPLACE ENVIRONMENT-VARIABLES BY THEIR RESPECTIVE VALUES
+    eval  line=\"$line\"
+
+
+       # INTERPRET THE LINE
+    if [[ "$(echo $line)" = "" ]]
+    then
+
+          # EMPTY LINE, NO ACTION
+       continue
+
+    elif [[ "$(echo $line | cut -c1)"  =  "#" ]]
+    then
+
+          # LINE IS A COMMENT LINE
+       continue
+
+    elif [[ "$(echo $line | cut -c1)"  =  "%" ]]
+    then
+
+          # LINE DEFINES AN ENVIRONMENT-VARIABLE
+       var=`echo $line | cut -d" " -s -f1 | cut -c2-`
+       value=`echo $line | cut -d" " -s -f2-`
+
+          # REPLACE ":" BY " " IN COMPILER- CPP- OR LINKER-OPTIONS,
+          # "::" IS REPLACED BY ":".
+       #value=`echo $value | sed 's/::/%DUM%/g' | sed 's/:/ /g' | sed 's/%DUM%/:/g'`
+
+
+          # VALUE FROM THE CONFIGURATION-FILE IS ASSIGNED TO THE
+          # ENVIRONMENT-VARIABLE, BUT ONLY IF NO VALUE HAS BEEN ALREADY
+          # ASSIGNED WITHIN THIS SCRIPT (E.G. BY SCRIPT-OPTIONS).
+          # NON-ASSIGNED VARIABLES HAVE VALUE "" OR 0 (IN CASE OF INTEGER).
+          # HENCE THE GENERAL RULE IS: SCRIPT-OPTION OVERWRITES THE
+          # CONFIGURATION-FILE.
+       if [[ "$(eval echo \$$var)" = ""  ||  "$(eval echo \$$var)" = "0" ]]
+       then
+          eval  export  $var="\$value"
+
+             # TERMINAL OUTPUT OF ENVIRONMENT-VARIABLES, IF TRACEBACK IS SWITCHED on
+          if [[ $do_trace = true ]]
+          then
+             printf "\n*** ENVIRONMENT-VARIABLE $var = $value"
+          fi
+       fi
+
+    else
+
+          # SKIP ALL OTHER LINES
+       continue
+
+    fi
+
+ done < $config_file
+
+ 
+    # CHECK, IF THE BASE DIRECTORY PATH HAS BEEN GIVEN
+ if [[ "$base_directory" = "" ]]
+ then
+    printf "\n  +++ no base directory found in configuration file"
+    locat=config_file; exit
+ else
+    if [[ ! -d $base_directory ]]
+    then
+       printf "\n\n  +++ base directory \"$base_directory\" "
+       printf "\n      does not exist"
+       locat=source_path; exit
+    fi
+ fi
+
+
+    # CHECK SOURCE-CODE PATH
+ if [[ "$source_path" = "" ]]
+ then
+    printf "\n  +++ no source path found in configuration file"
+    locat=config_file; exit
+ else
+    if [[ ! -d $source_path ]]
+    then
+       printf "\n\n  +++ source path \"$source_path\" "
+       printf "\n      does not exist"
+       locat=source_path; exit
+    fi
+ fi
+
+
+    # CHECK MAKEFILE
+ [[ "$makefile" = "" ]]  &&  makefile=$source_path/Makefile
+ if [[ ! -f $makefile ]]
+ then
+    printf "\n  +++ makefile: "
+    printf "\n           $makefile"
+    printf "\n      does not exist"
+    locat=makefile; exit  
+ fi
+
+
+    # CHECK COMPILERNAME
+ if [[ "$compiler_name" = "" ]]
+ then
+    printf "\n  +++ no compiler name found in configuration file"
+    locat=config_file; exit
+ fi
+
+
+    # CHECK SERIAL COMPILERNAME
+ if [[ "$compiler_name_ser" = "" ]]
+ then
+    printf "\n  +++ no compiler name for serial compilation in configuration file"
+    locat=config_file; exit
+ fi
+
+
+    # DETERMINE SSH-KEY TO BE USED
+ if [[ "$ssh_key" != "" ]]
+ then
+    ssh_key="-i $HOME/.ssh/`echo $line | cut -d" " -s -f2`"
+ fi
+
+
+    #CHECK CPP-OPTIONS
+ if [[ "$cpp_options" = "" ]]
+ then
+    printf "\n  +++ WARNING: no cpp-options found in configuration file"
+ fi
+
+
+    # CHECK SETTINGS IN CASE OF COMPILING ON REMOTE MACHINE
+ if [[ "$remote_ip" != "" ]]
+ then
+ 
+    if [[ "$remote_username" = "" ]]
+    then
+       printf "\n  +++ no user name given in configuration file"
+       locat=config_file; exit
+    fi
+
+       # GET SOURCE AND DEPOSITORY PATH ON THE REMOTE MACHINE WITHOUT EVALUATING
+       # THE $
+       # IF NOT GIVEN, USE THE LOCAL SOURCE AND DEPOSITORY PATH
+    line=`grep %remote_source_path $config_file`
+    if [[ "$line" != "" ]]
+    then
+       remote_source_path=`echo $line | cut -d" " -s -f2`
+    else
+       line=`grep %source_path $config_file`
+       remote_source_path=`echo $line | cut -d" " -s -f2`
+    fi
+
+    line=`grep %base_directory $config_file`
+    make_depository=`echo $line | cut -d" " -s -f2`/MAKE_DEPOSITORY_${host_configuration}
+
+ else
+
+    make_depository=${base_directory}/MAKE_DEPOSITORY_${host_configuration}
+
+ fi
+
+    # HEADER-OUTPUT (PART1: MESSAGES CONCERNING THE LOCAL HOST)
+ if [[ $silent = false ]]
+ then
+    calltime=$(date)
+    printf "\n"
+    printf "#------------------------------------------------------------------------# \n"
+    printf "| %-40s%30s | \n" "$version" "$calltime"
+    printf "|                                                                        | \n"
+    printf "| %-13s%-57s | \n" "called on:" "$(hostname) (IP:$local_ip)"
+    column2=$(echo $config_file | cut -c1-57 )
+    printf "| %-13s%-57s | \n" "config file:" "$column2"
+    line=$(echo "$config_file" | cut -c58-)
+    while [[ "$line" != "" ]]
+    do
+       column1=""
+       column2=$(echo $line | cut -c1-57 )
+       printf "| %-13s%-57s | \n" "$column1" "$column2"
+       line=$(echo "$line" | cut -c58-)
+    done
+    column2=$(echo $makefile | cut -c1-57 )
+    printf "| %-13s%-57s | \n" "makefile:" "$column2"
+    line=$(echo "$makefile" | cut -c58-)
+    while [[ "$line" != "" ]]
+    do
+       column1=""
+       column2=$(echo $line | cut -c1-57 )
+       printf "| %-13s%-57s | \n" "$column1" "$column2"
+       line=$(echo "$line" | cut -c58-)
+    done
+    column2=$(echo $source_path | cut -c1-57 )
+    printf "| %-13s%-57s | \n" "source path:" "$column2"
+    line=$(echo "$source_path" | cut -c58-)
+    while [[ "$line" != "" ]]
+    do
+       column1=""
+       column2=$(echo $line | cut -c1-57 )
+       printf "| %-13s%-57s | \n" "$column1" "$column2"
+       line=$(echo "$line" | cut -c58-)
+    done
+    printf "|                                                                        | \n"
+   
+    if [[ "$remote_ip" != "" ]]
+    then
+       column2="$host_configuration"
+       printf "| %-20s%-50s | \n" "host configuration:" "$column2"
+       column2=$(echo "$make_depository" | cut -c1-50 )
+       printf "| %-20s%-50s | \n" "remote depository:" "$column2"
+    else
+       column2="$host_configuration"
+       printf "| %-20s%-50s | \n" "host identifier:" "$column2"
+       column2=$(echo "$make_depository" | cut -c1-50 )
+       printf "| %-20s%-50s | \n" "local depository:" "$column2"
+    fi
+    line=$(echo "$make_depository" | cut -c51-)
+    while [[ "$line" != "" ]]
+    do
+       column1=""
+       column2=$(echo "$line" | cut -c1-50 )
+       printf "| %-20s%-50s | \n" "$column1" "$column2"
+       line=$(echo "$line" | cut -c51-)
+    done
+   
+    if [[ "$remote_ip" != "" ]]
+    then
+       printf "| %-20s%-50s | \n" "remote username:" "$remote_username"
+       printf "| %-20s%-50s | \n" "remote address:" "$remote_ip"
+    else
+       printf "| %-20s%-50s | \n" "username:" "$local_username"
+       printf "| %-20s%-50s | \n" "address:" "$local_ip"
+    fi
+   
+    printf "| %-20s%-50s | \n" "compiler:" "$compiler_name"
+    printf "| %-20s%-50s | \n" "serial compiler:" "$compiler_name_ser"
+   
+    if [[ "$make_options" != "" ]]
+    then
+       printf "| %-20s%-50s | \n" "make options:" "$make_options"
+    fi
+    column2=$(echo "$cpp_options" | cut -c1-50 )
+    printf "| %-20s%-50s | \n" "cpp options:" "$column2"
+    line=$(echo "$cpp_options" | cut -c51-)
+    while [[ "$line" != "" ]]
+    do
+       column1=""
+       column2=$(echo "$line" | cut -c1-50 )
+       printf "| %-20s%-50s | \n" "$column1" "$column2"
+       line=$(echo "$line" | cut -c51-)
+    done
+    column2=$(echo "$compiler_options" | cut -c1-50 )
+    printf "| %-20s%-50s | \n" "compiler options:" "$column2"
+    line=$(echo "$compiler_options" | cut -c51-)
+    while [[ "$line" != "" ]]
+    do
+       column1=""
+       column2=$(echo "$line" | cut -c1-50 )
+       printf "| %-20s%-50s | \n" "$column1" "$column2"
+       line=$(echo "$line" | cut -c51-)
+    done
+    column2=$(echo "$linker_options" | cut -c1-50 )
+    printf "| %-20s%-50s | \n" "linker options:" "$column2"
+    line=$(echo "$linker_options" | cut -c51-)
+    while [[ "$line" != "" ]]
+    do
+       column1=""
+       column2=$(echo "$line" | cut -c1-50 )
+       printf "| %-20s%-50s | \n" "$column1" "$column2"
+       line=$(echo "$line" | cut -c51-)
+    done
+    if [[ "$login_init_cmd" != "" ]]
+    then
+       column2=$(echo "$login_init_cmd" | cut -c1-50 )
+       printf "| %-20s%-50s | \n" "login init command:" "$column2"
+       line=$(echo "$login_init_cmd" | cut -c51-)
+       while [[ "$line" != "" ]]
+       do
+          column1=""
+          column2=$(echo "$line" | cut -c1-50 )
+          printf "| %-20s%-50s | \n" "$column1" "$column2"
+          line=$(echo "$line" | cut -c51-)
+       done
+    fi
+    if [[ "$module_commands" != "" ]]
+    then
+       column2=$(echo "$module_commands" | cut -c1-50 )
+       printf "| %-20s%-50s | \n" "module command(s):" "$column2"
+       line=$(echo "$module_commands" | cut -c51-)
+       while [[ "$line" != "" ]]
+       do
+          column1=""
+          column2=$(echo "$line" | cut -c1-50 )
+          printf "| %-20s%-50s | \n" "$column1" "$column2"
+          line=$(echo "$line" | cut -c51-)
+       done
+    fi
+    printf "#------------------------------------------------------------------------# \n"
+
+    answer=dummy
+    printf "\n"
+    while [[ "$answer" != y  &&  "$answer" != Y  && "$answer" != c  &&  "$answer" != C  && "$answer" != s  &&  "$answer" != S  &&  "$answer" != a  &&  "$answer" != A ]]
+    do
+       printf " >>> continue (y(es)/c(ontinue)/a(bort)) ?  "
+       read  answer
+    done
+    if [[ $answer = a  ||  $answer = A ]]
+    then
+       locat=user_abort; exit
+    fi
+    if [[ $answer = c  ||  $answer = C ]]
+    then
+       silent=true
+    fi
+ fi
+
+
+    # TAR THE SOURCES AND MAKEFILES
+    # UTILITIES ARE TEMPORARILY COPIED TO THE SOURCE DIRECTORY IN ORDER TO TAR
+    # THEM TOO
+ if [[ $silent = false ]]
+ then
+    printf "\n\n  *** tar of makefile and source files in"
+    printf "\n      $source_path\n"
+ fi
+ cd  $source_path
+ cp -p  ../UTIL/combine_plot_fields.f90  .
+ cp -p  ../UTIL/compare_palm_logs.f90  .
+ cp -p  ../UTIL/Makefile_utilities  .
+ tar -cf  ${program_name}_sources.tar  Makefile*  *.$suf
+ rm  combine_plot_fields.f90  compare_palm_logs.f90  Makefile_utilities
+
+
+    # MAKE ON REMOTE HOST
+ if [[ "$remote_ip" != "" ]]
+ then
+
+       # NEXT IS THE BRANCH FOR CREATING THE MAKE_DEPOSITORY_...
+    if [[ "$jobname" = "" ]]
+    then
+
+          # COPY CURRENT SOURCE CODE TO SOURCE-CODE DIRECTORY ON THE REMOTE HOST
+          # CREATE THIS DIRECTORY, IF IT DOES NOT EXIST
+       if [[ $silent = false ]]
+       then
+          echo " "
+          echo "  *** copying \"${program_name}_sources.tar\" to \"${remote_ip}:${make_depository}/\" "
+          echo "[[ ! -d ${make_depository} ]]  &&  (echo \"  *** ${make_depository} will be created\"; mkdir -p  ${make_depository})"  |  ssh  -q  $ssh_key ${remote_username}@${remote_ip}  2>&1
+          scp  $ssh_key ${source_path}/${program_name}_sources.tar  ${remote_username}@${remote_ip}:${make_depository}/${program_name}_sources.tar
+       else
+          echo "[[ ! -d ${make_depository} ]]  &&  mkdir -p  ${make_depository}"  |  ssh  -q  $ssh_key ${remote_username}@${remote_ip}  2>&1
+          scp  $ssh_key ${source_path}/${program_name}_sources.tar  ${remote_username}@${remote_ip}:${make_depository}/${program_name}_sources.tar  >  /dev/null
+       fi
+
+
+
+
+          # UNTAR PREVIOUS UPDATE ON REMOTE HOST, IF EXISTING
+       if [[ $silent = false ]]
+       then
+          echo "  *** untar previous update on remote host, if existing"
+       fi
+       echo "cd ${make_depository}; [[ -f ${program_name}_current_version.tar ]]  &&  tar -xf  ${program_name}_current_version.tar"  |  ssh  -q  $ssh_key  ${remote_username}@${remote_ip}  2>&1
+
+
+          # UNTAR CURRENT SOURCES ON REMOTE HOST
+       if [[ $silent = false ]]
+       then
+          echo "  *** untar current sources on remote host"
+       fi
+       echo  "cd ${make_depository}; tar -xf  ${program_name}_sources.tar"  |  ssh  -q  $ssh_key  ${remote_username}@${remote_ip}  2>&1
+
+
+          # CREATE INIT AND MODULE COAMMNDS
+       [[ "$login_init_cmd" != "" ]]   &&  login_init_cmd=${login_init_cmd}";"
+       [[ "$module_commands" != "" ]]  &&  module_commands=${module_commands}";"
+
+
+          # FIRST CREATE EXECUTABLES FOR THE UTILITY ROUTINES
+       if [[ $silent = false ]]
+       then
+          echo " "
+          echo "  *** creating utilities on remote host"
+       fi
+       make_call_string="make  -f Makefile_utilities  $make_options  F90=$compiler_name  F90_SER=$compiler_name_ser  COPT=\"$cpp_options\"  F90FLAGS=\"$compiler_options\"  LDFLAGS=\"$linker_options\" "
+       echo "$login_init_cmd $module_commands cd ${make_depository}; echo $make_call_string > LAST_MAKE_CALL; chmod u+x LAST_MAKE_CALL; $make_call_string; [[ \$? != 0 ]] && echo MAKE_ERROR" | ssh  -q  $ssh_key  ${remote_username}@${remote_ip} 2>&1 | tee ${host_configuration}_last_make_protocol
+
+       if [[ $(grep -c MAKE_ERROR ${host_configuration}_last_make_protocol) != 0 ]]
+       then
+          printf "\a\n  +++ error(s) occurred during compiling or linking of utilities"
+          printf "\n      for host configuration \"$host_configuration\" "
+          if [[ $silent = false ]]
+          then
+             answer=dummy
+             printf "\n"
+             while [[ "$answer" != c  &&  "$answer" != k ]]
+             do
+                printf "  >>> continue / list errors / kill palmbuild (c/l/k) ? "
+                read  answer
+                if [[ "$answer" = l ]]
+                then
+                   more ${host_configuration}_last_make_protocol
+                fi
+             done
+             if [[ $answer = k ]]
+             then
+                locat=user_abort; exit
+             fi
+          else
+                # ABORT ANYWAY
+             locat=user_abort; exit
+          fi
+       fi
+
+
+          # NOW COMPILE THE PALM CODE
+          # COMMANDS WILL BE COMMUNICATED TO SSH VIA PIPE, SINCE THIS WAY THE SYSTEM- AND
+          # USER-PROFILES OF THE SHELL ARE COMPLETELY EXECUTED (OTHERWISE, MAKE
+          # MAY E.G. MISS THE COMPILER-PATHS)
+       if [[ $silent = false ]]
+       then
+          echo " "
+          echo "  *** compile PALM sources on remote host"
+       fi
+       make_call_string="make  $make_options  PROG=$program_name  F90=$compiler_name  COPT=\"$cpp_options\"  F90FLAGS=\"$compiler_options\"  LDFLAGS=\"$linker_options\" "
+       echo "$login_init_cmd $module_commands cd ${make_depository}; echo $make_call_string > LAST_MAKE_CALL; chmod u+x LAST_MAKE_CALL; $make_call_string; [[ \$? != 0 ]] && echo MAKE_ERROR" | ssh  -q  $ssh_key  ${remote_username}@${remote_ip} 2>&1 | tee ${host_configuration}_last_make_protocol
+
+       if [[ $(grep -c MAKE_ERROR ${host_configuration}_last_make_protocol) != 0 ]]
+       then
+          printf "\a\n  +++ error(s) occurred during compiling or linking for host configuration \"$host_configuration\" "
+          if [[ $silent = false ]]
+          then
+             answer=dummy
+             printf "\n"
+             while [[ "$answer" != c  &&  "$answer" != k ]]
+             do
+                printf "  >>> continue / list errors / kill palmbuild (c/l/k) ? "
+                read  answer
+                if [[ "$answer" = l ]]
+                then
+                   more ${host_configuration}_last_make_protocol
+                fi
+             done
+             if [[ $answer = k ]]
+             then
+                locat=user_abort; exit
+             fi
+          else
+                # ABORT ANYWAY
+             locat=user_abort; exit
+          fi
+       fi
+
+          # TAR UPDATED VERSION ON THE REMOTE HOST
+       if [[ $silent = false ]]
+       then
+          printf "\n  *** tar update on remote host ..."
+       fi
+       echo  "cd ${make_depository}; chmod u+w *; tar -cf  ${program_name}_current_version.tar  ${program_name}  *.f90 *.o *.mod *.x"  |  ssh  -q  $ssh_key  ${remote_username}@${remote_ip}  2>&1
+
+
+       # NOW COMES THE BRANCH FOR CREATING THE EXECUTABLE FOR THE CURRENT RUN
+       # INCLUDING E.G. USER-INTERFACE ROUTINES. ALSO ADD OTHER UTILITY EXECUTABLES. EVERYTHING IS
+       # COLLECTED IN DIRECTORY SOURCES_FOR_RUN_...
+    elif [[ "$jobname" != "" ]]
+    then
+
+          # FIRST CHECK, IF COMPILED SOURCES FOR THIS RUN IDENTIFIER EXISTS
+          # AND ASK, IF THEY SHALL BE USED
+       echo  "[[ -d ${fast_io_catalog}/${sources_for_run_catalog} ]]  &&  echo sources for run found" | ssh  -q  $ssh_key  ${remote_username}@${remote_ip} 2>&1  >  ${host_configuration}_last_make_protocol
+       if [[ $(grep -c "sources for run found" ${host_configuration}_last_make_protocol) != 0  &&  $use_existing_sources_folder = true ]]
+       then
+          printf "\a\n  *** compiled sources for run \"$jobname\" found on remote host in folder"
+          printf "\n      ${fast_io_catalog}/${sources_for_run_catalog}"
+          printf "\n      will be used!"
+          exit
+       fi
+
+          # COPY MAKE DEPOSITORY ON REMOTE MACHINE TO SOURCES_FOR_RUN_...
+       if [[ $silent = false ]]
+       then
+          printf "\n  *** copy MAKE_DEPOSITORY_${host_configuration} on remote host to $sources_for_run_catalog \n"
+       fi
+       echo  "rm -rf ${fast_io_catalog}/${sources_for_run_catalog}; mkdir -p ${fast_io_catalog}/${sources_for_run_catalog}; cp ${make_depository}/${program_name}_current_version.tar  ${fast_io_catalog}/${sources_for_run_catalog}; cd ${fast_io_catalog}/${sources_for_run_catalog}; tar xf ${program_name}_current_version.tar"  |  ssh  -q  $ssh_key  ${remote_username}@${remote_ip}  2>&1
+
+
+          # COPY CONTENTS OF SOURCES_FOR_RUN_... TO SOURCES_FOR_RUN_... ON THE REMOTE MACHINE
+       if [[ $silent = false ]]
+       then
+          printf "\n  *** copy ${base_directory}/${sources_for_run_catalog}"
+          printf "\n      to $sources_for_run_catalog on remote host \n"
+       fi
+       scp  -q  $ssh_key  ${base_directory}/${sources_for_run_catalog}/{*,.[!.]*}  ${remote_username}@${remote_ip}:${fast_io_catalog}/${sources_for_run_catalog}
+
+
+          # CREATE EXECUTABLE FROM THE NEW/MODIFIED SOURCE FILES, IF THERE ARE ANY
+       if [[ $(ls -1 ${base_directory}/${sources_for_run_catalog}/ | grep -c .$suf) != 0 ]]
+       then
+
+          make_call_string="make  $make_options  PROG=$program_name  F90=$compiler_name  COPT=\"$cpp_options\"  F90FLAGS=\"$compiler_options\"  LDFLAGS=\"$linker_options\" "
+          [[ "$login_init_cmd" != "" ]]   &&  login_init_cmd=${login_init_cmd}";"
+          [[ "$module_commands" != "" ]]  &&  module_commands=${module_commands}";"
+          if [[ $silent = false ]]
+          then
+             echo "  *** execute \"make\" on remote host"
+          fi
+          echo "$login_init_cmd $module_commands cd ${fast_io_catalog}/${sources_for_run_catalog}; echo $make_call_string > LAST_MAKE_CALL; chmod u+x LAST_MAKE_CALL; $make_call_string; [[ \$? != 0 ]] && echo MAKE_ERROR" | ssh  -q  $ssh_key  ${remote_username}@${remote_ip} 2>&1 | tee ${host_configuration}_last_make_protocol
+
+          if [[ $(grep -c MAKE_ERROR ${host_configuration}_last_make_protocol) != 0 ]]
+          then
+             printf "\a\n  +++ error(s) occurred during compiling or linking for host configuration \"$host_configuration\" "
+             if [[ $silent = false ]]
+             then
+                answer=dummy
+                printf "\n"
+                while [[ "$answer" != c  &&  "$answer" != k ]]
+                do
+                   printf "  >>> continue / list errors / kill palmbuild (c/l/k) ? "
+                   read  answer
+                   if [[ "$answer" = l ]]
+                   then
+                      more ${host_configuration}_last_make_protocol
+                   fi
+                done
+                if [[ $answer = k ]]
+                then
+                   echo "rm -rf ${fast_io_catalog}/${sources_for_run_catalog}" | ssh  -q  $ssh_key  ${remote_username}@${remote_ip} 2>&1
+                   locat=user_abort; exit
+                fi
+             else
+                   # ABORT ANYWAY
+                echo "rm -rf ${fast_io_catalog}/${sources_for_run_catalog}" | ssh  -q  $ssh_key  ${remote_username}@${remote_ip} 2>&1
+                locat=user_abort; exit
+             fi
+          fi
+
+       else
+
+          echo "  *** nothing to compile for this run"
+
+       fi
+
+    fi
+
+    rm -rf  ${source_path}/${host_configuration}_last_make_protocol
+
+
+    # MAKE ON LOCAL HOST
+ else
+
+
+       # NEXT IS THE BRANCH FOR CREATING THE MAKE_DEPOSITORY_... ON THE
+       # LOCAL HOST
+    if [[ "$jobname" = "" ]]
+    then
+
+          # SET THE ENVIRONMENT (EXECUTE INIT AND MODULE COMMANDS)
+       if [[ "$login_init_cmd" != "" ]]
+       then
+          $login_init_cmd
+       fi
+
+       if [[ "$module_commands" != "" ]]
+       then
+          $module_commands
+       fi
+
+
+          # CREATE MAKE-DEPOSITORY, IF IT DOES NOT EXIST
+       eval make_depository=$make_depository
+       if [[ ! -d $make_depository ]]
+       then
+          if  mkdir -p $make_depository
+          then
+             if [[ $silent = false ]]
+             then
+                printf "\n\n  *** directory for local make depository:"
+                printf "\n           $make_depository"
+                printf "\n      was created\n"
+             fi
+          else
+             printf "\n  +++ directory for local make depository:"
+             printf "\n           $make_depository"
+             printf "\n      cannot be created"
+             locat=local_depository; exit
+          fi
+       fi
+
+          # COPY SOURCE-CODE FROM REPOSITORY TO MAKE-DEPOSITORY
+       if [[ $silent = false ]]
+       then
+          echo " "
+          echo "  *** untar current source sources on local host in"
+          echo "      $make_depository"
+       fi
+       cd  $make_depository
+       cp  $source_path/${program_name}_sources.tar  .
+       tar xf  ${program_name}_sources.tar
+
+
+          # FIRST CREATE EXECUTABLES FOR THE UTILITY ROUTINES
+       if [[ $silent = false ]]
+       then
+          echo " "
+          echo "  *** creating utilities on local host"
+       fi
+       make  -f Makefile_utilities  $make_options  F90=$compiler_name  F90_SER=$compiler_name_ser  COPT="$cpp_options"  F90FLAGS="$compiler_options"  LDFLAGS="$linker_options"
+
+
+          # CALL MAKE ON LOCAL HOST USING THE  OPTIONS DETERMINED FURTHER ABOVE
+       if [[ $silent = false ]]
+       then
+          echo " "
+          echo "  *** compile PALM sources on local host"
+       fi
+
+       make  $make_options  PROG=$program_name  F90=$compiler_name  COPT="$cpp_options"  F90FLAGS="$compiler_options"  LDFLAGS="$linker_options"  2>&1 | tee ${host_configuration}_last_make_protocol
+
+       if [[ $? != 0 ]]
+       then
+          printf "\a\n  +++ error(s) occurred during compiling or linking for host configuration \"$host_configuration\" "
+          if [[ $silent = false ]]
+          then
+             answer=dummy
+             printf "\n"
+             while [[ "$answer" != c  &&  "$answer" != k ]]
+             do
+                printf "  >>> continue / list errors / kill palmbuild (c/l/k) ? "
+                read  answer
+                if [[ "$answer" = l ]]
+                then
+                   more ${host_configuration}_last_make_protocol
+                fi
+             done
+             if [[ $answer = k ]]
+             then
+                locat=user_abort; exit
+             fi
+          else
+                # ABORT ANYWAY
+             locat=user_abort; exit
+          fi
+       fi
+
+
+          # TAR NEW VERSION ON LOCAL HOST
+       if [[ $silent = false ]]
+       then
+          printf "\n  *** tar update on local host ..."
+       fi
+       tar -cf  ${program_name}_current_version.tar  ${program_name} *.$suf *.o *.mod *.x
+
+    else
+
+          # NOW COMES THE BRANCH FOR CREATING THE EXECUTABLE FOR THE CURRENT RUN
+          # INCLUDING E.G. USER-INTERFACE ROUTINES. ALSO ADD OTHER UTILITY EXECUTABLES. EVERYTHING IS
+          # COLLECTED IN DIRECTORY SOURCES_FOR_RUN_...
+
+          # FIRST CHECK, IF COMPILED SOURCES FOR THIS RUN IDENTIFIER EXISTS
+          # AND ASK, IF THEY SHALL BE USED
+       if [[ -d ${fast_io_catalog}/${sources_for_run_catalog}  &&  $use_existing_sources_folder = true ]]
+       then
+          printf "\a\n  *** compiled sources for run \"$jobname\" found on local host in folder"
+          printf "\n      ${fast_io_catalog}/${sources_for_run_catalog}"
+          printf "\n      will be used!"
+          exit
+       fi
+
+          # SECOND CHECK, IF A DEPOSITORY EXISTS ON THE LOCAL MACHINE
+       if [[ ! -d ${make_depository} ]]
+       then
+          printf "\n  +++ directory for local make depository:"
+          printf "\n           $make_depository"
+          printf "\n      not found. Please run \"palmbuild -h $host_configuration\" "
+          locat=make_depository; exit
+       fi
+
+
+          # COPY MAKE DEPOSITORY ON LOCAL MACHINE TO SOURCES_FOR_RUN_...
+       if [[ $silent = false ]]
+       then
+          printf "\n  *** copy MAKE_DEPOSITORY_${host_configuration} on local host to "
+          printf "\n      ${fast_io_catalog}/${sources_for_run_catalog} \n"
+       fi
+       rm -rf ${fast_io_catalog}/${sources_for_run_catalog}
+       mkdir -p ${fast_io_catalog}/${sources_for_run_catalog}
+       cp ${make_depository}/${program_name}_current_version.tar  ${fast_io_catalog}/${sources_for_run_catalog}
+       cd $fast_io_catalog/${sources_for_run_catalog}
+       tar xf ${program_name}_current_version.tar
+
+
+          # COPY CONTENTS OF SOURCES_FOR_RUN_... TO SOURCES_FOR_RUN_...
+          # IN THE FAST_IO_CATALOG ON THE LOCAL MACHINE
+       if [[ $silent = false ]]
+       then
+          printf "\n  *** copy ${base_directory}/${sources_for_run_catalog} to"
+          printf "\n      ${fast_io_catalog}/${sources_for_run_catalog} on local host \n"
+       fi
+       cp  ${base_directory}/${sources_for_run_catalog}/{*,.[!.]*}  ${fast_io_catalog}/${sources_for_run_catalog}
+
+
+          # CREATE EXECUTABLE FROM THE NEW/MODIFIED SOURCE FILES, IF THERE ARE ANY
+       if [[ $(ls -1 ${base_directory}/${sources_for_run_catalog}/ | grep -c .$suf) != 0 ]]
+       then
+
+          if [[ $silent = false ]]
+          then
+             echo "  *** execute \"make\" on local host"
+          fi
+          [[ "$login_init_cmd" != "" ]]   &&  $login_init_cmd
+          [[ "$module_commands" != "" ]]  &&  $module_commands
+
+          make  $make_options  PROG=$program_name  F90=$compiler_name  COPT="$cpp_options"  F90FLAGS="$compiler_options"  LDFLAGS="$linker_options"
+
+          if [[ $? != 0 ]]
+          then
+
+             printf "\a\n  +++ error(s) occurred during compiling or linking for host configuration \"$host_configuration\" "
+             if [[ $silent = false ]]
+             then
+                answer=dummy
+                printf "\n"
+                while [[ "$answer" != c  &&  "$answer" != k ]]
+                do
+                   printf "  >>> continue / kill palmbuild (c/k) ? "
+                   read  answer
+                done
+                if [[ $answer = k ]]
+                then
+                   rm -rf ${fast_io_catalog}/${sources_for_run_catalog}
+                   locat=user_abort; exit
+                fi
+             else
+                   # ABORT ANYWAY
+                rm -rf ${fast_io_catalog}/${sources_for_run_catalog}
+                locat=user_abort; exit
+             fi
+          fi
+
+       else
+
+          echo "  *** nothing to compile for this run"
+
+       fi
+
+    fi
+ fi

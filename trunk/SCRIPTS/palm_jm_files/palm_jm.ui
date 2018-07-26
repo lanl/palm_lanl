@@ -1,0 +1,356 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>735</width>
+    <height>456</height>
+   </rect>
+  </property>
+  <property name="contextMenuPolicy">
+   <enum>Qt::NoContextMenu</enum>
+  </property>
+  <property name="windowTitle">
+   <string>PALM job manager</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QLineEdit" name="line_path">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>139</x>
+      <y>28</y>
+      <width>584</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="readOnly">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="push_copy">
+    <property name="geometry">
+     <rect>
+      <x>276</x>
+      <y>335</y>
+      <width>114</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Copy</string>
+    </property>
+   </widget>
+   <widget class="QListWidget" name="list_input">
+    <property name="geometry">
+     <rect>
+      <x>271</x>
+      <y>71</y>
+      <width>220</width>
+      <height>257</height>
+     </rect>
+    </property>
+    <property name="contextMenuPolicy">
+     <enum>Qt::CustomContextMenu</enum>
+    </property>
+    <property name="alternatingRowColors">
+     <bool>true</bool>
+    </property>
+    <property name="selectionMode">
+     <enum>QAbstractItemView::MultiSelection</enum>
+    </property>
+    <property name="sortingEnabled">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>282</x>
+      <y>55</y>
+      <width>74</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>INPUT files:</string>
+    </property>
+   </widget>
+   <widget class="QListWidget" name="list_user">
+    <property name="geometry">
+     <rect>
+      <x>504</x>
+      <y>73</y>
+      <width>220</width>
+      <height>257</height>
+     </rect>
+    </property>
+    <property name="contextMenuPolicy">
+     <enum>Qt::CustomContextMenu</enum>
+    </property>
+    <property name="alternatingRowColors">
+     <bool>true</bool>
+    </property>
+    <property name="selectionMode">
+     <enum>QAbstractItemView::MultiSelection</enum>
+    </property>
+    <property name="sortingEnabled">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_2">
+    <property name="geometry">
+     <rect>
+      <x>510</x>
+      <y>55</y>
+      <width>156</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>USER_CODE files:</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="push_create_set">
+    <property name="geometry">
+     <rect>
+      <x>275</x>
+      <y>359</y>
+      <width>114</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Create Set</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="push_close">
+    <property name="geometry">
+     <rect>
+      <x>275</x>
+      <y>384</y>
+      <width>115</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Quit</string>
+    </property>
+   </widget>
+   <widget class="QListWidget" name="list_jobs">
+    <property name="geometry">
+     <rect>
+      <x>9</x>
+      <y>73</y>
+      <width>256</width>
+      <height>338</height>
+     </rect>
+    </property>
+    <property name="contextMenuPolicy">
+     <enum>Qt::NoContextMenu</enum>
+    </property>
+    <property name="sortingEnabled">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_3">
+    <property name="geometry">
+     <rect>
+      <x>15</x>
+      <y>55</y>
+      <width>121</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Available jobs:</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_4">
+    <property name="geometry">
+     <rect>
+      <x>145</x>
+      <y>11</y>
+      <width>145</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Job directory:</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="push_update">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>29</y>
+      <width>128</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Update job list</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="palm_logo">
+    <property name="geometry">
+     <rect>
+      <x>630</x>
+      <y>340</y>
+      <width>79</width>
+      <height>72</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="pixmap">
+     <pixmap>../../../../nesting_version/trunk/SCRIPTS/palm_jm_files/palm_logo_black_and_blue.png</pixmap>
+    </property>
+    <property name="scaledContents">
+     <bool>true</bool>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>735</width>
+     <height>21</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>push_close</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>319</x>
+     <y>418</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>429</x>
+     <y>442</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>list_jobs</sender>
+   <signal>itemActivated(QListWidgetItem*)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>update_input()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>196</x>
+     <y>290</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>521</x>
+     <y>384</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>push_copy</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>copy_job()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>341</x>
+     <y>366</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>409</x>
+     <y>368</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>push_create_set</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>create_set()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>340</x>
+     <y>389</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>488</x>
+     <y>418</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>push_update</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>update_all()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>85</x>
+     <y>57</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>654</x>
+     <y>385</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>list_input</sender>
+   <signal>customContextMenuRequested(QPoint)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openmenuinput()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>389</x>
+     <y>110</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>448</x>
+     <y>29</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>list_user</sender>
+   <signal>customContextMenuRequested(QPoint)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openmenuuser()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>570</x>
+     <y>127</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>615</x>
+     <y>36</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>update_input()</slot>
+  <slot>copy_job()</slot>
+  <slot>rename_job()</slot>
+  <slot>create_set()</slot>
+  <slot>update_all()</slot>
+  <slot>openmenuinput()</slot>
+  <slot>openmenuuser()</slot>
+ </slots>
+</ui>

@@ -1,0 +1,972 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#--------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018  Leibniz Universitaet Hannover
+#--------------------------------------------------------------------------------#
+#
+# Current revisions:
+# -----------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: palm_wd 2825 2018-02-20 21:48:27Z maronga $
+# Modified header
+# 
+# 2718 2018-01-02 08:49:38Z maronga
+# Corrected "Former revisions" section
+# 
+# 2696 2017-12-14 17:12:51Z kanani
+# Change in file header (GPL part)
+#
+# 2416 2017-09-06 14:28:14Z maronga
+# Adapted for palmrun
+# 
+# 1754 2016-02-22 13:50:22Z maronga
+#
+# 1753 2016-02-22 13:49:49Z maronga
+# Bugfix: use of global variables is required after updating configuration file
+# 
+# 1751 2016-02-15 07:44:16Z maronga
+# Bugfixes: runs on multiple hosts caused crash of the watchdog. Progress bar
+# occasionally showed wrong progress.
+# New: Hosts can be switched on/off and update_frequency can be modified via 
+# File->Options. Security check for cancelation of jobs.
+# 
+# 1618 2015-07-13 06:52:15Z maronga
+# Added steering via configuration file .wd.config, to be place in the local
+# palm directory. Watchdog save files are automatically created upon first start.
+# 
+# 1613 2015-07-08 14:53:29Z maronga
+# Bugfix: tooltip for queuing name did not show up on first update.
+# New: added contect menu for showing the parameter file and the run control
+# output
+# 
+# 1611 2015-07-07 12:23:22Z maronga
+# Initial revision
+# 
+#
+# Description:
+# ------------
+# PALM watchdog client for monitoring batch jobs on a variety of hosts specified
+# by the user
+# 
+# Instructions:
+# -------------
+# 1) Modify the header section of palm_wd
+# 2) Move .wd.olddata and .wd.newdata to your palm directory 
+#    (e.g. /home/user/current_version/.wd.newdata etc.)
+# 3) Modify a copy of palm_wdd for each host to be monitored and move it to the
+#    respective hosts
+# 4) Start the client either from mrungui or from shell by "nohup palm_wd&"
+
+# To do:
+# ------
+# 1) Add "Options", "Help" and "Manual"
+# 2) Move user settings to a configuration file
+#------------------------------------------------------------------------------!
+
+import ConfigParser
+import datetime
+import os
+from PyQt4 import QtGui, QtCore, uic
+from PyQt4.QtCore import pyqtSlot,SIGNAL,SLOT
+import shutil
+import subprocess as sub
+import sys
+import time
+
+# Determine PALM directories
+try: 
+   devnull = open(os.devnull, 'w')
+   out = sub.check_output("echo $PALM_BIN", shell=True, stderr=sub.STDOUT)
+   palm_bin = out.rstrip()
+   palm_dir = out.split("palm")[0] + "palm/" + out.split("palm")[1].split("/")[1]
+   out = None
+except:   
+   print "Error. $PALM_BIN is not set."
+   raise SystemExit
+
+
+# Read configuration file
+# First check if the configuration file exists
+if ( os.path.exists(palm_dir + '/.wd.config') == False ):
+    print "Error. No configuration file .wd.config found in " + palm_dir
+    raise SystemExit     
+
+config = ConfigParser.RawConfigParser()
+config.read(palm_dir + '/.wd.config')
+
+description = []
+hostname = []
+username = []
+
+for i in range(0,len(config.sections())):
+
+    description_tmp = config.sections()[i]
+ 
+    if ( description_tmp != 'Settings' ):
+      
+       if ( config.get(description_tmp, 'enabled') == 'true' ):
+          description.append(description_tmp)
+          hostname.append(config.get(description_tmp, 'hostname'))
+          username.append(config.get(description_tmp, 'username')) 
+    else:
+       update_frequency = int(config.get(description_tmp, 'update_frequency'))*60000
+
+# Check if .wd.olddata and .wd.newdata exist. Otherwise create the files
+if ( os.path.exists(palm_dir + '/.wd.olddata') == False ):
+   print "No .wd.olddata found. Creating..."
+   file1 = open(palm_dir + '/.wd.olddata', 'a')
+   file1.close()
+   
+
+if ( os.path.exists(palm_dir + '/.wd.newdata') == False ):
+   print "No .wd.newdata found. Creating..."  
+   file1 = open(palm_dir + '/.wd.newdata', 'a')
+   file1.close()
+
+# Dummy variables for the jobname and the progressbars
+jobname = ""
+timestamp = ""
+pbars = []
+job_data_list = []
+
+# Message box for showing RUN_CONTROL output
+class MessageBoxScroll(QtGui.QMessageBox):
+    def __init__(self):
+        QtGui.QMessageBox.__init__(self)
+        self.setSizeGripEnabled(True)
+
+    def event(self, e):
+        result = QtGui.QMessageBox.event(self, e)
+
+        self.setMinimumHeight(100)
+        self.setMaximumHeight(16777215)
+        self.setMinimumWidth(400)
+        self.setMaximumWidth(16777215)
+        self.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+
+        textEdit = self.findChild(QtGui.QTextEdit)
+        if textEdit != None :
+            textEdit.setMinimumHeight(800)
+            textEdit.setMaximumHeight(16777215)
+            textEdit.setMinimumWidth(1000)
+            textEdit.setMaximumWidth(16777215)
+            textEdit.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+            f = QtGui.QFont('not_a_font') # 
+            f.setStyleHint(f.TypeWriter, f.PreferDefault)
+            textEdit.setFont(f)
+
+        return result
+
+
+# Message box for showing RUN_CONTROL output
+class OptionBox(QtGui.QDialog):
+    def __init__(self):
+      
+        super(OptionBox, self).__init__()
+      
+        uic.loadUi(palm_bin + '/palm_wd_files/wdoptions.ui', self)
+        
+        hostname = []
+        self.checkbox = []
+        j = -1
+        ypos = 0
+   
+        self.vbox = QtGui.QVBoxLayout(self)
+        self.vbox.setSpacing(0)
+        self.vbox.setMargin(0)       
+    
+        config.read(palm_dir + '/.wd.config')
+    
+        for i in range(0,len(config.sections())):
+
+           description_tmp = config.sections()[i]
+ 
+           if ( description_tmp != 'Settings' ):
+              description.append(description_tmp)
+              hostname.append(config.get(description_tmp, 'hostname'))
+              
+              j = j + 1
+              self.checkbox.append(j)
+              self.checkbox[j] = QtGui.QCheckBox(description_tmp, self)   
+              ypos = ypos + 20
+              self.checkbox[j].move(10,0)
+              if ( config.get(description_tmp, 'enabled') == 'true' ):
+                 self.checkbox[j].toggle()
+                       
+              self.vbox.addWidget(self.checkbox[j])
+           else:
+	      self.update_spin.setValue(int(config.get(description_tmp, 'update_frequency')))
+     
+        self.hostBox.setLayout(self.vbox)
+        self.hostBox.setGeometry(0, 0, 272, 50+ypos)
+        self.settingBox.setGeometry(281, 0, 214, 50+ypos)
+        self.ok.setGeometry(385, 50+ypos, 111, 24)
+        self.cancel.setGeometry(270, 50+ypos, 111, 24)
+        
+        self.setGeometry(0, 0, 500, 80+ypos)
+        self.show()
+        
+        return
+
+#   save updtes to file
+    def SaveAndClose(self):
+      
+       for i in range(0,len(self.checkbox)):
+          
+          if ( self.checkbox[i].checkState() == 0 ):
+	     config.set(str(self.checkbox[i].text()),'enabled','false')
+	  else:
+	     config.set(str(self.checkbox[i].text()),'enabled','true')       
+       
+       config.set('Settings','update_frequency',self.update_spin.text())  
+
+       with open(palm_dir + '/.wd.config', 'wb') as configfile:
+          config.write(configfile)
+
+
+       self.close()
+     
+       return
+
+
+
+# MainWindow class
+class Watchdog(QtGui.QMainWindow):
+    
+    def __init__(self):
+        super(Watchdog, self).__init__()
+        
+        self.InitUi()   
+        
+   
+    # Initialized MainWindow UI
+    def InitUi(self):
+
+        # Load predefined mainwindow
+        uic.loadUi(palm_bin + '/palm_wd_files/wd.ui', self)
+
+        # Resize columns and set number of rows to zero. Column 6 is hidden and
+        # contains the remote jobname (e.g. hannover.174610)
+        self.table.setColumnWidth(0,230)
+        self.table.setColumnWidth(1,80)
+        self.table.setColumnWidth(2,50)
+        self.table.setColumnWidth(3,80)     
+        self.table.setColumnWidth(4,180)
+        self.table.setColumnWidth(5,115)   
+        self.table.setColumnHidden(6, True)
+        self.table.setRowCount(0) 
+    
+        # Display MainWindow
+        self.show()
+        QtGui.QApplication.processEvents()
+
+        # Start refresh timer. On timeout perform update
+        self.timer = QtCore.QTimer(self)
+        self.timer.timeout.connect(self.Refresh)
+        self.timer.setSingleShot(False)
+        self.timer.start(update_frequency)
+
+        # The timetimer counts the time since last update
+        self.timetimer= QtCore.QElapsedTimer()
+        self.timetimer.start()
+
+        # The labeltimer induces the update of the remaining time in the UI
+        self.labeltimer = QtCore.QTimer(self)
+        self.labeltimer.timeout.connect(self.UpdateLabel)
+        self.labeltimer.setSingleShot(False)
+
+        # Update in the UI will be performed at each 1/10 of the update interval
+        self.labeltimer.start(update_frequency/10)   
+        self.label.setText("Next update in " + str(update_frequency/1000/60) + "min")
+
+        # Update the list now
+        self.Refresh()
+        
+
+    # Add a custom context menu
+    def OpenContextMenu(self, position):
+        menu = QtGui.QMenu()
+       
+        # "Show details" -> fetch details for the selected job
+        detailsjobAction = menu.addAction('Show job details')     
+        detailsjobAction.setStatusTip('Display detailed info for job')
+        detailsjobAction.triggered.connect(self.ShowDetails)
+
+        # "Show parameter file" -> show the contents of PARIN
+        parinAction = menu.addAction('Show parameter file')     
+        parinAction.setStatusTip('Display the parameter file of the job (e.g. PARIN / _p3d)')
+        parinAction.triggered.connect(self.ShowPARIN)
+        
+        rcAction = menu.addAction('Show run control file')     
+        rcAction.setStatusTip('Display the current run control file (e.g. RUN_CONTROL / _rc)')
+        rcAction.triggered.connect(self.ShowRC)
+        
+        # "Cancel job" -> remove job from queuing system
+        canceljobAction = menu.addAction('Cancel job')
+        canceljobAction.setStatusTip('Remove job from queueing system')
+        canceljobAction.triggered.connect(self.CancelJob)
+        
+        # "Force stop" -> force termination of job
+        stopjobAction = menu.addAction('Force stop')
+        stopjobAction.setStatusTip('Terminate job properly')
+        stopjobAction.triggered.connect(self.DoStop)
+   
+        # "Force restart" -> force rermination and restart of job
+        restartjobAction = menu.addAction('Force restart')
+        restartjobAction.setStatusTip('Terminate job properly and initiate restart')
+        restartjobAction.triggered.connect(self.DoRestart)
+  
+        # "Remove from list" -> remove a completed job from the list
+        removefromlistAction = menu.addAction('Remove from list')     
+        removefromlistAction.setStatusTip('Remove finished job')
+        removefromlistAction.triggered.connect(lambda: self.RemoveFromList(-1))     
+
+        
+        # Activate/deactive contect menu items based on the status of the runs
+        state = self.table.item(self.table.currentRow(),3).text()
+        if (state == "Canceled" or state == "Completed" or state == "Terminated"):
+            detailsjobAction.setEnabled(False)
+            canceljobAction.setEnabled(False)  
+            removefromlistAction.setEnabled(True)  
+        else:
+            detailsjobAction.setEnabled(True)
+            canceljobAction.setEnabled(True)  
+            removefromlistAction.setEnabled(False)   
+ 
+        if ( state == "Running" ):
+	    stopjobAction.setEnabled(True) 
+            restartjobAction.setEnabled(True)   
+            parinAction.setEnabled(True)
+            rcAction.setEnabled(True)          
+        else:
+	    stopjobAction.setEnabled(False) 
+            restartjobAction.setEnabled(False)   
+            parinAction.setEnabled(False)
+            rcAction.setEnabled(False)  
+            
+        # Show the context menu
+        action = menu.exec_(self.table.mapToGlobal(position))
+
+
+    # Collecting watchdog data and display in the UI
+    def Refresh(self):
+      
+        # Use global variables
+        global pbars
+        global update_frequency
+
+        # Deactivate timer processes until update is finished
+        # QtGui.QApplication.processEvents() updates the UI whenever needed
+        self.labeltimer.stop() 
+        self.label.setText("Updating...") 
+        QtGui.QApplication.processEvents()
+        self.setEnabled(False)
+        QtGui.QApplication.processEvents()
+
+        # Get current timestamp
+        timestamp = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
+        
+        # Open an empty file for the watchdog data        
+        file = open(palm_dir + '/.wd.newdata', 'w')
+        
+ 
+        # Set all required variables to their initial values. Sorting must be
+        # disabled.
+        self.table.setRowCount(0) 
+        self.table.setSortingEnabled(False)
+        i = -1
+        job_data_list = []
+        pbars = []
+        
+        # Scan all hosts in the variable hostname. For each host perform the
+        # update loop
+        for h in range(0,len(hostname)):
+	  
+	    # Perform ssh command
+            host    = username[h] + "@" + hostname[h]
+            ssh = sub.Popen(["ssh", "%s" % host, "/sw/tools/python/2.7.6/generic/bin/python palm_wdd queue " + username[h]],
+                           shell=False,
+                           stdout=sub.PIPE,
+                           stderr=sub.PIPE)
+            result = ssh.stdout.readlines()
+            result = filter(None, result)
+ 
+ 
+     	    # Delete all job data
+	    job_data_tmp = []
+            job_data = []
+            job_data_n = []    
+	    job_progress = 0
+
+            # In case of errors display error message
+            if ( len(result) < 1 ):
+                error = ssh.stderr.readlines()
+                if ( error != [] ):
+                    notify = QtGui.QMessageBox.warning(self,'Collect data',"Error. An error occured during read of job data for user " + username[h] +" for host " + description[h] + ".\n\nError message:\n" + ''.join(error))
+
+            # No error -> save job data
+            else:        
+
+                # Successively write to job_data
+                for j in range(0,len(result)):
+   
+  		    job_data_tmp.append(j)
+                    job_data_tmp[j] = result[j].split(" ")
+                    job_data_tmp[j] = filter(None, job_data_tmp[j])
+  
+                    job_data.append(j)   
+                    job_data[j] = [job_data_tmp[j][0], description[h], job_data_tmp[j][2],                  
+				   job_data_tmp[j][3], int(float(job_data_tmp[j][4])*100), job_data_tmp[j][5], 
+				   job_data_tmp[j][1], job_data_tmp[j][6].rstrip()]
+                    job_data_n.append(j)
+                    job_data_n[j] = job_data_tmp[j][1]
+
+            del(result)
+
+
+
+            # Now read the data from the last update from file. These data are
+            # already in the prefered format
+            file2 = open(palm_dir + '/.wd.olddata', 'r')
+	    result = file2.readlines()
+	    file2.close()
+
+	    job_data_old = []
+	    job_data_old_n = []
+            k = -1
+            for j in range(0,len(result)):
+	        if ( result[j].split()[1] == description[h] ):
+		    k = k + 1
+		    job_data_old.append(k)
+                    job_data_old[k] = result[j].split(" ")
+                    job_data_old[k] = filter(None, job_data_old[k])
+                    job_data_old[k] = [line.rstrip('\n') for line in job_data_old[k]]
+                    job_data_old_n.append(k)
+                    job_data_old_n[k] = job_data_old[k][6]
+
+            # Merge the job_data and job_data_old to find completed, new and
+            # still queued jobs     
+            if ( len(job_data_n) > 0 and len(job_data_old_n) > 0 ):
+               jobs_full  = list(set(job_data_old_n) | set(job_data_n))
+               jobs_known    = list(set(job_data_old_n) & set(job_data_n))
+               jobs_complete = set(job_data_old_n) - set(job_data_n)
+               jobs_new      = set(job_data_n) - set(job_data_old_n)
+            elif ( len(job_data_n) > 0 ):
+	       jobs_full  = job_data_n
+	       jobs_known    = []
+	       jobs_new = job_data_n
+	       jobs_complete = []
+	    elif ( len(job_data_old_n) > 0 ):
+	       jobs_full  = job_data_old_n
+	       jobs_known    = []
+	       jobs_new = []
+	       jobs_complete = job_data_old_n   
+	    else:
+	       jobs_full  = []
+	       jobs_known    = []         
+	       jobs_new = []
+	       jobs_complete = []
+
+            # Display all known jobs
+            to_display = [list(job_data_n).index(item) for item in list(jobs_known) if list(jobs_known) and list(job_data_n)]
+            for j in range(0,len(to_display)):
+	        i = i + 1
+                self.table.insertRow(i)
+                item = QtGui.QTableWidgetItem(job_data[to_display[j]][0])
+                item.setToolTip("Queuing name: " + job_data[to_display[j]][6])
+                self.table.setItem(i, 0, item)            
+                self.table.setItem(i, 1, QtGui.QTableWidgetItem(job_data[to_display[j]][1])) 
+                self.table.setItem(i, 2, QtGui.QTableWidgetItem(job_data[to_display[j]][2]))   
+                self.table.setItem(i, 3, QtGui.QTableWidgetItem(job_data[to_display[j]][3]))
+                item = QtGui.QTableWidgetItem(job_data[to_display[j]][5])
+                item.setToolTip("Estimated job start: " + job_data[to_display[j]][7])               
+                self.table.setItem(i, 5, item)  
+                self.table.setItem(i, 6, QtGui.QTableWidgetItem(job_data[to_display[j]][6]))  
+                self.table.item(i,2).setTextAlignment(QtCore.Qt.AlignRight)
+                self.table.item(i,5).setTextAlignment(QtCore.Qt.AlignRight)
+                pbars.append(i)
+                pbars[i] = QtGui.QProgressBar(self)
+                pbars[i].setValue(int(job_data[to_display[j]][4])) 
+ 
+                # Apply a color depending on the status of the job
+                if ( job_data[to_display[j]][3] == "Running" ):
+                    self.table.setCellWidget(i,4,pbars[i]) 
+		    self.table.item(i,0).setBackground(QtGui.QColor(255, 251, 168))
+		    self.table.item(i,1).setBackground(QtGui.QColor(255, 251, 168))
+		    self.table.item(i,2).setBackground(QtGui.QColor(255, 251, 168))
+                    self.table.item(i,3).setBackground(QtGui.QColor(255, 251, 168))
+                    self.table.item(i,5).setBackground(QtGui.QColor(255, 251, 168))
+                    self.table.item(i,6).setBackground(QtGui.QColor(255, 251, 168))
+                else:
+		    pbars[j].setEnabled(False)
+		    self.table.setCellWidget(i,4,pbars[i])
+                    self.table.item(i,0).setBackground(QtGui.QColor(255, 112, 118))
+                    self.table.item(i,1).setBackground(QtGui.QColor(255, 112, 118))
+                    self.table.item(i,2).setBackground(QtGui.QColor(255, 112, 118))
+                    self.table.item(i,3).setBackground(QtGui.QColor(255, 112, 118))
+                    self.table.item(i,5).setBackground(QtGui.QColor(255, 112, 118))
+                    self.table.item(i,6).setBackground(QtGui.QColor(255, 112, 118))
+                
+                # Save the job data to file
+                job_data_list.append(i)
+                job_data_list[i] = job_data[to_display[j]][0]
+                
+                printstring = str(job_data[to_display[j]][0]) + " " + \
+                              str(job_data[to_display[j]][1]) + " " + \
+                              str(job_data[to_display[j]][2]) + " " + \
+                              str(job_data[to_display[j]][3]) + " " + \
+                              str(job_data[to_display[j]][4]) + " " + \
+                              str(job_data[to_display[j]][5]) + " " + \
+                              str(job_data[to_display[j]][6]) + " " + \
+                              str(job_data[to_display[j]][7]) + "\n"
+                file.write(printstring)
+
+
+            # Display all new jobs
+            to_display = [list(job_data_n).index(item) for item in list(jobs_new) if list(jobs_new) and list(job_data_n)]
+            for j in range(0,len(to_display)):
+	        i = i + 1
+                self.table.insertRow(i)
+                item = QtGui.QTableWidgetItem(job_data[to_display[j]][0])
+                item.setToolTip("Queuing name: " + job_data[to_display[j]][6])
+                self.table.setItem(i, 0, item)   
+                self.table.setItem(i, 1, QtGui.QTableWidgetItem(job_data[to_display[j]][1])) 
+                self.table.setItem(i, 2, QtGui.QTableWidgetItem(job_data[to_display[j]][2]))   
+                self.table.setItem(i, 3, QtGui.QTableWidgetItem(job_data[to_display[j]][3])) 
+                item = QtGui.QTableWidgetItem(job_data[to_display[j]][5])
+                item.setToolTip("Estimated job start: " + job_data[to_display[j]][7])               
+                self.table.setItem(i, 5, item)  
+                self.table.setItem(i, 6, QtGui.QTableWidgetItem(job_data[to_display[j]][6]))  
+                self.table.item(i,2).setTextAlignment(QtCore.Qt.AlignRight)
+                self.table.item(i,5).setTextAlignment(QtCore.Qt.AlignRight)
+                
+                pbars.append(i)
+                pbars[i] = QtGui.QProgressBar(self)
+                pbars[i].setValue(int(job_data[to_display[j]][4]))   
+
+                # Apply a color depending on the status of the job
+                if ( job_data[to_display[j]][3] == "Running" ):
+		    self.table.setCellWidget(i,4,pbars[i])           
+		    self.table.item(i,0).setBackground(QtGui.QColor(255, 251, 168))
+		    self.table.item(i,1).setBackground(QtGui.QColor(255, 251, 168))
+		    self.table.item(i,2).setBackground(QtGui.QColor(255, 251, 168))
+                    self.table.item(i,3).setBackground(QtGui.QColor(255, 251, 168))
+                    self.table.item(i,5).setBackground(QtGui.QColor(255, 251, 168))
+                    self.table.item(i,6).setBackground(QtGui.QColor(255, 251, 168))
+                else:
+		    pbars[j].setEnabled(False)
+		    self.table.setCellWidget(i,4,pbars[i])
+                    self.table.item(i,0).setBackground(QtGui.QColor(255, 112, 118))
+                    self.table.item(i,1).setBackground(QtGui.QColor(255, 112, 118))
+                    self.table.item(i,2).setBackground(QtGui.QColor(255, 112, 118))
+                    self.table.item(i,3).setBackground(QtGui.QColor(255, 112, 118))
+                    self.table.item(i,5).setBackground(QtGui.QColor(255, 112, 118))
+                    self.table.item(i,6).setBackground(QtGui.QColor(255, 112, 118))
+          
+                # Save job data to file
+                job_data_list.append(i)
+                job_data_list[i] = job_data[to_display[j]][0]
+                
+                printstring = str(job_data[to_display[j]][0]) + " " + \
+                              str(job_data[to_display[j]][1]) + " " + \
+                              str(job_data[to_display[j]][2]) + " " + \
+                              str(job_data[to_display[j]][3]) + " " + \
+                              str(job_data[to_display[j]][4]) + " " + \
+                              str(job_data[to_display[j]][5]) + " " + \
+                              str(job_data[to_display[j]][6]) + " " + \
+                              str(job_data[to_display[j]][7]) + "\n"
+                file.write(printstring)
+
+
+            # Display all completed/canceled/aborted jobs. The watchdog cannot
+            # distinguish why the job has been finished
+            to_display = [list(job_data_old_n).index(item) for item in list(jobs_complete) if list(jobs_complete) and list(job_data_old_n)]
+            for j in range(0,len(to_display)):
+	        i = i + 1
+                self.table.insertRow(i)
+                item = QtGui.QTableWidgetItem(job_data_old[to_display[j]][0])
+                item.setToolTip("Queuing name: " + job_data_old[to_display[j]][6])
+                self.table.setItem(i, 0, item)          
+                self.table.setItem(i, 1, QtGui.QTableWidgetItem(job_data_old[to_display[j]][1])) 
+                self.table.setItem(i, 2, QtGui.QTableWidgetItem(job_data_old[to_display[j]][2]))   
+                self.table.setItem(i, 3, QtGui.QTableWidgetItem(job_data_old[to_display[j]][3]))  
+                pbars.append(i)
+                pbars[j] = QtGui.QProgressBar(self)
+                pbars[j].setValue(int(job_data_old[to_display[j]][4]))  
+                pbars[j].setEnabled(False)
+                self.table.setCellWidget(i,4,pbars[j]) 
+                item = QtGui.QTableWidgetItem(job_data_old[to_display[j]][5])
+                item.setToolTip("Estimated job start: " + job_data_old[to_display[j]][7])               
+                self.table.setItem(i, 5, item)  
+                self.table.setItem(i, 6, QtGui.QTableWidgetItem(job_data_old[to_display[j]][6]))  
+                self.table.item(i,2).setTextAlignment(QtCore.Qt.AlignRight)
+                self.table.item(i,5).setTextAlignment(QtCore.Qt.AlignRight)
+                self.table.setItem(i, 3, QtGui.QTableWidgetItem("Completed"))
+                
+                # Apply a color depending on the status of the job
+                self.table.item(i,0).setBackground(QtGui.QColor(172, 252, 175))
+                self.table.item(i,1).setBackground(QtGui.QColor(172, 252, 175))
+                self.table.item(i,2).setBackground(QtGui.QColor(172, 252, 175))
+                self.table.item(i,3).setBackground(QtGui.QColor(172, 252, 175))
+                self.table.item(i,5).setBackground(QtGui.QColor(172, 252, 175))
+                self.table.item(i,6).setBackground(QtGui.QColor(172, 252, 175))
+
+          
+                # Save job data to file
+                job_data_list.append(i)
+                job_data_list[i] = job_data_old[to_display[j]][0]
+
+                printstring = str(job_data_old[to_display[j]][0]) + " " + \
+                              str(job_data_old[to_display[j]][1]) + " " + \
+                              str(job_data_old[to_display[j]][2]) + " " + \
+                              str(job_data_old[to_display[j]][3]) + " " + \
+                              str(job_data_old[to_display[j]][4]) + " " + \
+                              str(job_data_old[to_display[j]][5]) + " " + \
+	                      str(job_data_old[to_display[j]][6]) + " " + \
+                              str(job_data_old[to_display[j]][7]) + "\n"
+                file.write(printstring)
+
+            del(jobs_complete)
+            del(jobs_new)
+            del(result)
+            del(job_data_old)
+            del(job_data_old_n)
+            
+        file.close()
+
+        
+        # Update is complete, sorting can thus be re-enabled                
+        self.table.setSortingEnabled(True) 
+
+        # Update the logfile
+        if ( os.path.isfile(palm_dir + '/.wd.newdata') ):
+            shutil.copy(palm_dir + '/.wd.newdata',palm_dir + '/.wd.olddata')
+
+        # Re-enable timer processes             
+        self.setEnabled(True)
+        self.label2.setText("Last update: " + timestamp)
+        self.label.setText("Update complete.")
+        self.timetimer.start()
+        self.timer.start(update_frequency)
+        self.labeltimer.start(update_frequency/10)
+        self.UpdateLabel()
+        QtGui.QApplication.processEvents()
+       
+    # Canceling selected job from table
+    def CancelJob(self):
+
+        # Return internal jobname
+        jobname = self.table.item(self.table.currentRow(),6).text()
+        jobrealname = self.table.item(self.table.currentRow(),0).text()     
+ 
+        # Check description of job in order to login on the correct host
+        descr = self.table.item(self.table.currentRow(),1).text()
+        
+        querybox = QtGui.QMessageBox()
+        querybox.setText("Attention!\nYou are trying to cancel a job. It will not be able to terminate properly.")
+        querybox.setInformativeText("Do you really want to cancel " + jobname + " on host " + descr + "?")
+        querybox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+        querybox.setDefaultButton(QtGui.QMessageBox.No)
+        returnvalue = querybox.exec_()
+       
+        if ( returnvalue == QtGui.QMessageBox.Yes ):
+        
+           for h in range(0,len(description)):
+	       if ( descr == description[h] ):
+                  host = username[h] + "@" + hostname[h]
+
+           ssh = sub.Popen(["ssh", "%s" % host, "/sw/tools/python/2.7.6/generic/bin/python palm_wdd cancel " + jobname],
+                              shell=False,
+                              stdout=sub.PIPE,
+                              stderr=sub.PIPE)
+           result = ssh.stdout.readlines()
+           result = filter(None, result)
+        
+           # In case of error display a warning message
+           if ( len(result) == 0 ):
+               error = ssh.stderr.readlines()
+               notify = QtGui.QMessageBox.warning(self,'Cancel job',"Error. Could not cancel job " + jobname + ".\n\nError message:\n" + ''.join(error))
+
+           # Otherwise inform the user and mark the job in the table
+           else:
+	       self.table.setItem(self.table.currentRow(),3,QtGui.QTableWidgetItem("Canceled"))
+               notify = QtGui.QMessageBox.information(self,'Cancel job',"Job" + jobname + " canceled!\n\nServer message:\n" + ''.join(result))
+
+
+    # Show detailed information on job. For documentation see above
+    def ShowDetails(self):
+
+        jobname = self.table.item(self.table.currentRow(),6).text()  
+        descr   = self.table.item(self.table.currentRow(),1).text()
+        for h in range(0,len(description)):
+	    if ( descr == description[h] ):
+                host = username[h] + "@" + hostname[h]
+
+        ssh = sub.Popen(["ssh", "%s" % host, "/sw/tools/python/2.7.6/generic/bin/python palm_wdd check " + jobname],
+                           shell=False,
+                           stdout=sub.PIPE,
+                           stderr=sub.PIPE)
+        result = ssh.stdout.readlines()
+        result = filter(None, result)
+
+        if ( len(result) == 0 ):
+            error = ssh.stderr.readlines()
+            notify = QtGui.QMessageBox.warning(self,'Show job details',"Error. Could not fetch job details for " + jobname + ".\n\nError message:\n" + ''.join(error))
+        else:
+            notify = QtGui.QMessageBox.information(self,'Job details',"Details for job " + jobname + ":\n\n" + ''.join(result))
+
+
+    # Perform a forced stop on the job
+    def DoStop(self):
+
+        # Return internal jobname
+        jobname = self.table.item(self.table.currentRow(),6).text()
+        jobrealname = self.table.item(self.table.currentRow(),0).text()   
+        # Check description of job in order to login on the correct host
+        descr = self.table.item(self.table.currentRow(),1).text()
+        for h in range(0,len(description)):
+	    if ( descr == description[h] ):
+                host = username[h] + "@" + hostname[h]
+                user = username[h]
+
+        ssh = sub.Popen(["ssh", "%s" % host, "/sw/tools/python/2.7.6/generic/bin/python palm_wdd stop " + jobrealname],
+                           shell=False,
+                           stdout=sub.PIPE,
+                           stderr=sub.PIPE)
+        result = ssh.stdout.readlines()
+        result = filter(None, result) 
+        
+        # In case of error display a warning message
+        if ( len(result) == 0 ):
+            error = ssh.stderr.readlines()
+            notify = QtGui.QMessageBox.warning(self,'Proper termination of job',"Error. Could not stop job " + jobname + ".\n\nError message:\n" + ''.join(error))
+
+        # Otherwise inform the user and mark the job in the table
+        else:
+	    self.table.setItem(self.table.currentRow(),3,QtGui.QTableWidgetItem("Terminated"))
+            notify = QtGui.QMessageBox.information(self,'Terminate job',"Termination of job " + jobname + " was initiated!\n\nServer message:\n" + ''.join(result))
+
+
+    # Perform a forced stop on the job
+    def DoRestart(self):
+
+        # Return internal jobname
+        jobname = self.table.item(self.table.currentRow(),6).text()
+        jobrealname = self.table.item(self.table.currentRow(),0).text()   
+         
+        # Check description of job in order to login on the correct host
+        descr = self.table.item(self.table.currentRow(),1).text()
+        for h in range(0,len(description)):
+	    if ( descr == description[h] ):
+                host = username[h] + "@" + hostname[h]
+                user = username[h]
+
+        ssh = sub.Popen(["ssh", "%s" % host, "/sw/tools/python/2.7.6/generic/bin/python palm_wdd restart " + jobrealname],
+                           shell=False,
+                           stdout=sub.PIPE,
+                           stderr=sub.PIPE)
+        result = ssh.stdout.readlines()
+        result = filter(None, result)
+        
+        # In case of error display a warning message
+        if ( len(result) == 0 ):
+            error = ssh.stderr.readlines()
+            notify = QtGui.QMessageBox.warning(self,'Proper termination of job',"Error. Could not stop job " + jobname + ".\n\nError message:\n" + ''.join(error))
+
+        # Otherwise inform the user and mark the job in the table
+        else:
+	    self.table.setItem(self.table.currentRow(),3,QtGui.QTableWidgetItem("Terminated"))
+            notify = QtGui.QMessageBox.information(self,'Terminate job for restart',"Restart for job" + jobname + " was initiated!\n\nServer message:\n" + ''.join(result))
+            
+
+    # Read the PARIN file of the job
+    def ShowPARIN(self):
+
+        # Return internal jobname
+        jobname = self.table.item(self.table.currentRow(),6).text()
+        jobrealname = self.table.item(self.table.currentRow(),0).text()     
+ 
+        # Check description of job in order to login on the correct host
+        descr = self.table.item(self.table.currentRow(),1).text()
+        for h in range(0,len(description)):
+	    if ( descr == description[h] ):
+                host = username[h] + "@" + hostname[h]
+                user = username[h]
+
+        ssh = sub.Popen(["ssh", "%s" % host, "/sw/tools/python/2.7.6/generic/bin/python palm_wdd parin " + jobrealname],
+                           shell=False,
+                           stdout=sub.PIPE,
+                           stderr=sub.PIPE)
+        result = ssh.stdout.readlines()
+        result = filter(None, result)
+        
+        # In case of error display a warning message
+        if ( len(result) == 0 ):
+            error = ssh.stderr.readlines()
+            notify = QtGui.QMessageBox.warning(self,'Showing parameter file',"Error. Could not fetch parameter file for job " + jobrealname + " (" + jobname + ").\n\nError message:\n" + ''.join(error))
+
+        # Otherwise inform the user and mark the job in the table
+        else:
+	   mb = MessageBoxScroll()
+           mb.setText("Parameter file for job: " + jobrealname + "")
+           mb.setDetailedText(''.join(result))
+           mb.exec_()
+
+    # Read the PARIN file of the job
+    def ShowRC(self):
+
+        # Return internal jobname and real job name
+        jobname = self.table.item(self.table.currentRow(),6).text()
+        jobrealname = self.table.item(self.table.currentRow(),0).text()      
+ 
+        # Check description of job in order to login on the correct host
+        descr = self.table.item(self.table.currentRow(),1).text()
+        for h in range(0,len(description)):
+	    if ( descr == description[h] ):
+                host = username[h] + "@" + hostname[h]
+                user = username[h]
+
+        ssh = sub.Popen(["ssh", "%s" % host, "/sw/tools/python/2.7.6/generic/bin/python palm_wdd rc " + jobrealname],
+                           shell=False,
+                           stdout=sub.PIPE,
+                           stderr=sub.PIPE)
+        result = ssh.stdout.readlines()
+        result = filter(None, result)
+        
+        # In case of error display a warning message
+        if ( len(result) == 0 ):
+            error = ssh.stderr.readlines()
+            notify = QtGui.QMessageBox.warning(self,'Showing run control',"Error. Could not fetch run control file for job " + jobrealname + "(" + jobname + ").\n\nError message:\n" + ''.join(error))
+
+        # Otherwise inform the user and mark the job in the table
+        else:
+	   mb = MessageBoxScroll()
+	   lastline = result[len(result)-2].split()[2]
+           mb.setText("Simulated time for job " + jobrealname + " is currently: " + lastline)
+           mb.setDetailedText(''.join(result))
+           mb.exec_()
+
+    # Remove a job from list - removes the current row from the table and from
+    # save file
+    def RemoveFromList(self, row):
+        if ( row == -1 ):
+	    row = self.table.currentRow()
+
+        # Read data from save file
+        job_to_delete = self.table.item(row,6).text()
+        self.table.removeRow(row)
+        file = open(palm_dir + '/.wd.olddata', 'r')
+        result = file.readlines()
+        result = filter(None, result)
+	file.close()
+        file = open(palm_dir + '/.wd.olddata', 'w')
+	
+	job_data_old = []
+	
+        if ( len(result) == 0 ):
+            notify = QtGui.QMessageBox.warning(self,'Read from .wd.olddata',"Error message:\n\nCould not read from file. I/O error.")
+	else: 
+	    # Save data in array job_data_old
+	    for j in range(0,len(result)):
+                job_data_old.append(j)
+                job_data_old[j] = result[j].split(" ")
+                job_data_old[j] = filter(None, job_data_old[j])
+                job_data_old[j] = [line.rstrip('\n') for line in job_data_old[j]]
+                
+                # Check if line j is the selected job, if not -> save to file
+                if ( job_data_old[j][6] != job_to_delete ):
+                    printstring = str(job_data_old[j][0]) + " " + \
+                                  str(job_data_old[j][1]) + " " + \
+                                  str(job_data_old[j][2]) + " " + \
+                                  str(job_data_old[j][3]) + " " + \
+                                  str(job_data_old[j][4]) + " " + \
+                                  str(job_data_old[j][5]) + " " + \
+                                  str(job_data_old[j][6]) + " " + \
+                                  str(job_data_old[j][7]) + "\n"
+                    file.write(printstring)
+           
+        file.close() 
+
+    # Remove all completed jobs from list
+    def ClearList(self):
+      
+       num_of_lines = self.table.rowCount()
+       
+       # Delete all lines with completed/canceled jobs from list. The counter
+       # must decrease as the line numbers would be messed up otherwise
+       for j in range(num_of_lines-1,-1,-1): 
+           state = self.table.item(j,3).text()
+           if ( state == "Completed" or state == "Canceled" or state == "Terminated"):
+              self.RemoveFromList(j)
+         
+    # Update the label
+    def UpdateLabel(self):
+        remaining_time = (update_frequency - self.timetimer.elapsed()) / 1000 / 60
+        self.label.setText("Next update in " + str(remaining_time) + " min")
+        
+
+    # Enter Options menu
+    def Options(self):
+  
+#       disable mainwindow  
+        self.setEnabled(False)
+      
+#       show Options Dialog      
+        opt = OptionBox()
+        opt.exec_()
+
+        self.UpdateHosts()
+        self.setEnabled(True)
+
+# Update settings
+    def UpdateHosts(self):
+
+       global update_frequency
+       global description
+       global hostname
+       global username
+       
+       description = []
+       hostname = []
+       username = []
+
+       for i in range(0,len(config.sections())):
+
+          description_tmp = config.sections()[i]
+ 
+          if ( description_tmp != 'Settings' ):
+      
+             if ( config.get(description_tmp, 'enabled') == 'true' ):
+                description.append(description_tmp)
+                hostname.append(config.get(description_tmp, 'hostname'))
+                username.append(config.get(description_tmp, 'username')) 
+          else:
+             update_frequency = int(config.get(description_tmp, 'update_frequency'))*60000
+
+
+# Main loop       
+def main():
+    
+    app = QtGui.QApplication(sys.argv)
+    res = Watchdog() 
+    sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    main()   

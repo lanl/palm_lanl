@@ -1,0 +1,89 @@
+#!/bin/bash
+#--------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018  Leibniz Universitaet Hannover
+#--------------------------------------------------------------------------------#
+#
+# Current revisions:
+# ------------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: release_tutorial 2718 2018-01-02 08:49:38Z maronga $
+# Corrected "Former revisions" section
+# 
+# 2696 2017-12-14 17:12:51Z kanani
+# Change in file header (GPL part)
+#
+# 1841 2016-04-07 19:14:06Z raasch
+# script now running under bash
+#
+# 1046 2012-11-09 14:38:45Z maronga
+# code put under GPL (PALM 3.9)
+#
+# 981 2012-08-09 14:57:44Z maronga
+# Typo removed
+#
+# 955 2012-07-20 09:54:04Z maronga
+# The pdf files are now directly transfered to the trac system. A user account
+# on the palm server is required. Without ssh-key, the passwort has to be given
+# four times.
+#
+# 946 2012-07-17 16:02:40Z maronga
+# Typo removed
+#
+# 915 2012-05-30 15:11:11Z maronga
+# Initial revision
+#
+# Description:
+# ------------
+# Script for copying the compiled PDFs to a desired web directory. This script
+# should be used by user raasch only.
+#
+# Execution:
+# ----------
+# release_tutorial --> Copy all PDF files to $release_directory on
+# the trac server (see below)
+#------------------------------------------------------------------------------!
+
+    release_directory="/palmdata/trac/htdocs/tutorial"
+    server="palm"
+    mod_lecture="664"
+    mod_handout="664"
+    mod_web="664"
+
+    full_name=`readlink -f $0`
+    directory="$(dirname $full_name)/../TUTORIAL/SOURCE"
+    input_dir="$(dirname $full_name)/../TUTORIAL"
+    cd $input_dir
+
+    printf "\n Files will be released in $release_directory/."
+    printf "\n Start copying...\n"
+
+#   copy files to trac system
+    scp LECTURE/*.pdf $USER@$server:"$release_directory/LECTURE/"
+    scp HANDOUT/*.pdf $USER@$server:"$release_directory/HANDOUT/"
+    scp WEB/*.pdf $USER@$server:"$release_directory/WEB/"
+
+#   change permissions
+    ssh $server -l $USER "cd $release_directory/LECTURE; chmod $mod_lecture $release_directory/LECTURE/*; chmod $mod_handout $release_directory/HANDOUT/*; chmod $mod_web $release_directory/WEB/*"
+
+    printf " \n *** All actions finished.\n"
+
+exit
+
+
+

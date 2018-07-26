@@ -1,0 +1,5 @@
+// NOTE: This is the vectorised version of the routine in rosenbrock_mz
+//       and can only be used with KP4; the files rosenbrock_mz.def and
+//       rosenbrock_mz.f90 from the kpp-directory are required.
+//       SUBROUTINE Rosenbrock will be exchanged by kp4.
+#INTEGRATOR rosenbrock_mz

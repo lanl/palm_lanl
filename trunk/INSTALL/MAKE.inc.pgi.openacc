@@ -1,0 +1,9 @@
+# Contents of this file are included in palm's makefile if the simple install
+# process (palm_simple_install) is used.
+# Please adjust compiling parameters as required for your system.
+
+PROG=palm 
+F90=pgf90
+COPT= -Mpreprocess -D__nopointer -D__openacc -D__cuda_fft -D__lc
+F90FLAGS= -acc -ta=nvidia,5.0,nocache,time -Minfo=acc -Mcray=pointer -fastsse -r8 -Mcuda=cuda5.0
+LDFLAGS= -acc -ta=nvidia,5.0,nocache,time -Minfo=acc -Mcray=pointer -fastsse -r8 -Mcuda=cuda5.0 -L/muksoft/packages/pgi/2013-133/linux86-64/2013/cuda/5.0/lib64 -lcufft

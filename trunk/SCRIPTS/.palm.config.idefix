@@ -1,0 +1,76 @@
+#$Id: .palm.config.idefix 2834 2018-02-23 14:04:07Z raasch $
+#This configuration file is for running jobs locally (interactive or batch mode)
+#on host idefix.
+#-------------------------------------------------------------------------------
+#column 1          column 2
+#name of variable  value of variable (~ must not be used)
+#-------------------------------------------------------------------------------
+%base_data          ~/palm/current_version/JOBS
+%base_directory     $HOME/palm/current_version
+%fast_io_catalog    /work/<replace_by_your_IDEFIX_username>
+%local_jobcatalog   $HOME/job_queue
+%output_path        /work/<replace_by_your_IDEFIX_username>/JOBS/$jobname
+%remote_jobcatalog  $HOME/job_queue
+%source_path        $HOME/palm/current_version/trunk/SOURCE
+%user_source_path   $base_directory/JOBS/$jobname/USER_CODE
+#
+%local_ip            130.75.105.239
+%local_username      <replace_by_your_IDEFIX_username>
+%defaultqueue        workq
+%submit_command      /opt/pbspro/default/bin/qsub
+#
+%compiler_name       mpif90
+%compiler_name_ser   ifort
+%cpp_options         -cpp -D__parallel -DMPI_REAL=MPI_DOUBLE_PRECISION -DMPI_2REAL=MPI_2DOUBLE_PRECISION -D__netcdf -D__netcdf4 -D__netcdf4_parallel -D__fftw -D__intel_compiler
+%make_options        -j 4
+%compiler_options    -fpe0 -O3 -cpp -fp-model source -ftz -fno-alias -no-prec-div -no-prec-sqrt -ip -nbs -diag-disable 8290,8291 -I /opt/netcdf4_hdf5parallel/4411c_443f/intel/include -L/opt/netcdf4_hdf5parallel/4411c_443f/intel/lib -L/opt/hdf5-parallel/1.10.0-patch1/intel/lib -lnetcdf -lnetcdff -I /opt/fftw/3.3.6-pl1/mvapich2-intel/include -L/opt/fftw/3.3.6-pl1/mvapich2-intel/lib -lfftw3
+%linker_options      -fpe0 -O3 -cpp -fp-model source -ftz -fno-alias -no-prec-div -no-prec-sqrt -ip -nbs -diag-disable 8290,829 -I /opt/netcdf4_hdf5parallel/4411c_443f/intel/include -L/opt/netcdf4_hdf5parallel/4411c_443f/intel/lib -L/opt/hdf5-parallel/1.10.0-patch1/intel/lib -lnetcdf -lnetcdff -I /opt/fftw/3.3.6-pl1/mvapich2-intel/include -L/opt/fftw/3.3.6-pl1/mvapich2-intel/lib -lfftw3
+%hostfile            auto
+%module_commands     module load intel-compiler/2017.1.132 mvapich2/2.2/intel fftw/3.3.6-pl1/mvapich2-intel hdf5-parallel/1.10.0-patch1/intel netcdf4_hdf5parallel/4411c_443f/intel
+#
+%execute_command     mpirun  -machinefile hostfile  -n {{mpi_tasks}} palm
+#
+#
+# BATCH-directives to be used for batch jobs.
+BD:#!/bin/bash
+BD:#PBS -N{{job_id}}
+BD:#PBS -l walltime={{cpu_hours}}:{{cpu_minutes}}:{{cpu_seconds}}
+BD:#PBS -l ncpus={{cores}}
+BD:#PBS -o{{job_protocol_file}}
+BD:#PBS -j oe
+BD:#PBS -q{{queue}}
+#
+# BATCH-directives for batch jobs used to send back the jobfile from a remote to a local host
+BDT:#!/bin/bash
+BDT:#PBS -N job_protocol_transfer
+BDT:#PBS -l walltime=00:30:00
+BDT:#PBS -l ncpus=1
+BDT:#PBS -o{{job_transfer_protocol_file}}
+BDT:#PBS -j oe
+BDT:#PBS -q workq
+#
+#
+#----------------------------------------------------------------------------
+# INPUT-commands, executed before running PALM - lines must start with "IC:" 
+#----------------------------------------------------------------------------
+IC:export MV2_ENABLE_AFFINITY=0
+IC:export MV2_SHOW_CPU_BINDING=1
+IC:export MV2_CPU_BINDING_POLICY=scatter
+IC:ulimit -s unlimited
+#
+#----------------------------------------------------------------------------
+# ERROR-commands - executed when program terminates abnormally
+#----------------------------------------------------------------------------
+EC:[[ \$locat = execution ]]  &&  cat  RUN_CONTROL
+EC:[[ \$locat = execution ]]  &&  cat  PARTICLE_INFOS/*
+#
+#----------------------------------------------------------------------------
+# OUTPUT-commands - executed when program terminates normally
+#----------------------------------------------------------------------------
+#
+# Combine 1D- and 3D-profile output (these files are not usable for plotting)
+OC:[[ -f LIST_PROFIL_1D     ]]  &&  cat  LIST_PROFIL_1D  >>  LIST_PROFILE
+OC:[[ -f LIST_PROFIL        ]]  &&  cat  LIST_PROFIL     >>  LIST_PROFILE
+#
+# Combine all particle information files
+OC:[[ -f PARTICLE_INFOS/_0000 ]]  &&  cat  PARTICLE_INFOS/* >> PARTICLE_INFO

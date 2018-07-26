@@ -1,0 +1,69 @@
+#
+#---------------------------------------------------------------------------------------------
+# List of input-files
+#---------------------------------------------------------------------------------------------
+PARIN                    in:tr      d3#      $base_data/$jobname/INPUT          _p3d*
+PARIN                    in:tr      d3r      $base_data/$jobname/INPUT          _p3dr*
+PARIN                    in:tr      pcr      $base_data/$jobname/INPUT          _pcr*
+TOPOGRAPHY_DATA          inopt:tr   d3#:d3r  $base_data/$jobname/INPUT          _topo*
+PIDS_STATIC              inopt:tr   d3#:d3r  $base_data/$jobname/INPUT          _static*
+PIDS_DYNAMIC             inopt:tr   d3#:d3r  $base_data/$jobname/INPUT          _dynamic*
+rrtmg_lw.nc              inopt:tr   d3#:d3r  $base_data/$jobname/INPUT          _rlw
+rrtmg_sw.nc              inopt:tr   d3#:d3r  $base_data/$jobname/INPUT          _rsw
+WTM_DATA                 inopt:tr   d3#:d3r  $base_data/$jobname/INPUT          _wtm
+BININ                    in:lnpe    d3r:rec  $fast_io_catalog/$jobname/RESTART  _d3d*
+PARTICLE_RESTART_DATA_IN in:lnpe    prtr     $fast_io_catalog/$jobname/RESTART  _rprt
+SVFIN                    in:lnpe    svfin    $fast_io_catalog/$jobname/SVF      _svf*
+DATA_1D_PR_NETCDF        inopt      prr      $base_data/$jobname/OUTPUT         _pr*       nc
+DATA_1D_SP_NETCDF        inopt      spr      $base_data/$jobname/OUTPUT         _sp*       nc
+DATA_1D_TS_NETCDF        inopt      tsr      $base_data/$jobname/OUTPUT         _ts*       nc
+DATA_1D_PTS_NETCDF       inopt      ptsr     $base_data/$jobname/OUTPUT         _pts*      nc
+DATA_2D_XY_NETCDF        inopt      xyr      $base_data/$jobname/OUTPUT         _xy*       nc
+DATA_2D_XY_AV_NETCDF     inopt      xyr      $base_data/$jobname/OUTPUT         _av_xy*    nc
+DATA_2D_XZ_NETCDF        inopt      xzr      $base_data/$jobname/OUTPUT         _xz*       nc
+DATA_2D_XZ_AV_NETCDF     inopt      xzr      $base_data/$jobname/OUTPUT         _av_xz*    nc
+DATA_2D_YZ_NETCDF        inopt      yzr      $base_data/$jobname/OUTPUT         _yz*       nc
+DATA_2D_YZ_AV_NETCDF     inopt      yzr      $base_data/$jobname/OUTPUT         _av_yz*    nc
+DATA_3D_NETCDF           inopt      3dr      $base_data/$jobname/OUTPUT         _3d*       nc
+DATA_3D_AV_NETCDF        inopt      3dr      $base_data/$jobname/OUTPUT         _av_3d*    nc
+DATA_MASK_NETCDF         inopt      mar      $base_data/$jobname/OUTPUT         _masked    nc
+DATA_MASK_AV_NETCDF      inopt      mar      $base_data/$jobname/OUTPUT         _av_masked nc
+DATA_PRT_NETCDF          inopt:pe   prtr     $base_data/$jobname/OUTPUT         _prt*
+#
+#---------------------------------------------------------------------------------------------
+# List of output-files
+#---------------------------------------------------------------------------------------------
+BINOUT*                    out:lnpe restart   $fast_io_catalog/$jobname/RESTART  _d3d
+PARTICLE_RESTART_DATA_OUT* out:lnpe prt#:prtr $fast_io_catalog/$jobname/RESTART  _rprt
+SVFOUT*                    out:lnpe svfout    $fast_io_catalog/$jobname/SVF      _svf
+#
+RUN_CONTROL*               out:tr   d3#:pcr   $base_data/$jobname/MONITORING     _rc
+RUN_CONTROL*               out:tra  d3r       $base_data/$jobname/MONITORING     _rc
+HEADER*                    out:tr   d3#:pcr   $base_data/$jobname/MONITORING     _header
+HEADER*                    out:tra  d3r       $base_data/$jobname/MONITORING     _header
+CPU_MEASURES*              out:tr   d3#:pcr   $base_data/$jobname/MONITORING     _cpu
+CPU_MEASURES*              out:tra  d3r       $base_data/$jobname/MONITORING     _cpu
+PARTICLE_INFO*             out:tr   pt#       $base_data/$jobname/MONITORING     _prt_info
+PARTICLE_INFO*             out:tra  ptr       $base_data/$jobname/MONITORING     _prt_info
+LIST_PROFIL*               out:tr   *         $base_data/$jobname/MONITORING     _list_pr
+#
+DATA_1D_PR_NETCDF*         out:tr   *         $base_data/$jobname/OUTPUT         _pr        nc
+DATA_1D_SP_NETCDF*         out:tr   *         $base_data/$jobname/OUTPUT         _sp        nc
+DATA_1D_TS_NETCDF*         out:tr   *         $base_data/$jobname/OUTPUT         _ts        nc
+DATA_1D_PTS_NETCDF         out:tr   *         $base_data/$jobname/OUTPUT         _pts       nc
+DATA_2D_XY_NETCDF*         out:tr   *         $base_data/$jobname/OUTPUT         _xy        nc
+DATA_2D_XY_AV_NETCDF*      out:tr   *         $base_data/$jobname/OUTPUT         _av_xy     nc
+DATA_2D_XZ_NETCDF*         out:tr   *         $base_data/$jobname/OUTPUT         _xz        nc
+DATA_2D_XZ_AV_NETCDF*      out:tr   *         $base_data/$jobname/OUTPUT         _av_xz     nc
+DATA_2D_YZ_NETCDF*         out:tr   *         $base_data/$jobname/OUTPUT         _yz        nc
+DATA_2D_YZ_AV_NETCDF*      out:tr   *         $base_data/$jobname/OUTPUT         _av_yz     nc
+DATA_3D_NETCDF*            out:tr   *         $base_data/$jobname/OUTPUT         _3d        nc
+DATA_3D_AV_NETCDF*         out:tr   *         $base_data/$jobname/OUTPUT         _av_3d     nc
+DATA_MASK_NETCDF*          out:tr   *         $base_data/$jobname/OUTPUT         _masked    nc
+DATA_MASK_AV_NETCDF*       out:tr   *         $base_data/$jobname/OUTPUT         _av_masked nc
+#
+DATA_PRT_NETCDF*           out:pe   *         $base_data/$jobname/OUTPUT         _prt
+DATA_PRT_NETCDF*           out:trpe *         $base_data/$jobname/OUTPUT         _prt
+PARTICLE_DATA*             out:lnpe *         $base_data/$jobname/OUTPUT         _prt_dat
+#
+WTM_OUTPUT_DATA*           out:tr   *         $base_data/$jobname/MONITORING     _wtm

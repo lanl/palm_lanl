@@ -1,0 +1,34 @@
+!********************************************************* 
+! If .hluresfile is copied to the home directory the default
+! graphical display of NCL is changed (x11)
+! Further information are available at: 
+! http://www.ncl.ucar.edu/Document/Graphics/hlures.shtml
+!*********************************************************
+
+! comments for ".res" files are preceded by a "!"
+! remember quotations are not used in .res files
+
+! White background/black foreground
+*wkForegroundColor  : (/0.,0.,0./)
+*wkBackgroundColor  : (/1.,1.,1./)
+
+*wkColorMap         : rainbow+gray
+
+! Font stuff
+*Font           : helvetica 
+
+! Function Codes [Default is a colon ]
+*TextFuncCode               : ~     
+ 
+! Make default X11 window larger (adjust as necessary)
+*wkWidth                     : 1000
+*wkHeight                    : 800
+
+! Have a favorite colormap that you use for everything? You can
+! make it your default here (note the name is NOT in quotes):
+! *wkColorMap  : temp1
+
+! Increase the default (16mb) contour memory
+! If you gave gridded data > 500 x 500, you may need this
+*wsMaximumSize: 100000000
+!********************************************************* 

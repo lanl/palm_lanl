@@ -1,0 +1,56 @@
+example_wtm
+
+1. Purpose
+   This example shows the application of enhanced actuator disc wind turbine models in PALM 
+   The model is based on blade elements and conversion of airfoil lift 
+   and drag coefficients from the NREL 5MW reference turbine (see Jonkman et al. 2009:
+   Technical Report NREL/TP-500-38060, doi:10.2172/947422) to local forces on the flow.
+   The example simulates 4 different turbines in laminar flow that correct their orientation
+   after 30s of simulated time by use of a yaw controller.
+   
+2. PALM-Version / SVN Revision
+   PALM 4.0 / SVN Revision 2272
+
+3. Required user code
+   No user code is required
+   
+4. Input: 
+   example_wtm_p3d: Cyclic lateral boundary conditions are used. The 3d-model is initialized with
+                    constant temperature and constant laminar flow.
+   example_wtm_wtm: The property file of the NREL 5MW model turbine has also to be copied to the
+                    local INPUT folder, it will be automatically read by PALM
+
+5. Preprocessing
+   No preprocessing is required.
+   
+6. Program start 
+   Modifications to .mrun.config:
+   No modifications are necessary if you use one of the default .mrun.config-files in trunk/SCRIPTS/.
+   In case you want to use your own (older) .mrun.config-file, you will have to add the following
+   lines in your .mrun.config file:
+   In "List of input-files":
+   WTM_DATA               in:locopt     d3#:d3f  $base_data/$fname/INPUT     _wtm
+   In "List of output-files":
+   TURBINE_PARAMETERS01   out:loc:tr    d3#:d3f   $base_data/$fname/MONITORING  _turbine_parameters01
+   TURBINE_PARAMETERS02   out:loc:tr    d3#:d3f   $base_data/$fname/MONITORING  _turbine_parameters02
+   TURBINE_PARAMETERS03   out:loc:tr    d3#:d3f   $base_data/$fname/MONITORING  _turbine_parameters03
+   TURBINE_PARAMETERS04   out:loc:tr    d3#:d3f   $base_data/$fname/MONITORING  _turbine_parameters04
+   
+   mrun call (example for lccrayh):
+   mrun -d example_wtm -h lccrayh -K parallel -X 64 -T 24 -t 2000 -q mpp1testq -r "d3# ts# ma#"
+
+7. Monitoring: 
+   example_wtm_rc and TURBINE_PARAMETERS01-04 should be equal to the attached files when run at
+   Cray System of HLRN Berlin. For other systems the deviations should be small.
+
+8. Postprocessing
+   No postprocessing of the data is required.
+
+9. List of attachments
+   example_wtm_p3d
+   example_wtm_wtm
+   lccrayb_example_wtm_rc
+   lccrayb_example_wtm_turbine_parameters01
+   lccrayb_example_wtm_turbine_parameters02
+   lccrayb_example_wtm_turbine_parameters03
+   lccrayb_example_wtm_turbine_parameters04

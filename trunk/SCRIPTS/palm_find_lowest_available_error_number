@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+#------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2018-2018  Leibniz Universitaet Hannover
+#------------------------------------------------------------------------------#
+#
+# Current revisions:
+# ------------------
+#
+#
+# Former revisions:
+# -----------------
+# $Id: palm_find_lowest_available_error_number 3024 2018-05-22 10:17:49Z knoop $
+# Initial revision
+#
+#------------------------------------------------------------------------------#
+# palm_find_lowest_available_error_number does what its name indicates
+#------------------------------------------------------------------------------#
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  # if $SOURCE was a relative symlink, we need to resolve it
+  # relative to the path where the symlink file was located
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_LOCATION="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+working_dir=$(readlink -f "${SCRIPT_LOCATION}/../../")
+trunk_dir=$(readlink -f "${SCRIPT_LOCATION}/../")
+
+contains() {
+    [[ ${1} =~ (^|[[:space:]])${2}($|[[:space:]]) ]] && return 0 || return 1
+}
+
+error_code_prefix="PA"
+
+all_found_error_codes=$(grep -P "CALL +message\(.+\)" ${trunk_dir}/SOURCE/* \
+      | grep -oP "${error_code_prefix}(?<!\d)\d{4}(?!\d)" | sort | uniq -c  \
+      | grep -oP "${error_code_prefix}(?<!\d)\d{4}(?!\d)")
+
+for n in {1..9999} ; do
+   current_code=$(printf "${error_code_prefix}%04d" $((10#${n})))
+   if ! contains "$all_found_error_codes" "$current_code"; then
+     echo $current_code
+     break
+   fi
+done

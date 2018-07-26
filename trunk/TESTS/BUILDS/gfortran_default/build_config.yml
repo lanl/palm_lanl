@@ -1,0 +1,23 @@
+---
+# this is a palmtest build configuration file
+
+compiler:
+  executable: mpif90
+  definitions:
+    - "MPI_REAL=MPI_DOUBLE_PRECISION"
+    - "MPI_2REAL=MPI_2DOUBLE_PRECISION"
+    - "__parallel"
+    - "__netcdf"
+    - "__fftw"
+    - "__gfortran"
+  options:
+    - "-cpp"
+    - "-O3"
+    - "-ffree-line-length-none"
+  includes: []
+
+linker:
+  options:
+    - "-lnetcdff"
+    - "-lfftw3"
+

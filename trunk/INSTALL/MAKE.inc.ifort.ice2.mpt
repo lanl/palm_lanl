@@ -1,0 +1,9 @@
+# contents of this file are include in palm's makefile if the simple install
+# process (palm_simple_install) is used.
+# Please adjust compiling parameters as required for your system
+
+PROG=palm 
+F90=mpif90
+COPT= -cpp -DMPI_REAL=MPI_DOUBLE_PRECISION -DMPI_2REAL=MPI_2DOUBLE_PRECISION -D__netcdf -D__netcdf_64bit -D__intel_openmp_bug -D__lc -D__parallel -D__mpi2
+F90FLAGS= -xSSE4.2 -O3 -openmp -r8 -align all -ftz -fno-alias -no-prec-div -no-prec-sqrt -ip -nbs -convert little_endian -I /sw/dataformats/netcdf/3.6.2/include
+LDFLAGS= -xSSE4.2 -O3 -openmp -r8 -align all -ftz -fno-alias -no-prec-div -no-prec-sqrt -ip -nbs -Vaxlib -lmpi -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -L/sw/dataformats/netcdf/3.6.2/lib -lnetcdf -lnetcdff

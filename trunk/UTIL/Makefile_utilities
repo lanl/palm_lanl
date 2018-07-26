@@ -1,0 +1,82 @@
+#------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018  Leibniz Universitaet Hannover
+#------------------------------------------------------------------------------#
+#
+# Current revisions:
+# -----------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: Makefile_utilities 2718 2018-01-02 08:49:38Z maronga $
+# Corrected "Former revisions" section
+# 
+# 2696 2017-12-14 17:12:51Z kanani
+# Change in file header (GPL part)
+#
+# 2380 2017-09-01 08:33:46Z raasch
+# file renamed to Makefile_utilities
+# executables are created in current working directory
+# interpret_config removed
+#
+# 1046 2012-11-09 14:38:45Z maronga
+# code put under GPL (PALM 3.9)
+#
+# utility programs are created separately for each block in the configuration
+# file,
+# compare_palm_logs added
+# added PROG3 in 'all:' statement (line 39, bugfix)
+#
+# Initial revision somewhere in 2003/04
+#
+# Description:
+# ------------
+# Makefile for generating the utility programs required by mrun and palm
+#------------------------------------------------------------------------------#
+
+PROG1 =  combine_plot_fields.x
+PROG2 =  compare_palm_logs.x
+
+OBJS1 =  combine_plot_fields.o
+OBJS2 =  compare_palm_logs.o
+
+CC = cc
+CFLAGS = -O
+
+F90 =
+F90_SER =
+COPT =
+F90FLAGS =
+LDFLAGS =
+
+.SUFFIXES: $(SUFFIXES) .f90
+
+
+all: $(PROG1) $(PROG2) $(PROG3)
+
+$(PROG1): $(OBJS1)
+	$(F90_SER) -o $(PROG1) $(OBJS1) $(LDFLAGS)
+
+$(PROG2): $(OBJS2)
+	$(F90_SER) -o $(PROG2) $(OBJS2) $(LDFLAGS)
+
+$(PROG3): $(OBJS3)
+	$(F90_SER) -o $(PROG3) $(OBJS3) $(LDFLAGS)
+
+.f90.o:
+	$(F90_SER) $(F90FLAGS) $(COPT) -c $<
+
+

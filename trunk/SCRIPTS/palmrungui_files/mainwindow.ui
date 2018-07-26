@@ -1,0 +1,1958 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="windowModality">
+   <enum>Qt::WindowModal</enum>
+  </property>
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>600</width>
+    <height>700</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>600</width>
+    <height>700</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>600</width>
+    <height>700</height>
+   </size>
+  </property>
+  <property name="focusPolicy">
+   <enum>Qt::NoFocus</enum>
+  </property>
+  <property name="windowTitle">
+   <string>palmrungui</string>
+  </property>
+  <property name="iconSize">
+   <size>
+    <width>72</width>
+    <height>72</height>
+   </size>
+  </property>
+  <property name="toolButtonStyle">
+   <enum>Qt::ToolButtonIconOnly</enum>
+  </property>
+  <property name="animated">
+   <bool>false</bool>
+  </property>
+  <property name="documentMode">
+   <bool>false</bool>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <widget class="QGroupBox" name="groupBox">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>570</y>
+      <width>601</width>
+      <height>81</height>
+     </rect>
+    </property>
+    <property name="focusPolicy">
+     <enum>Qt::NoFocus</enum>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <property name="flat">
+     <bool>true</bool>
+    </property>
+    <widget class="QPushButton" name="button_exit">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>20</y>
+       <width>90</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Quit</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="button_start">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>20</y>
+       <width>91</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>palmrun</string>
+     </property>
+     <property name="checkable">
+      <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="button_clear">
+     <property name="geometry">
+      <rect>
+       <x>210</x>
+       <y>20</y>
+       <width>90</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Clear</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="commandline">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>50</y>
+       <width>581</width>
+       <height>26</height>
+      </rect>
+     </property>
+     <property name="mouseTracking">
+      <bool>false</bool>
+     </property>
+     <property name="acceptDrops">
+      <bool>false</bool>
+     </property>
+     <property name="frame">
+      <bool>false</bool>
+     </property>
+     <property name="dragEnabled">
+      <bool>false</bool>
+     </property>
+     <property name="readOnly">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QTabWidget" name="tabWidget">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>5</y>
+      <width>591</width>
+      <height>581</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="font">
+     <font>
+      <strikeout>false</strikeout>
+     </font>
+    </property>
+    <property name="focusPolicy">
+     <enum>Qt::NoFocus</enum>
+    </property>
+    <property name="autoFillBackground">
+     <bool>false</bool>
+    </property>
+    <property name="currentIndex">
+     <number>0</number>
+    </property>
+    <widget class="QWidget" name="tab">
+     <attribute name="title">
+      <string>Default</string>
+     </attribute>
+     <widget class="QGroupBox" name="group_job">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>571</width>
+        <height>296</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <weight>50</weight>
+        <bold>false</bold>
+       </font>
+      </property>
+      <property name="title">
+       <string notr="true">Job name</string>
+      </property>
+      <property name="flat">
+       <bool>true</bool>
+      </property>
+      <widget class="QLineEdit" name="line_jobname">
+       <property name="geometry">
+        <rect>
+         <x>90</x>
+         <y>30</y>
+         <width>481</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="pushButton">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>30</y>
+         <width>71</width>
+         <height>24</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Select</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>65</y>
+         <width>151</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Recently submitted jobs:</string>
+       </property>
+      </widget>
+      <widget class="QListWidget" name="list_jobname">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>85</y>
+         <width>561</width>
+         <height>181</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QComboBox" name="drop_job">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="geometry">
+        <rect>
+         <x>70</x>
+         <y>270</y>
+         <width>271</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <item>
+        <property name="text">
+         <string>Initial run</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Restart run</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Precursor run (atmosphere)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Precursor run (ocean)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Initial run (coupled atmosphere ocean)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Restart run (coupled atmosphere ocean)</string>
+        </property>
+       </item>
+      </widget>
+      <widget class="QLabel" name="label_usercode">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="geometry">
+        <rect>
+         <x>350</x>
+         <y>267</y>
+         <width>231</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_8">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>275</y>
+         <width>81</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Job type:</string>
+       </property>
+      </widget>
+      <zorder>line_jobname</zorder>
+      <zorder>pushButton</zorder>
+      <zorder>label</zorder>
+      <zorder>list_jobname</zorder>
+      <zorder>drop_job</zorder>
+      <zorder>label_usercode</zorder>
+      <zorder>palm_logo</zorder>
+      <zorder>label_8</zorder>
+     </widget>
+     <widget class="QGroupBox" name="group_execution">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>305</y>
+        <width>431</width>
+        <height>231</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Execution</string>
+      </property>
+      <property name="flat">
+       <bool>false</bool>
+      </property>
+      <widget class="QLineEdit" name="line_q">
+       <property name="geometry">
+        <rect>
+         <x>340</x>
+         <y>30</y>
+         <width>81</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_2">
+       <property name="geometry">
+        <rect>
+         <x>260</x>
+         <y>25</y>
+         <width>71</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Queue:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="line_pe">
+       <property name="geometry">
+        <rect>
+         <x>120</x>
+         <y>55</y>
+         <width>101</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_3">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>55</y>
+         <width>111</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Processing cores:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="line_tpn">
+       <property name="geometry">
+        <rect>
+         <x>340</x>
+         <y>55</y>
+         <width>61</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_4">
+       <property name="geometry">
+        <rect>
+         <x>230</x>
+         <y>50</y>
+         <width>101</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Tasks per node:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="line_account">
+       <property name="geometry">
+        <rect>
+         <x>340</x>
+         <y>80</y>
+         <width>81</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_5">
+       <property name="geometry">
+        <rect>
+         <x>230</x>
+         <y>80</y>
+         <width>101</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Project account:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_6">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>80</y>
+         <width>101</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Wallclock time:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="line_time">
+       <property name="geometry">
+        <rect>
+         <x>120</x>
+         <y>80</y>
+         <width>101</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_7">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>30</y>
+         <width>91</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Configuration:</string>
+       </property>
+       <property name="scaledContents">
+        <bool>false</bool>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="line_host">
+       <property name="geometry">
+        <rect>
+         <x>120</x>
+         <y>30</y>
+         <width>101</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+      <widget class="Line" name="line">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>105</y>
+         <width>431</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="check_restarts">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>120</y>
+         <width>121</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Allow restarts</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="check_delete_tmp_files">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>140</y>
+         <width>281</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Do not delete temporary directory at end</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="check_verbose">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>160</y>
+         <width>261</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>No prompt on confirmation (silent)</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_restart">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="geometry">
+        <rect>
+         <x>130</x>
+         <y>120</y>
+         <width>291</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="check_cycfill">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>180</y>
+         <width>261</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Use cyclic fill method</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="check_svf">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>200</y>
+         <width>261</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Read sky view factors from file</string>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QLabel" name="palm_logo">
+      <property name="geometry">
+       <rect>
+        <x>490</x>
+        <y>440</y>
+        <width>77</width>
+        <height>72</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>TextLabel</string>
+      </property>
+      <property name="scaledContents">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_2">
+     <attribute name="title">
+      <string>Advanced</string>
+     </attribute>
+     <widget class="QGroupBox" name="group_advanced">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>5</y>
+        <width>501</width>
+        <height>401</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Advanced settings</string>
+      </property>
+      <property name="flat">
+       <bool>true</bool>
+      </property>
+      <widget class="QCheckBox" name="check_x">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>175</y>
+         <width>421</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>-x  (tracing of palmrun for debug purposes)</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="check_O">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>150</y>
+         <width>421</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>-O  (use OpenMP)</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="check_k">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>125</y>
+         <width>421</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>-k  (keep data from previous run)</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="check_I">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>100</y>
+         <width>441</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>-I  (archiving errors of previous batch-jobs will be ignored)</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="check_F">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>75</y>
+         <width>421</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>-F (create remote job file only)</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="check_b">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>50</y>
+         <width>421</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>-b  (batch-job on local machine)</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="check_Z">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>200</y>
+         <width>421</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>-Z  (disable combine_plot_fields at the end of job)</string>
+       </property>
+      </widget>
+      <widget class="Line" name="line_2">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>220</y>
+         <width>581</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="line_w">
+       <property name="geometry">
+        <rect>
+         <x>220</x>
+         <y>345</y>
+         <width>191</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="line_s">
+       <property name="geometry">
+        <rect>
+         <x>220</x>
+         <y>320</y>
+         <width>191</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="line_D">
+       <property name="geometry">
+        <rect>
+         <x>220</x>
+         <y>295</y>
+         <width>191</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="line_M">
+       <property name="geometry">
+        <rect>
+         <x>220</x>
+         <y>270</y>
+         <width>191</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="line_m">
+       <property name="geometry">
+        <rect>
+         <x>220</x>
+         <y>245</y>
+         <width>81</width>
+         <height>25</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="line_user">
+       <property name="geometry">
+        <rect>
+         <x>220</x>
+         <y>370</y>
+         <width>191</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QLabel" name="label_20">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>375</y>
+        <width>211</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>User parameters (no preview):</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_18">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>300</y>
+        <width>201</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Preprocessor directives (cpp):</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_17">
+      <property name="geometry">
+       <rect>
+        <x>-10</x>
+        <y>350</y>
+        <width>221</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Number of parallel I/O streams:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_16">
+      <property name="geometry">
+       <rect>
+        <x>110</x>
+        <y>255</y>
+        <width>101</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Memory (MB):</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_19">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>325</y>
+        <width>191</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Filenames to be compiled:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_21">
+      <property name="geometry">
+       <rect>
+        <x>40</x>
+        <y>275</y>
+        <width>171</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Makefile:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
+      </property>
+     </widget>
+     <widget class="QGroupBox" name="group_coupled">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>410</y>
+        <width>401</width>
+        <height>101</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string/>
+      </property>
+      <widget class="QLineEdit" name="line_PE_ocean">
+       <property name="geometry">
+        <rect>
+         <x>100</x>
+         <y>70</y>
+         <width>111</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_coupled3">
+       <property name="geometry">
+        <rect>
+         <x>40</x>
+         <y>65</y>
+         <width>51</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Ocean:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="line_PE_atmos">
+       <property name="geometry">
+        <rect>
+         <x>100</x>
+         <y>45</y>
+         <width>111</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="frame">
+        <bool>true</bool>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_coupled2">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>45</y>
+         <width>81</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Atmosphere:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_coupled1">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>1</y>
+         <width>181</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="autoFillBackground">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>Processor distribution</string>
+       </property>
+       <property name="scaledContents">
+        <bool>false</bool>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignJustify</set>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_coupled1_2">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>20</y>
+         <width>281</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="autoFillBackground">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>(Coupled atmosphere-ocean runs only)</string>
+       </property>
+       <property name="scaledContents">
+        <bool>false</bool>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignJustify</set>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_coupling">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="geometry">
+        <rect>
+         <x>160</x>
+         <y>5</y>
+         <width>55</width>
+         <height>15</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </widget>
+    </widget>
+   </widget>
+  </widget>
+  <widget class="QToolBar" name="mainToolBar">
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>600</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuStart">
+    <property name="geometry">
+     <rect>
+      <x>341</x>
+      <y>82</y>
+      <width>128</width>
+      <height>189</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>St&amp;art</string>
+    </property>
+    <property name="separatorsCollapsible">
+     <bool>false</bool>
+    </property>
+    <addaction name="action_open"/>
+    <addaction name="separator"/>
+    <addaction name="action_last"/>
+    <addaction name="action_save"/>
+    <addaction name="action_default"/>
+    <addaction name="action_quit"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>He&amp;lp</string>
+    </property>
+    <addaction name="action_help"/>
+    <addaction name="action_about"/>
+   </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>&amp;Tools</string>
+    </property>
+    <addaction name="action_start_watchdog"/>
+    <addaction name="action_start_jobmanager"/>
+   </widget>
+   <addaction name="menuStart"/>
+   <addaction name="menuTools"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <action name="action_open">
+   <property name="text">
+    <string>&amp;Open from File</string>
+   </property>
+  </action>
+  <action name="action_save">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Save to File</string>
+   </property>
+  </action>
+  <action name="action_last">
+   <property name="text">
+    <string>&amp;Load Last Job</string>
+   </property>
+  </action>
+  <action name="action_quit">
+   <property name="text">
+    <string>&amp;Quit</string>
+   </property>
+  </action>
+  <action name="action_help">
+   <property name="text">
+    <string>&amp;Help</string>
+   </property>
+  </action>
+  <action name="action_about">
+   <property name="text">
+    <string>&amp;About palmrungui</string>
+   </property>
+  </action>
+  <action name="action_default">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Save as &amp;Default</string>
+   </property>
+  </action>
+  <action name="actionCheck_parameter_file">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Check parameter file</string>
+   </property>
+  </action>
+  <action name="action_start_wd">
+   <property name="text">
+    <string>Start watchdog</string>
+   </property>
+  </action>
+  <action name="actionStart_job_manager">
+   <property name="text">
+    <string>Start job manager</string>
+   </property>
+  </action>
+  <action name="action_start_watchdog">
+   <property name="text">
+    <string>&amp;Watchdog</string>
+   </property>
+  </action>
+  <action name="action_start_jobmanager">
+   <property name="text">
+    <string>&amp;Job manager</string>
+   </property>
+  </action>
+ </widget>
+ <layoutdefault spacing="1" margin="11"/>
+ <tabstops>
+  <tabstop>pushButton</tabstop>
+  <tabstop>drop_job</tabstop>
+  <tabstop>line_host</tabstop>
+  <tabstop>line_q</tabstop>
+  <tabstop>line_pe</tabstop>
+  <tabstop>line_tpn</tabstop>
+  <tabstop>line_time</tabstop>
+  <tabstop>line_account</tabstop>
+  <tabstop>check_restarts</tabstop>
+  <tabstop>check_delete_tmp_files</tabstop>
+  <tabstop>check_verbose</tabstop>
+  <tabstop>check_cycfill</tabstop>
+  <tabstop>button_start</tabstop>
+  <tabstop>button_exit</tabstop>
+  <tabstop>button_clear</tabstop>
+  <tabstop>commandline</tabstop>
+  <tabstop>list_jobname</tabstop>
+  <tabstop>line_jobname</tabstop>
+  <tabstop>check_b</tabstop>
+  <tabstop>check_F</tabstop>
+  <tabstop>check_I</tabstop>
+  <tabstop>check_k</tabstop>
+  <tabstop>check_O</tabstop>
+  <tabstop>check_x</tabstop>
+  <tabstop>check_Z</tabstop>
+  <tabstop>line_m</tabstop>
+  <tabstop>line_M</tabstop>
+  <tabstop>line_D</tabstop>
+  <tabstop>line_s</tabstop>
+  <tabstop>line_w</tabstop>
+  <tabstop>line_user</tabstop>
+  <tabstop>line_PE_atmos</tabstop>
+  <tabstop>line_PE_ocean</tabstop>
+ </tabstops>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>button_exit</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>160</x>
+     <y>652</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>16</x>
+     <y>19</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>button_start</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>startpalmrun()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>73</x>
+     <y>652</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>14</x>
+     <y>63</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>drop_job</sender>
+   <signal>activated(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>enable_coupled()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>226</x>
+     <y>361</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>261</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>choosejob()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>57</x>
+     <y>120</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>535</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>list_jobname</sender>
+   <signal>itemActivated(QListWidgetItem*)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>choosejob_list()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>313</x>
+     <y>178</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>430</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>drop_job</sender>
+   <signal>currentIndexChanged(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_rc_list()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>264</x>
+     <y>361</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>334</x>
+     <y>356</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_restarts</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_rc_list()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>76</x>
+     <y>527</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1</x>
+     <y>530</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_delete_tmp_files</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>check_flags()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>80</x>
+     <y>547</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>3</x>
+     <y>562</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_verbose</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>check_flags()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>61</x>
+     <y>567</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>5</x>
+     <y>623</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_b</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>check_flags()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>434</x>
+     <y>139</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>599</x>
+     <y>67</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_F</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>check_flags()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>434</x>
+     <y>164</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>599</x>
+     <y>103</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_I</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>check_flags()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>454</x>
+     <y>189</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>599</x>
+     <y>129</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_k</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>check_flags()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>434</x>
+     <y>214</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>599</x>
+     <y>158</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_O</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>check_flags()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>434</x>
+     <y>239</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>599</x>
+     <y>188</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_x</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>check_flags()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>434</x>
+     <y>282</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>599</x>
+     <y>255</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>line_host</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_lineinput()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>127</x>
+     <y>434</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>26</x>
+     <y>362</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>line_pe</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_lineinput()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>124</x>
+     <y>459</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>5</x>
+     <y>440</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>line_time</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_lineinput()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>187</x>
+     <y>484</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>4</x>
+     <y>480</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>line_q</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_lineinput()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>346</x>
+     <y>435</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>507</x>
+     <y>387</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>line_account</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_lineinput()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>369</x>
+     <y>484</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>506</x>
+     <y>416</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>line_tpn</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_lineinput()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>344</x>
+     <y>460</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>505</x>
+     <y>447</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>line_m</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_lineinput()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>304</x>
+     <y>330</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>599</x>
+     <y>328</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>line_D</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_lineinput()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>414</x>
+     <y>380</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>599</x>
+     <y>396</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>line_s</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_lineinput()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>414</x>
+     <y>405</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>599</x>
+     <y>522</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>line_w</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_lineinput()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>414</x>
+     <y>446</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>599</x>
+     <y>612</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>line_user</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_lineinput()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>414</x>
+     <y>479</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>599</x>
+     <y>650</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>button_clear</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>reset_window()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>299</x>
+     <y>654</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>599</x>
+     <y>689</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>line_M</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_lineinput()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>414</x>
+     <y>355</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>599</x>
+     <y>287</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_quit</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>479</x>
+     <y>366</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_save</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>save_to_file()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>479</x>
+     <y>366</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_last</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>open_last()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>479</x>
+     <y>366</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_open</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>open_from_file()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>479</x>
+     <y>366</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_help</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>help()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>479</x>
+     <y>366</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_about</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>about_gui()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>479</x>
+     <y>366</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_default</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>save_default()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>479</x>
+     <y>366</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>line_jobname</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_lineinput()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>179</x>
+     <y>121</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>4</x>
+     <y>122</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_Z</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>check_flags()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>434</x>
+     <y>307</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>458</x>
+     <y>344</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_cycfill</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_rc_list()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>274</x>
+     <y>585</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>4</x>
+     <y>510</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_start_jobmanager</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>start_jobmanager()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>458</x>
+     <y>344</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_start_watchdog</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>start_watchdog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>458</x>
+     <y>344</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_svf</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_rc_list()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>172</x>
+     <y>593</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>596</x>
+     <y>494</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>startpalmrun()</slot>
+  <slot>enable_advanced()</slot>
+  <slot>enable_coupled()</slot>
+  <slot>choosejob()</slot>
+  <slot>choosejob_list()</slot>
+  <slot>change_rc_list()</slot>
+  <slot>check_flags()</slot>
+  <slot>change_lineinput()</slot>
+  <slot>reset_window()</slot>
+  <slot>save_to_file()</slot>
+  <slot>open_from_file()</slot>
+  <slot>open_last()</slot>
+  <slot>about()</slot>
+  <slot>about_gui()</slot>
+  <slot>save_default()</slot>
+  <slot>help()</slot>
+  <slot>start_watchdog()</slot>
+  <slot>start_jobmanager()</slot>
+ </slots>
+</ui>

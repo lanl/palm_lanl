@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+
+#--------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018  Leibniz Universitaet Hannover
+#--------------------------------------------------------------------------------#
+#
+# Current revisions:
+# -----------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: testsuite 2718 2018-01-02 08:49:38Z maronga $
+# Corrected "Former revisions" section
+# 
+# 
+#
+# 2696 kanani
+# Change in file header (GPL part)
+#
+# 2410 giersch
+# Change of option -h argument
+#
+# 2372 sward
+# Change of option -h argument
+#
+# 2349 giersch
+# Change of option -h argument
+#
+# 2347 knoop
+# Initial revision
+#
+# Description:
+# ------------
+# Testsuite execution script
+#------------------------------------------------------------------------------#
+
+hrule() {
+   printf "#"
+   printf -- '-%.0s' {1..72}
+   printf "#\n"
+}
+
+get_number_of_cpu_cores() {
+   {
+      n=$(sysctl -n machdep.cpu.core_count 2> /dev/null)
+   } || {
+      n=$(grep -c ^processor /proc/cpuinfo 2> /dev/null)
+   } || {
+   if ! [[ $n =~ ^-?[0-9]+$ ]]; then
+      n=1
+   fi
+   }
+   echo $n
+}
+
+
+configure() {
+   hrule
+   printf "Configuring .mrun.config ..."
+   if [[ -f ${existing_working_dir}/.mrun.config ]]; then
+      cp ${existing_working_dir}/.mrun.config ${tester_prefix}/.mrun.config
+      sed -i -e "s#%base_directory .*#%base_directory    ${tester_prefix}#g" ${tester_prefix}/.mrun.config
+      sed -i -e "s#%base_data .*#%base_data         ${tester_prefix}/JOBS#g" ${tester_prefix}/.mrun.config
+      sed -i -e "s#%tmp_user_catalog .*#%tmp_user_catalog  ${tester_prefix}/tmp#g" ${tester_prefix}/.mrun.config
+      printf " finished (adapted existing .mrun.config)\n"
+   else
+      cp ${PALM_BIN}/.mrun.config.gfortran ${tester_prefix}/.mrun.config
+      sed -i -e "s/<replace_with_your_hostname>/${HOSTNAME}/g" ${tester_prefix}/.mrun.config
+      sed -i -e "s/<replace_with_your_local_username>/${USER}/g" ${tester_prefix}/.mrun.config
+      sed -i -e "s/<hi>/lcmuk/g" ${tester_prefix}/.mrun.config
+      sed -i -e "s#%base_directory    \$HOME/palm/current_version#%base_directory    ${tester_prefix}#g" ${tester_prefix}/.mrun.config
+      sed -i -e "s#%base_data         ~/palm/current_version/JOBS#%base_data         ${tester_prefix}/JOBS#g" ${tester_prefix}/.mrun.config
+      sed -i -e "s#%tmp_user_catalog  \$HOME/palm/tmp#%tmp_user_catalog  ${tester_prefix}/tmp#g" ${tester_prefix}/.mrun.config
+      sed -i -e "s#<replace_by_netcdf_include_path>#/usr/include#g" ${tester_prefix}/.mrun.config
+      sed -i -e "s#-L:<replace_by_netcdf_library_path>:-lnetcdf#/usr/lib/x86_64-linux-gnu/libnetcdff.so#g" ${tester_prefix}/.mrun.config
+      sed -i -e "s#-j:4#-j:1#g" ${tester_prefix}/.mrun.config
+      printf " finished (created .mrun.config from template)\n"
+   fi
+}
+
+build() {
+   hrule
+   rm -rf ${tester_prefix}/JOBS
+   rm -rf ${tester_prefix}/MAKE_DEPOSITORY*
+   rm -rf ${tester_prefix}/SOURCES_FOR_RUN_*
+   bash ${trunk_dir}/SCRIPTS/mbuild -h "lcmuk" -K "parallel" -v -u
+   bash ${trunk_dir}/SCRIPTS/mbuild -h "lcmuk" -K "parallel" -v
+}
+
+palm_installer_test() {
+   hrule
+   printf "Testing with \"${1}\"... "
+   local input_dir=${tester_prefix}/JOBS/${1}/INPUT
+   local monitoring_dir=${tester_prefix}/JOBS/${1}/MONITORING
+   local test_dir=${trunk_dir}/INSTALL
+   if [[ ! -f ${test_dir}/${1}_p3d ]] || [[ ! -f ${test_dir}/${1}_rc ]]; then
+      printf " test not found\n"
+      return 1
+   fi
+   rm -rf ${monitoring_dir}
+   mkdir -p ${input_dir}
+   mkdir -p ${monitoring_dir}
+   cp ${test_dir}/${1}_p3d ${input_dir}/${1}_p3d
+   cp ${test_dir}/${1}_rc ${monitoring_dir}/${1}_rc_reference
+   [[ -f ${test_dir}/${1}_topo ]] && cp ${test_dir}/${1}_topo ${input_dir}/
+   bash ${trunk_dir}/SCRIPTS/mrun -d ${1} -r "d3#" -h "lcmuk" -K "parallel" -X "$NUM_PROC" -T "$NUM_PROC" -v -B > ${monitoring_dir}/${1}_stdout 2>&1
+   grep -A 99999 "Run-control output" ${monitoring_dir}/${1}_rc 1> ${monitoring_dir}/RC 2> /dev/null
+   grep -A 99999 "Run-control output" ${monitoring_dir}/${1}_rc_reference 1> ${monitoring_dir}/RC_REF 2> /dev/null
+   diff_output=$(diff ${monitoring_dir}/RC_REF ${monitoring_dir}/RC)
+   rm ${monitoring_dir}/RC ${monitoring_dir}/RC_REF
+   if [[ "${diff_output}" == "" ]]; then
+      printf " passed\n"
+      return 0
+   else
+      printf " failed\n"
+      test_status="failed"
+      return 1
+   fi
+}
+
+palm_installer_test_suite() {
+   for test_path in ${trunk_dir}/INSTALL/*_p3d; do
+      testname_p3d=$(basename $test_path)
+      palm_installer_test "${testname_p3d%_p3d}"
+   done
+   hrule
+   if [[ "${test_status}" == "failed" ]]; then
+      echo "Some tests failed!"
+      hrule
+      exit 1
+   else
+      echo "All found tests passed. :-)"
+      rm -rf ${tester_prefix}/tmp/*
+      hrule
+      exit 0
+   fi
+}
+
+NUM_PROC=$(get_number_of_cpu_cores)
+existing_trunk_dir=$(readlink -f "${PALM_BIN}/../")
+existing_working_dir=$(readlink -f "${PALM_BIN}/../../")
+tester_prefix=${existing_working_dir}/tests/${BUILD_NUMBER:-$(date +%Y-%m-%d_%H%M%S)}
+trunk_dir=${tester_prefix}/trunk
+
+# redirect PALM_BIN for duration of tests
+export PALM_BIN=${trunk_dir}/SCRIPTS
+
+mkdir -p ${tester_prefix}
+cd ${tester_prefix}
+
+ln -s ${existing_trunk_dir}
+
+configure
+build
+palm_installer_test_suite

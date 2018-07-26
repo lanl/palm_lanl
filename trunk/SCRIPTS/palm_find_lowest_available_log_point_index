@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+#------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2018-2018  Leibniz Universitaet Hannover
+#------------------------------------------------------------------------------#
+#
+# Current revisions:
+# ------------------
+#
+#
+# Former revisions:
+# -----------------
+# $Id: palm_find_lowest_available_log_point_index 3027 2018-05-22 15:23:58Z knoop $
+# Initial revision
+#
+#------------------------------------------------------------------------------#
+# palm_find_lowest_available_log_point_index does what its name indicates
+#------------------------------------------------------------------------------#
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  # if $SOURCE was a relative symlink, we need to resolve it
+  # relative to the path where the symlink file was located
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_LOCATION="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+working_dir=$(readlink -f "${SCRIPT_LOCATION}/../../")
+trunk_dir=$(readlink -f "${SCRIPT_LOCATION}/../")
+
+contains() {
+    [[ ${1} =~ (^|[[:space:]])${2}($|[[:space:]]) ]] && return 0 || return 1
+}
+
+all_found_log_point=$(grep -P "CALL +cpu_log\( +log_point\(" ${trunk_dir}/SOURCE/* \
+      | grep -oP "(?<!\d)\d+(?!\d)" | sort -n | uniq \
+      | grep -oP "(?<!\d)\d+(?!\d)")
+
+log_point_size=$(grep -oP "TYPE\(logpoint\), DIMENSION\(\d+\) ::  log_point =" \
+      ${trunk_dir}/SOURCE/cpulog_mod.f90 \
+      | grep -oP "(?<!\d)\d+(?!\d)")
+
+for n in $(seq 1 ${log_point_size}) ; do
+   if ! contains "$all_found_log_point" "$n"; then
+     echo "log_point($n)   is the lowest available log_point   index."
+     break
+   fi
+   if [[ ${n} -ge ${log_point_size} ]]; then
+      echo "ERROR: array log_point (size: ${log_point_size}) is full. " \
+           "Please increase its size in file \"cpulog_mod.f90\"."
+   fi
+done
+
+
+all_found_log_point_s=$(grep -P "CALL +cpu_log\( +log_point_s\(" ${trunk_dir}/SOURCE/* \
+      | grep -oP "(?<!\d)\d+(?!\d)" | sort -n | uniq \
+      | grep -oP "(?<!\d)\d+(?!\d)")
+
+log_point_s_size=$(grep -oP "TYPE\(logpoint\), DIMENSION\(\d+\) ::  log_point_s =" \
+      ${trunk_dir}/SOURCE/cpulog_mod.f90 \
+      | grep -oP "(?<!\d)\d+(?!\d)")
+
+for n in $(seq 1 ${log_point_s_size}) ; do
+   if ! contains "$all_found_log_point_s" "$n"; then
+     echo "log_point_s($n) is the lowest available log_point_s index."
+     break
+   fi
+   if [[ ${n} -ge ${log_point_s_size} ]]; then
+      echo "ERROR: array log_point_s (size: ${log_point_s_size}) is full. " \
+           "Please increase its size in file \"cpulog_mod.f90\"."
+   fi
+done

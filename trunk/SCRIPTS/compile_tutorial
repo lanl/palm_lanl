@@ -1,0 +1,185 @@
+#!/bin/ksh
+
+#--------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018  Leibniz Universitaet Hannover
+#--------------------------------------------------------------------------------#
+#
+# Current revisions:
+# -----------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: compile_tutorial 2718 2018-01-02 08:49:38Z maronga $
+# Corrected "Former revisions" section
+#
+# 2696 2017-12-14 17:12:51Z kanani
+# Change in file header (GPL part)
+#
+# 1046 2012-11-09 14:38:45Z maronga
+# code put under GPL (PALM 3.9)
+#
+# Typo removed
+# 981 2012-08-09 14:57:44Z maronga
+#
+# 915 2012-05-30 15:11:11Z maronga
+# Initial revision
+#
+# Description:
+# ------------
+# This script compiles all LaTeX files that are located in TUTORIAL/SOURCE/.
+# Three PDFs are generated for each source file: 
+# the lecture version has a step-by-step layout, the handout version contains 
+# lines for notes, the web version can contain additional comments by the 
+# authors and has no step-by-step layout.
+# If a file is given as input parameter, only this file will be compiled.
+#
+# Execution:
+# ----------
+# compile_tutorial                 --> compiles all *.tex files in directory.
+# compile_tutorial -f filename.tex --> compiles filename.tex only.
+#------------------------------------------------------------------------------!
+
+    cycles=3
+    debug=false
+    file=""
+
+    full_name=`readlink -f $0`
+    directory="$(dirname $full_name)/../TUTORIAL/SOURCE"
+    output_dir="$(dirname $full_name)/../TUTORIAL"
+    cd $directory
+
+    while  getopts  :df: option
+    do
+       case  $option  in
+          (d)   debug=true;;
+          (f)   file=$OPTARG;;
+          (\?)  printf "\n  +++ unknown option $OPTARG \n"
+                printf "\n  --> type \"$0 ?\" for available options \n"
+                locat=parameter;exit;;
+       esac
+    done
+
+    shift OPTIND-1
+
+
+#   Print help
+    if [[ "$1" = "?" ]]
+    then
+       (printf "\n  *** compile_tutorial can be called as follows:\n"
+        printf "\n     compile_tutorial  -d  -f..\n"
+        printf "\n     Description of available options:\n"
+        printf "\n      Option      Description                                 Default-Value"
+        printf "\n        -d        show all debug output                               false"
+        printf "\n        -f        Filename (single file compilation mode)                \"\""
+        printf "\n         ?        this outline \n\n") | more
+        exit
+    fi
+
+    if [[ "$file" != "" ]] then
+       file_list=`readlink -f $(basename $file)`
+    else
+       file_list="$directory/*.tex"
+    fi
+
+
+    if [[ ! -d $output_dir/LECTURE ]] then
+       printf " $output_dir/LECTURE will be created.\n"
+       mkdir -p $output_dir/LECTURE
+    fi
+
+    if [[ ! -d $output_dir/HANDOUT ]] then
+       printf " $output_dir/HANDOUT will be created.\n"
+       mkdir -p $output_dir/HANDOUT
+    fi
+
+    if [[ ! -d $output_dir/WEB ]] then
+       printf " $output_dir/WEB will be created.\n"
+       mkdir -p $output_dir/WEB
+    fi
+
+    for i in $file_list;
+    do 
+       if [[ "$(echo $(basename $i)|cut -c1-6)" != "header" ]] then
+          printf "\n Compiling $i.\ Please wait..."
+
+#         Check if file exists
+          if [[ ! -f "$i" ]] then
+             printf " error."
+             printf "\n File $i does not exist. Skipping..."
+             break
+          fi
+
+          compiling_type="LECTURE"
+          for (( j=0; j<=2; j+=1 ))
+          do
+             rm -rf tmp_dir
+             mkdir tmp_dir
+             cp header_${compiling_type}.tex header_tmp.tex
+             for (( k=1; k<=$cycles; k+=1 ))
+             do
+                if ( $debug ) then
+                   printf "\n pdflatex output:\n\n\n"
+                   pdflatex -halt-on-error -output-directory=tmp_dir $i
+                   if [[ "$?" != "0" ]] 
+                   then
+                      printf "\n\n Compilation aborted. Please check your source code.\n"
+                      rm -rf tmp_dir
+                      exit
+                    fi
+                else
+                   pdflatex -halt-on-error -output-directory=tmp_dir $i  2>&1 > error_file
+
+                   if [[ "$?" != "0" ]] 
+                   then
+                      printf " error."
+                      printf "\n The following error occured during the compilation:\n\n\n"
+                      cat error_file |grep "Error"
+                      printf "\n\n Compilation aborted. Please check your source code.\n"
+                      rm -rf tmp_dir
+                      rm error_file
+                      exit
+                   fi
+                fi
+                mv tmp_dir/*.pdf $output_dir/$compiling_type
+             done
+             if [[ "$compiling_type" = "LECTURE" ]]
+             then
+                compiling_type="WEB"
+             elif [[ "$compiling_type" = "WEB" ]]
+             then
+                compiling_type="HANDOUT"
+             fi
+          done  
+          printf " done."
+       fi
+
+#      Cleaning up
+       if [[ -f header_tmp.tex ]] then
+          rm header_tmp.tex
+       fi
+       if [[ -f error_file ]] then
+          rm error_file
+       fi
+       if [[ -d tmp_dir ]] then
+          rm -rf tmp_dir
+       fi
+
+    done
+
+    printf "\n\n *** All actions finished.\n"
+
+exit

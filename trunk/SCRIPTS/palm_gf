@@ -1,0 +1,798 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#--------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018  Leibniz Universitaet Hannover
+#--------------------------------------------------------------------------------#
+#
+# Current revisions:
+# -----------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: palm_gf 2825 2018-02-20 21:48:27Z maronga $
+# Modified header
+# 
+# 2718 2018-01-02 08:49:38Z maronga
+# Corrected "Former revisions" section
+# 
+# 2696 2017-12-14 17:12:51Z kanani
+# Change in file header (GPL part)
+#
+# 2309 2017-07-10 15:55:55Z gronemeier
+# some further bugfixes for palm_gf
+#
+# 2308 2017-07-10 12:15:43Z gronemeier
+# new version of palm_gf (bugfixes, changes and new options)
+#
+# 2116 2017-01-16 16:15:24Z maronga
+# Initial revision
+# 
+# 
+#
+# Description:
+# ------------
+# 
+#
+# Instructions:
+# -------------
+#
+#------------------------------------------------------------------------------!
+
+import sys
+import os
+import time
+import palm_gf_files.palm_gf_exec as execute_script
+import palm_gf_files.palm_gf_conf as config_wr
+import sqlite3
+import subprocess as sub
+
+
+from PyQt4 import QtCore, QtGui, uic, Qt
+from PyQt4.QtCore import QCoreApplication
+from palm_gf_files.palm_gf_tools import MyApp3
+
+# Determine PALM directories
+try: 
+   devnull = open(os.devnull, 'w')
+   out = sub.check_output("echo $PALM_BIN", shell=True, stderr=sub.STDOUT)
+   palm_bin = out.rstrip()
+   palm_dir = out.split("palm")[0] + "palm/" + out.split("palm")[1].split("/")[1]
+   out = None
+except:   
+   print "Error. $PALM_BIN is not set."
+   raise SystemExit
+
+qtCreatorFile = palm_bin + '/palm_gf_files/palm_gf.ui'
+
+Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
+
+
+class MyApp1(QtGui.QMainWindow, Ui_MainWindow):
+    def __init__(self):
+
+
+
+        QtGui.QMainWindow.__init__(self)
+        Ui_MainWindow.__init__(self)
+        #self.setWindowTitle('Gridfinder')
+
+        frameGm = self.frameGeometry()
+        screen = QtGui.QApplication.desktop().screenNumber(QtGui.QApplication.desktop().cursor().pos())
+        centerPoint = QtGui.QApplication.desktop().screenGeometry(screen).center()
+        frameGm.moveCenter(centerPoint)
+        self.move(frameGm.topLeft())
+
+
+        #centerPoint = str(centerPoint)
+        #xcenter = centerPoint.split('(')[1].split(',')[0]
+        #ycenter = centerPoint.split('(')[1].split(',')[1].split(')')[0]
+        #print xcenter, ycenter
+        #centerPoint = QtCore.QPoint(int(xcenter) - 418, int(ycenter))
+        #frameGm.moveCenter(centerPoint)
+        #self.move(frameGm.topLeft())
+
+        self.setupUi(self)
+        self.startbutton.clicked.connect(self.input_check)  # starts grid_calculation
+        self.psolver_box.currentIndexChanged.connect(self.vis)  # triggers visibility of fft_method option
+        self.save_button.clicked.connect(self.save_results)  # saves .db file under given name
+        self.fft_method_box.setVisible(False)
+        self.fft_method_label.setVisible(False)
+        self.result_headline.setVisible(False)
+        self.result_label.setVisible(False)
+        #self.line_res_up.setVisible(False)
+        self.line_res_down.setVisible(False)
+        self.view_result_button.setVisible(False)
+        #self.tableWidget.setVisible(False)
+        self.load_text_label.setVisible(False)
+        self.nor_spinbox.setVisible(False)
+        self.filename_line.setVisible(False)
+        self.save_button.setVisible(False)
+        self.testbar.setVisible(False)
+        self.d_box.setVisible(False)
+        self.tpn_box.setVisible(False)
+        self.tolerance_bar.setVisible(False)
+        self.tolerance_value.setVisible(False)
+        self.view_result_button.clicked.connect(self.load_gui)
+        self.threadclass = Threadclass()
+        self.actionSetting.triggered.connect(self.settings)
+        self.question_box.clicked.connect(self.settings)
+        self.warning_label.setVisible(False)
+
+
+
+
+    def closeEvent(self, QCloseEvent):
+
+        config_wr.closing_cleanup()
+        QCloseEvent.accept()
+
+
+    def input_check(self):
+
+        if int(self.nx_min_box.value()) <= int(self.nx_max_box.value()) and int(self.ny_min_box.value()) <= int(self.nx_max_box.value()) and int(self.nz_min_box.value()) <= int(self.nz_max_box.value()):
+            self.warning_label.setVisible(False)
+            self.run_program()
+
+        else:
+
+            self.warning_label.setStyleSheet('color: red')
+            self.warning_label.setVisible(True)
+
+
+
+
+
+
+
+    def settings(self):
+
+        self.w = MyPopup()
+        #self.w.setGeometry(Qt.QRect(100, 100, 400, 200))
+        frameGm = self.frameGeometry()
+        screen = QtGui.QApplication.desktop().screenNumber(QtGui.QApplication.desktop().cursor().pos())
+        centerPoint = QtGui.QApplication.desktop().screenGeometry(screen).center()
+        frameGm.moveCenter(centerPoint)
+        self.w.move(frameGm.topLeft())
+        self.w.show()
+
+
+
+    def vis(self):
+
+        if str(self.psolver_box.currentIndex()) == str(1):
+            self.fft_method_box.setVisible(True)
+            self.fft_method_label.setVisible(True)
+
+        if str(self.psolver_box.currentIndex()) != str(1):
+            self.fft_method_box.setVisible(False)
+            self.fft_method_label.setVisible(False)
+
+    def load_gui(self):
+        self.child_win = MyApp3()
+        self.child_win.show()
+
+    def run_transfer(self):
+        self.threadclass = Threadclass()
+        self.connect(self.threadclass, QtCore.SIGNAL('finish'), self.behind_run)
+        #self.connect(self.threadclass, QtCore.SIGNAL('progress'), self.up2date)
+        self.connect(self.threadclass, QtCore.SIGNAL('startqmsg'), self.takeoff)
+        self.connect(self.threadclass, QtCore.SIGNAL('check'), self.checkme)
+        self.threadclass.runx()
+
+    def run_program(self):
+
+
+        self.result_label.setText('Starting calculation...')
+        #self.QtCore.QCoreApplication.processEvents()
+        QtGui.QApplication.processEvents()
+        #self.setEnabled(False)
+        # self.Ui_MainWindow.setDisabled(True)
+        #self.qmsg_wait(0)
+        #print("bool state ", self.npex_npey_box.checkState())                                 # XXX
+        np_min = str(self.np_min_box.value())
+        np_max = str(self.np_max_box.value())
+        nx_min = str(self.nx_min_box.value())
+        nx_max = str(self.nx_max_box.value())
+        ny_min = str(self.ny_min_box.value())
+        ny_max = str(self.ny_max_box.value())
+        nz_min = str(self.nz_min_box.value())
+        nz_max = str(self.nz_max_box.value())
+        tpn = str(self.tpn_box.value())
+        dnpexnpey = str(self.d_box.value())
+        dnpexnpey_tolerance = str(self.tolerance_value.value())
+        dnxny = str(self.dnxny_box.value())
+        myobject = MyPopup()
+        ld_thrs = myobject.load_thres.value()
+        rslt_thrs = myobject.result_thres.value()
+
+        if str(self.psolver_box.currentIndex()) == str(1):
+            poisfft = True
+            switch = True
+            if str(self.fft_method_box.currentIndex()) == str(2):
+                temperton = True
+            else:
+                temperton = False
+        else:
+            poisfft = False
+            temperton = False
+            switch = False
+
+        if str(self.psolver_box.currentIndex()) == str(2):
+            mlt_grid = True
+        else:
+            mlt_grid = False
+
+        if str(self.Oos_checkbox.checkState()) == str(2):
+            spctre = True
+            poisfft = True
+        else:
+            spctre = False
+
+        if int(self.strict_box.checkState()) != 2:
+            tpn = 0
+
+        if int(self.npex_npey_box.checkState()) != 2:
+            dnpexnpey = 0
+            dnpexnpey_tolerance = 0
+
+        #print(poisfft, switch, temperton, mlt_grid, spctre)
+        config_wr.write_config(np_min, np_max, nx_min, nx_max, ny_min, ny_max, nz_min, nz_max, tpn, dnpexnpey,dnpexnpey_tolerance, dnxny,
+                               str(poisfft), str(switch), str(temperton), str(mlt_grid), str(spctre), rslt_thrs, ld_thrs)
+        #time.sleep(1)
+        # execute_script.grid_executer() temp deactive
+        self.testbar.setVisible(True)
+        QtCore.QCoreApplication.processEvents()
+        self.run_transfer()
+
+
+    def behind_run(self):
+        trigger_bool = False
+        #print("behind_run executed")
+        checkfile = open(".palm_gf_tmp", "r")
+        #self.result_label.setText(str(checkfile.readline()))
+        res_text = str(checkfile.readline())          # XXX
+        self.result_label.setText(res_text)
+        result_nr = res_text.split(' ')[2]
+        if int(checkfile.readline()) == 1:
+            self.view_result_button.setVisible(True)
+            trigger_bool = True
+        self.result_label.setVisible(True)
+        self.result_headline.setVisible(True)
+        self.line_res_down.setVisible(True)
+        #self.line_res_up.setVisible(True)
+        self.load_text_label.setVisible(False)
+        self.nor_spinbox.setVisible(False)
+        checkfile.close()
+        #self.setEnabled(True)
+        self.filename_line.setVisible(True)
+        self.save_button.setVisible(True)
+        parameters = config_wr.read_config()
+
+
+        if trigger_bool is True and int(result_nr) < int(parameters[18]):
+            self.result_label.setText(res_text + 'Loading Ui...')
+            self.load_gui()                                              # XXXX
+            self.result_label.setText(res_text)
+            #self.close()
+            #frameGm = self.frameGeometry()
+            #screen = QtGui.QApplication.desktop().screenNumber(QtGui.QApplication.desktop().cursor().pos())
+            #centerPoint = QtGui.QApplication.desktop().screenGeometry(screen).center()
+            #frameGm = self.frameGeometry()
+            #screen = QtGui.QApplication.desktop().screenNumber(QtGui.QApplication.desktop().cursor().pos())
+            #centerPoint = str(centerPoint)
+            #xcenter = centerPoint.split('(')[1].split(',')[0]
+            #ycenter = centerPoint.split('(')[1].split(',')[1].split(')')[0]
+            ##print xcenter, ycenter
+            #centerPoint = QtCore.QPoint(int(xcenter) - 292, int(ycenter))
+            #frameGm.moveCenter(centerPoint)
+            #self.move(frameGm.topLeft())
+
+
+
+
+
+
+
+    def get_path(wildcard):
+        import wx
+        app = wx.App(None)
+        style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
+        dialog = wx.FileDialog(None, 'Open', wildcard='*.db')
+        if dialog.ShowModal() == wx.ID_OK:
+            path = dialog.GetPath()
+
+            print(path, file)
+        else:
+            path = None
+        dialog.Destroy()
+        return
+
+
+
+    def save_results(self):
+
+        #self.get_path()
+
+
+
+        import os
+        import shutil
+        prvs = '.palm_gf_data.db'
+        new = str(self.filename_line.text())
+        print(new)
+        shutil.copy(prvs, new)
+        print(prvs, new)
+
+    def qmsg(self):
+        msgbox = QtGui.QMessageBox()
+        msgbox.setWindowTitle("Information")
+        # msgbox.setVisible(False)
+        msgbox.Information
+        msgbox.setText("Calculating, please be patient.")
+        # msgbox.
+        msgbox.setModal(True)
+        msgbox.exec_()
+
+    def tester(self):
+        #print("tester was executed from run method")
+        pass
+
+    def qmsg_wait(self, progress):
+        global msgbox
+        msgbox = QtGui.QMessageBox()
+        layout = msgbox.layout()
+        layout.itemAtPosition(layout.rowCount() - 1, 0).widget().hide()
+        global progressx
+        progressx = QtGui.QProgressBar()
+        layout.addWidget(progressx, layout.rowCount(), 0, 1, layout.columnCount())
+
+        msgbox.setWindowTitle("Progress")
+        msgbox.Information
+        msgbox.setText("Calculating, please be patient.")
+
+        progressx.setValue(int(progress))
+        #msgbox.setModal(False)
+        msgbox.exec_()
+
+    def up2date(self, progress):
+
+        progressx.setValue(int(progress))
+        if progress == 100:
+            msgbox.done(1)
+
+    def takeoff(self):
+        #self.qmsg_wait(0)
+        pass
+
+    def checkme(self, check):
+        #print(check)
+        self.testbar.setValue(int(check))
+
+        if check == 100:
+            self.testbar.setVisible(False)
+        QtGui.QApplication.processEvents()
+
+
+
+
+
+class Threadclass(QtCore.QThread):
+    def __init__(self, parent = None):
+        super(Threadclass, self).__init__(parent)
+
+    def runx(self):
+        #print("runx exec.")
+        self.execute()
+
+
+
+    def execute(self):
+        self.emit(QtCore.SIGNAL('startqmsg'), 0)
+
+        parameters = config_wr.read_config()
+        min_procs = int(parameters[0])
+        max_procs = int(parameters[1])
+        tpn = int(parameters[2])
+        dnpexnpey = float(parameters[3])
+        dnpexnpey_tol = int(parameters[4])
+        dnxny = float(parameters[5])
+        nx_min = int(parameters[6])
+        nx_max = int(parameters[7])
+        ny_min = int(parameters[8])
+        ny_max = int(parameters[9])
+        nz_min = int(parameters[10])
+        nz_max = int(parameters[11])
+        poisfft = parameters[12]
+        switch = parameters[13]
+        tempterton = parameters[14]
+        mlt_grid = parameters[15]
+        spectr = parameters[16]
+        result_thrs = parameters[17]
+
+
+        path = "/localdata/.palm_gf_data.db"
+        pathx = parameters[19] + '/.palm_gf_data.db'
+
+
+        conn = sqlite3.connect(pathx)
+        #conn = sqlite3.connect(".palm_gf_data.db")
+        c = conn.cursor()
+        c.execute("DROP TABLE IF EXISTS grid_current")
+        c.execute("DROP TABLE IF EXISTS grid_limits")
+        c.execute(
+            "CREATE TABLE IF NOT EXISTS grid_current(nx INT, ny INT, nz INT, npex INT, npey INT, npxnpy FLOAT, np INT, ngpts INT, nxnpex FLOAT, nynpey FLOAT)")
+        c.execute(
+            "CREATE TABLE IF NOT EXISTS grid_limits(nx INT, ny INT, nz INT, npex INT, npey INT, npxnpy FLOAT, np INT, ngpts INT, nxnpex FLOAT, nynpey FLOAT)")
+        conn.commit()
+        main_bool = True
+
+
+
+
+        if poisfft == str(True):
+            poisfft = True
+        else:
+            poisfft = False
+
+        if switch == str(True):
+            switch = True
+        else:
+            switch = False
+
+        if tempterton == str(True):
+            tempterton = True
+        else:
+            tempterton = False
+
+        if mlt_grid == str(True):
+            mlt_grid = True
+        else:
+            mlt_grid = False
+
+        if spectr == str(True):
+            spectr = True
+        else:
+            spectr = False
+
+        #print(spectr, type(spectr))
+        #print(poisfft, switch, tempterton, mlt_grid, spectr)
+
+        np_used = min_procs
+        counter = 0
+
+        nx = nx_min
+        ny = ny_min
+        nz = nz_min
+
+        from math import floor
+
+        def factors(n):
+            result = []
+            for i in range(2, n + 1):  # test all integers between 2 and n
+                s = 0
+                while n / i == floor(n / float(i)):  # is n/i an integer?
+                    n = n / float(i)
+                    s += 1
+                if s > 0:
+                    for k in range(s):
+                        result.append(i)  # i is a pf s times
+                        if n == 1:
+                            return result
+
+        while np_used <= max_procs:
+            a = 1
+
+            while a <= np_used:
+                prcs_var = np_used % a
+                if prcs_var != 0:
+                    a += 1
+                elif prcs_var == 0:
+                    npex = a
+                    npey = int(np_used / npex)
+
+                    if tpn != 0:                                   # XXX
+
+                        if np_used % tpn != 0:
+                            a += 1
+                            continue
+
+                    if dnpexnpey != 0 and npex / npey != dnpexnpey:
+                        a += 1
+                        continue
+
+                    if dnpexnpey != 0:
+
+
+                        if float(npex) / float(npey) < (dnpexnpey - dnpexnpey*dnpexnpey_tol/100):
+                            a += 1
+                            continue
+
+                        if float(npex) / float(npey) > (dnpexnpey + dnpexnpey*dnpexnpey_tol/100):
+                            a += 1
+                            continue
+
+                    while nx <= nx_max:
+                        if (nx + 1) % npex != 0:
+                            nx += 1
+                            continue
+
+                        if mlt_grid is True and (nx + 1) % 2 != 0:
+                            nx += 1
+                            continue
+
+                        if switch is True and (nx + 1) % npey != 0:
+                            nx += 1
+                            continue
+                        if npex > nx:
+                            nx += 1
+                            continue
+
+                        while ny <= ny_max:
+
+                            if dnxny != 0 and float(nx) / float(ny) != float(dnxny):
+                                ny += 1
+                                continue
+                            if (ny + 1) % npey != 0:
+                                ny += 1
+                                continue
+
+                            #if mlt_grid is True and ny % 2 != 0:       mlt and mlt_noOpt have same cond.
+                            #    ny += 1
+                            #    continue
+
+                            if (ny + 1) % npex != 0 and switch is True:
+                                ny += 1
+                                continue
+                            if npey > ny:
+                                ny += 1
+                                continue
+
+                            while nz <= nz_max:
+
+                                if mlt_grid is True and nz % 2 != 0:
+                                    nz += 1
+                                    continue
+
+                                if poisfft is True and nz % npex != 0:
+                                    nz += 1
+                                    continue
+
+                                if spectr is True and nz % npey != 0:
+                                    nz += 1
+                                    continue
+
+                                if tempterton is True and nx > 1 and ny > 1:  # and nz < 1:
+
+                                    nx_list = factors(nx + 1)
+
+                                    i = 0
+                                    nx_var = nx_list[i]
+
+
+                                    while i < len(nx_list):
+                                        if nx_var != 2 or nx_var != 3 or nx_var != 5:
+                                            i += 1
+                                            continue
+
+                                        i += 1
+                                    ny_list = factors(ny + 1)
+                                    i = 0
+                                    ny_var = ny_list[i]
+                                    while i < len(ny_list):
+                                        if ny_var != 2 or ny_var != 3 or ny_var != 5:
+                                            i += 1
+                                            continue
+                                        i += 1
+
+                                counter += 1
+                                if counter > int(result_thrs):
+                                    break
+
+                                npxnpy = format(float(npex) / float(npey), '.2f')
+                                nxpex = float(nx+1) /float(npex)
+                                nypey = float(ny+1) /float(npey)
+
+                                c.execute(
+                                    """INSERT OR REPLACE INTO grid_current(nx, ny, nz, npex, npey, npxnpy, np, ngpts, nxnpex, nynpey) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                                    (nx, ny, nz, npex, npey, npxnpy, (npex * npey), (nx * ny * nz), nxpex, nypey))
+
+                                nz += 1
+                            nz = nz_min
+                            ny += 1
+                        ny = ny_min
+                        nx += 1
+                    nx = nx_min
+                    a += 1
+                    #  a += 1
+            np_used += 1
+            progr_act = 100*(float(np_used-1)/float(max_procs))
+            self.emit(QtCore.SIGNAL('check'), progr_act)
+            #print(np_used, max_procs, progr_act)
+            self.emit(QtCore.SIGNAL('progress'), progr_act)
+
+            conn.commit()
+
+        conn.commit()
+        #c.close()
+        #conn.close()
+        #
+        ## ********************************
+        #
+        #conn = sqlite3.connect(parameters[19] + '/.palm_gf_data.db')
+        #print parameters[19] + '/.palm_gf_data.db'
+        #c = conn.cursor()
+        try:
+            c.execute("SELECT nx FROM grid_current ORDER BY nx DESC LIMIT 1")
+            mx_nx = c.fetchone()[0]
+            # print(mx_nx)
+            c.execute("SELECT nx FROM grid_current ORDER BY nx  LIMIT 1")
+            mn_nx = c.fetchone()[0]
+            # print(mn_nx)
+            c.execute("SELECT ny FROM grid_current ORDER BY ny DESC LIMIT 1")
+            mx_ny = c.fetchone()[0]
+            # print(mx_ny)
+            c.execute("SELECT ny FROM grid_current ORDER BY ny  LIMIT 1")
+            mn_ny = c.fetchone()[0]
+            # print(mn_ny)
+            c.execute("SELECT nz FROM grid_current ORDER BY nz DESC LIMIT 1")
+            mx_nz = c.fetchone()[0]
+            # print(mx_nz)
+            c.execute("SELECT nz FROM grid_current ORDER BY nz  LIMIT 1")
+            mn_nz = c.fetchone()[0]
+            # print(mn_nz)
+            c.execute("SELECT npex FROM grid_current ORDER BY npex DESC LIMIT 1")
+            mx_npex = c.fetchone()[0]
+            # print(mx_npex)
+            c.execute("SELECT npex FROM grid_current ORDER BY npex  LIMIT 1")
+            mn_npex = c.fetchone()[0]
+            # print(mn_npex)
+            c.execute("SELECT npey FROM grid_current ORDER BY npey DESC LIMIT 1")
+            mx_npey = c.fetchone()[0]
+            # print(mx_npey)
+            c.execute("SELECT npey FROM grid_current ORDER BY npey  LIMIT 1")
+            mn_npey = c.fetchone()[0]
+            # print(mn_npey)
+            c.execute("SELECT npxnpy FROM grid_current ORDER BY npxnpy DESC LIMIT 1")
+            mx_npxnpy = c.fetchone()[0]
+            # print(mx_npxnpy)
+            c.execute("SELECT npxnpy FROM grid_current ORDER BY npxnpy  LIMIT 1")
+            mn_npxnpy = c.fetchone()[0]
+            # print(mn_npxnpy)
+            c.execute("SELECT np FROM grid_current ORDER BY np DESC LIMIT 1")
+            mx_np = c.fetchone()[0]
+            # print(mx_np)
+            c.execute("SELECT np FROM grid_current ORDER BY np LIMIT 1")
+            mn_np = c.fetchone()[0]
+            # print(mn_np)
+            c.execute("SELECT ngpts FROM grid_current ORDER BY ngpts DESC LIMIT 1")
+            mx_ngpts = c.fetchone()[0]
+            # print(mx_ngpts)
+            c.execute("SELECT ngpts FROM grid_current ORDER BY ngpts LIMIT 1")
+            mn_ngpts = c.fetchone()[0]
+            # print(mn_ngpts)
+            c.execute("SELECT nxnpex FROM grid_current ORDER BY nxnpex DESC LIMIT 1")
+            mx_nxpex = c.fetchone()[0]
+            c.execute("SELECT nxnpex FROM grid_current ORDER BY nxnpex LIMIT 1")
+            mn_nxpex = c.fetchone()[0]
+            c.execute("SELECT nynpey FROM grid_current ORDER BY nynpey DESC LIMIT 1")
+            mx_nypey = c.fetchone()[0]
+            c.execute("SELECT nynpey FROM grid_current ORDER BY nynpey LIMIT 1")
+            mn_nypey = c.fetchone()[0]
+
+
+
+            conn.commit()
+            c.execute(
+                """INSERT OR REPLACE INTO grid_limits(nx, ny, nz, npex, npey, npxnpy, np, ngpts, nxnpex, nynpey) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (mn_nx, mn_ny, mn_nz, mn_npex, mn_npey, mn_npxnpy, mn_np, mn_ngpts, mn_nxpex, mn_nypey))
+
+            c.execute(
+                """INSERT OR REPLACE INTO grid_limits(nx, ny, nz, npex, npey, npxnpy, np, ngpts, nxnpex, nynpey) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (mx_nx, mx_ny, mx_nz, mx_npex, mx_npey, mx_npxnpy, mx_np, mx_ngpts, mx_nxpex, mx_nypey))
+            conn.commit()
+
+            c.close()
+            conn.close()
+        except TypeError:
+
+            checkfile = open(".palm_gf_tmp", "w")
+            if counter != 0:
+                checkfile.write("Gridfinder found " + str(counter) + " results.\n1")
+            else:
+                checkfile.write("Check input, no Results found.\n0")
+            checkfile.close()
+
+        checkfile = open(".palm_gf_tmp", "w")
+        if counter != 0:
+            checkfile.write("Gridfinder found " + str(counter) + " results.\n1")
+        else:
+            checkfile.write("Check input, no Results found.\n0")
+        checkfile.close()
+        self.emit(QtCore.SIGNAL('finish'), 1)
+        #print("finished with main execute")
+
+
+
+
+
+qtpopupFile = palm_bin + '/palm_gf_files/palm_gf_settings.ui'
+Ui_Pop, QtBaseClass = uic.loadUiType(qtpopupFile)
+
+
+class MyPopup(QtGui.QWidget, Ui_Pop):
+
+    def __init__(self):
+        Qt.QWidget.__init__(self)
+        Ui_Pop.__init__(self)
+
+        self.setupUi(self)
+        self.show
+        self.savepath.clicked.connect(self.path_to_save)
+        self.begin_check()
+        self.buttonBox.accepted.connect(self.end_check)
+        self.buttonBox.rejected.connect(self.close)
+
+
+    def begin_check(self):
+        file_check = palm_dir + '/trunk/SCRIPTS/.palm_gf_config'
+        if os.path.isfile(file_check) is True:
+            parameters = config_wr.read_config_settings()
+            self.linepath.setText(parameters[0])
+            self.result_thres.setValue(int(parameters[1]))
+            self.load_thres.setValue(int(parameters[2]))
+
+    def end_check(self):
+        config_wr.write_config_settings(self.linepath.text(), self.result_thres.value(), self.load_thres.value())
+
+        self.close()
+
+
+
+
+
+    def path_to_save(self, wildcard= None):
+        import wx
+        app = wx.App(None)
+        style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
+        dialog = wx.DirDialog(None, 'Open')
+        if dialog.ShowModal() == wx.ID_OK:
+            path = str(dialog.GetPath())
+
+            print(path)
+            self.linepath.setText(path)
+
+
+
+        else:
+            path = None
+        dialog.Destroy()
+        return
+
+
+
+
+
+
+
+
+if __name__ == "__main__":
+    import time
+    app = QtGui.QApplication(sys.argv)
+    window = MyApp1()
+    window.setWindowTitle('Gridfinder')
+    window.show()
+    sys.exit(app.exec_())

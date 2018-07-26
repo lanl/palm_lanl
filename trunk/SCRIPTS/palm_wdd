@@ -1,0 +1,275 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#--------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018  Leibniz Universitaet Hannover
+#--------------------------------------------------------------------------------#
+#
+# Current revisions:
+# -----------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: palm_wdd 2825 2018-02-20 21:48:27Z maronga $
+# Modified header
+# 
+# 2718 2018-01-02 08:49:38Z maronga
+# Corrected "Former revisions" section
+# 
+# 2696 2017-12-14 17:12:51Z kanani
+# Change in file header (GPL part)
+#
+# 2421 2017-09-07 10:36:34Z maronga
+# Fixed display of job progress.
+# 
+# 2416 2017-09-06 14:28:14Z maronga
+# Adapted for palmrun
+# 
+# 1619 2015-07-13 06:53:19Z maronga
+#
+# 1618 2015-07-13 06:52:15Z maronga
+# Added steering via configuration file, to be placed in the home directory of the
+# remote host to be monitored.
+# 
+# 1613 2015-07-08 14:53:29Z maronga
+# Bugfix: tooltip for queuing name did not show up on first update.
+# New: added contect menu for showing the parameter file and the run control
+# output
+# 
+# 1611 2015-07-07 12:23:22Z maronga
+# Initial revision
+# 
+#
+# Description:
+# ------------
+# PALM watchdog client for monitoring batch jobs on a variety of hosts specified
+# by the user. The watchdog server requires python 2.7 or higher installed on
+# host to be monitored.
+# 
+# Instructions:
+# -------------
+# 1) Modify the header section of palm_wd
+# 2) Move .wd.olddata and .wd.newdata to your palm directory 
+#    (e.g. /home/user/current_version/.wd.newdata etc.)
+# 3) Modify a copy of palm_wdd for each host to be monitored and move it to the
+#    respective hosts
+# 4) Start the client either from mrungui or from shell by "nohup palm_wd&"
+#
+# To do:
+# ------
+# 1) Add "Options", "Help" and "Manual"
+# 2) Move user settings to a configuration file
+#------------------------------------------------------------------------------!
+
+import ConfigParser
+import os
+import pwd
+from subprocess import check_output
+import sys
+
+
+# Read configuration file
+# First check if the configuration file exists
+if ( os.path.exists('.wdd.config') == False ):
+    print "Error. No configuration file .wdd.config found."
+    raise SystemExit     
+
+config = ConfigParser.RawConfigParser()
+config.read('.wdd.config')
+
+cmd_readqueue      = config.get('Settings', 'readqueue').strip('"')
+cmd_tmpdir         = config.get('Settings', 'tmpdir').strip('"')
+cmd_canceljob      = config.get('Settings', 'canceljob').strip('"')
+cmd_checkjob       = config.get('Settings', 'checkjob').strip('"')
+cmd_realname_grep  = config.get('Settings', 'realname_grep').strip('"')
+cmd_starttime      = config.get('Settings', 'starttime').strip('"')
+cmd_starttime_grep = config.get('Settings', 'starttime_grep').strip('"')
+
+
+action   = str(sys.argv[1])
+data     = str(sys.argv[2])
+
+cmd_readqueue = cmd_readqueue + " " + pwd.getpwuid( os.getuid() )[ 0 ]
+cmd_tmpdir    = cmd_tmpdir + pwd.getpwuid( os.getuid() )[ 0 ]
+
+# reading queuing system
+def ReadQueue(username):
+  
+#  collect queuing information
+   try:
+      out = check_output(cmd_readqueue, shell=True)
+      job_list = out.splitlines()
+      out = None
+#  do nothing for empty results list
+   except:
+      job_list = []
+  
+ 
+   job_data_tmp = []
+   for j in range(0,len(job_list)):
+
+      # Write temporary data array containing the job information.
+      job_data_tmp.append(j)
+      job_data_tmp[j] = job_list[j].split(" ")
+      job_data_tmp[j] = filter(None, job_data_tmp[j])
+
+      cmd_realname = cmd_checkjob + " " + job_data_tmp[j][0] + "|grep " + cmd_realname_grep 
+
+      # retrieve real job name for all jobs
+      try:  
+         out = check_output(cmd_realname, shell=True)
+         job_realname = out.split(" ")[1].rstrip()
+      except:
+         job_realname = "error"
+
+
+      # for running jobs, determine progress                  
+      if ( job_data_tmp[j][2] == "Running" ):
+  
+         # collect progress information
+         cmd_progress = "cat " + cmd_tmpdir + "/" + job_realname + "/PROGRESS"
+         try: 
+
+            devnull = open(os.devnull, 'w')
+            out = check_output(cmd_progress, shell=True, stderr=devnull)
+            progress_lines = out.splitlines()
+            job_progress = progress_lines[1].split(" ")[3]
+            out = None
+         except:
+            job_progress = "0" 
+
+      else:
+         job_progress = "0" 
+
+      # return the job data
+      job_starttime = GetStartTime(job_data_tmp[j][0])
+      print job_realname + " " + job_data_tmp[j][0] + " " + job_data_tmp[j][3] + " " + job_data_tmp[j][2] + " " + job_progress + " "  + job_data_tmp[j][4] + " " + job_starttime
+
+
+# check details of specific job
+def CheckJob(jobid):
+
+   cmd_checkjob_tmp = cmd_checkjob + " " + jobid
+
+   try:  
+      out = check_output(cmd_checkjob_tmp, shell=True)
+      job_details = out
+   except:
+      job_details = "No details available." 
+
+   return job_details
+
+
+# cancel a specific job
+def CancelJob(jobid):
+
+   cmd_canceljob_tmp = cmd_canceljob + " " + jobid
+
+   try:  
+      out = check_output(cmd_canceljob_tmp, shell=True)
+      job_canceled = out
+   except:
+      job_canceled = "Action failed." 
+
+   return job_canceled
+
+
+# retrieve estimated start time of job
+def GetStartTime(jobid):
+
+   cmd_starttime_tmp = cmd_starttime + " " + jobid + "|grep \"" + cmd_starttime_grep + "\"" 
+
+   try:  
+      out = check_output(cmd_starttime_tmp, shell=True)
+      job_starttime = out.split()[5]
+   except:
+      job_starttime = "Action failed." 
+
+   return job_starttime
+
+
+def DoStopNow(jobid):
+
+   # collect progress information
+   cmd_dostop = "touch " + cmd_tmpdir + "/" + jobid + "/DO_STOP_NOW"
+   try: 
+      devnull = open(os.devnull, 'w')
+      out = check_output(cmd_dostop, shell=True, stderr=devnull)
+      out = None
+   except:
+      return_message = "Action failed."  
+      return return_message
+
+def DoRestartNow(jobid):
+
+   # collect progress information
+   cmd_dorestart = "touch " + cmd_tmpdir + "/" + jobid + "/DO_RESTART_NOW"
+   try: 
+      devnull = open(os.devnull, 'w')
+      out = check_output(cmd_dorestart, shell=True, stderr=devnull)
+      out = None
+   except:
+      return_message = "Action failed."  
+      return return_message
+
+def GetPARIN(jobid):
+
+   # collect progress information
+   cmd_dorestart = "cat " + cmd_tmpdir + "/" + jobid + "/PARIN"
+   try: 
+      devnull = open(os.devnull, 'w')
+      out = check_output(cmd_dorestart, shell=True, stderr=devnull)
+      return_message = out
+      out = None
+   except:
+      return_message = "Action failed."   + "cat " + cmd_tmpdir + "/" + jobid + "/PARIN" 
+      
+   return return_message
+
+def GetRC(jobid):
+
+   # collect progress information
+   cmd_dorestart = "cat " + cmd_tmpdir + "/" + jobid + "/RUN_CONTROL"
+   try: 
+      devnull = open(os.devnull, 'w')
+      out = check_output(cmd_dorestart, shell=True, stderr=devnull)
+      return_message = out
+      out = None
+   except:
+      return_message = "Action failed."
+      
+   return return_message
+
+# START OF MAIN
+if ( action == "queue" ):
+   ReadQueue(data)
+elif ( action == "check"):
+   print CheckJob(data)
+elif ( action == "cancel"):
+   print CancelJob(data)
+elif ( action == "start"):
+   print GetStartTime(data)
+elif ( action == "stop"):
+   print DoStopNow(data)
+elif ( action == "restart"):
+   print DoRestartNow(data)
+elif ( action == "parin"):
+   print GetPARIN(data)
+elif ( action == "rc"):
+   print GetRC(data)  
+else:
+   print "Error. Action " + action + " unknown."
+

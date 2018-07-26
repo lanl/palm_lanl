@@ -1,0 +1,36 @@
+//chem_gasphase_mod.kpp
+//
+//Former revisions
+//----------------
+// $Id: chem_gasphase_mod.kpp 2459 2017-09-13 14:10:33Z forkel $
+//
+#include      passive.spc
+#include      passive.eqn
+#INTEGRATOR rosenbrock
+#LANGUAGE   Fortran90
+#HESSIAN    on
+#STOICMAT   on
+#INLINE F90_GLOBAL
+  !   Declaration of global variable declarations for photolysis will come from INLINE F90_DATA
+#ENDINLINE
+//
+// *******************************************************************************************
+// *** adapt the lines below occurding to the photolysis reactions of your mechanism         *
+// *** adapt the number of photolysis frequencies NPHO                                       *
+// *** adapt/extend the indices in the INTEGER, PARAMETER,PUBLIC statement below             *
+// *** adapt/extend PHOT_NAMES: Note that the order of PHOT_NAMES and the indices must match *
+// *******************************************************************************************
+//
+#INLINE F90_DATA
+  !   INLINE F90_DATA: Declaration of global variables for photolysis
+  !   REAL(kind=dp) :: phot(nphot) must eventually be moved to GLOBAL later for vector version
+  INTEGER, PARAMETER :: nphot = 1
+  !   phot Photolysis frequencies
+  REAL(kind=dp) :: phot(nphot)
+
+  INTEGER, PARAMETER,PUBLIC :: j_no2 = 1
+
+  CHARACTER(LEN=15), PARAMETER, DIMENSION(NPHOT) :: phot_names =  (/ &
+     'J_NO2          '/)
+#ENDINLINE
+

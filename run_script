@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#PBS  -N PALM_LES
+#PBS  -j oe
+#PBS  -m ae
+#PBS -A cli127
+#PBS -l nodes=1
+#PBS -q debug
+
+cd $PBS_O_WORKDIR
+export PATH="/ccs/home/vanroek/palm/current_version/trunk/SCRIPTS:${PATH}"
+module load cray-netcdf
+source $MODULESHOME/init/bash # May already be included if using modules
+
+rm -f PALM*
+
+cp *oceanml* /lustre/atlas1/cli127/proj-shared/vanroek/palm/jobs/ocean_test/
+
+palm_simple_run -b ifort.titan -w "/lustre/atlas1/cli127/proj-shared/vanroek/palm/jobs/diurnal" -c mpirun -s test_oceanml -n 1 -p 16 -t 1

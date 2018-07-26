@@ -1,0 +1,15 @@
+{simple.eqn
+Former revisions
+----------------
+ $Id: smog.eqn 2459 2017-09-13 14:10:33Z forkel $
+}
+#EQUATIONS
+
+{ very simple mechanism - do NOT show to a chemist! }
+
+  { 1.}  NO2 + hv = NO + O3 :                   phot(j_no2)  ;
+  { 2.}  O3 + hv = 2OH + O2 :                   phot(j_o31d)  ;
+  { 3.}  NO + O3 = NO2 :                     arr2(1.8E-12_dp, 1370.0_dp, temp) ;
+  { 4.}  RH + OH = RO2 + H2O :               arr2(2.E-11_dp, 500.0_dp, temp) ;
+  { 5.}  RO2 + NO = NO2 + RCHO + HO2 :       arr2(4.2E-12_dp, -180.0_dp, temp);
+  { 6.}  HO2 + NO = NO2 + OH :               arr2(3.7E-12_dp, -240.0_dp, temp) ;

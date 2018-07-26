@@ -1,0 +1,66 @@
+#$Id: .palm.config.crayh 2834 2018-02-23 14:04:07Z raasch $
+#column 1          column 2
+#name of variable  value of variable (~ must not be used)
+#----------------------------------------------------------------------------
+%base_data           $HOME/palm/current_version/JOBS
+%output_data         $WORK/palm/current_version/JOBS
+%base_directory      $HOME/palm/current_version
+%source_path         $HOME/palm/current_version/trunk/SOURCE
+%user_source_path    $base_directory/JOBS/$jobname/USER_CODE
+%fast_io_catalog     $WORK/palm_restart_tmp
+%local_jobcatalog    $HOME/job_queue
+################################################################################
+# Replace abcd1234 by your username on Eddy:
+################################################################################
+%local_username      abcd1234
+#
+%defaultqueue        eddy.p
+%submit_command      sbatch
+#
+%compiler_name       mpifort
+%compiler_name_ser   gfortran
+%cpp_options         -DMPI_REAL=MPI_DOUBLE_PRECISION -DMPI_2REAL=MPI_2DOUBLE_PRECISION -D__lc -D__netcdf -D__netcdf4 -D__parallel
+%make_options        -j 4
+%compiler_options    -Ofast -mtune=native -march=native -cpp -fconvert=little-endian -I/cm/shared/uniol/software/netCDF-Fortran/4.4.4-goolf-5.2.01/include
+%linker_options      -Ofast -mtune=native -march=native -cpp -lnetcdff -lnetcdf
+%execute_command     mpirun -n {{mpi_tasks}} palm
+%execute_command_for_combine     mpirun  -n 1  -N 1  ./combine_plot_fields.x
+%memory              2333
+%module_commands     module load PALMDependencies/.gcc 
+%login_init_cmd      
+#
+# BATCH-directives to be used for batch jobs
+BD:#!/bin/bash
+BD:#SBATCH -J {{job_id}}
+BD:#SBATCH -t {{timestring}}
+BD:#SBATCH -n {{mpi_tasks}}
+BD:#SBATCH -N {{nodes}}
+BD:#SBATCH --cpus-per-task 1
+BD:#SBATCH -p {{queue}}
+BD:#SBATCH -o {{job_protocol_file}}
+BD:#SBATCH -e {{job_protocol_file}}
+BD:#SBATCH --mem-per-cpu {{memory}}
+BD:#SBATCH --exclusive
+#
+#----------------------------------------------------------------------------
+# INPUT-commands, executed before running PALM - lines must start with "IC:" 
+#----------------------------------------------------------------------------
+IC:export ATP_ENABLED=1
+IC:export MPICH_GNI_BTE_MULTI_CHANNEL=disabled
+IC:ulimit  -s unlimited
+#
+#----------------------------------------------------------------------------
+# ERROR-commands - executed when program terminates abnormally
+#----------------------------------------------------------------------------
+EC:[[ \$locat = execution ]]  &&  cat  RUN_CONTROL
+#
+#----------------------------------------------------------------------------
+# OUTPUT-commands - executed when program terminates normally
+#----------------------------------------------------------------------------
+#
+# Combine 1D- and 3D-profile output (these files are not usable for plotting)
+OC:[[ -f LIST_PROFIL_1D     ]]  &&  cat  LIST_PROFIL_1D  >>  LIST_PROFILE
+OC:[[ -f LIST_PROFIL        ]]  &&  cat  LIST_PROFIL     >>  LIST_PROFILE
+#
+# Combine all particle information files
+OC:[[ -f PARTICLE_INFOS/_0000 ]]  &&  cat  PARTICLE_INFOS/* >> PARTICLE_INFO

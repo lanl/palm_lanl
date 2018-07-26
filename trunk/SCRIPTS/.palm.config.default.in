@@ -1,0 +1,95 @@
+################################################################################
+# This is a configuration file for PALM. It must be named: .palm.config.<suffix>
+# in order to use it, call palmbuild and palmrun with the option: -h <suffix>
+# Documentation: https://palm.muk.uni-hannover.de/trac/wiki/doc/app/jobcontrol
+################################################################################
+#
+#-------------------------------------------------------------------------------
+# General compiler and host configuration section.
+# Variable declaration lines must start with a percent character
+# Internal variables can be used as {{VARIABLE_NAME}}. Please see documentation.
+#-------------------------------------------------------------------------------
+%base_directory      @CMAKE_INSTALL_PREFIX@
+%base_data           @CMAKE_INSTALL_PREFIX@/JOBS
+%source_path         @CMAKE_INSTALL_PREFIX@/trunk/SOURCE
+%user_source_path    @CMAKE_INSTALL_PREFIX@/JOBS/$jobname/USER_CODE
+%fast_io_catalog     @CMAKE_INSTALL_PREFIX@/tmp
+%local_jobcatalog    @CMAKE_INSTALL_PREFIX@/job_queue
+#%remote_jobcatalog   <path/to/directory>
+#
+%local_ip            127.0.0.1
+%local_hostname      @PALM_HOSTNAME@
+%local_username      @CMAKE_USERNAME@
+#
+#%remote_ip           <ip>
+#%remote_hostname     <hostname>
+#%remote_loginnode    <loginnode>
+#%remote_username     <username>
+#%ssh_key             ~/.ssh/id_rsa
+#
+#%defaultqueue        <queue>
+#%submit_command      /opt/moab/default/bin/msub -E
+#
+%compiler_name       @MPI_Fortran_COMPILER@
+%compiler_name_ser   @CMAKE_Fortran_COMPILER@
+%cpp_options         @PALM_CPP_OPTIONS_STR@
+%make_options        -j @PALM_CORES@
+%compiler_options    @PALM_COMPILER_OPTIONS@
+%linker_options      @PALM_LINKER_OPTIONS@
+%execute_command     mpirun -n {{mpi_tasks}} ./palm
+#%memory              2300
+#%module_commands     module load fftw cray-hdf5-parallel cray-netcdf-hdf5parallel
+#%login_init_cmd      module switch craype-ivybridge craype-haswell
+#
+#-------------------------------------------------------------------------------
+# Directives to be used for batch jobs
+# Lines must start with "BD:". If $-characters are required, hide them with \
+# Internal variables can be used as {{variable_name}}. Please see documentation.
+#-------------------------------------------------------------------------------
+BD:#!/bin/bash
+BD:#PBS -N {{job_id}}
+BD:#PBS -l walltime={{cpu_hours}}:{{cpu_minutes}}:{{cpu_seconds}}
+BD:#PBS -l nodes={{nodes}}:ppn={{tasks_per_node}}
+BD:#PBS -o {{job_protocol_file}}
+BD:#PBS -j oe
+BD:#PBS -q {{queue}}
+#
+#-------------------------------------------------------------------------------
+# Directives for batch jobs used to send back the jobfiles from a remote to a local host
+# Lines must start with "BDT:". If $-characters are required, excape them with triple backslash
+# Internal variables can be used as {{variable_name}}. Please see documentation.
+#-------------------------------------------------------------------------------
+BDT:#!/bin/bash
+BDT:#PBS -N job_protocol_transfer
+BDT:#PBS -l walltime=00:30:00
+BDT:#PBS -l nodes=1:ppn=1
+BDT:#PBS -o {{job_transfer_protocol_file}}
+BDT:#PBS -j oe
+BDT:#PBS -q dataq
+#
+#-------------------------------------------------------------------------------
+# INPUT-commands. These commands are executed before running PALM 
+# Lines must start with "IC:" 
+#-------------------------------------------------------------------------------
+IC:export ATP_ENABLED=1
+IC:export MPICH_GNI_BTE_MULTI_CHANNEL=disabled
+IC:ulimit  -s unlimited
+#
+#-------------------------------------------------------------------------------
+# ERROR-commands. These commands are executed when PALM terminates abnormally
+# Lines must start with "EC:" 
+#-------------------------------------------------------------------------------
+EC:[[ $locat = execution ]]  &&  cat  RUN_CONTROL
+#
+#-------------------------------------------------------------------------------
+# OUTPUT-commands. These commands are executed when PALM terminates normally
+# Lines must start with "OC:" 
+#-------------------------------------------------------------------------------
+#
+# Combine 1D- and 3D-profile output (these files are not usable for plotting)
+OC:[[ -f LIST_PROFIL_1D     ]]  &&  cat  LIST_PROFIL_1D  >>  LIST_PROFILE
+OC:[[ -f LIST_PROFIL        ]]  &&  cat  LIST_PROFIL     >>  LIST_PROFILE
+#
+# Combine all particle information files
+OC:[[ -f PARTICLE_INFOS/_0000 ]]  &&  cat  PARTICLE_INFOS/* >> PARTICLE_INFO
+

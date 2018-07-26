@@ -1,0 +1,11 @@
+# $Id: .wdd.config.default 1618 2015-07-13 06:52:15Z maronga $
+# Configuration file for palm_wdd
+
+[Settings]
+readqueue=<replace_by_queuing_system_command>
+tmpdir=<replace_by_%tmp_user_catalog>
+canceljob=<replace_by_command_for_canceling_jobs>
+checkjob=<replace_by_command_for_showing_job_information>
+realname_grep=<replace_by_string_identifier_to_get_job_name>
+starttime=<replace_by_command_for_showing_estimated_start_time>
+starttime_grep=<replace_by_string_identifier_to_get_start_time>

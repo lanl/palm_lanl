@@ -1,0 +1,12 @@
+# $Id: .wdd.config.hlrnIII 2416 2017-09-06 14:28:14Z maronga $
+# Configuration file for palm_wdd
+# Preconfigured for HLRN-III
+
+[Settings]
+readqueue="showq | egrep"
+tmpdir="/gfs1/work/"
+canceljob="canceljob"
+checkjob="checkjob"
+realname_grep="AName"
+starttime="showstart"
+starttime_grep="start in"

@@ -1,0 +1,541 @@
+#!/usr/bin/env bash
+#------------------------------------------------------------------------------#
+# This file is part of PALM.
+#
+# PALM is free software: you can redistribute it and/or modify it under the 
+# terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018  Leibniz Universitaet Hannover
+#------------------------------------------------------------------------------#
+# Temporary trunk side of the automatic installation scipt
+# WARNING: This script does not work as a standalone installer!
+#------------------------------------------------------------------------------#
+
+
+# install PALM
+palm_installer_build() {
+   printf "%s\n" "${program_name} installer is configuring using cmake..."
+   palm_installer_create_files
+   rm -rf ${build_dir}
+   mkdir -p ${build_dir}
+   cd ${build_dir}
+   cp ${trunk_dir}/SCRIPTS/.palm.config.default.in ${source_dir}/.palm.config.default.in
+   cmake -Wno-dev ${CUSTOM_FORTRAN_COMPILER:+-DCMAKE_Fortran_COMPILER=}${CUSTOM_FORTRAN_COMPILER} \
+         ${NETCDF_C_ROOT:+-DNETCDF_C_ROOT=}${NETCDF_C_ROOT} \
+         ${NETCDF_FORTRAN_ROOT:+-DNETCDF_FORTRAN_ROOT=}${NETCDF_FORTRAN_ROOT} \
+         -DPALM_CORES=$NUM_PROC_BUILD \
+         -DCMAKE_BUILD_TYPE=Release \
+         ${install_prefix:+-DCMAKE_INSTALL_PREFIX=}${install_prefix} \
+         -DCMAKE_USERNAME=${USER} \
+         ${source_dir}
+   if [[ $? -ne 0 ]]; then
+      hrule
+      printf "| \e[1;31m%-${number_of_cols}s\e[0m |\n" "Configuration failed!"
+      palm_installer_ticket_message
+      hrule
+      exit 1
+   else
+      hrule
+      printf "| \e[1;32m%-${number_of_cols}s\e[0m |\n" "Configuration finished!"
+      hrule
+   fi
+   palm_read_yn "Please check the configuration!!! Would you like to continue?" "RESPONSE_CONFIGURE"
+   if [[ "$RESPONSE_CONFIGURE" != "y" ]]; then
+      palm_installer_abort_message
+   fi
+   cd ${install_prefix}
+   rm -rf ${source_dir}
+   rm -rf MAKE_DEPOSITORY_parallel
+   bash ${trunk_dir}/SCRIPTS/palmbuild -v -h "default"
+}
+
+palm_installer_set_path() {
+   [[ -w ${HOME}/.mybashrc ]] && shell_profile=${HOME}/.mybashrc
+   if [[ ! -w ${shell_profile} ]]; then
+      printf "\e[1;31mWARNING\e[0m: ${program_name} binary \e[1;31mpath could not be written\e[0m to \"${shell_profile}\"\n"
+      printf "In order to run the ${program_name} execution script \"mrun\" you need to set the following paths\n"
+      printf "   export PALM_BIN=${trunk_dir}/SCRIPTS\n"
+      printf "   export PATH=\$PALM_BIN:\$PATH\n"
+   elif grep -q "^export PALM_BIN=${trunk_dir}/SCRIPTS" ${shell_profile}; then
+      printf "${program_name} binary \e[1;32mpath already set correctly\e[0m in \"${shell_profile}\"\n"
+   else
+      if grep -q "PALM_BIN" ${shell_profile}; then
+         sed -i "s@^[^#]\(.*PALM_BIN.*\)@#e\1@" ${shell_profile}
+         printf "${program_name} binary \e[1;32mpath updated\e[0m in \"${shell_profile}\""
+      else
+         printf "${program_name} binary \e[1;32mpath written\e[0m to \"${shell_profile}\""
+      fi
+      cat >> ${shell_profile} << EOF
+#-------------------------------------------------------------------------------
+##PALM##
+export PALM_BIN=${trunk_dir}/SCRIPTS
+export PATH=\$PALM_BIN:\$PATH
+
+EOF
+   fi
+   export PALM_BIN=${trunk_dir}/SCRIPTS
+   export PATH=$PALM_BIN:$PATH
+   echo " "
+}
+
+palm_installer_test() {
+   hrule
+   printf "Testing ${program_name} with \"${1}\"... "
+   source ${shell_profile}
+   local input_dir=${install_prefix}/JOBS/${1}/INPUT/
+   local monitoring_dir=${install_prefix}/JOBS/${1}/MONITORING/
+   local test_dir=${trunk_dir}/INSTALL
+   if [[ ! -f ${test_dir}/${1}_p3d ]] || [[ ! -f ${test_dir}/${1}_rc ]]; then
+      printf "\e[1;31m test not found\e[0m\n"
+      return 1
+   fi
+   rm -rf ${monitoring_dir}
+   mkdir -p ${input_dir}
+   cp ${test_dir}/${1}_p3d ${input_dir}
+   [[ -f ${test_dir}/${1}_topo ]] && cp ${test_dir}/${1}_topo ${input_dir}
+   bash ${trunk_dir}/SCRIPTS/palmrun -d ${1} -a "d3#" -h "default" -X "$NUM_PROC_TEST" -T "$NUM_PROC_TEST" -v -B > ${install_prefix}/${logfile_test} 2>&1
+   grep -A 99999 "Run-control output" JOBS/${1}/MONITORING/${1}_rc 1> ${install_prefix}/RC_LOCAL 2> /dev/null
+   grep -A 99999 "Run-control output" ${test_dir}/${1}_rc 1> ${install_prefix}/RC_DEFAULT 2> /dev/null
+   diff_output=$(diff ${install_prefix}/RC_DEFAULT ${install_prefix}/RC_LOCAL)
+   rm ${install_prefix}/RC_LOCAL ${install_prefix}/RC_DEFAULT
+   if [[ "${diff_output}" == "" ]]; then
+      printf "\e[1;32m passed\e[0m\n"
+      return 0
+   else
+      printf "\e[1;31m failed\e[0m\n"
+      test_status="failed"
+      return 1
+   fi
+}
+
+palm_installer_test_suite() {
+   rm -f ${install_prefix}/${logfile_test}
+   for test_path in ${trunk_dir}/INSTALL/*_p3d; do
+      testname_p3d=$(basename $test_path)
+      palm_installer_test "${testname_p3d%_p3d}"
+   done
+   hrule
+   cat ${install_prefix}/${logfile_test} >> ${logfile_all}
+   if [[ "${test_status}" == "failed" ]]; then
+      printf "| \e[1;31m%-${number_of_cols}s\e[0m \n" "Some tests failed. ${program_name} installation not successful :-("
+      printf "| \e[1;31m%-${number_of_cols}s\e[0m \n" "More detailed information regarding the failure can be found in file:"
+      printf "| \e[1;31m%-${number_of_cols}s\e[0m \n" "      ${install_prefix}/${logfile_test}"
+      palm_installer_ticket_message
+      hrule
+      exit 1
+   else
+      printf "| \e[1;32m%-${number_of_cols}s\e[0m |\n" "All found tests passed. ${program_name} installation successful :-)"
+      rm -f ${install_prefix}/${logfile_test}
+      rm -rf ${install_prefix}/tmp/*
+      hrule
+   fi
+}
+
+palm_post_installer_help() {
+   hrule
+   printf "| %-${number_of_cols}s \n" " "
+   printf "| %-${number_of_cols}s \n" "-- To use ${program_name} it is required to update your PATH variable. Please type:"
+   printf "| %-${number_of_cols}s \n" " "
+   printf "| %-${number_of_cols}s \n" "      source ${shell_profile}"
+   printf "| %-${number_of_cols}s \n" " "
+   printf "| %-${number_of_cols}s \n" "   or restart your shell."
+   printf "| %-${number_of_cols}s \n" " "
+   printf "| %-${number_of_cols}s \n" "-- To work with ${program_name} please go to your ${program_name} base directory:"
+   printf "| %-${number_of_cols}s \n" " "
+   printf "| %-${number_of_cols}s \n" "      cd ${install_prefix}"
+   printf "| %-${number_of_cols}s \n" " "
+   printf "| %-${number_of_cols}s \n" "-- To start the model, please use \"palmrun\" with appropriate options. For example:"
+   printf "| %-${number_of_cols}s \n" " "
+   printf "| %-${number_of_cols}s \n" "      palmrun -d example_cbl -a \"d3#\" -h \"default\" -X \"$NUM_PROC_TEST\" -T \"$NUM_PROC_TEST\" "
+   printf "| %-${number_of_cols}s \n" "                      |           |          |        |     |            "
+   printf "| %-${number_of_cols}s \n" "                  Job name        |    configuration  | tasks per node   "
+   printf "| %-${number_of_cols}s \n" "                           I/O control list    number of cores           "
+   printf "| %-${number_of_cols}s \n" " "
+   printf "| %-${number_of_cols}s \n" "-- Edit \".palm.config.default\" to customize this ${program_name} installation."
+   printf "| %-${number_of_cols}s \n" "-- To rebuild ${program_name} type: palmbuild -h \"default\""
+   printf "| %-${number_of_cols}s \n" " "
+   printf "| %-${number_of_cols}s \n" "-- For further questions go to: https://palm.muk.uni-hannover.de/."
+   printf "| %-${number_of_cols}s \n" " "
+}
+
+palm_installer_create_files() {
+   mkdir -p ${source_dir}
+
+   cat > ${source_dir}/CMakeLists.txt << EOF
+# This is the CMake configuration file for PALM
+
+cmake_minimum_required (VERSION 2.8)
+
+# set program name
+set(PALM_PROGRAM_NAME "PALM")
+
+project(\${PALM_PROGRAM_NAME} NONE)
+exec_program( hostname OUTPUT_VARIABLE PALM_HOSTNAME)
+
+# .palm.config locations
+set(config_in \${CMAKE_CURRENT_SOURCE_DIR}/.palm.config.default.in)
+set(config \${CMAKE_INSTALL_PREFIX}/.palm.config.default)
+
+# include local cmake files
+set(PALM_CMAKE_FILES \${CMAKE_CURRENT_SOURCE_DIR})
+list(APPEND CMAKE_MODULE_PATH \${PALM_CMAKE_FILES})
+
+# enabling Fortran language support
+enable_language(Fortran) # required to compile the main model and all utilities
+
+# check for Fortran MPI support
+find_package(MPI REQUIRED)
+
+# check for netCDF
+#set(NETCDF_C "YES")
+set(NETCDF_FORTRAN "YES")
+find_package (NetCDF REQUIRED)
+find_program(NETCDF_FORTRAN_COMPILER_FULL NAMES \${NETCDF_FORTRAN_COMPILER})
+if(NOT \${CMAKE_Fortran_COMPILER} STREQUAL \${NETCDF_FORTRAN_COMPILER_FULL} )
+   message(WARNING "Fortran compiler \"\${CMAKE_Fortran_COMPILER}\" does not match netCDF Fortran compiler \"\${NETCDF_FORTRAN_COMPILER_FULL}\".")
+else()
+   message(STATUS "Fortran compiler matches netCDF Fortran compiler.")
+endif()
+
+# extract subversion info
+if (${SVN_CMAKE_CHECK})
+find_package(Subversion)
+if(SUBVERSION_FOUND)
+   Subversion_WC_INFO(\${PROJECT_SOURCE_DIR}/../trunk PALM)
+   message(STATUS "Your \${PALM_PROGRAM_NAME} installation will be based on revision \${PALM_WC_REVISION}.")
+else(SUBVERSION_FOUND)
+   message(WARNING "Subversion not found. Wondering how you aquired the PALM code. :-)")
+endif(SUBVERSION_FOUND)
+endif()
+
+# check for fftw
+find_package(FFTW)
+if(FFTW_FOUND)
+   message(STATUS "\${PALM_PROGRAM_NAME} is using an external fftw library.")
+   list(APPEND PALM_CPP_OPTIONS __fftw)
+else(FFTW_FOUND)
+   message(STATUS "\${PALM_PROGRAM_NAME} is using the buildin fft algorithm.")
+endif(FFTW_FOUND)
+
+# compiler flag management
+if(\${CMAKE_Fortran_COMPILER_ID} STREQUAL "Cray")
+   set(PALM_COMPILER_OPTIONS "-em -K trap=fp -O3 -hnoomp -hnoacc -hfp3 -hdynamic")
+   set(PALM_LINKER_OPTIONS "\${PALM_COMPILER_OPTIONS} -dynamic")
+   set(PALM_CPP_FLAGS "-eZ")
+elseif(\${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
+   set(PALM_COMPILER_OPTIONS "-O3 -fp-model source -fno-alias -fpe0 -ftz -no-prec-div -no-prec-sqrt -ip -nbs -diag-disable 8290,8291")
+   set(PALM_LINKER_OPTIONS "\${PALM_COMPILER_OPTIONS}")
+   set(PALM_CPP_FLAGS "-cpp")
+   list(APPEND PALM_CPP_OPTIONS __intel_compiler)
+elseif(\${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
+   set(PALM_COMPILER_OPTIONS "-Ofast -ffree-line-length-none")
+   set(PALM_LINKER_OPTIONS "\${PALM_COMPILER_OPTIONS}")
+   set(PALM_CPP_FLAGS "-cpp")
+   list(APPEND PALM_CPP_OPTIONS __gfortran)
+endif()
+
+# workaround
+list(APPEND PALM_CPP_OPTIONS __parallel)
+
+# adding cpp options
+list(APPEND PALM_CPP_OPTIONS MPI_REAL=MPI_DOUBLE_PRECISION)
+list(APPEND PALM_CPP_OPTIONS MPI_2REAL=MPI_2DOUBLE_PRECISION)
+if(NETCDF_FOUND)
+   list(APPEND PALM_CPP_OPTIONS __netcdf)
+   set(PALM_COMPILER_OPTIONS "\${PALM_COMPILER_OPTIONS} -I \${NETCDF_INCLUDES}")
+   set(PALM_LINKER_OPTIONS "\${PALM_LINKER_OPTIONS} \${NETCDF_LIBRARIES}")
+endif()
+
+if(FFTW_FOUND)
+   set(PALM_COMPILER_OPTIONS "\${PALM_COMPILER_OPTIONS} -I \${FFTW_INCLUDES}")
+   set(PALM_LINKER_OPTIONS "\${PALM_LINKER_OPTIONS} \${FFTW_LIBRARIES}")
+endif()
+
+string(REPLACE ";" " -D" PALM_CPP_OPTIONS_STR_1 "\${PALM_CPP_OPTIONS}")
+set(PALM_CPP_OPTIONS_STR "\${PALM_CPP_FLAGS} -D\${PALM_CPP_OPTIONS_STR_1}")
+
+# configuring the .palm.config
+configure_file(\${config_in} \${config} @ONLY)
+
+
+EOF
+
+   cat > ${source_dir}/FindFFTW.cmake << EOF
+# - Find FFTW
+# Find the native FFTW includes and library
+#
+#  FFTW_INCLUDES    - where to find fftw3.h
+#  FFTW_LIBRARIES   - List of libraries when using FFTW.
+#  FFTW_FOUND       - True if FFTW found.
+
+if (FFTW_INCLUDES)
+  # Already in cache, be silent
+  set (FFTW_FIND_QUIETLY TRUE)
+endif (FFTW_INCLUDES)
+
+#exec_program(sed ARGS -i '/%fftw_inc.*/d' \${config})
+#list(APPEND NETCDF_HINTS "\$ENV{LD_LIBRARY_PATH}")
+
+find_path (FFTW_INCLUDES fftw3.f03 HINTS \${NETCDF_HINTS} ENV LD_LIBRARY_PATH  PATH_SUFFIXES include Include)
+find_library(NETCDF_FORTRAN_LIB netcdff HINTS \${NETCDF_HINTS} ENV LD_LIBRARY_PATH PATH_SUFFIXES lib lib64)
+
+find_library (FFTW_LIBRARIES NAMES fftw3)
+
+# handle the QUIETLY and REQUIRED arguments and set FFTW_FOUND to TRUE if
+# all listed variables are TRUE
+include (FindPackageHandleStandardArgs)
+find_package_handle_standard_args (FFTW DEFAULT_MSG FFTW_LIBRARIES FFTW_INCLUDES)
+
+mark_as_advanced (FFTW_LIBRARIES FFTW_INCLUDES)
+
+EOF
+
+   cat > ${source_dir}/FindNetCDF.cmake << EOF
+# - Find NetCDF
+# Find the native NetCDF includes and library
+#
+#  NETCDF_INCLUDES    - where to find netcdf.h, etc
+#  NETCDF_LIBRARIES   - Link these libraries when using NetCDF
+#  NETCDF_FOUND       - True if NetCDF found including required interfaces (see below)
+#
+# Your package can require certain interfaces to be FOUND by setting these
+#
+#  NETCDF_C           - require the C interface and link the C library
+#  NETCDF_CXX         - require the C++ interface and link the C++ library
+#  NETCDF_FORTRAN     - require the Fortran interface and link the Fortran library
+#
+# The following are not for general use and are included in
+# NETCDF_LIBRARIES if the corresponding option above is set.
+#
+#  NETCDF_LIBRARIES_C        - Just the C interface
+#  NETCDF_LIBRARIES_CXX      - C++ interface, if available
+#  NETCDF_LIBRARIES_FORTRAN  - Fortran 90 interface, if available
+#
+# Normal usage would be:
+#  set (NETCDF_FORTRAN "YES")
+#  find_package (NetCDF REQUIRED)
+#  target_link_libraries (uses_f90_interface \${NETCDF_LIBRARIES})
+
+if (NETCDF_INCLUDES AND NETCDF_LIBRARIES)
+  # Already in cache, be silent
+  set (NETCDF_FIND_QUIETLY TRUE)
+endif (NETCDF_INCLUDES AND NETCDF_LIBRARIES)
+
+
+macro(NETCDF_CONFIG flag output)
+    if(NETCDF_CONFIG_EXECUTABLE)
+        exec_program( \${NETCDF_CONFIG_EXECUTABLE} ARGS \${flag}
+            OUTPUT_VARIABLE \${output} RETURN_VALUE return_value)
+        if(NOT \${return_value} EQUAL 0 )
+            message( STATUS "Unable to determine \${flag} from \${NETCDF_CONFIG_EXECUTABLE}." )
+        endif()
+    endif(NETCDF_CONFIG_EXECUTABLE)
+endmacro()
+
+if(NETCDF_C_ROOT)
+   list(APPEND NETCDF_HINTS "\${NETCDF_C_ROOT}")
+else()
+   list(APPEND NETCDF_HINTS "\$ENV{NETCDF_ROOT}")
+endif()
+
+if(NETCDF_FORTRAN_ROOT)
+   list(APPEND NETCDF_HINTS "\${NETCDF_FORTRAN_ROOT}")
+else()
+   list(APPEND NETCDF_HINTS "\$ENV{NETCDF_ROOT}")
+endif()
+
+if(NETCDF_C_ROOT)
+   find_program(NETCDF_C_CONFIG_EXECUTABLE NAMES nc-config
+      HINTS \${NETCDF_HINTS} PATH_SUFFIXES bin Bin NO_DEFAULT_PATH
+      DOC "NETCDF CONFIG PROGRAM. Used to detect NETCDF compile flags." )
+else()
+   find_program(NETCDF_C_CONFIG_EXECUTABLE NAMES nc-config
+      HINTS \${NETCDF_HINTS} PATH_SUFFIXES bin Bin
+      DOC "NETCDF CONFIG PROGRAM. Used to detect NETCDF compile flags." )
+endif()
+
+set(NETCDF_CONFIG_EXECUTABLE \${NETCDF_C_CONFIG_EXECUTABLE})
+   if(NETCDF_C_CONFIG_EXECUTABLE)
+      NETCDF_CONFIG(--cc NETCDF_C_COMPILER_C)
+      NETCDF_CONFIG(--fc NETCDF_C_COMPILER_FORTRAN)
+      NETCDF_CONFIG(--prefix NETCDF_C_ROOT)
+      NETCDF_CONFIG(--includedir NETCDF_C_INCLUDE)
+      NETCDF_CONFIG(--version NETCDF_C_VERSION)
+      #NETCDF_CONFIG(--has-c++ NETCDF_C_CXX)
+      #NETCDF_CONFIG(--has-f77 NETCDF_C_F77)
+      NETCDF_CONFIG(--has-f90 NETCDF_C_F90)
+      #NETCDF_CONFIG(--has-dap NETCDF_C_DAP)
+      #NETCDF_CONFIG(--has-nc2 NETCDF_C_NC2)
+      #NETCDF_CONFIG(--has-nc4 NETCDF_C_NC4)
+      #NETCDF_CONFIG(--has-hdf4 NETCDF_C_HDF4)
+      #NETCDF_CONFIG(--has-hdf5 NETCDF_C_HDF5)
+      #NETCDF_CONFIG(--has-pnetcdf NETCDF_C_PARALLEL)
+      list(APPEND NETCDF_INCLUDE_HINTS "\${NETCDF_C_INCLUDE}")
+      list(APPEND NETCDF_HINTS "\${NETCDF_C_ROOT}")
+      message(STATUS "Found \${NETCDF_C_VERSION} compiled with \${NETCDF_C_COMPILER_C}")
+   else(NETCDF_C_CONFIG_EXECUTABLE)
+      message(STATUS "nc-config not found")
+   endif(NETCDF_C_CONFIG_EXECUTABLE)
+
+if(NETCDF_C_ROOT AND NETCDF_FORTRAN_ROOT)
+   find_program(NETCDF_FORTRAN_CONFIG_EXECUTABLE NAMES nf-config
+       HINTS \${NETCDF_HINTS} PATH_SUFFIXES bin Bin NO_DEFAULT_PATH
+       DOC "NETCDF CONFIG PROGRAM. Used to detect NETCDF compile flags." )
+else()
+   find_program(NETCDF_FORTRAN_CONFIG_EXECUTABLE NAMES nf-config
+       HINTS \${NETCDF_HINTS} PATH_SUFFIXES bin Bin
+       DOC "NETCDF CONFIG PROGRAM. Used to detect NETCDF compile flags." )
+endif()
+
+set(NETCDF_CONFIG_EXECUTABLE \${NETCDF_FORTRAN_CONFIG_EXECUTABLE})
+   if(NETCDF_FORTRAN_CONFIG_EXECUTABLE)
+      NETCDF_CONFIG(--cc NETCDF_FORTRAN_COMPILER_C)
+      NETCDF_CONFIG(--fc NETCDF_FORTRAN_COMPILER_FORTRAN)
+      NETCDF_CONFIG(--prefix NETCDF_FORTRAN_ROOT)
+      NETCDF_CONFIG(--includedir NETCDF_FORTRAN_INCLUDE)
+      NETCDF_CONFIG(--version NETCDF_FORTRAN_VERSION)
+      #NETCDF_CONFIG(--has-c++ NETCDF_FORTRAN_CXX)
+      #NETCDF_CONFIG(--has-f77 NETCDF_FORTRAN_F77)
+      NETCDF_CONFIG(--has-f90 NETCDF_FORTRAN_F90)
+      #NETCDF_CONFIG(--has-dap NETCDF_FORTRAN_DAP)
+      #NETCDF_CONFIG(--has-nc2 NETCDF_FORTRAN_NC2)
+      #NETCDF_CONFIG(--has-nc4 NETCDF_FORTRAN_NC4)
+      #NETCDF_CONFIG(--has-hdf4 NETCDF_FORTRAN_HDF4)
+      #NETCDF_CONFIG(--has-hdf5 NETCDF_FORTRAN_HDF5)
+      #NETCDF_CONFIG(--has-pnetcdf NETCDF_FORTRAN_PARALLEL)
+      list(APPEND NETCDF_INCLUDE_HINTS "\${NETCDF_FORTRAN_INCLUDE}")
+      list(APPEND NETCDF_HINTS "\${NETCDF_FORTRAN_ROOT}")
+      message(STATUS "Found \${NETCDF_FORTRAN_VERSION} compiled with \${NETCDF_FORTRAN_COMPILER_FORTRAN}")
+   else(NETCDF_FORTRAN_CONFIG_EXECUTABLE)
+      #message(STATUS "nf-config not found")
+      set(NETCDF_FORTRAN_COMPILER_C \${NETCDF_C_COMPILER_C})
+      set(NETCDF_FORTRAN_COMPILER_FORTRAN \${NETCDF_C_COMPILER_FORTRAN})
+      set(NETCDF_FORTRAN_ROOT \${NETCDF_C_ROOT})
+      set(NETCDF_FORTRAN_INCLUDE \${NETCDF_C_INCLUDE})
+      set(NETCDF_FORTRAN_VERSION \${NETCDF_C_VERSION})
+      #set(NETCDF_FORTRAN_CXX \${NETCDF_C_CXX})
+      #set(NETCDF_FORTRAN_F77 \${NETCDF_C_F77})
+      set(NETCDF_FORTRAN_F90 \${NETCDF_C_F90})
+      #set(NETCDF_FORTRAN_DAP \${NETCDF_C_DAP})
+      #set(NETCDF_FORTRAN_NC2 \${NETCDF_C_NC2})
+      #set(NETCDF_FORTRAN_NC4 \${NETCDF_C_NC4})
+      #set(NETCDF_FORTRAN_HDF4 \${NETCDF_C_HDF4})
+      #set(NETCDF_FORTRAN_HDF5 \${NETCDF_C_HDF5})
+      #set(NETCDF_FORTRAN_PARALLEL \${NETCDF_C_PARALLEL})
+      if(NETCDF_FORTRAN_F90)
+         message(STATUS "Found \${NETCDF_FORTRAN_VERSION} compiled with \${NETCDF_FORTRAN_COMPILER_FORTRAN}")
+      else(NETCDF_FORTRAN_F90)
+         message(STATUS "nc-config found no netCDF Fortran libraries")
+      endif(NETCDF_FORTRAN_F90)
+   endif(NETCDF_FORTRAN_CONFIG_EXECUTABLE)
+
+# find netcdf c
+if(NOT NETCDF_C_INCLUDE)
+   find_path(NETCDF_C_INCLUDE netcdf.h HINTS \${NETCDF_HINTS} PATH_SUFFIXES include Include)
+endif()
+find_library(NETCDF_C_LIB netcdf HINTS \${NETCDF_HINTS} PATH_SUFFIXES lib lib64)
+#message(STATUS "NETCDF_C_INCLUDE so far: \${NETCDF_C_INCLUDE}")
+#message(STATUS "NETCDF_C_LIB so far: \${NETCDF_C_LIB}")
+
+# find netcdf fortran
+if(NOT NETCDF_FORTRAN_INCLUDE)
+   find_path(NETCDF_FORTRAN_INCLUDE netcdf.mod HINTS \${NETCDF_HINTS} PATH_SUFFIXES include Include)
+endif()
+find_library(NETCDF_FORTRAN_LIB netcdff HINTS \${NETCDF_HINTS} PATH_SUFFIXES lib lib64)
+if(NOT NETCDF_FORTRAN_LIB)
+   find_library(NETCDF_FORTRAN_LIB netcdf HINTS \${NETCDF_HINTS} PATH_SUFFIXES lib lib64)
+endif()
+#message(STATUS "NETCDF_FORTRAN_INCLUDE so far: \${NETCDF_FORTRAN_INCLUDE}")
+#message(STATUS "NETCDF_FORTRAN_LIB so far: \${NETCDF_FORTRAN_LIB}")
+
+if ((NOT NETCDF_C_LIB) OR (NOT NETCDF_C_INCLUDE))
+   message(STATUS "Trying to find NetCDF using LD_LIBRARY_PATH (we're desperate)...")
+   file(TO_CMAKE_PATH "\$ENV{LD_LIBRARY_PATH}" LD_LIBRARY_PATH)
+   find_library(NETCDF_C_LIB NAMES netcdf HINTS \${LD_LIBRARY_PATH})
+
+   if (NETCDF_C_LIB)
+      get_filename_component(NETCDF_LIB_DIR \${NETCDF_C_LIB} PATH)
+      string(REGEX REPLACE "/lib/?\$" "/include" NETCDF_H_HINT \${NETCDF_LIB_DIR})
+      find_path (NETCDF_C_INCLUDE netcdf.h HINTS \${NETCDF_H_HINT} DOC "Path to netcdf.h")
+      message(STATUS "found netcdf.h in: \${NETCDF_C_INCLUDE}")
+      list(APPEND NETCDF_INCLUDE_HINTS "\${NETCDF_C_INCLUDE}")
+   endif()
+endif()
+
+get_filename_component (NETCDF_C_LIB_DIR "\${NETCDF_C_LIB}" PATH)
+get_filename_component (NETCDF_FORTRAN_LIB_DIR "\${NETCDF_FORTRAN_LIB}" PATH)
+list(APPEND NETCDF_LIB_HINTS "\${NETCDF_C_LIB_DIR}")
+list(APPEND NETCDF_LIB_HINTS "\${NETCDF_FORTRAN_LIB_DIR}")
+
+#message(STATUS "All include Hints: \${NETCDF_INCLUDE_HINTS}")
+#message(STATUS "All lib Hints: \${NETCDF_LIB_HINTS}")
+
+macro(NetCDF_add_interface lang)
+   if(NETCDF_\${lang})
+      if(NETCDF_\${lang}_INCLUDE AND NETCDF_\${lang}_LIB)
+         list(INSERT NetCDF_includes 0 \${NETCDF_\${lang}_INCLUDE})
+         list(INSERT NetCDF_libs 0 \${NETCDF_\${lang}_LIB}) # prepend so that -lnetcdf is last
+      else()
+         set(NetCDF_has_interfaces "NO")
+         message(STATUS "Failed to find NetCDF interface for \${lang}")
+      endif()
+   endif(NETCDF_\${lang})
+endmacro(NetCDF_add_interface)
+
+set(NetCDF_has_interfaces "YES") # will be set to NO if we're missing any interfaces
+NetCDF_add_interface(C)
+NetCDF_add_interface(CXX)
+NetCDF_add_interface(FORTRAN)
+
+# macro (NetCDF_check_interface lang header libs)
+#    if (NETCDF_\${lang})
+#       find_path (NETCDF_INCLUDES_\${lang} NAMES \${header} HINTS \${NETCDF_HINTS} PATH_SUFFIXES include Include NO_DEFAULT_PATH)
+#       find_library (NETCDF_LIBRARIES_\${lang} NAMES \${libs} HINTS \${NETCDF_HINTS} PATH_SUFFIXES lib lib64 NO_DEFAULT_PATH)
+#       mark_as_advanced (NETCDF_INCLUDES_\${lang} NETCDF_LIBRARIES_\${lang})
+#       if (NETCDF_INCLUDES_\${lang} AND NETCDF_LIBRARIES_\${lang})
+#          list (INSERT NetCDF_libs 0 \${NETCDF_LIBRARIES_\${lang}}) # prepend so that -lnetcdf is last
+#       else (NETCDF_INCLUDES_\${lang} AND NETCDF_LIBRARIES_\${lang})
+#          set (NetCDF_has_interfaces "NO")
+#          message (STATUS "Failed to find NetCDF interface for \${lang}")
+#       endif (NETCDF_INCLUDES_\${lang} AND NETCDF_LIBRARIES_\${lang})
+#    endif (NETCDF_\${lang})
+# endmacro (NetCDF_check_interface)
+# 
+# set (NetCDF_has_interfaces "YES") # will be set to NO if we're missing any interfaces
+# NetCDF_check_interface (C netcdf.h netcdf)
+# NetCDF_check_interface (CXX netcdfcpp.h netcdf_c++)
+# NetCDF_check_interface (FORTRAN netcdf.mod  netcdff)
+
+set (NETCDF_C_COMPILER "\${NETCDF_C_COMPILER_C}" CACHE STRING "The C compiler used to build netCDF")
+set (NETCDF_FORTRAN_COMPILER "\${NETCDF_FORTRAN_COMPILER_FORTRAN}" CACHE STRING "The Fortran compiler used to build netCDF")
+set (NETCDF_INCLUDES "\${NetCDF_includes}" CACHE STRING "All NetCDF includes required for interface level")
+set (NETCDF_LIBRARIES "\${NetCDF_libs}" CACHE STRING "All NetCDF libraries required for interface level")
+
+# handle the QUIETLY and REQUIRED arguments and set NETCDF_FOUND to TRUE if
+# all listed variables are TRUE
+include (FindPackageHandleStandardArgs)
+find_package_handle_standard_args (NetCDF DEFAULT_MSG NETCDF_LIBRARIES NETCDF_INCLUDES NetCDF_has_interfaces)
+
+mark_as_advanced (NETCDF_LIBRARIES NETCDF_INCLUDES)
+
+#message(STATUS "netCDF library: \${NETCDF_LIBRARIES}")
+#message(STATUS "netCDF include: \${NETCDF_INCLUDES}")
+
+EOF
+}
+
+################################################################################
+
+palm_installer_build
+palm_installer_set_path
+palm_installer_test_suite
+palm_post_installer_help

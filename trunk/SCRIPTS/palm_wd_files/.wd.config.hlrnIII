@@ -1,0 +1,16 @@
+# $Id: .wd.config.hlrnIII 1751 2016-02-15 07:44:16Z maronga $
+# Configuration file for palm_wd
+# Preconfigured for HLRN-III
+
+[Hannover]
+enabled=true
+hostname=hlogin.hlrn.de
+username=<replace_by_your_remote_username>
+
+[Berlin]
+enabled=true
+hostname=blogin.hlrn.de
+username=<replace_by_your_remote_username>
+
+[Settings]
+update_frequency=10

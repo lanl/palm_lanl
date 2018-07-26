@@ -1,0 +1,35 @@
+example_mountain
+
+1. Purpose
+   This example shows the flow around a single 3d idealized 
+   mountain. The mountain shape is Gaussian. The inversion height lies
+   below the mountain top so that a part of the topography resides in
+   stable stratification. 
+   
+2. PALM-Version / SVN Revision
+   PALM 3.6 / SVN Revision 244
+
+3. Required user code
+   No user code is required.
+
+4. Input: example_mountain_p3d
+   Cyclic lateral boundary conditions are used. The 3d-model is initialized with
+   the solution of the 1d-model. Rayleigh damping is switched on.
+
+5. Preprocessing
+   The topography file has to be prepared according to the topography conventions
+   used in PALM. The topography file is created with aid of a 2d Gauss function.
+   
+6. Program start - mrun call
+   mrun -d example_mountain -h lcsgih -K parallel -X8 -T2 -t900 -q testq
+   -r "d3# pr# ts# xy# xz# yz#"
+
+7. Monitoring: example_mountain_rc
+
+8. Postprocessing
+   No postprocessing of the data is required.
+
+9. List of attachments
+   example_mountain _p3d
+   example_mountain_rc
+   example_mountain_topo

@@ -1,0 +1,4 @@
+#!/bin/bash
+
+module load cray-netcdf
+palm_simple_build -b ifort.titan -w "/lustre/atlas1/cli127/proj-shared/vanroek/palm/jobs/diurnal/"

@@ -1,0 +1,20 @@
+---
+# this is a palmtest job configuration file
+
+allowed_builds:
+  - default: gfortran_default
+    if_debug: gfortran_default_debug
+  - default: intel_default
+    if_debug: intel_default_debug
+
+allowed_number_of_cores:
+  - 1
+  - 2
+  - 4
+  - 8
+  - 16
+  - 32
+
+write_binary: false
+
+read_binary: false

@@ -1,0 +1,22 @@
+{smog.eqn
+Former revisions
+----------------
+ $Id: smog.eqn 2612 2017-11-15 16:50:16Z forkel $
+}
+#EQUATIONS
+
+{ Photochemical Smog with photolysis}
+
+  { 1.}  NO2 + hv = NO + O :                   phot(j_no2)  ;
+  { 2.}  O + O2 = O3       :                 arr2(3.2e-11_dp,  -70.0_dp, temp) ;
+  { 3.}  NO + O3 = NO2 + O2 :                arr2(1.8E-12_dp, 1370.0_dp, temp) ;
+  { 4.}  RH + OH = RO2 + H2O :               arr2(2.E-11_dp, 500.0_dp, temp) ;
+  { 5.}  RCHO + OH = RCOO2 + H2O :           arr2(7.0E-12_dp, -250.0_dp, temp) ;
+  { 6.}  RCHO + hv = RO2 + HO2 + CO :        phot(j_rcho)    ;
+  { 7.}  HO2 + NO = NO2 + OH :               arr2(3.7E-12_dp, -240.0_dp, temp) ;
+  { 8.}  RO2 + NO = NO2 + RCHO + HO2 :       arr2(4.2E-12_dp, -180.0_dp, temp);
+  { 9.}  RCOO2 + NO = NO2 + RO2 + CO2 :      arr2(5.4E-12_dp, -250.0_dp, temp) ;
+  {10.}  OH + NO2 = HNO3 :                   arr2(1.0E-12_dp, -713.0_dp, temp) ;
+  {11.}  RCOO2 + NO2 = RCOO2NO2 :            arr2(1.2e-11_dp, 0.0_dp, temp) ;
+  {12.}  RCOO2NO2 = RCOO2 + NO2 :            arr2(9.4E+16_dp, 14000.0_dp, temp) ;
+

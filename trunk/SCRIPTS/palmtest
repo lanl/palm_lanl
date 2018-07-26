@@ -1,0 +1,197 @@
+#!/usr/bin/env bash
+
+#--------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2017-2018  Leibniz Universitaet Hannover
+#--------------------------------------------------------------------------------#
+#
+# Current revisions:
+# -----------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: palmtest 2824 2018-02-20 15:39:11Z knoop $
+# Corrected "Former revisions" section
+# svn propset keyword
+# 
+# 
+#
+# 2696 kanani
+# Change in file header (GPL part)
+#
+# 2579 knoop
+# palmtest now testing for multiple cpu-setups 
+#
+# 2515 kanani
+# Generalization of the palmtest script 
+#
+# 2497 knoop
+# Initial revision
+#
+# Description:
+# ------------
+# Testsuite execution script
+#------------------------------------------------------------------------------#
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
+done
+SCRIPT_LOCATION="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+hrule() {
+   printf "#"
+   printf -- '-%.0s' {1..72}
+   printf "#\n"
+}
+
+get_number_of_cpu_cores() {
+   {
+      n=$(sysctl -n machdep.cpu.core_count 2> /dev/null)
+   } || {
+      n=$(grep -c ^processor /proc/cpuinfo 2> /dev/null)
+   } || {
+   if ! [[ $n =~ ^-?[0-9]+$ ]]; then
+      n=1
+   fi
+   }
+   echo $n
+}
+
+get_core_array() {
+   for i in 1 2 4 8 16 32; do
+      if [[ $i -le ${1} ]]; then
+         printf "$i "
+      fi
+   done
+}
+
+configure() {
+   hrule
+   printf "Configuring..."
+   if [[ -f ${existing_working_dir}/.palm.config.${configuration} ]]; then
+      cp ${existing_working_dir}/.palm.config.${configuration} ${tester_prefix}/.palm.config.${configuration}
+      sed -i -e "s#%base_directory .*#%base_directory      ${tester_prefix}#g" ${tester_prefix}/.palm.config.${configuration}
+      sed -i -e "s#%base_data .*#%base_data           ${tester_prefix}/JOBS#g" ${tester_prefix}/.palm.config.${configuration}
+      sed -i -e "s#%source_path .*#%source_path         ${tester_prefix}/trunk/SOURCE#g" ${tester_prefix}/.palm.config.${configuration}
+      sed -i -e "s#%user_source_path .*#%user_source_path    ${tester_prefix}/JOBS/\$fname/USER_CODE#g" ${tester_prefix}/.palm.config.${configuration}
+      sed -i -e "s#%fast_io_catalog .*#%fast_io_catalog     ${tester_prefix}/tmp#g" ${tester_prefix}/.palm.config.${configuration}
+      printf " finished (adapted existing .palm.config.${configuration})\n"
+   else
+      printf " failed (missing .palm.config.${configuration})\n"
+      hrule
+      exit 1
+   fi
+}
+
+build() {
+   hrule
+   rm -rf ${tester_prefix}/JOBS
+   rm -rf ${tester_prefix}/MAKE_DEPOSITORY*
+   bash ${trunk_dir}/SCRIPTS/palmbuild -h "${configuration}" -v
+}
+
+palm_installer_test() {
+   hrule
+   local name=${1}
+   local cores=${2}
+   printf "Testing with \"${name}\" on ${cores} core(s)... "
+   local job_id=${name}_${cores}
+   local input_dir=${tester_prefix}/JOBS/${job_id}/INPUT
+   local monitoring_dir=${tester_prefix}/JOBS/${job_id}/MONITORING
+   if [[ ! -f ${test_dir}/${name}_p3d ]] || [[ ! -f ${test_dir}/${name}_rc ]]; then
+      printf " test not found\n"
+      return 1
+   fi
+   rm -rf ${monitoring_dir}
+   mkdir -p ${input_dir}
+   mkdir -p ${monitoring_dir}
+   cp ${test_dir}/${name}_p3d ${input_dir}/${job_id}_p3d
+   cp ${test_dir}/${name}_rc ${monitoring_dir}/${job_id}_rc_reference
+   [[ -f ${test_dir}/${name}_topo ]] && cp ${test_dir}/${name}_topo ${input_dir}/${job_id}_topo
+   [[ -f ${test_dir}/${name}_static ]] && cp ${test_dir}/${name}_static ${input_dir}/${job_id}_static
+   [[ -f ${test_dir}/${name}_dynamic ]] && cp ${test_dir}/${name}_dynamic ${input_dir}/${job_id}_dynamic
+   bash ${trunk_dir}/SCRIPTS/palmrun -d ${job_id} -a "d3#" -h "${configuration}" -X "$cores" -T "$cores" -v -B > ${monitoring_dir}/${job_id}_stdout 2>&1
+   grep -A 99999 "Run-control output" ${monitoring_dir}/${job_id}_rc 1> ${monitoring_dir}/RC 2> /dev/null
+   grep -A 99999 "Run-control output" ${monitoring_dir}/${job_id}_rc_reference 1> ${monitoring_dir}/RC_REF 2> /dev/null
+   diff_output=$(diff ${monitoring_dir}/RC_REF ${monitoring_dir}/RC)
+   rm ${monitoring_dir}/RC ${monitoring_dir}/RC_REF
+   if [[ "${diff_output}" == "" ]]; then
+      printf " passed\n"
+      return 0
+   else
+      printf " failed\n"
+      test_status="failed"
+      return 1
+   fi
+}
+
+palm_installer_test_suite() {
+   for test_path in ${fnames}; do
+      for n_core in $(get_core_array $max_cores); do
+         testname_p3d=$(basename $test_path)
+         palm_installer_test "${testname_p3d%_p3d}" "${n_core}"
+      done
+   done
+   hrule
+   if [[ "${test_status}" == "failed" ]]; then
+      echo "Some tests failed!"
+      hrule
+      exit 1
+   else
+      echo "All found tests passed. :-)"
+      rm -rf ${tester_prefix}/tmp/*
+      hrule
+      exit 0
+   fi
+}
+
+existing_working_dir=$(readlink -f "${SCRIPT_LOCATION}/../../")
+existing_trunk_dir=$(readlink -f "${SCRIPT_LOCATION}/../")
+
+max_cores=$(get_number_of_cpu_cores)
+test_id=$(date +%Y-%m-%d_%H%M%S)
+do_plots=1
+configuration="default"
+fnames="$(echo ${existing_trunk_dir}/INSTALL/*_p3d)"
+
+while  getopts  :d:h:N:pX:  option
+do
+   case  $option  in
+      (d)   fnames="$OPTARG";;
+      (h)   configuration="$OPTARG";;
+      (N)   test_id="$OPTARG";;
+      (p)   do_plots=0;;
+      (X)   max_cores=$OPTARG;;
+      (\?)  printf "\n  +++ unknown option $OPTARG \n";
+            exit;;
+   esac
+done
+tester_prefix=${existing_working_dir}/tests/${test_id}
+trunk_dir=${tester_prefix}/trunk
+test_dir=${trunk_dir}/INSTALL
+
+mkdir -p ${tester_prefix}
+cd ${tester_prefix}
+
+ln -s ${existing_trunk_dir} trunk
+
+
+
+configure
+build
+palm_installer_test_suite

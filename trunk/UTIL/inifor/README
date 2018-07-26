@@ -1,0 +1,58 @@
+INIFOR - Initialization and Forcing of PALM-4U (v1.1.5)
+
+INIFOR provides the meteorological fields required to initialize and drive the
+urban-climate model PALM-4U. The required meteorological fields are
+interpolated from output data of the meso-scale model COSMO.
+
+COMPILATION
+
+1. Customize ./Makefile and ./tests/Makefile (netCDF library location, compiler
+   and parameters, use Makefile.ifort as a template if you want to use the Intel
+   Fortran compiler)
+2. $ make
+
+USAGE
+
+1. Customize ./namelist (number or grid points and spacings, end_time)
+2. $ ./bin/inifor -path <scenario path> -date <YYYYMMDD> -clat <latitude> -clon <longitude>
+
+All COMMAND-LINE PARAMETERS
+
+-date <date>: Start date of the simulation in the form YYYMMDD. Currently,
+    INIFOR assumes that the simulation starts at O UTC on that day.
+    Default: 20130721
+
+-hhl <netCDF file>: Location of the netCDF file containing the vertical COSMO-DE
+    grid (hhh = height of half layers, i.e. vertical cell faces).
+    Default: <scenario path>/hhl.nc
+
+-mode profile: Produce average profiles instead of three-dimensional fields as 
+    initial conditions.
+
+-n <namelist file>: Location of the PALM-4U namelist file. INIFOR expects the
+    file to contain two namelists, inipar and d3par, from which it will read
+    grid parameters and the simulation time. Default: ./namelist
+
+-o <ouput file>: Name of the INIFOR output file. Default: ./palm-4u-input.nc
+
+-p0 <pressure>: Surface pressure at z=0 in the PALM-4U domain [Pa].
+    Default: 1e5 Pa = 1000 hPa
+
+-path <scenario path>: Scenario path, i.e. the path of the meteorological input
+    data. Default: ./
+
+-soil <netCDF file>: Location of the netCDF file containing the COSMO-DE soil type
+    map.
+    Default: <scenario path>/soil.nc
+
+-static <static driver file>: Location of the netCDF file containing the static
+    driver file for the case to be simulated with PALM-4U. Optional parameter.
+    Default: None
+
+-ug <velocity>: Specifies the geostrophic wind in x direction [m/s]. Default: 0
+
+-vg <velocity>: Specifies the geostrophic wind in y direction [m/s]. Default: 0
+
+-z0 <height>: Specifies the elevation of the the PALM-4U domain above sea level [m].
+    Default: 35 m
+

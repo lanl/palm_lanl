@@ -1,0 +1,57 @@
+ &inipar nx = 39, ny = 39, nz = 45,
+         dx = 2.0, dy = 2.0, dz = 2.0,
+
+         fft_method = 'temperton-algorithm',   ! fast, but restrictions apply
+
+         momentum_advec = 'pw-scheme',         ! topography does not work with
+         scalar_advec   = 'pw-scheme',         ! Wicker-Skamarock advection so far
+
+         omega = 0.0,                          ! no Coriolis force
+         dp_external = .T.,                    ! external pressure gradient
+         dp_level_b = 80.0,                    ! ...acting above 80 m height
+         dp_smooth = .T.,                      ! ...vertically smoothed
+         dpdxy = -0.003, 0.0,                  ! ...in x-, y-direction
+
+         initializing_actions = 'set_constant_profiles',
+         ug_surface = 0.0, vg_surface = 0.0,
+         ug_vertical_gradient       = 2.5,     ! linear vertical ug gradient
+         ug_vertical_gradient_level = 0.0,     ! starting from the ground
+         roughness_length = 0.1,               ! applies to all surfaces locally
+
+         bc_pt_b = 'neumann',
+         bc_uv_t = 'neumann',                  ! open channel boundary condition
+
+         topography = 'single_building',
+         topography_grid_convention = 'cell_edge',  ! default
+         building_height   = 40.0,
+         building_length_x = 40.0,
+         building_length_y = 40.0,
+
+         surface_heatflux = 0.0,               ! strictly neutral simulation
+         wall_heatflux = 0.0, 0.0, 0.0, 0.0, 0.0,  /
+
+ &d3par  end_time                  =  14400.0,
+         termination_time_needed   =    900.0,
+
+         create_disturbances = .T.,
+
+         dt_run_control            =      6.0,
+         dt_dots                   =      6.0,
+
+         skip_time_dopr            =      0.0,
+         dt_dopr                   =   7200.0,
+         averaging_interval_pr     =   7200.0,
+         dt_averaging_input_pr     =      6.0,
+
+         skip_time_data_output     =      0.0,
+         dt_data_output            =   7200.0,
+
+         averaging_interval        =   7200.0,
+         dt_averaging_input        =      6.0,
+
+         data_output_pr = '#u', 'w"u"', 'w*u*', 'wu', 'u*2', 
+                          '#v', 'w"v"', 'w*v*', 'wv', 'v*2',
+                          'w', 'w*2', 'e', 'e*', '#km', '#l',
+
+         data_output = 'u',       'v',       'w',
+                       'u_av',    'v_av',    'w_av',  /

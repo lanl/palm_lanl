@@ -1,0 +1,28 @@
+ &inipar nx = 511, ny = 511, nz = 64,
+         dx = 1.0, dy = 1.0, dz = 1.0,
+         dz_stretch_level = 1200.0,
+
+         background_communication = .FALSE.,
+
+         fft_method = 'system-specific',
+         loop_optimization = 'acc',
+
+         initializing_actions = 'set_constant_profiles',
+         ug_surface = 0.0, vg_surface = 0.0,
+         pt_vertical_gradient       = 0.0, 1.0,
+         pt_vertical_gradient_level = 0.0, 800.0,
+
+
+	 surface_heatflux = 0.1, bc_pt_b = 'neumann'  
+
+/ 
+
+ &d3par  end_time = 65.0,
+
+         create_disturbances = .T.,
+         dt_disturb = 150.0, disturbance_energy_limit = 0.01,
+
+         dt_run_control = 0.0,
+
+/
+

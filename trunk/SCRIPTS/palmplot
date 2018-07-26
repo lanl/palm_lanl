@@ -1,0 +1,227 @@
+#!/bin/ksh
+#--------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018  Leibniz Universitaet Hannover
+#--------------------------------------------------------------------------------#
+#
+# Current revisions:
+# -----------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: palmplot 2845 2018-03-01 08:32:34Z raasch $
+# assign configuration file within palmplot call
+# 
+# 2837 2018-02-26 14:04:53Z gronemeier
+# Corrected "Former revisions" section
+#
+# 2696 2017-12-14 17:12:51Z kanani
+# Change in file header (GPL part)
+#
+# 1310 2014-03-14 08:01:56Z raasch
+# update GPL copyright
+#
+# 1046 2012-11-09 14:38:45Z maronga
+# code put under GPL (PALM 3.9)
+#
+# palmplot - script for running the NCL scripts
+    # Using the available NCL scripts via the shell script palmplot
+
+    # Last changes
+    # 16/03/10 - Rieke - initial revision
+    # 30/03/10 - Rieke - substituting double quotes (") with a character 
+    #                    variable (dq) containing double quotes 
+    # 31/03/10 - Rieke - list of variable names can be specified using 
+    #                    blank separated lists instead of comma 
+    #                    separated lists
+    # 01/04/10 - Rieke - bugfix - treatment of special character *
+    #                    in NCL variables containing lists corrected
+    # 23/08/10 - Rieke - bugfix - "" had to be added in if-queries 
+    # 30/09/10 - Rieke - Link to new online documentation of PALM NCL scripts
+    # 31/10/11 - Rieke - Adjustement so that palmplot also works on 
+    #                    DKRZ (ibmh)
+
+
+ # SHORT INTRODUCTION FOR USING THIS SCRIPT
+ if [[ "$1" = "?"  || "$1" = "--help" || "$1" = "-h" ]]
+  then
+    (printf "\n   palmplot is designed to run the NCL scripts of PALM \n"
+     printf "\n   palmplot can be called as follows:"
+     printf "\n   palmplot script_identifier file_1=OUTPUT/test.nc file_out=test format_out=pdf var='pt w\"pt\" w*pt* u' no_rows=2 ...\n"
+     printf "\n   script_identifier has to be one of the following:"
+     printf "\n    xy, xz, yz, pr, ts, sp"
+     printf "\n   in dependence on the data that wants to be plotted\n"
+     printf "\n   the further arguments control the plot"
+     printf "\n   they can also be set in the configuration file .ncl.config"
+     printf "\n   a documentation is available at"
+     printf "\n   http://palm.muk.uni-hannover.de/wiki/doc/app/ncl \n\n")
+     exit
+ fi
+
+
+ # DEFINITION OF VARIABLES
+ a=""
+ arg=""
+ b=""
+ key=""
+ script=""
+ value=""
+ CMDLINE=""
+ STRINGPARAMS=""
+ STRINGPARAMS_CO=""
+ STRINGPARAMS_CS=""
+ STRINGPARAMS_PR="" 
+ STRINGPARAMS_SP=""
+ STRINGPARAMS_TS=""
+ STRINGPARAMS_VA=""
+
+
+ # LIST OF THE PARAMETERS OF THE NCL SCRIPTS WHICH NCL EXPECTED TO BE STRINGS
+ # CO: PARAMETERS WHICH ARE COMMON FOR ALL NCL SCRIPTS
+ # CS: cross_sections.ncl PR: profiles.ncl SP: spectra.ncl TS: timeseries.ncl
+ # VA: PARAMETERS WHICH CONTAIN LISTS OF VARIABLE NAMES
+ STRINGPARAMS_CO="file_1 format_out file_out var file_config "
+ STRINGPARAMS_CS="sort mode fill_mode unit_x unit_y unit_z vec1 vec2 plotvec"
+ STRINGPARAMS_PR="file_2 file_3 file_4 file_5 file_6 name_legend_1 name_legend_2 name_legend_3 name_legend_4 name_legend_5 name_legend_6 c_var"
+ STRINGPARAMS_SP="sort unit_x unit_y"
+ STRINGPARAMS_TS="unit_t"
+ STRINGPARAMS_VA="var c_var vec1 vec2 plotvec"
+
+
+ # CHOICE OF THE PARTICULAR NCL SCRIPT
+ if [[ "$1" == "xy" ]]
+  then 
+    script="cross_sections.ncl"
+    STRINGPARAMS=$STRINGPARAMS_CO$STRINGPARAMS_CS
+    CMDLINE="xyc=1 "
+  elif [[ "$1" == "xz" ]]
+    then 
+    script="cross_sections.ncl"
+    STRINGPARAMS=$STRINGPARAMS_CO$STRINGPARAMS_CS
+    CMDLINE="xzc=1 "
+  elif [[ "$1" == "yz" ]]
+    then 
+    script="cross_sections.ncl"
+    STRINGPARAMS=$STRINGPARAMS_CO$STRINGPARAMS_CS
+    CMDLINE="yzc=1 "
+  elif [[ "$1" == "pr" ]]
+    then 
+    script="profiles.ncl"
+    STRINGPARAMS=$STRINGPARAMS_CO$STRINGPARAMS_PR
+  elif [[ "$1" == "ts" ]]
+    then 
+    script="timeseries.ncl"
+    STRINGPARAMS=$STRINGPARAMS_CO$STRINGPARAMS_TS
+  elif [[ "$1" == "sp" ]]
+    then 
+    script="spectra.ncl"
+    STRINGPARAMS=$STRINGPARAMS_CO$STRINGPARAMS_SP
+   else
+     (printf "\n  first argument has to be one of the following:"
+      printf "\n   xy, xz, yz, pr, ts or sp \n" 
+      printf "\n  type \"palmplot ?\" for information about the usage of this script\n")
+     exit
+ fi
+
+ # SHIFTING THE FIRST COMMAND LINE ARGUMENT
+ shift 
+
+ # PROCESSING THE COMMAND LINE ARGUMENTS
+ while [ $# -gt 0 ] 
+ do
+    arg=$1
+    key=${arg%%=*}
+    value=${arg#*=}
+
+    # ALLOWING RELATIVE AND ABSOLUTE FILE PATHS 
+    if [[ "$key" ==  @(file_*) && "$value" != @(~/*|/*) ]]
+    then
+       value=$PWD/$value
+    fi
+
+    # USE CONFIG FILE SPECIFIED BY USER
+    if [ "$key" = "file_config" ]
+    then
+       if [ -f $value ]
+       then
+          use_user_config=true
+       else
+          printf "\n  configuration file \"$value\" not found."
+          printf "\n  trying to use one of the standard configuraion files...\n"
+       fi
+    fi
+
+    # PROCESSING STRINGS
+    for a in $STRINGPARAMS
+    do
+      if [ "$key" = "$a" ]
+      then
+
+         # PROCESSING STRINGS CONTAINING LISTS OF VARIABLES
+         for b in $STRINGPARAMS_VA
+         do
+           if [ "$key" = "$b" ]
+           then
+              if [[ "$value" != "all" ]]
+              then
+                 # SUBSTITUTING BLANKS WITH COMMAS IN 
+                 # PARAMETERS CONTAINING LISTS OF VARIABLES
+                 value=`echo $value | sed 's/ /,/g'`   
+                 # ALLOWING THE USAGE OF COMMA SEPARATED LIST AS WELL    
+            
+                 if [[ "$value" == "${value#,}" ]]
+                 then
+                    value=,$value
+                 fi
+                 if [[ "$value" == "${value%,}" ]]
+                 then
+                    value=$value,
+                 fi          
+                 value=${value/%\*,,/\*,}                 
+                 break
+              fi
+           fi
+         done
+
+         # SUBSTITUTING DOUBLE QUOTES - REQUIRED BY NCL
+         value=`echo $value | sed 's/\"/\"+dq+\"/g'`
+         # SETTING ENTIRE STRING IN DOUBLE QUOTES - REQUIRED BY NCL
+         value=\"$value\"
+      fi
+    done
+
+    CMDLINE=$CMDLINE"$key=$value "
+    shift
+ done
+
+ # SET CONFIGURATION FILE TO ONE OF THE DEFAULT FILES IF NOT SPECIFIED BY USER
+ if [ "$use_user_config" != true ]
+ then
+    key="file_config"
+
+    if [ -f $PALM_BIN/../../.ncl.config ]
+    then
+       value="\"$PALM_BIN/../../.ncl.config\""
+    else
+       value="\"$PALM_BIN/NCL/.ncl.config.default\""
+    fi
+
+    CMDLINE=$CMDLINE"$key=$value "
+ fi
+
+ # EXECUTING THE PARTICULAR NCL SCRIPT
+ cd $PALM_BIN/NCL
+ ncl 'dq=str_get_dq()' $script $CMDLINE 

@@ -1,0 +1,108 @@
+
+create_kpp_module.C,449
+void create_kpp_module::do_work 17,421
+void create_kpp_module::create_fortran_files_and_read(220,5691
+void create_kpp_module::copy_files_to_subroutines 291,7256
+void create_kpp_module::add_solver_to_subroutine_list 326,8197
+void create_kpp_module::generate_module_header(339,8501
+void create_kpp_module::write_module_file(400,10956
+void create_kpp_module::create_kpp_integrate(427,11543
+void create_kpp_module::create_fill_routine(540,18720
+
+create_kpp_module.h,118
+#define mecca 2,14
+class create_kpp_module 27,653
+  create_kpp_module create_kpp_module::create_kpp_module56,1596
+
+expand_decomp.C,92
+void expand_decomp::create_sparse_info 19,460
+void expand_decomp::create_routine 163,5162
+
+expand_decomp.h,48
+#define EXPDE 2,14
+class expand_decomp 23,522
+
+fortran_file.C,478
+void fortran_file::read 16,437
+void fortran_file::edit_fortran 71,2066
+void fortran_file::copy_to_subroutine_vector 128,3696
+void fortran_file::edit_FUNC 210,6332
+void fortran_file::edit_inc 231,6983
+void fortran_file::create_species_list(339,10027
+void fortran_file::vector_variable_list(373,11060
+void fortran_file::print 446,13651
+void fortran_file::write_file 462,13918
+void fortran_file::copy_to_AWI_KPP 506,15262
+void  fortran_file::global_substitute(519,15554
+
+fortran_file.h,243
+#define FFILE 2,14
+class fortran_file 22,496
+  void   set_name(fortran_file::set_name29,599
+  string get_name(fortran_file::get_name30,651
+  void   add_line(fortran_file::add_line31,702
+  void   add_line(fortran_file::add_line32,767
+
+fortran_file_vec.C,305
+void fortran_file::edit_inc_vec 18,437
+void fortran_file::global_variables2vector 46,1189
+void fortran_file::edit_Update_RCONST 62,1592
+void fortran_file::edit_KppDecomp 115,2946
+void fortran_file::edit_KppSolve 164,4268
+void fortran_file::edit_Jac_SP 181,4641
+void fortran_file::edit_Fun 210,5467
+
+main.C,51
+control_switches kpp_switches;13,381
+main 15,413
+
+Makefile,10
+OBJ=4,22
+
+program_line.C,397
+void  program_line::set_line(14,397
+void  program_line::substitute(22,495
+void  program_line::global_substitute(33,738
+int  program_line::get_token_number_from_string 53,1075
+int  program_line::get_token_number_from_string_upper 64,1271
+void  program_line::update_token 76,1518
+void  program_line::change_variable_to_vector 86,1724
+void  program_line::change_variable_to_vector_g 105,2216
+
+program_line.h,211
+#define PLINE 2,14
+class program_line 24,510
+   string get_line(program_line::get_line31,600
+   string get_token(program_line::get_token32,646
+   int    get_token_size(program_line::get_token_size33,716
+
+utils.C,89
+void string_token::fill_token 14,370
+void my_abort 52,1009
+string my_to_upper(59,1098
+
+utils.h,1267
+#define UTIL 2,13
+class Vvar 26,565
+  int nr_dim(Vvar::nr_dim31,651
+  void clear(Vvar::clear32,693
+class control_switches 35,755
+  void   set_vector_mode(control_switches::set_vector_mode47,1111
+  void   set_vector_length control_switches::set_vector_length48,1182
+  void   set_de_index_mode(control_switches::set_de_index_mode49,1250
+  void   set_de_index_LU(control_switches::set_de_index_LU50,1323
+  bool   is_vector(control_switches::is_vector53,1398
+  string get_vector_length control_switches::get_vector_length54,1452
+  bool   de_indexing control_switches::de_indexing55,1508
+  bool   de_indexing_LU(control_switches::de_indexing_LU56,1564
+  control_switches control_switches::control_switches58,1619
+class string_token 63,1767
+    void set_separator string_token::set_separator72,2001
+    bool    get_next_token(string_token::get_next_token75,2114
+    string  get_token_by_index string_token::get_token_by_index76,2195
+    int     size(string_token::size80,2455
+    void    update string_token::update81,2520
+    int     get_position(string_token::get_position82,2608
+    void    reset string_token::reset83,2676
+    string_token string_token::string_token86,2766
+    string_token string_token::string_token87,2823

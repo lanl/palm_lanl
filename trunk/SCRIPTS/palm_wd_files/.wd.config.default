@@ -1,0 +1,15 @@
+#$Id: .wd.config.default 1751 2016-02-15 07:44:16Z maronga $
+# Configuration file for palm_wd
+
+[<Replace_by_your_description_of_hostname_1>]
+enabled=true
+hostname=<replace_by_the_remote_hostname_1>
+username=<replace_by_your_remote_username_1>
+
+[<Replace_by_your_description_of_hostname_2>]
+enabled=true
+hostname=<replace_by_the_remote_hostname_2>
+username=<replace_by_your_remote_username_2>
+
+[Settings]
+update_frequency=10

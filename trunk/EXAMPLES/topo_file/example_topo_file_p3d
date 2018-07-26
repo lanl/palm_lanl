@@ -1,0 +1,46 @@
+ &inipar nx = 39, ny = 39, nz = 40,
+         dx = 2.0, dy = 2.0, dz = 2.0,
+
+         fft_method = 'temperton-algorithm',   ! fast, but restrictions apply
+
+         momentum_advec = 'ws-scheme',         ! default advection scheme
+         scalar_advec   = 'ws-scheme',
+
+         omega = 0.0,                          ! no Coriolis force
+         conserve_volume_flow = .T.,           ! maintain constant bulk velocity
+
+         initializing_actions = 'set_constant_profiles',
+         ug_surface = 1.0, vg_surface = 0.0,   ! implies bulk velocity 1 m/s
+         roughness_length = 0.1,               ! applies to all surfaces locally
+         neutral = .T.,                        ! strictly neutral flow
+
+         bc_uv_t = 'dirichlet_0',              ! channel flow boundary condition
+
+         topography = 'read_from_file',
+         topography_grid_convention = 'cell_center',  / ! default
+
+ &d3par  end_time                  =   7200.0,
+         termination_time_needed   =    900.0,
+
+         create_disturbances = .T.,
+
+         dt_run_control            =      6.0,
+         dt_dots                   =      6.0,
+
+         skip_time_dopr            =      0.0,
+         dt_dopr                   =   3600.0,
+         averaging_interval_pr     =   3600.0,
+         dt_averaging_input_pr     =      6.0,
+
+         skip_time_data_output     =      0.0,
+         dt_data_output            =   3600.0,
+
+         averaging_interval        =   3600.0,
+         dt_averaging_input        =      6.0,
+
+         data_output_pr = '#u', 'w"u"', 'w*u*', 'wu', 'u*2', 
+                          '#v', 'w"v"', 'w*v*', 'wv', 'v*2',
+                          'w', 'w*2', 'e', 'e*', '#km', '#l',
+
+         data_output = 'u',       'v',       'w',
+                       'u_av',    'v_av',    'w_av',  /

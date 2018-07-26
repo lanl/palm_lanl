@@ -1,0 +1,196 @@
+#!/bin/ksh 
+
+# install_rrtmg - install script for creating a RRTMG library
+
+#--------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018  Leibniz Universitaet Hannover
+#--------------------------------------------------------------------------------#
+#
+# Current revisions:
+# ------------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: install_rrtmg 2718 2018-01-02 08:49:38Z maronga $
+#
+# 1613 2015-07-08 14:53:29Z maronga
+# Bugfix: compilation of shared library fails due to misplaced rm command
+# 
+# 1585 2015-04-30 07:05:52Z maronga
+# Initial revision
+# 
+#--------------------------------------------------------------------------------#
+# install_rrtmg - install script for creating a RRTMG library
+#--------------------------------------------------------------------------------#
+
+# the following variables must be modified for the local system according to
+# .mrun.config
+#
+# Example 1 (lcmuk):
+# compiler_name="mpif90"
+# fopts="-fltconsistency -O3 -cpp -r8 -nbs -convert little_endian -I /muksoft/packages/netcdf/4_intel/include"
+# fopts_trace="-fpe0 -C -check nooutput_conversion -debug -traceback -g -w -xT -O0 -ftz -fno-alias -no-prec-div -no-prec-sqrt -ip -nbs -convert little_endian -diag-disable 8290,8291 -I /muksoft/packages/netcdf/4_intel/include"
+#
+# Example 2 (lccrayh):
+# compiler_name="ftn"
+# fopts="-em -s real64 -O3 -hnoomp -hfp3 -hdynamic"
+# fopts_trace="-eD -em -g -R b -K trap=fp -O0 -hnoomp"
+#
+#
+
+ compiler_name="mpif90"
+ fopts="-fltconsistency -O3 -cpp -r8 -nbs -convert little_endian -I /muksoft/packages/netcdf/4_intel/include"
+ fopts_trace="-fpe0 -C -check nooutput_conversion -debug -traceback -g -w -xT -O0 -ftz -fno-alias -no-prec-div -no-prec-sqrt -ip -nbs -convert little_endian -diag-disable 8290,8291 -I /muksoft/packages/netcdf/4_intel/include"
+ install_path="$HOME/rrtmg"
+ compile_static=false
+ compile_shared=false
+ compile_static_debug=true
+ compile_shared_debug=true
+
+ while  getopts  p: option
+ do
+   case  $option  in
+       (p)   install_path=$OPTARG;;
+ 
+       (\?)  printf "\n  +++ unknown option $OPTARG \n"
+             printf "\n  --> type \"$0 ?\" for available options \n"
+             locat=parameter;exit;;
+   esac
+ done
+
+ (( to_shift = $OPTIND - 1 ))
+ shift $to_shift
+
+    # PRINT SHORT DESCRIPTION OF OPTIONS
+ if [[ "$1" = "?" ]]
+ then
+   (printf "\n  *** rrtmg_install can be called as follows:\n"
+    printf "\n      rrtmg_install -p.\n"
+    printf "\n      Description of available options:\n"
+    printf "\n      Option  Description                              Default-Value"
+    printf "\n        -p    installation path                                   ./"
+
+    printf "\n "
+    printf "\n      Possible values of positional parameter <modus>:"
+    printf "\n        \"?\"       -  this outline \n\n") | more
+    exit
+ elif [[ "$1" != "" ]]
+ then
+    printf "\n  +++ positional parameter $1 unknown \n"
+    locat=parameter; exit
+ fi
+
+ prog="librrtmg"
+ version="1.0"
+
+
+# 1 static
+
+ if [[ $compile_static = true ]]
+ then
+    printf "\n      Start compiling static library $prog... (make)\n\n"
+    mkdir -p static/lib
+    mkdir -p static/include
+    make -f Makefile_static F90=$compiler_name  PROG=$prog F90FLAGS="$fopts"
+    cp $prog.a  static/lib
+    cp *.mod    static/include
+    make -f Makefile_static clean
+    mkdir -p $install_path/static/lib
+    mkdir -p $install_path/static/include
+    cp static/lib/$prog.a $install_path/static/lib
+    cp static/include/*.mod $install_path/static/include/
+    rm -rf static
+    printf "\n      finished.\n"
+ fi
+
+# 2 static debug
+ if [[ $compile_static_debug = true ]]
+ then
+    printf "\n      Start compiling static debug library $prog... (make)\n\n"
+    mkdir -p static_trace/lib
+    mkdir -p static_trace/include
+    make -f Makefile_static F90=$compiler_name  PROG=$prog F90FLAGS="$fopts_trace"
+    cp $prog.a  static_trace/lib
+    cp *.mod    static_trace/include
+    make -f Makefile_static clean
+    mkdir -p $install_path/static_trace/lib
+    mkdir -p $install_path/static_trace/include
+    cp static_trace/lib/$prog.a $install_path/static_trace/lib
+    cp static_trace/include/*.mod $install_path/static_trace/include/
+    rm -rf static_trace
+    printf "\n      finished.\n"
+ fi
+
+# 3 shared
+ if [[ $compile_shared = true ]]
+ then
+    printf "\n      Start compiling shared (dynamic) library $prog... (make)\n\n"
+    mkdir -p shared/lib
+    mkdir -p shared/include
+    make -f Makefile F90=$compiler_name  PROG=$prog F90FLAGS="$fopts"
+    cp $prog.so shared/lib/$prog.so.$version
+    cp *.mod    shared/include/
+    make -f Makefile clean
+    mkdir -p $install_path/shared/lib
+    mkdir -p $install_path/shared/include
+    cp shared/lib/$prog.so.$version $install_path/shared/lib/
+    cp shared/include/*.mod $install_path/shared/include/
+    if [ -f $install_path/shared/lib/$prog.so.1 ]
+    then
+       rm $install_path/shared/lib/$prog.so.1
+    fi
+    ln -s $install_path/shared/lib/$prog.so.$version $install_path/shared/lib/$prog.so.1
+    if [ -f $install_path/shared/lib/$prog.so ]
+    then
+       rm $install_path/shared/lib/$prog.so
+    fi
+    ln -s $install_path/shared/lib/$prog.so.1 $install_path/shared/lib/$prog.so
+    rm -rf shared
+    printf "\n      finished.\n"
+ fi
+
+# 4 shared debug
+ if [[ $compile_static_debug = true ]]
+ then
+    printf "\n      Start compiling shared debug library $prog... (make)\n\n"
+    mkdir -p shared_trace/lib
+    mkdir -p shared_trace/include
+    make -f Makefile F90=$compiler_name  PROG=$prog F90FLAGS="$fopts_trace"
+    cp $prog.so shared_trace/lib/$prog.so.$version
+    cp *.mod    shared_trace/include/
+    make -f Makefile clean
+    mkdir -p $install_path/shared_trace/lib
+    mkdir -p $install_path/shared_trace/include
+    cp shared_trace/lib/$prog.so.$version $install_path/shared_trace/lib
+    cp shared_trace/include/*.mod $install_path/shared_trace/include/
+    if [ -f $install_path/shared_trace/lib/$prog.so.1 ]
+    then
+       rm $install_path/shared_trace/lib/$prog.so.1
+    fi
+    ln -s $install_path/shared_trace/lib/$prog.so.$version $install_path/shared_trace/lib/$prog.so.1
+    if [ -f $install_path/shared_trace/lib/$prog.so ]
+    then
+       rm $install_path/shared_trace/lib/$prog.so
+    fi
+    ln -s $install_path/shared_trace/lib/$prog.so.1 $install_path/shared_trace/lib/$prog.so
+    rm -rf shared_trace
+    printf "\n      finished.\n"
+ fi
+
+ printf "\n      Libraries $prog are installed in \"$install_path\".\n\n" 
+ printf "\n\n  *** all actions complete."
+ 

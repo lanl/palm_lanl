@@ -1,0 +1,65 @@
+Usage of PALM NCL script crosssections_new.ncl
+==============================================
+Last change: $Id: crosssections_new.usage.txt 127 2007-10-23 11:05:25Z letzel $
+initial version: Marcus Letzel, 17 July 2007
+contour and vector overlay: Theres Franke/Marcus Letzel, 26 July 2007
+
+Command-line syntax
+===================
+ncl crosssections_new.ncl [parameters]
+
+The parameter syntax depends on their data type:
+A) numeric data    : parameter=value      (for example t=0)
+B) character string: 'parameter="string"' (for example 'var="u_xy"')
+
+Alphabetical parameter list
+===========================
+Name	Default value		Meaning
+-----------------------------------------------------------------------------
+cm	"ncview_default"	colormap
+di	""			input directory (with final /)
+d	=di			output directory (with final /)
+fi	"example_xy"		base name of input file (without suffix)
+fo	""			base name of output files (without suffix)
+fill_mode "AreaFill"		fill mode for mode="Fill":
+				"AreaFill", "RasterFill" or "CellFill"
+mode	"Fill"			output mode ("Fill" or "Line")
+t	0			output time step
+var	"u_xy"			variable to be output
+xs	-1e+38			output x-coordinate range start (in m)
+xe	+1e+38			output x-coordinate range end   (in m)
+ys	-1e+38			output y-coordinate range start (in m)
+ye	+1e+38			output y-coordinate range end   (in m)
+zs	-1e+38			output z-coordinate range start (in m)
+ze	+1e+38			output z-coordinate range end   (in m)
+co                              variable to be output as contour overlay
+wv1                             first component of wind vector overlay
+wv2                             second component of wind vector overlay
+
+Usage
+=====
+This script draws NCL contour plots from two-dimensional cross-sections of 
+NetCDF data produced by PALM. Instantaneous or time-averaged xy-, xz-, yz- or 
+3D-data can be used with this script.
+
+The sectional plane has neither a default orientation nor a default position.
+Both must be specified together using the coordinate range parameters:
+- For xy cross-sections specify zs and ze (with zs=za).
+- For xz cross-sections specify ys and ye (with ys=ya).
+- For yz cross-sections specify xs and xe (with xs=xa).
+
+The remaining coordinate range parameters can optionally be used to restrict 
+the output coordinate range.
+
+By default, only screen output is produced. Additional file output is optional
+and requires to specify the parameter fo. This will create three files: fo.pdf,
+fo.eps and fo.ps.
+
+Input and output files can optionally be preceeded by an input and output
+directory di and d, respectively. If not specified, this scripts expects the
+input file to reside in the current directory.
+
+The contours can be drawn either in "Fill" (default) or "Line" mode.
+
+The parameter co activates an optional contour overlay; the parameters wv1 and
+wv2 activate an optional vector overlay.

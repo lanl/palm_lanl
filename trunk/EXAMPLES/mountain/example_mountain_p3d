@@ -1,0 +1,57 @@
+ &inipar nx = 159, ny = 79, nz = 40,
+         dx = 50.0, dy = 50.0, dz = 50.0,
+         dz_stretch_level = 1500.0,
+
+         fft_method = 'temperton-algorithm',
+
+         momentum_advec = 'pw-scheme',         ! topography does not work with
+         scalar_advec   = 'pw-scheme',         ! Wicker-Skamarock advection so far
+
+         initializing_actions = 'set_1d-model_profiles',
+         dt_run_control_1d = 43200.0, dt_pr_1d = 43200.0,    
+ 
+         ug_surface = 5.5, vg_surface = -2.0,
+
+         pt_vertical_gradient       = 0.0, 5.0,   0.5,
+         pt_vertical_gradient_level = 0.0, 600.0, 700.0,  !Inversion below the mountain top
+
+         rayleigh_damping_factor = 0.01,
+
+         topography = 'read_from_file',                   !Gaussian shaped mountain
+                                                               !height: 1km, base diameter: 2km
+         wall_heatflux(0) = 0.05,
+          
+	 surface_heatflux = 0.05, bc_pt_b = 'neumann', /
+
+ &d3par  end_time = 7200.0,
+
+         create_disturbances = .T.,
+         dt_disturb = 150.0, disturbance_energy_limit = 0.01,
+
+         dt_run_control = 0.0,
+         dt_dots = 0.0,
+         
+         dt_data_output = 1800.0,
+         dt_data_output_av = 1800.0,
+         averaging_interval = 900.0,
+         dt_averaging_input = 10.0,
+
+         section_xy =  4, 8, 14, 20,
+         section_xz = -1, 40, 
+         section_yz = 60,
+
+         data_output = 'u_xy','u_xz', 'u_yz', 'u_xy_av',
+                       'v_xy','v_xz', 'v_yz', 'v_xy_av',
+                       'w_xy','w_xz', 'w_yz', 'w_xy_av',
+                       'pt_xy','pt_xz', 'pt_yz', 'pt_xy_av',
+                           
+
+         dt_dopr = 1800.0,
+         averaging_interval_pr = 600.0,
+         dt_averaging_input_pr = 10.0,
+         data_output_pr = '#pt','#u', '#v', 'w',
+                          'wpt', 'w*pt*', 'w"pt"',
+                          'wu', 'w*u*', 'w"u"',
+                          'u*2', 'v*2', 'w*2',
+
+         data_output_2d_on_each_pe = .F., /

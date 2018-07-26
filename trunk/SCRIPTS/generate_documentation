@@ -1,0 +1,94 @@
+#!/bin/bash
+#--------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018  Leibniz Universitaet Hannover
+#--------------------------------------------------------------------------------#
+#
+# Current revisions:
+# ------------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: generate_documentation 2718 2018-01-02 08:49:38Z maronga $
+# Corrected "Former revisions" section
+# svn propset keyword
+# 
+# 
+#
+# 2696 2017-12-14 17:12:51Z kanani
+# Change in file header (GPL part)
+# 
+# 1714 knoop
+# Initial revision
+# 
+#--------------------------------------------------------------------------------#
+# generate_documentation - script for generating the PALM code documentation
+#--------------------------------------------------------------------------------#
+
+echo "Generating PALM source code documentation..."
+
+# Checking if the environment variable PALM_BIN is set.
+if [[ -z $PALM_BIN ]]; then
+   echo "PALM_BIN is not set."
+   exit 1
+fi
+
+doc_dir=$PALM_BIN/../../documentation
+
+# Checking for doxygen
+if type -t doxygen; then
+
+   # Removing old documentation
+   if [[ -d $doc_dir ]];then
+      echo "Remove old documentation"
+      rm -r $doc_dir
+   fi
+   # Generating HTML documentation
+   echo "found doxygen. Continuing..."
+   cd $PALM_BIN/../DOC
+   doxygen palm2doxygen.config
+   if [[ $? -ne 0 ]];then
+      echo "doxygen detected an error."
+      exit 1
+   fi
+   cd $doc_dir
+   doc_dir=$(pwd)
+   ln -s $(pwd)/html/index.html PALM_doc.html
+   echo "HTML source code documentation generated."
+   
+   # Checking for pdflatex
+   if type -t pdflatex; then
+   
+      # Generating PDF documentation
+      cd $doc_dir/latex
+      make pdf
+      cd $doc_dir
+      ln -s $(pwd)/latex/refman.pdf PALM_doc.pdf
+      echo "PDF source code documentation generated."
+   
+   else
+      echo "ERROR: pdflatex not found."
+      echo "Skipping PDF documentation generation. Terminating!"
+      exit 1
+   fi
+else
+   echo "ERROR: doxygen not found."
+   echo "Skipping PALM documentation generation. Terminating!"
+   exit 1
+fi
+
+echo "The PALM source code documentation is located in: $doc_dir"
+echo "Done."

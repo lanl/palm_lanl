@@ -1,0 +1,51 @@
+ &inipar nx = 79, ny = 79, nz = 80,
+         dx = 25.0, dy = 25.0, dz = 25.0,
+         dz_stretch_level = 1200.0,
+
+         fft_method = 'temperton-algorithm',
+
+         initializing_actions = 'set_constant_profiles',
+         ug_surface = 0.0, vg_surface = 0.0,
+         pt_surface = 288.0,
+         pt_vertical_gradient       = 0.0, 1.0,
+         pt_vertical_gradient_level = 0.0, 800.0,
+
+         humidity = .TRUE., cloud_physics = .TRUE.,
+         q_surface = 0.008,
+         surface_waterflux = 3.20E-4,
+         q_vertical_gradient        = -0.00029, -0.002, 0.0,
+         q_vertical_gradient_level  =      0.0,  700.0, 800.0,
+
+	 surface_heatflux = 0.1, bc_pt_b = 'neumann', bc_e_b = 'neumann',
+                                 bc_q_b = 'neumann', /
+
+
+ &d3par  end_time = 3600.0, dt = 1.0,
+
+         create_disturbances = .T.,
+         dt_disturb = 150.0, disturbance_energy_limit = 0.01,
+
+         dt_run_control = 60.0,
+
+         data_output = 'ql',
+
+         nz_do3d = 50, /
+
+ &particles_par      dt_prel = 200.0, particle_maximum_age = 3600.0,
+                     psb = 50.0,
+                     pdx = 200.0, pdy = 200.0,
+                     random_start_position = .T.,
+                     use_particle_tails = .T., skip_particles_for_tail = 1,
+                     maximum_number_of_tailpoints = 60,
+                     minimum_tailpoint_distance = 25.0,
+                     maximum_tailpoint_age = 300.0,
+                     write_particle_statistics = .F., /
+
+ &dvrp_graphics_par  dvrp_username = '<replace by your IMUK username>',
+                     dvrp_host = '130.75.105.2',
+                     dvrp_directory = '<rep by IMUK usern>/<replace by subdirectory name of your choice>',
+                     mode_dvrp = 'particles', 'isosurface1',
+                     threshold = 0.0002,
+                     particle_color = 'pt*', color_interval = -0.5, +0.5,
+                     particle_dvrpsize = 'absw', dvrpsize_interval = 0.0, 5.0,
+                     dt_dvrp = 1.0, /

@@ -1,0 +1,298 @@
+#!/usr/bin/env bash
+#--------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018  Leibniz Universitaet Hannover
+#--------------------------------------------------------------------------------#
+#
+# Current revisions:
+# -----------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: palm_simple_run 2875 2018-03-13 11:00:25Z knoop $
+# made RUN dirs unique with timestamp again
+# 
+# 2850 2018-03-05 14:24:40Z knoop
+# Refactoring of the palm_simple_ build and run scripts
+# 
+# 2718 2018-01-02 08:49:38Z maronga
+# Corrected "Former revisions" section
+#
+# 2696 2017-12-14 17:12:51Z kanani
+# Change in file header (GPL part)
+#
+# 2225 2017-05-16 11:36:20Z raasch
+# shell changed to bash
+#
+# 1310 2014-03-14 08:01:56Z raasch
+# update GPL copyright
+#
+# 1221 2013-09-10 08:59:13Z raasch
+# setting of PGI_ACC_SYNCHRONOUS=1 for running with pgi-openacc
+#
+# 1172 2013-05-30 11:46:00Z raasch
+# for performance reasons set PGI_ACC_SYNCHRONOUS=1 for pgi/openacc execution
+#
+# 1171 2013-05-30 11:27:45Z raasch
+# new option -e which defines the execution command to be used to run PALM
+#
+# 1046 2012-11-09 14:38:45Z maronga
+# code put under GPL (PALM 3.9)
+#
+# 29/08/11 - BjornW - Adapted for lcflow (ForWind cluster in Oldenburg)
+# 18/03/10 - Siggi  - Some comments changed
+# 25/01/10 - Siggi  - Generating the first version
+
+
+#--------------------------------------------------------------------------------#
+# palm_simple_run - a simple method for running the palm code without
+#                   using the mrun script
+#
+# This script runs the palm code in a unique subdirectory (OUTPUT...,
+# current time/date and number of processors are part of the subdirectory
+# name).
+# It requires that palm has been installed with command
+# palm_simple_install and that the executable palm has been created
+# with make in directory  ...../MAKE_DEPOSITORY_simple
+#--------------------------------------------------------------------------------#
+#LPV -- Commenting out 7/3/2018 does not work on mac, adding argument to call
+#SOURCE="${BASH_SOURCE[0]}"
+#while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+#  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+#  SOURCE="$(readlink "$SOURCE")"
+#  # if $SOURCE was a relative symlink, we need to resolve it
+#  # relative to the path where the symlink file was located
+#  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+#done
+#SCRIPT_LOCATION="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+#
+#working_dir=$(readlink -f "${SCRIPT_LOCATION}/../../")
+#trunk_dir=$(readlink -f "${SCRIPT_LOCATION}/../")
+
+# Variable declarations + default values
+build_config=unknown
+run_config=unknown
+test_case=unknown
+mpi_ranks=1
+mpi_ranks_per_node=1
+openmp_threads=1
+localhost_realname=$(hostname)
+cpumax=999999
+SCRIPT_LOCATION=~/palm/current_version/trunk/SCRIPTS
+work_dir=unknown
+restart_run=false
+remote_dir=true #assumes everything in work_dir
+
+print_help() {
+   echo "Usage: palm_simple_run -b <build-config> -c <run-config> -s <test-case>"
+   echo "                       [-n <mpi-ranks-per-node>] [-p <mpi-ranks>]"
+   echo "                       [-t <openmp-threads>] [-d <base-directory>]"
+   echo ""
+   echo "List of allowed option:"
+   echo ""
+   echo "   -b <build-config>        Suffix of any MAKE.inc.<build-config> file in the trunk/INSTALL dir."
+   echo "   -c <run-config>          Suffix of any RUN.cmd.<run-config> file in the trunk/INSTALL dir."
+   echo "   -n <mpi-ranks-per-node>  Number of MPI ranks per compute node."
+   echo "   -p <mpi-ranks>           Number of MPI ranks in total."
+   echo "   -s <test-case>           Prefix of any <test-case>_p3d file in the trunk/INSTALL dir."
+   echo "   -t <openmp-threads>      Number of OpenMP threads"
+   echo "   -d <base-directory>      SCRIPTS directory, defaults to ~/palm/current_version/trunk/SCRIPTS"
+   echo "   -w <working-directory>   working dirctory, defaults to SCRIPTS/../../"
+   echo ""
+   echo ""
+}
+
+
+   # Read shellscript options
+while  getopts  :b:w:d:c:n:p:s:t:h:r  option
+do
+  case  $option  in
+      (b)   build_config=$OPTARG;;
+      (c)   run_config=$OPTARG;;
+      (n)   mpi_ranks_per_node=$OPTARG;;
+      (p)   mpi_ranks=$OPTARG;;
+      (s)   test_case=$OPTARG;;
+      (t)   openmp_threads=$OPTARG;;
+      (d)   SCRIPT_LOCATION=$OPTARG;; 
+      (w)   work_dir=$OPTARG;;
+      (r)   restart_run=true;;
+      (h)   print_help
+            exit 0;;
+      (\?)  echo "Unknown option -$OPTARG"
+            print_help
+            exit 1;;
+  esac
+done
+
+if [[ ${build_config} == "unknown" ]]
+then
+   echo "Missing option -b <build-config>"
+   print_help
+   exit 1
+fi
+
+if [[ ${run_config} == "unknown" ]]
+then
+   echo "Missing option -c <run-config>"
+   print_help
+   exit 1
+fi
+
+working_dir=$work_dir
+if [[ ${work_dir} == "unknown" ]]
+then
+   working_dir=${SCRIPT_LOCATION}/../../
+   remote_dir=false
+fi
+
+trunk_dir=${SCRIPT_LOCATION}/../
+
+if [[ ${test_case} == "unknown" ]]
+then
+   echo "Missing option -s <test-case>"
+   print_help
+   exit 1
+fi
+
+build_dir=${working_dir}/BUILD_${build_config}
+echo $build_dir
+if [[ ! -d ${build_dir} ]]
+then
+   echo "+++ ERROR: No build for configuration ${build_config} exists! "
+   echo "           Please run \"palm_simple_install -b ${build_config}\""
+   echo "           or specify a different build that this run should be based on"
+   exit 1
+fi
+
+   # Check, if include file exists
+if [[ "$remote_dir" = true ]]
+then
+   run_config_file=${working_dir}/RUN.cmd.${run_config}
+else
+   run_config_file=${trunk_dir}/INSTALL/RUN.cmd.${run_config}
+fi
+
+if [[ ! -f ${run_config_file} ]]
+then
+   echo "+++ ERROR: no such run command file:"
+   echo "    \"${run_config_file}\""
+   exit 1
+fi
+
+   # Find out the global svn revision number
+global_revision=$(svnversion ${trunk_dir}  2>/dev/null)
+global_revision="Rev: $global_revision"
+
+
+   # Generate unique directory/files for this run
+timedate="$(date +%F_%H:%M:%S)"
+#suffix=${build_config}_${run_config}_${test_case}_${mpi_ranks}_${mpi_ranks_per_node}_${openmp_threads}_${timedate}
+suffix=${build_config}_${run_config}_${test_case}
+execution_dir=${working_dir}/RUN_${suffix}
+
+if [[ "$restart_run" = true ]] 
+then
+   mv ${execution_dir}/BINOUT ${execution_dir}/BININ
+   cp restart_oceanml_p3d ${work_dir}/test_oceanml_p3d
+else
+   if [[ ! -d ${execution_dir} ]]
+   then
+      mkdir -p ${execution_dir}
+   else
+      rm -r ${execution_dir}
+      mkdir -p ${execution_dir}
+   fi
+fi
+echo "*** PALM running in directory ${execution_dir}"
+
+
+# Check if palm has been installed and copy executable into the run
+# directory
+if [[ ! -f ${build_dir}/palm ]]
+then
+   echo "+++ ERROR: palm executable does not exist."
+   echo "           Please run \"palm_simple_install\"."
+   exit 1
+else
+   cp  ${build_dir}/palm  ${execution_dir}/palm
+fi
+
+
+# Check, if parameter file exists and copy into the run directory
+if [[ "$remote_dir" = true ]]
+then
+   test_config_file=${working_dir}/${test_case}_p3d
+else
+   test_config_file=${trunk_dir}/INSTALL/${test_case}_p3d
+fi
+
+
+if [[ ! -f $test_config_file ]]
+then
+   echo "+++ ERROR: parameter file"
+   echo "           \"$test_config_file\""
+   echo "           does not exist."
+   exit 1
+else
+   cp  $test_config_file  ${execution_dir}/PARIN
+fi
+
+
+
+
+# Create NAMELIST file containing environment values needed by palm
+cat  >  ${execution_dir}/ENVPAR  <<  EOF
+&envpar  run_identifier = '${test_case}',
+         host = 'localhost',
+         revision = '${global_revision}',
+         tasks_per_node = ${mpi_ranks_per_node},
+         maximum_parallel_io_streams = ${mpi_ranks_per_node},
+         batch_job = .TRUE.,
+         write_binary = .TRUE.,
+         maximum_cpu_time_allowed = ${cpumax}.,
+         local_dvrserver_running = .FALSE.,
+/
+EOF
+
+
+# Coupled runs cannot be carried out with this simple run script
+echo "no_coupling"  >  ${execution_dir}/runfile_atmos
+
+
+# Generate hostfile (if neccessary)
+(( ii = 1 ))
+while (( ii <= $mpi_ranks ))
+do
+   echo  $localhost_realname  >>  ${execution_dir}/hostfile
+   (( ii = ii + 1 ))
+done
+
+
+# Switch to run directory
+cd  ${execution_dir}
+
+# Start palm run
+echo "*** PALM will be executed with configuration: ${run_config}"
+echo "       MPI ranks in total: $mpi_ranks"
+echo "       MPI ranks per node: $mpi_ranks_per_node"
+echo "       OpenMP threads:     $openmp_threads"
+
+# execute according to the run command file
+source ${run_config_file}
+
+echo "*** PALM execution finished. Results can be found in:"
+echo "    \"${execution_dir}\""
+exit 0

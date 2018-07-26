@@ -1,0 +1,761 @@
+#! /bin/bash
+
+# batch_scp - script for automatic file/directory transfer using scp
+
+#--------------------------------------------------------------------------------#
+# This file is part of the PALM model system.
+#
+# PALM is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# PALM is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM. If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 1997-2018  Leibniz Universitaet Hannover
+#--------------------------------------------------------------------------------#
+#
+# Current revisions:
+# ------------------
+# 
+# 
+# Former revisions:
+# -----------------
+# $Id: batch_scp 2718 2018-01-02 08:49:38Z maronga $
+# Corrected "Former revisions" section
+# 
+# 2715 2017-12-27 11:31:43Z raasch
+# last commit documented
+# 
+# 2714 2017-12-27 11:25:57Z raasch
+# bugfix: variable cycle explicitly interpreted with 10 as the number base
+# 
+# 2696 2017-12-14 17:12:51Z kanani
+# Change in file header (GPL part)
+#
+# 2600 2017-11-01 14:11:20Z raasch
+# cycle numbers made three digits wide
+# host depending code completely removed
+# 
+# 2261 2017-06-08 14:25:57Z raasch
+# option usecycle added, script is running under bash now,
+# filenames are allowed to contain arbitrary number of dots "."
+#
+# 1310 2014-03-14 08:01:56Z raasch
+#
+# 1202 2013-07-10 16:22:07Z witha
+# adjustments for Forwind cluster (lcflow): using absolute paths for ssh
+#
+# 1099 2013-02-10 01:47:43Z raasch
+# LANG variable is unset in some ssh calls to guarantee messages in English
+#
+# 1094 2013-02-03 01:52:12Z raasch
+# new option -P for explicit setting of ssh/scp port
+#
+# 1090 2013-02-02 07:06:13Z raasch 
+# code put under GPL (PALM 3.9) 
+# adjustments for Kyushu-University computing center (lckyut)
+# old changelog messages removed
+#
+# 08/03/11 - Siggi - adjustments for ibmkisti: this machine allows
+#                    outgoing ssh/scp connections only from the
+#                    interactive nodes (gaiad). All ssh/scp traffic is
+#                    done via this interactive node.
+# 04/01/02 - Siggi - first version finished
+# 29/11/01 - Siggi - script development started
+#
+#--------------------------------------------------------------------------------#
+# batch_scp - script for automatic file/directory transfers using scp
+#
+# batch_scp has up to 5 arguments (first 4 are mandatory):
+#               $1 = IP-addres of remote (target) machine
+#               $2 = file to be transferred
+#               $3 = directory of remote machine, where file should be copied to
+#               $4 = filename that file should be given on remote machine
+#               $5 = file extension (optional argument)
+#
+# ATTENTION: problems might occur if directories on remote machine include very
+#            old files for which "ls -al" does give "year" as modification
+#            time instead of "hh:mm". In such a case, batch_scp cannot check the
+#            filename and may not find the file (e.g. if option -g is used).
+#--------------------------------------------------------------------------------#
+
+
+ 
+    # VARIABLENVEREINBARUNGEN + DEFAULTWERTE 
+ random=$RANDOM
+
+ absolut=false
+ append=false
+ catalog_copy=false
+ check=false
+ cyclestring=""
+ delete=false
+ errfile=batch_scp.errfile.$random
+ filelist=filelist.$random
+ get=false
+ local_host=`hostname`
+ local_wdir=`pwd`
+ locat=normal
+ make_catalog=false
+ overwrite=false
+ print_local_filename=false
+ quote_wait=false
+ remote_user=""
+ silent=false
+ transfermode=binary
+ typeset -i iii icycle maxcycle=0 usecycle wait=0
+
+    # FEHLERBEHANDLUNG
+    # BEI EXIT:
+ trap 'if [[ $locat != normal ]]
+       then
+          [[ -f "$filelist" ]]  &&  cat $filelist
+          [[ -f "$errfile"  ]]  &&  cat $errfile
+          rm -rf $filelist $errfile
+          printf " +++ BATCH_SCP terminated \n"
+          printf "     locat     = $locat \n"
+          printf "     arguments = $1 $2 $3 $4 \n\n"
+          exit 1
+       fi' exit
+
+
+    # BEI TERMINAL-BREAK:
+ trap 'rm -rf $filelist $errfile
+       printf " +++ BATCH_SCP terminated \n\n"
+       exit 1
+      ' 2
+
+
+    # SHELLSCRIPT-OPTIONEN EINLESEN
+ while  getopts  :aAbcCdgmnoP:qsu:U:w:  option
+ do
+   case  $option  in
+       (a)   absolut=true;;
+       (A)   append=true;;
+       (b)   transfermode=binary;;
+       (c)   catalog_copy=true;;
+       (C)   check=true;;
+       (d)   delete=true;;
+       (g)   get=true;;
+       (m)   make_catalog=true;;
+       (n)   print_local_filename=true;;  # Option ist nicht dokumentiert !
+       (o)   overwrite=true;;
+       (P)   scp_port=$OPTARG;;
+       (q)   quote_wait=true;;
+       (s)   silent=true;;
+       (u)   remote_user=$OPTARG;;
+       (U)   usecycle=$OPTARG;;
+       (w)   wait=$OPTARG;;
+       (\?)  printf "  +++ option $OPTARG unknown \n"
+             printf "  --> call: batch_scp [-aAbcCdgmnoqsuw] <IP-adress> <localfile> <remotepath> <remotefile>\n"
+             locat=parameter;exit;;
+   esac
+ done
+
+ (( to_shift = $OPTIND - 1 ))
+ shift $to_shift
+
+
+
+ 
+    # KURZE AUFRUFBESCHREIBUNG WIRD HIER AUSGEGEBEN
+ if [ "$1" = "?" ]
+ then
+   (printf "\n  *** batch_scp can be called as follows:\n"
+    printf "\n      batch_scp -a -b -d -g -o -q -s -u.. -U.. -w..  <param1> <param2> <param3> <param4>\n"
+    printf "\n      Description of available options:\n"
+    printf "\n      Option  Description                            Default-Value"
+    printf "\n        -a    Filenames are absolute. No cycle-      ---"
+    printf "\n              numbers will be determined"
+    printf "\n        -A    append to destination file             ---"
+    printf "\n        -b    use binary-modus for transfer          ASCII-modus"
+    printf "\n        -c    transfer of directory                  ---"
+    printf "\n        -C    check-Modus, no transfer               ---"
+    printf "\n        -d    file to be transferred will be         ---"
+    printf "\n              deleted after successful transfer"
+    printf "\n        -g    change of transfer direction, i.e.     ---"
+    printf "\n              file will be transferred from"
+    printf "\n              destination host"
+    printf "\n        -o    any existing file will be overwritten  ---"
+    printf "\n        -q    switch on  \"quote wait\"  on          ---"
+    printf "\n              estination host"
+    printf "\n        -s    do not display informative messages    ---"
+    printf "\n        -u    username on remote machine             <username>"
+    printf "\n        -U    cycle number to be used                ---"
+    printf "\n        -w    waiting time in seconds, before trans- 0"
+    printf "\n              fer will be initiated"
+    printf "\n "
+    printf "\n      The positional parameters <param1> - <param4> must be provided at"
+    printf "\n      any time and have the following meaning:"
+    printf "\n        <param1>  -  IP-adress of destination host"
+    printf "\n                     or \"?\"  (creates this outline)"
+    printf "\n        <param2>  -  abs. or rel. path of file to be transferred"
+    printf "\n        <param3>  -  directory (abs.!) on destination host. Special cahracters"
+    printf "\n                     like \~ are allowed but must be quoted by \"."
+    printf "\n        <param4>  -  filename (without path!) on destination host; must not"
+    printf "\n                     be given, if option -c is used."
+    printf "\n      When using option -g, file will be copied from destination host to file"
+    printf "\n      <param2>. In this case, no overwriting is possible.") | more
+    exit
+ fi
+
+
+    # PRUEFEN, OB ALLE ARGUMENTE VORLIEGEN
+ if [[ "$1" = "" ]]
+ then
+    printf " +++ 1. argument missing \n"
+    locat=argument; exit
+ elif [[ "$2" = "" ]]
+ then
+    printf " +++ 2. argument missing \n"
+    locat=argument; exit
+ elif [[ "$3" = "" ]]
+ then
+    printf " +++ 3. argument missing \n"
+    locat=argument; exit
+ elif [[ "$4" = "" ]]
+ then
+    printf " +++ 4. argument missing \n"
+    locat=argument; exit
+ fi
+
+
+    # USER-NAME AUF ZIELRECHNER AUS .NETRC-DATEI ERMITTELN
+ if [[ -z $remote_user ]]
+ then
+
+       # PRUEFEN, OB NETRC-DATEI VORHANDEN
+    if [[ ! -f ~/.netrc ]]
+    then
+       printf " +++ option -u not given; \n"
+       printf "     getting remote-username from password file failed \n"
+       printf "     because ~/.netrc does not exist \n"
+       locat=netrc; exit
+    fi
+    grep  $1  ~/.netrc | read dum dum dum remote_user dum dum
+ fi
+
+
+    # APPEND IST NUR BEI TRANSFER EINZELNER DATEIEN OHNE UEBERSCHREIBEN
+    # ERLAUBT. GET IST DABEI EBENFALLS NICHT ERLAUBT
+ if [[ $append = true  &&  ( $get = true || $catalog_copy = true || $overwrite = true ) ]]
+ then
+    printf " +++ options -g, -c and -o are not allowed, if -A is given \n"
+    locat=parameter; exit
+ fi
+
+
+    # QUOTE WAIT FUNKTIONIERT NICHT BEIM KOPIEREN GANZER VERZEICHNISSE
+ if [[ $quote_wait = true  &&  $catalog_copy = true ]]
+ then
+    printf " +++ options  -c  and  -q  must not be used simultaneously\n"
+    locat=parameter; exit
+ fi
+
+
+    # IM CHECK-MODUS WIRD SCRIPT HIER BEENDET
+ [[ $check = true ]]  &&  exit
+
+
+    # BESTIMMTE ZEIT WARTEN, BIS WEITERGEMACHT WIRD (NOETIG Z.B. BEI TRANSFER
+    # VON JOBPROTOKOLLEN AUS JOBS HERAUS)
+ sleep  $wait
+
+
+    # Set port number option for calls of ssh/scp, subjob and batch_scp scripts
+ if [[ "$scp_port" != "" ]]
+ then
+    PORTOPT="-P $scp_port"
+    SSH_PORTOPT="-p $scp_port"
+ fi
+
+
+    # PRUEFEN, OB LOKALE DATEI/LOKALES VERZEICHNIS VORHANDEN BZW. NICHT VORHANDEN
+ if [[ $get = false ]]
+ then
+    if [[ $catalog_copy = false ]]
+    then
+       if [[ ! -f $2 ]]
+       then
+          printf " +++ file \"$2\" to be transferred does not exist \n"
+          locat=localfile; exit
+       fi
+    else
+       if [[ ! -d $2 ]]
+       then
+          printf " +++ directory \"$2\" to be transferred does not exist\n"
+          printf "     or is not a directory \n"
+          locat=localfile; exit
+       fi
+    fi
+ else
+    if [[ $catalog_copy = false ]]
+    then
+       if [[ -f $2 ]]
+       then
+          if [[ $overwrite = true ]]
+          then
+             rm  $2
+          else
+             printf " +++ local file \"$2\" is already existing \n"
+             locat=localfile; exit
+          fi
+       else
+
+             # PRUEFEN, OB SICH LOKALE DATEI ANLEGEN LAESST
+          local_dirname=`dirname $2`
+          if [[ ! -d $local_dirname ]]
+          then
+             printf " +++ local directory \"$local_dirname\" \n"
+             printf "     does not exist or is not a directory \n"
+             printf " +++ cannot copy file \"$3/$4\" \n"
+             printf "     from \"$1\" to \"$local_host\" \n"
+             locat=localfile; exit
+          fi
+       fi
+    else
+       if [[ -d $2  ||  -f $2 ]]
+       then
+          printf " +++ local directory \"$2\" is already existing, \n"
+          printf "     or a file with the same name exists \n"
+          locat=localfile; exit
+       fi
+    fi
+ fi
+
+
+    # VERZEICHNISLSTE DES ZIELRECHNERS ERSTELLEN
+ ssh $SSH_PORTOPT $1 -l $remote_user "unset LANG; cd $3; ls -1; echo '*** list complete'" > $filelist  2>&1
+ ssh_status=$?
+
+ if [[ $ssh_status != 0 ]]
+ then
+    if [[ ! -f $filelist ]]
+    then
+       echo " local_host = $local_host   ssh_status = $ssh_status"
+       locat=ssh_failed_1; exit
+    else
+       if [[ $(grep -c "*** list complete" $filelist) = 0 ]]
+       then
+          echo " local_host = $local_host   ssh_status = $ssh_status"
+          locat=ssh_failed_2; exit
+       fi
+    fi
+ fi
+
+
+    # PRUEFEN, OB VERZEICHNIS VORHANDEN IST. WENN GANZES VERZEICHNISS ZUM
+    # ZIELRECHNER KOPIERT WERDEN SOLL, DARF DORT NOCH KEIN ENTSPRECHENDES
+    # VERZEICHNIS VORHANDEN SEIN
+ if [[ $(cat $filelist | grep -c "not found") != 0  || \
+       $(cat $filelist | grep -c "No such file or directory") != 0 ]]
+ then
+    if [[ ! ( $catalog_copy = true  &&  $get = false ) ]]
+    then
+       if [[ $make_catalog = false ]]
+       then
+          printf " +++ directory \"$3\" does not exist on destination host (\"$1\") \n"
+          locat=directory; exit
+       else
+          if [[ $silent = false ]]
+          then
+             printf "  >>> directory \"$3\" does not exist on destination host (\"$1\")"
+             printf "\n      trying to create \"$3\" \n"
+          fi
+
+          make_catalog=force
+       fi
+    fi
+ fi
+
+
+    # PRUEFEN, OB DATEI/VERZEICHNIS VORHANDEN, WENN JA, HOECHSTEN ZYKLUS
+    # ERMITTELN (BZW. IM ABSOLUT-MODUS PRUEFEN, OB DATEI VORHANDEN IST)
+    # DAS GANZE ABER NUR, WENN NICHT OVERWRITE-MODUS GEWAEHLT WURDE, DIE
+    # EVENTUELL VORHANDENE DATEI ALSO UEBERSCHRIEBEN WERDEN SOLL
+ found=false
+ if [[ ( $overwrite = false   &&  $get = false )  ||  $get = true ]]
+ then
+    while  read zeile
+    do
+       if [[ $absolut = false ]]
+       then
+             # REMOVE EXTENSION, IF EXISTING AND GIVEN AS ARGUMENT
+          if [[ "$5" != ""  &&  "$5" != " " ]]
+          then
+             extension=${zeile##*.}
+             if [[ $extension = $5 ]]
+             then
+                text=${zeile%.*}
+             else
+                text=${zeile}
+             fi
+          else
+             text=${zeile}
+          fi
+
+             # GET AND REMOVE CYCLE NUMBER, IF EXISTING, AND CHECK, IF FILE EXISTS
+          cycle=${text##*.}
+          if [[ $cycle = $text ]]
+          then
+                # filename contains no dot, i.e. no cycle number
+             if [[ "$text" = "$4" ]]
+             then
+                found=true
+                (( icycle = 0 ))
+             fi
+          else
+                # filename contains at least one dot
+                # find out if the string after the last dot is a number
+             if [[ $cycle =~ ^-?[0-9]+$ ]]
+             then
+                text=${text%.*}
+                if [[ "$text" = "$4" ]]
+                then
+                   found=true
+                   (( icycle = $((10#$cycle)) ))
+                fi
+             else
+                if [[ "$text" = "$4" ]]
+                then
+                   found=true
+                   (( icycle = 0 ))
+                fi
+             fi
+          fi
+
+          if (( icycle > maxcycle ))
+          then
+             (( maxcycle = icycle ))
+
+                 # FOR COMPATIBILITY REASONS WITH OLDER VERSIONS
+                 # CHECK IF CYCLE NUMBER CONTAINS LEADING ZEROS
+              if [[ $(echo $cycle | cut -c1) = 0 ]]
+              then
+                 leading_zero=true
+              else
+                 leading_zero=false
+              fi
+          fi
+
+       else
+
+             # IM ABSOLUT-MODUS MUSS NUR GEPRUEFT WERDEN, OB DIE DATEI
+             # VORHANDEN IST
+          [[ $4 = $zeile ]]  &&  found=true
+       fi
+
+    done <$filelist
+ fi
+
+ if [[ $found = true ]]
+ then
+    if [[ $get = false ]]
+    then
+       if [[ $absolut = false ]]
+       then
+          if [[ $append = false ]]
+          then
+             (( maxcycle = maxcycle + 1 ))
+
+                # TRY TO USE FIXED CYCLE NUMBER, IF GIVEN AS OPTION
+             if [[ "$usecycle" != "" ]]
+             then
+                if (( usecycle >= maxcycle ))
+                then
+                   (( maxcycle = usecycle ))
+                else
+                    printf "  >>> Unfied cycle number cannot be used\n"
+                fi
+             fi
+             cyclestring=`printf ".%03d" $maxcycle`
+          else
+             if (( maxcycle == 0 ))
+             then
+                cyclestring=""
+             else
+                cyclestring=`printf ".%03d" $maxcycle`
+             fi
+          fi
+       else
+          if [[ $overwrite = false ]]
+          then
+             printf "  +++ file \"$3/$4\" \n"
+             printf "      already exists on destination host (use -o, if necessary) \n"
+             locat=file; exit
+          fi
+       fi
+    else
+       if [[ $absolut = false ]]
+       then
+          if (( maxcycle == 0 ))
+          then
+             cyclestring=""
+          else
+
+                # MAKE CYCLE NUMBER THREE DIGITS WIDE
+             if [[ $leading_zero = true ]]
+             then
+                cyclestring=`printf ".%03d" $maxcycle`
+             else
+                cyclestring=.$maxcycle
+             fi
+             (( maxcycle = 0 ))
+          fi
+       else
+          cyclestring=""
+       fi
+    fi
+
+ else
+
+    if [[ "$usecycle" != "" ]]
+    then
+       (( maxcycle = usecycle ))
+       cyclestring=`printf ".%03d" $usecycle`
+    else
+       cyclestring=""
+    fi
+
+       # ABBRUCH, WENN DATEI VON ZIELRECHNER GEHOLT WERDEN SOLL, DORT ABER
+       # NICHT VORHANDEN IST
+    if [[ $get = true ]]
+    then
+       printf " +++ file \"$3/$4\" \n"
+       printf "     does not exist on destination host (\"$1\") \n"
+       locat=remotefile; exit
+    fi
+ fi
+
+
+    # FALLS KATALOG ERZEUGT WIRD, DARF DIE DATEI IN KEINEM FALL EINE
+    # ZYKLUSNUMMER BESITZEN, DA SIE JA NOCh GARNICHT EXISTIEREN KANN
+ if [[ $make_catalog = force ]]
+ then
+    cyclestring=""
+    (( maxcycle = 0 ))
+ fi
+
+ 
+    # FALLS NAMENSOPTION (-n) GEWAEHLT WURDE, NUR DEN ERMITTELTEN LOKALEN
+    # DATEINAMEN DES ZIELRECHNERS AUSGEBEN UND SCRIPT BEENDEN
+ if [[ $print_local_filename = true ]]
+ then
+    printf "$4$cyclestring\n"
+    rm -r $filelist
+    exit
+ fi
+
+
+    # FALLS 5. ARGUMENT ANGEGEBEN WURDE, WIRD DIES ALS FILE-EXTENSION
+    # HINTER DIE ZYKLUS-NUMMER GEHAENGT (FUNKTIONIERT NUR BEI KOPIEREN EINER
+    # DATEI AUF ZIELRECHNER
+ if [[ "$5" != ""  &&  $get = false ]]
+ then
+    cyclestring=${cyclestring}.$5
+ fi
+
+
+    # BEI VERZEICHNISTRANSFER VON ZIELRECHNER AUF LOKALEN RECHNER PRUEFEN, OB
+    # $3 AUF ZIELRECHNER WIRKLICH EIN VERZEICHNIS IST
+ if [[ $catalog_copy = true  &&  $get = true ]]
+ then
+
+    rm -rf $filelist
+    ssh $SSH_PORTOPT $1 -l $remote_user "cd $3" > $filelist
+
+    if [[ $? != 0 ]]
+    then
+       locat=ssh_failed_3; exit
+    fi
+
+    if [[ $(cat $filelist | grep -c "Not a directory") != 0 ]]
+    then
+       printf " +++ \"$3\" on destination host is not a directory \n"
+       locat=directory; exit
+    fi
+
+ fi
+
+
+    # BEI KATALOGTRANSFER AUF LOKALEN RECHNER ENTSPRECHENDES VERZEICHNIS
+    # ANLEGEN
+ if [[ $catalog_copy = true ]]
+ then
+    if [[ $get = true ]]
+    then
+       mkdir $2
+    fi
+ fi
+
+
+ catalog_name=$3
+ [[ "$catalog_name" != "" ]]  &&  catalog_name=${catalog_name}/
+
+
+    # DATEI/VERZEICHNIS PER SCP UEBERTRAGEN
+ if [[ $get = false ]]
+ then
+    if [[ $make_catalog != force ]]
+    then
+       if [[ $append = false ]]
+       then
+
+          if [[ $catalog_copy = false ]]
+          then
+             scp $PORTOPT -p $2 $remote_user@$1:$catalog_name$4$cyclestring  > /dev/null
+          else
+             scp $PORTOPT -p -r $2 $remote_user@$1:$catalog_name$4$cyclestring  > /dev/null
+          fi
+          scp_status=$?
+
+          if [[ $scp_status != 0 ]]
+          then
+                # CHECK, OB DATEIGROESSEN AUF LOKALEM UND REMOTERECHNER
+                # UEBEREINSTIMMEN
+             local_size=`ls -al  $2`
+             local_size=`echo $local_size | cut -d" " -f5`
+
+             remote_size=`ssh $SSH_PORTOPT $1 -l $remote_user "ls -al $catalog_name$4$cyclestring"`
+             remote_size=`echo $remote_size | cut -d" " -f5`
+
+             if [[ "$remote_size" != "$local_size" ]]
+             then
+                echo " +++ scp failed on host \"$local_host\" with exit $scp_status"
+                echo "     local size = \"$local_size\"  remote size = \"$remote_size\" "
+                date
+                locat=scp_failed; exit
+             fi
+          fi
+
+       else
+
+          scp $PORTOPT -p $2 $remote_user@$1:${catalog_name}batch_scp_append_file.$random  > /dev/null
+
+          if [[ $? != 0 ]]
+          then
+                # CHECK, OB DATEIGROESSEN AUF LOKALEM UND REMOTERECHNER
+                # UEBEREINSTIMMEN
+             local_size=`ls -al  $2`
+             local_size=`echo $local_size | cut -d" " -f5`
+
+             remote_size=`ssh $SSH_PORTOPT $1 -l $remote_user "ls -al ${catalog_name}batch_scp_append_file.$random"`
+             remote_size=`echo $remote_size | cut -d" " -f5`
+
+             if [[ "$remote_size" != "$local_size" ]]
+             then
+                echo " +++ scp failed on host \"$local_host\" with exit $scp_status"
+                echo "     local size = \"$local_size\"  remote size = \"$remote_size\" "
+                date
+                locat=scp_for_append_failed; exit
+             fi
+          fi
+
+          rm  $filelist
+
+          ssh $SSH_PORTOPT $1 -l $remote_user "cd $3; cat batch_scp_append_file.$random >> $4$cyclestring; rm batch_scp_append_file.$random; echo '*** append complete'" > $filelist
+
+          if [[ $? != 0 ]]
+          then
+             if [[ ! -f $filelist ]]
+             then
+                locat=append_via_ssh_failed; exit
+             else
+                if [[ $(grep -c "*** append complete" $filelist) = 0 ]]
+                then
+                   locat=append_via_ssh_failed; exit
+                fi
+             fi
+          fi
+       fi
+
+    else
+
+       ssh $SSH_PORTOPT $1 -l $remote_user "mkdir -p $3"
+
+       if [[ $? != 0 ]]
+       then
+          locat=ssh_failed_4; exit
+       fi
+
+       scp $PORTOPT -p $2 $remote_user@$1:$catalog_name$4$cyclestring  > /dev/null
+
+       if [[ $? != 0 ]]
+       then
+          locat=scp_failed; exit
+       fi
+    fi
+
+ else
+
+    if [[ $catalog_copy = false ]]
+    then
+       if [[ $quote_wait = true ]]
+       then
+
+          printf " +++ quote wait not realized with BATCH_SCP"
+          locat=unavailable_feature; exit
+
+       else
+
+          scp $PORTOPT -p $remote_user@$1:$catalog_name$4$cyclestring $2  > /dev/null
+
+          if [[ $? != 0 ]]
+          then
+             locat=scp_failed; exit
+          fi
+
+       fi
+
+    else
+
+       printf " +++ get of whole cataloges not realized with BATCH_SCP so far"
+       locat=unavailable_feature; exit
+
+    fi
+
+ fi
+
+
+
+    # EVTL. TRANSFERIERTE DATEI AUF LOKALEM RECHNER LOESCHEN
+ if [[ $delete = true  &&  $get = false ]]
+ then
+    rm -rf  $2
+ fi
+
+
+
+    # ABSCHLUSSMELDUNG
+ if [[ $silent = false ]]
+ then
+    if (( maxcycle == 0 ))
+    then
+       if [[ $append = false ]]
+       then
+          printf "  >>> transfer successful \n"
+       else
+          printf "  >>> file was appended \n"
+       fi
+    else
+       printf "  >>> transfer successful \n"
+       if [[ $append = false ]]
+       then
+          if [[ $catalog_copy = false ]]
+          then
+             printf "      new file has cycle number .%03d \n" $maxcycle
+          else
+             printf "      new catalog has cycle number .%03d \n" $maxcycle
+          fi
+       else
+          printf "      append to cycle number .%03d \n" $maxcycle
+       fi
+    fi
+ fi
+
+ rm -rf  $filelist  $errfile

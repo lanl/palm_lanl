@@ -1,0 +1,2474 @@
+;********************************************************* 
+; Copying .hluresfile in the home directory
+;*********************************************************
+
+command = "ksh 'if [ ! -f $HOME/.hluresfile ]; then; "+\
+          "cp $PALM_BIN/NCL/.hluresfile $HOME; fi'"
+system(command)
+   
+;*********************************************************
+
+
+begin
+
+;********************************************************* 
+
+script=which_script
+
+   ;******************************************************
+   ; BE AWARE: NCl uses double quotes (") to denote strings
+   ;       to retrieve the double quote character - use dq:
+
+    dq=str_get_dq()
+
+   ;******************************************************
+   
+;*********************************************************
+   
+   ;******************************************************
+   ; parameters used by CROSS_SECTIONS
+   ;******************************************************
+   
+   if (script .EQ. "cross_section")then
+   
+      ;***************************************************
+      ; REQUIRED --file_1-- INPUT FILE
+      ;
+      ; input file produced by PALM; if there is more than one file for 
+      ; all timesteps 
+      ; of a job chain, 
+      ; declare path and file name without cycle number and ".nc" (first and 
+      ; last cycle numbers are given with the parameters 'start_f' and 
+      ; 'end_f'); 
+      ; otherwise declare path and full file name
+      ;
+      ; data type: string
+      ;
+      ; example: file_1 = "/path_to_file/file_xy_av"      if you use more than 
+      ;                                                   one cycle number
+      ;          file_1 = "/path_to_file/file_xy_av.4.nc" if you use one file 
+      ;                                              (e.g. with cycle number 4)
+      ;
+      ; default:   "File in" 
+      ;***************************************************
+      if(.not. isvar("file_1"))then
+
+
+         file_1 = "File in"
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL/REQUIRED if more than one file of a job chain 
+      ;          --start_f-- START OF CYCLIC NUMBER
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare the first cyclicnumber which contains timesteps 
+      ; you'd like to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   start_f = 3 (if first file: example_xy_av.3.nc) and 
+      ;            start_f = 0 (if first file: example_xy_av.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("start_f"))then  
+      
+          
+         start_f = -1
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL/REQUIRED if more than one file of a job chain 
+      ;          --end_f-- END OF CYCLIC NUMBER
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare the last cyclicnumber which contains timesteps you'd like 
+      ; to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   end_f = 48 (if last file: example_xy_av.48.nc) and 
+      ;            end_f = 0 (if last file: example_xy_av.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("end_f"))then  
+      
+          
+         end_f = -1
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL --format_out-- OUTPUT FORMAT
+      ;
+      ; format of the output file; 
+      ; supported file formats: x11, pdf, ps, eps, epsi ncgm or png 
+      ;
+      ; data type: string
+      ;
+      ; example: format_out = "pdf"
+      ;
+      ; default:   "x11" 
+      ;***************************************************
+      if(.not. isvar("format_out"))then	 
+      
+      
+         format_out = "x11"
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL --file_out-- OUTPUT FILE
+      ;
+      ; path and name of the output file
+      ;
+      ; data type: string
+      ;
+      ; example: file_out = "/home/path_to_output/test_cs"
+      ;
+      ; default:   "~/test_cs" 
+      ;***************************************************
+      if(.not. isvar("file_out"))then	 
+      
+      
+         file_out = "~/test_cs"
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --var-- OUTPUT VARIABLES
+      ;
+      ; names of output variables; 
+      ; inidcate them with one comma before and after each variable;
+      ; if the name contains double quotes (") use dq and the '+' operation to 
+      ; concatenate the strings
+      ;
+      ; data type: string 
+      ; 
+      ; example: var = ",u,v,w,"
+      ;
+      ; default:   "all" (all available variables are plotted)
+      ;***************************************************
+      if(.not. isvar("var"))then
+      
+      	 
+         var = "all"
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --start_time_step-- FIRST TIME STEP
+      ;
+      ; first time step of plot; there is no need to specify a precise time 
+      ; value from the input file,
+      ; 'start_time_step' is rounded to the next existent time step
+      ;
+      ; data type: double; dimension: [hour]
+      ;
+      ; example:   start_time_step = 0.5d 
+      ;
+      ; default:   -1.d (first available time step)
+      ;***************************************************
+      if(.not. isvar("start_time_step"))then
+      
+      	 
+         start_time_step = -1.d
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --end_time_step-- LAST TIME STEP
+      ;
+      ; last time step of plot; there is no need to specify a precise time 
+      ; value from the input file,
+      ; 'end_time_step' is rounded to the next existent time step
+      ;
+      ; data type: double; dimension: [hour]
+      ;
+      ; example:   end_time_step = 2.0d
+      ;
+      ; default:   -1.d (last available time step)
+      ;***************************************************
+      if(.not. isvar("end_time_step"))then	 
+      
+      
+         end_time_step = -1.d
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --xs-- MINIMUM X-AXIS 
+      ;
+      ; value for minimum of x-axis, selectable if there are 
+      ; NO preset layers 
+      ; for x (as for XY or XZ 2D-DATA);
+      ; there is no need to specify a precise meter value from the input file, 
+      ; it is rounded to the next existent value
+      ;
+      ; data type: double; dimension: [meter]
+      ;
+      ; example: xs = 150.0d
+      ;
+      ; default:   -1.d (minimum of range)
+      ;***************************************************
+      if(.not. isvar("xs"))then      
+      
+      
+         xs = -1.d
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --xe-- MAXIMUM X-AXIS 
+      ;
+      ; value for maximum of x-axis, selectable if there are 
+      ; NO preset layers 
+      ; for x (as for XY or XZ 2D-DATA);
+      ; there is no need to specify a precise meter value from the input file, 
+      ; it is rounded to the next existent value
+      ;
+      ; data type: double; dimension: [meter] 
+      ;
+      ; example: xe = 300.0d
+      ;
+      ; default:   -1.d (maximum of range)
+      ;***************************************************
+      if(.not. isvar("xe"))then      
+      
+      
+         xe = -1.d
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --ys-- MINIMUM Y-AXIS 
+      ;
+      ; value for minimum of y-axis, selectable if there are 
+      ; NO preset layers 
+      ; for y (as for XY or YZ 2D-DATA);
+      ; there is no need to specify a precise meter value from the input file, 
+      ; it is rounded to the next existent value
+      ;
+      ; data type: double; dimension: [meter]
+      ;
+      ; example: ys = 150.0d
+      ;
+      ; default:   -1.d (minimum of range)
+      ;***************************************************
+      if(.not. isvar("ys"))then      
+      
+      
+         ys = -1.d
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --ye-- MAXIMUM Y-AXIS 
+      ;
+      ; value for maximum of y-axis, selectable if there are NO preset layers
+      ; for y (as for XY or YZ 2D-DATA);
+      ; there is no need to specify a precise meter value from the input file,
+      ; it is rounded to the next existent value 
+      ;
+      ; data type: double; dimension: [meter]
+      ;
+      ; example: ye = 300.0d
+      ;
+      ; default:   -1.d (maximum of range)
+      ;***************************************************
+      if(.not. isvar("ye"))then   
+      
+         
+         ye = -1.d
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --zs-- MINIMUM Z-AXIS 
+      ;
+      ; index for minimum of z-axis, selectable if there are 
+      ; NO preset layers 
+      ; for z (as for XZ or YZ 2D-DATA);
+      ; you cannot specify a meter value from the input file due to 
+      ; grid stretching  
+      ;
+      ; data type: integer
+      ;
+      ; example: zs = 0
+      ;
+      ; default:   -1 (minimum of range)
+      ;***************************************************
+      if(.not. isvar("zs"))then      
+      
+      
+         zs = -1
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --ze-- MAXIMUM Z-AXIS 
+      ;
+      ; index for maximum of z-axis, selectable if there are 
+      ; NO preset layers
+      ; for z (as for XZ or YZ 2D-DATA);
+      ; you cannot specify a meter value from the input file due to 
+      ; grid stretching  
+      ;
+      ; data type: integer
+      ;
+      ; example: ze = 15
+      ;
+      ; default:   -1 (maximum of range)
+      ;***************************************************
+      if(.not. isvar("ze"))then
+      
+            
+         ze = -1
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --no_columns-- NUMBER OF COLUMNS
+      ;
+      ; number of plots in one row 
+      ;
+      ; data type: integer
+      ; 
+      ; example: no_columns = 1
+      ;
+      ; default:   1
+      ;***************************************************
+      if(.not. isvar("no_columns"))then	 
+      
+      
+         no_columns = 1
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --no_rows-- NUMBER OF ROWS
+      ;
+      ; number of plots in one column 
+      ;
+      ; data type: integer
+      ; 
+      ; example: no_rows = 2
+      ;
+      ; default:   2 
+      ;***************************************************
+      if(.not. isvar("no_rows"))then	 
+      
+      
+         no_rows = 2
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --sort-- TYPE OF SORTING 
+      ;
+      ; sequence of plots; sorting either by time step [="time"] or 
+      ; by layer/height [="layer"]
+      ;
+      ; data type: string
+      ;
+      ; example: sort = "layer"
+      ;
+      ; default:   "layer" 
+      ;***************************************************
+      if(.not. isvar("sort"))then	 
+      
+      
+         sort = "layer"
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --mode-- TYPE OF PLOT 
+      ;
+      ; isoline plots [="Line"], contour plots [="Fill"] or both [="Both"] 
+      ; can be choosen 
+      ;
+      ; data type: string
+      ;
+      ; example: mode = "Fill"
+      ;
+      ; default:   "Fill" 
+      ;***************************************************
+      if(.not. isvar("mode"))then	 
+      
+      
+         mode = "Fill"
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --fill_mode-- TYPE OF FILLING 
+      ;
+      ; area fill [="AreaFill"], raster fill [="RasterFill"] or 
+      ; cell fill [="CellFill"] can be choosen 
+      ;
+      ; data type: string
+      ;
+      ; example: fill_mode = "AreaFill"
+      ;
+      ; default:    "RasterFill"
+      ;***************************************************
+      if(.not. isvar("fill_mode"))then	 
+      
+      
+         fill_mode = "RasterFill"
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --shape-- ASPECT RATIO 
+      ;
+      ; aspect ratio of axis is kept [=1] or not[=0]
+      ;
+      ; data type: integer
+      ;
+      ; example: shape = 1
+      ;
+      ; default:   1 
+      ;***************************************************
+      if(.not. isvar("shape"))then
+      
+      	 
+         shape = 1
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL --font_size-- FONT SIZE OF STRINGS 
+      ;
+      ; font size can be changed to fit to the current plot
+      ;
+      ; data type: float
+      ;
+      ; example: font_size = 0.04
+      ;
+      ; default:   0.04 
+      ;***************************************************
+      if(.not. isvar("font_size"))then
+      
+      	 
+         font_size = 0.04
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL --font_size_legend-- FONT SIZE OF LEGEND STRINGS 
+      ;
+      ; font size of the legend can be changed to fit to the current plot
+      ;
+      ; data type: float
+      ;
+      ; example: font_size_legend = 0.04
+      ;
+      ; default:   0.04 
+      ;***************************************************
+      if(.not. isvar("font_size_legend"))then
+      
+      	 
+         font_size_legend = 0.04
+	 
+	 
+      end if	
+      ;***************************************************
+      ; OPTIONAL --legend_label_stride-- REDUCTION OF THE NUMBER 
+      ;                                  OF LABELS IN THE LEGEND
+      ;
+      ; if legend_label_stride is set to 1 every label is shown; 
+      ; if set to 2 every second, ...
+      ;
+      ; data type: integer
+      ;
+      ; example: legend_label_stride = 2
+      ;
+      ; default:   2 
+      ;***************************************************
+      if(.not. isvar("legend_label_reduction"))then
+      
+      	 
+         legend_label_stride = 2
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL --axes_explicit-- 
+      ;          EXPLICIT SETTINGS OF X- AND Y-AXES ARE SWITCHED ON
+      ;
+      ; to use several parameters to set up the axes, 'axes_explicit' 
+      ; must be switched on [=1]; if switched off [=0] units of axes are [m]
+      ;
+      ; data type: integer
+      ;
+      ; example: axes_explicit = 0
+      ;
+      ; default:   0 
+      ;***************************************************
+      if(.not. isvar("axes_explicit"))then
+      
+      	 
+         axes_explicit = 0
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL if axes_explicit = 1 --major_ticks_x-- 
+      ;                              NUMBER OF MAJOR TICK MARKS AT X-AXIS
+      ;
+      ; major_ticks_x can be set to any integer, best segmentation of x-axis 
+      ; can be achieved, if 
+      ; (number of gripdpoints in x-direction)/(major_ticks_x-1)=INTEGER, 
+      ; e.g. 128/8 = 16 -> major_ticks_x should be set to 9
+      ;
+      ; data type: integer
+      ;
+      ; example: major_ticks_x = 6
+      ;
+      ; default:   6 
+      ;***************************************************
+      if(.not. isvar("major_ticks_x"))then
+      
+      	 
+         major_ticks_x = 6
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL if axes_explicit = 1 --major_ticks_y-- 
+      ;                              NUMBER OF MAJOR TICK MARKS AT Y-AXIS
+      ;
+      ; major_ticks_y can be set to any integer, best segmentation of y-axis 
+      ; can be achieved, if 
+      ; (number of gripdpoints in y-direction)/(major_ticks_y-1)=INTEGER, 
+      ; e.g. 128/8 = 16 -> major_ticks_y should be set to 9
+      ;
+      ; data type: integer
+      ;
+      ; example: major_ticks_y = 6
+      ;
+      ; default:   6 
+      ;***************************************************
+      if(.not. isvar("major_ticks_y"))then
+      
+      	 
+         major_ticks_y = 6
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL if axes_explicit = 1 --norm_x--norm_y--norm_z-- 
+      ;                              NORMALISE X-, Y- and Z-AXES
+      ;
+      ; normalising the axes with the given value; 
+      ; units can explicitly be set; 
+      ; by default no normalising is used and units are [meter]
+      ;
+      ; data type: float
+      ;
+      ; default:   1.0 
+      ;***************************************************
+      if(.not. isvar("norm_x"))then      
+      	 
+         norm_x = 1.0	 
+	 
+      end if
+      if(.not. isvar("norm_y"))then      
+      	 
+         norm_y = 1.0	 
+	 
+      end if
+      if(.not. isvar("norm_z"))then      
+      	 
+         norm_z = 1.0	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL if axes_explicit = 1 --unit_x--unit_y--unit_z-- 
+      ;                              UNITS OF X-, Y- and Z-AXES
+      ;
+      ; units of the axes can be set; by default no units are given, 
+      ; if norm_x, norm_y or norm_z are unequal 1., otherwise units are [meter]
+      ;
+      ; data type: string, 
+      ;
+      ; example: unit_x = "m/s"
+      ;
+      ; default:   " " 
+      ;***************************************************
+      if(.not. isvar("unit_x"))then      
+      	 
+         unit_x = " "	 
+	 
+      end if
+      if(.not. isvar("unit_y"))then      
+      	 
+         unit_y = " "	 
+	 
+      end if
+      if(.not. isvar("unit_z"))then      
+      	 
+         unit_z = " "	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL --vector-- VECTOR PLOT 
+      ;
+      ; a vector plot for one defined vector is switched on [=1] or off [=0]
+      ;
+      ; data type: integer
+      ;
+      ; example: vector = 0
+      ;
+      ; default:   0 
+      ;***************************************************
+      if(.not. isvar("vector"))then
+      
+      	 
+         vector = 0
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; REQUIRED IF vector=1 --vec1, vec2-- VECTOR FOR VECTOR PLOT 
+      ;
+      ; variables for the vector, vec1 hast to be set to component 1 and 
+      ; vec2 to component 2;
+      ; inidcate them with one comma before and after each variable;
+      ;
+      ; data type: string
+      ;
+      ; example: vec1=",u,"
+      ;          vec2=",v,"
+      ;
+      ; default:   vec1 = "component1", vec2 = "component2" 
+      ;***************************************************
+      if(.not. isvar("vec1"))then     
+      	 
+         vec1 = "component1"
+	 
+      end if
+      if (.not. isvar("vec2"))then 
+      
+	 vec2 = "component2"	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --plotvec-- VARIABLE FOR EXTRA VECTOR PLOT
+      ;
+      ; the vector plot can be combined with other plots of variables; 
+      ; if this is desired inidcate the variables, 
+      ; where a vector plot shall overlay; inidcate them with one comma 
+      ; before and after each variable
+      ;
+      ; data type: string
+      ;
+      ; example: plotvec = ",u,w,"
+      ;
+      ; default:   "plotvec" (no combining, 
+      ;                       the vector plot is created seperately) 
+      ;***************************************************
+      if(.not. isvar("plotvec"))then
+      
+      	 
+         plotvec = "plotvec"
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --ref_mag-- REFERENCE VECTOR 
+      ;
+      ; length of the reference vector in a vector plot
+      ;
+      ; data type: float
+      ;
+      ; example: ref_mag = 0.05
+      ;
+      ; default:   0.05 
+      ;***************************************************
+      if(.not. isvar("ref_mag"))then
+      
+      	 
+         ref_mag = 0.05 
+	 
+	 
+      end if      	 
+      ;***************************************************
+
+   end if 
+
+   ;******************************************************
+   ; parameters used by PROFILES
+   ;******************************************************
+   
+   if (script .EQ. "profiles")then
+
+      ;***************************************************
+      ; REQUIRED --file_1-- 1ST INPUT FILE
+      ;
+      ; 1st input file produced by PALM; if there is more than one file for 
+      ; all timesteps of a job chain, declare path and file name without 
+      ; cycle number and ".nc" (first and last cycle numbers are given with 
+      ; the parameters 'start_f' and 'end_f'); 
+      ; otherwise declare path and full file name
+      ;
+      ; data type: string
+      ;
+      ; example: file_1 = "/path_to_file/file_pr"      
+      ;                     if you use more than one cycle number
+      ;          file_1 = "/path_to_file/file_pr.4.nc" 
+      ;                     if you use one file (e.g. with cycle number 4)
+      ;
+      ; default:   "File in" 
+      ;***************************************************
+      if(.not. isvar("file_1"))then
+
+
+         file_1 = "File in"
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL/REQUIRED --start_f-- if more than one file of a job chain
+      ;                    START OF CYCLIC NUMBER OF THE 1ST INPUT FILE
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare the first cyclicnumber which contains timesteps 
+      ; you'd like to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   3 (if first file: example_pr.3.nc) and 
+      ;            0 (if first file: example_pr.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("start_f"))then  
+      
+          
+         start_f = -1
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL/REQUIRED --end_f--  if more than one file of a job chain
+      ;            END OF CYCLIC NUMBER OF THE 1ST INPUT FILE
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare the last cyclicnumber which contains timesteps 
+      ; you'd like to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   48 (if last file: example_pr.48.nc) and 
+      ;             0 (if last file: example_pr.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("end_f"))then  
+      
+          
+         end_f = -1
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL --format_out-- OUTPUT FORMAT
+      ;
+      ; supported file formats: x11, pdf, ps, eps, epsi, ncgm or png 
+      ;
+      ; data type: string
+      ;
+      ; default:   "x11" 
+      ;***************************************************
+      if (.not. isvar("format_out"))then	 
+      
+      
+         format_out = "x11"
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --file_out-- OUTPUT FILE
+      ;
+      ; declare path and name of the output file
+      ;
+      ; data type: string
+      ;
+      ; default:   "~/test_pr" 
+      ;***************************************************
+      if (.not. isvar("file_out"))then	
+      
+       
+         file_out = "~/test_pr"
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --var-- OUTPUT VARIABLES
+      ;
+      ; names of output variables; 
+      ; inidcate them with one comma before and after each variable
+      ; if the name contains double quotes (") use dq and the '+' operation to 
+      ; concatenate the strings
+      ;
+      ; data type: string 
+      ; 
+      ; example: var = ",u,v,w,w*pt*,w"+dq+"pt"+dq+",wpt," 
+      ;
+      ; default:   ",cross_profiles," (profiles are plotted together according 
+      ;                                to the d3par parameter cross_profiles)
+      ;***************************************************
+      if (.not. isvar("var"))then
+      
+      	 
+         var = ",cross_profiles,"
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL --start_time_step-- FIRST TIME STEP
+      ;
+      ; first time step of plot; there is no need to specify a precise 
+      ; time value from the input file,
+      ; 'start_time_step' is rounded to the next existent time step
+      ;
+      ; data type: double; dimension: [hour]
+      ;
+      ; example:   start_time_step = 0.5d
+      ;
+      ; default:   -1.d (first available time step)
+      ;***************************************************
+      if (.not. isvar("start_time_step"))then	
+      
+       
+         start_time_step = -1.d
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --end_time_step-- LAST TIME STEP
+      ;
+      ; last time step of plot; there is no need to specify a precise
+      ; time value from the input file,
+      ; 'end_time_step' is rounded to the next existent time step
+      ;
+      ; data type: double; dimension: [hour]
+      ;
+      ; example:   end_time_step = 2.0d
+      ;
+      ; default:   -1.d (last available time step)
+      ;***************************************************
+      if (.not. isvar("end_time_step"))then
+      
+      	 
+         end_time_step = -1.d    
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL --time_stride-- TEMPORAL STRIDE 
+      ;
+      ; temporal stride for the plots; if time_stride=1 all the profiles 
+      ; between first_time_step and end_time_step are plotted 
+      ; (including first_time_step and end_time_step), 
+      ; if time_stride=3 every third time step between start_time_step and 
+      ; end_time_step is plotted
+      ;
+      ; data type: integer
+      ;
+      ; example:   time_stride = 3
+      ;
+      ; default:   1 
+      ;***************************************************
+      if (.not. isvar("time_stride"))then	
+      
+       
+         time_stride = 1
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL --xs-- MINIMUM X-AXIS 
+      ;
+      ; value for minimum of x-axis
+      ;
+      ; data type: float; dimension of variable
+      ;
+      ; example: xs = 300. (e.g. if var=",pt")
+      ;
+      ; default:   -1. (minimum of range)
+      ;***************************************************
+      if (.not. isvar("xs"))then   
+      
+         
+         xs = -1.
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --xe-- MAXIMUM X-AXIS 
+      ;
+      ; value for maximum of x-axis
+      ;
+      ; data type: float; dimension of variable
+      ;
+      ; example: xe = 302. (e.g. if var=",pt")
+      ;
+      ; default:   -1. (maximum of range)
+      ;***************************************************
+      if (.not. isvar("xe"))then  
+      
+          
+         xe = -1.
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --min_z-- MINIMUM Z-AXIS 
+      ;
+      ; value for minimum height of z-axis
+      ;
+      ; data type: double; dimension: [meter]
+      ;
+      ; example: min_z = 0.0d
+      ;
+      ; default:   -1.d (related to the minimum of z-axis in input file)
+      ;***************************************************
+      if (.not. isvar("min_z"))then   
+      
+         
+         min_z = -1.d
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --max_z-- MAXIMUM Z-AXIS 
+      ;
+      ; value for maximum height of z-axis
+      ;
+      ; data type: double; dimension: [meter]
+      ;
+      ; example: max_z = 1000.0d
+      ;
+      ; default:   -1.d (related to the maximum of z-axis in input file)
+      ;***************************************************
+      if (.not. isvar("max_z"))then   
+      
+         
+         max_z = -1.d
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --start_x-- STARTVALUE IN X-DIRECTION  
+      ;
+      ; if 3D data is used for profiles you can choose a startvalue 
+      ; in x-direction for horizontal averaging 
+      ;
+      ; data type: integer; dimension [grippoint]
+      ;
+      ; example: start_x = 0
+      ;
+      ; default:   0 (minimum of range)
+      ;***************************************************
+      if (.not. isvar("start_x"))then   
+      
+         
+         start_x = 0
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL --end_x-- ENDVALUE IN X-DIRECTION  
+      ;
+      ; if 3D data is used for profiles you can choose an endvalue 
+      ; in x-direction for horizontal averaging 
+      ;
+      ; data type: integer; dimension [grippoint]
+      ;
+      ; example: end_x = 200
+      ;
+      ; default:   -1 (maximum of range excluding ghostpoint)
+      ;***************************************************
+      if (.not. isvar("end_x"))then   
+      
+         
+         end_x = -1
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL --start_y-- STARTVALUE IN Y-DIRECTION  
+      ;
+      ; if 3D data is used for profiles you can choose a startvalue 
+      ; in y-direction for horizontal averaging 
+      ;
+      ; data type: integer; dimension [grippoint]
+      ;
+      ; example: start_y = 0
+      ;
+      ; default:   0 (minimum of range)
+      ;***************************************************
+      if (.not. isvar("start_y"))then   
+      
+         
+         start_y = 0
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL --end_y-- ENDVALUE IN Y-DIRECTION  
+      ;
+      ; if 3D data is used for profiles you can choose an endvalue 
+      ; in y-direction for horizontal averaging 
+      ;
+      ; data type: integer; dimension [grippoint]
+      ;
+      ; example: end_y = 200
+      ;
+      ; default:   -1 (maximum of range excluding ghostpoint)
+      ;***************************************************
+      if (.not. isvar("end_y"))then   
+      
+         
+         end_y = -1
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --no_columns-- NUMBER OF COLUMNS
+      ;
+      ; number of plots in one row 
+      ;
+      ; data type: integer
+      ;
+      ; default:   -1      (profiles are plotted according 
+      ;                     to the d3par parameter profile_columns)
+      ;***************************************************
+      if (.not. isvar("no_columns"))then	 
+      
+      
+         no_columns = -1
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --no_rows-- NUMBER OF ROWS
+      ;
+      ; number of plots in one column 
+      ;
+      ; data type: integer
+      ;
+      ; default:   -1      (profiles are plotted according 
+      ;                     to the d3par parameter profile_rows)
+      ;***************************************************
+      if (.not. isvar("no_rows"))then	
+      
+       
+         no_rows = -1
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --log_z-- LOGARITHMIC SCALE OF Z-AXIS 
+      ;
+      ; logarithmic scale for z-axis is switched on [=1] or off [=0]
+      ;
+      ; data type: integer
+      ;
+      ; example: log_z = 0
+      ;
+      ; default:   0
+      ;***************************************************
+      if (.not. isvar("log_z"))then 
+      
+           
+         log_z = 0
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --norm_z-- NORMALISING Z-AXIS 
+      ;
+      ; value for normalising the z-axis
+      ;
+      ; data type: float
+      ;
+      ; example: norm_z = 1.
+      ;
+      ; default:   1. (no normalising)
+      ;***************************************************
+      if (.not. isvar("norm_z"))then 
+      
+           
+         norm_z = 1.
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --over-- OVERLAYING
+      ;
+      ; predefined overlaying of standard variables is switched 
+      ; on [=1] or off [=0];
+      ; this feature cannot be used with statistic regions
+      ;
+      ; data type: integer
+      ;
+      ; example: over = 0
+      ;
+      ; default:   0 
+      ;***************************************************
+      if (.not. isvar("over"))then
+      
+      	 
+         over = 0
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --combine-- COMBINING 
+      ;
+      ; combining of two or three individual variables is possible and 
+      ; switched on [=1] or off[=0]
+      ;
+      ; data type: integer
+      ;
+      ; example: combine = 0
+      ;
+      ; default:   0
+      ;***************************************************
+      if (.not. isvar("combine"))then  
+      
+          
+         combine = 0
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; REQUIRED IF combine=1 --number_comb-- NUMBER FOR COMBINING 
+      ;
+      ; number of variables for combining; 2 or 3 is valid 
+      ;
+      ; data type: integer
+      ;
+      ; example: number_comb = 2
+      ;
+      ; default:   -1
+      ;***************************************************
+      if (.not. isvar("number_comb"))then 
+      
+           
+         number_comb = -1
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; REQUIRED IF combine=1 --c_var-- VARIABLES FOR COMBINING 
+      ;
+      ; names of variables; 
+      ; inidcate them with one comma before and after each variable
+      ; if the name contains double quotes (") use dq and the '+' operation to 
+      ; concatenate the strings
+      ;
+      ; data type: string
+      ;
+      ; example: c_var = ",u,v,w,w*pt*,w"+dq+"pt"+dq+",wpt," 
+      ;
+      ; default:   "c_variables"
+      ;***************************************************
+      if (.not. isvar("c_var"))then 
+      
+           
+         c_var = "c_variables"
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --black-- BLACK OR COLOR LINES
+      ;
+      ; colored [=0] or black and white [=1] plots
+      ;
+      ; data type: integer
+      ;
+      ; example: black = 0
+      ;
+      ; default:   0
+      ;***************************************************
+      if (.not. isvar("black"))then 
+      
+           
+         black = 0
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --dash-- DASHED LINES 
+      ;
+      ; use of different line patterns [=1] or continous lines [=0] 
+      ; for different time steps
+      ;
+      ; data type: integer
+      ;
+      ; example: dash = 0
+      ;
+      ; default:   0
+      ;***************************************************
+      if (.not. isvar("dash"))then     
+      
+       
+         dash = 0      
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL --font_size-- FONT SIZE OF STRINGS 
+      ;
+      ; font size can be changed to fit to the current plot
+      ;
+      ; data type: float
+      ;
+      ; example: font_size = 0.02
+      ;
+      ; default:   0.02 
+      ;***************************************************
+      if(.not. isvar("font_size"))then
+      
+      	 
+         font_size = 0.02
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL --legend-- SWITCHES ON A LEGEND
+      ;
+      ; a legend is switched on [=1] or off [=0]
+      ;
+      ; data type: integer 
+      ; 
+      ; example: legend = 1 
+      ;
+      ; default:   1
+      ;***************************************************
+      if (.not. isvar("legend"))then
+      
+      	 
+         legend = 1 
+	 
+	 
+      end if    
+      ;***************************************************
+      ; OPTIONAL --font_size_legend-- FONT SIZE OF LEGEND STRINGS 
+      ;
+      ; font size of the legend can be changed to fit to the current plot
+      ;
+      ; data type: float
+      ;
+      ; example: font_size_legend = 0.02
+      ;
+      ; default:   0.02 
+      ;***************************************************
+      if(.not. isvar("font_size_legend"))then
+      
+      	 
+         font_size_legend = 0.02
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL ---no_files-- NUMBER OF INPUT FILES
+      ;
+      ; up to 6 input files of different runs can be used; all input files 
+      ; must contain the same variables and dimensionalties;
+      ; identical variables are merged in one plot;
+      ; combining or overlaying of any variables is not feasible;
+      ; an extra legend (besides the time step legend) is drawn where you 
+      ; can explicitily name the items
+      ;
+      ; data type: integer
+      ;
+      ; default:   1 
+      ;***************************************************
+      if (.not. isvar("no_files"))then
+      
+      	 
+         no_files = 1
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --name_legend_1-- 1st LEGEND ITEM
+      ;
+      ; if no_files > 1: name of 1st item in extra legend
+      ;
+      ; data type: string
+      ;
+      ; default:   "File 1" 
+      ;***************************************************
+      if (.not. isvar("name_legend_1"))then 
+      
+           
+         name_legend_1 = "File 1"
+	 
+	 
+      end if
+      ;***************************************************
+      ; REQUIRED if no_files > 1 --file_2-- 2ND INPUT FILE
+      ;
+      ; 2nd input file produced by PALM; if there is more than one file 
+      ; for all timesteps of a job chain, 
+      ; declare path and file name without cycle number and ".nc" (first and 
+      ; last cycle numbers are given with the parameters 
+      ; 'start_f' and 'end_f'); 
+      ; otherwise declare path and full file name
+      ;
+      ; data type: string
+      ;
+      ; example: file_2 = "/path_to_file/file_pr"      
+      ;                    if you use more than one cycle number
+      ;          file_2 = "/path_to_file/file_pr.4.nc" 
+      ;                    if you use one file (e.g. with cycle number 4)
+      ;
+      ; default:   "File in" 
+      ;***************************************************
+      if(.not. isvar("file_2"))then
+
+
+         file_2 = "File in" 
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL/REQUIRED --start_f_2-- if more than one file of a job chain
+      ;                       START OF CYCLIC NUMBER OF THE 2ND INPUT FILE
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare the first cyclicnumber which contains timesteps 
+      ; you'd like to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   3 (if first file: example_ts.3.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("start_f_2"))then  
+      
+          
+         start_f_2 = -1
+	 
+	 
+      end if 
+      ;***************************************************
+      ; REQUIRED --end_f_2-- if more than one file of a job chain
+      ;                      END OF CYCLIC NUMBER OF THE 2ND INPUT FILE
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare the last cyclicnumber which contains timesteps 
+      ; you'd like to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   48 (if last file: example_ts.48.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("end_f_2"))then  
+      
+          
+         end_f_2 = -1 
+	 
+	 
+      end if 	 	 
+      ;***************************************************
+      ; OPTIONAL --name_legend_2-- 2nd LEGEND ITEM
+      ;
+      ; if no_files > 1: name of 2nd item in extra legend
+      ;
+      ; data type: string
+      ;
+      ; default:   "File 2" 
+      ;***************************************************
+      if (.not. isvar("name_legend_2"))then   
+      
+         
+         name_legend_2 = "File 2"
+	 
+	 
+      end if 
+      ;***************************************************
+      ; REQUIRED if no_files > 2 --file_3-- 3RD INPUT FILE
+      ;
+      ; 3rd input file produced by PALM; if there is more than one file 
+      ; for all timesteps of a job chain, 
+      ; declare path and file name without cycle number and ".nc" (first and 
+      ; last cycle numbers are given with the parameters 
+      ; 'start_f' and 'end_f'); 
+      ; otherwise declare path and full file name
+      ;
+      ; data type: string
+      ;
+      ; example: file_3 = "/path_to_file/file_pr"      
+      ;                     if you use more than one cycle number
+      ;          file_3 = "/path_to_file/file_pr.4.nc" 
+      ;                     if you use one file (e.g. with cycle number 4)
+      ;
+      ; default:   "File in" 
+      ;***************************************************
+      if(.not. isvar("file_3"))then
+
+
+         file_3 = "File in" 
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL/REQUIRED --start_f_3-- if more than one file of a job chain
+      ;                        START OF CYCLIC NUMBER OF THE 3RD INPUT FILE
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare the first cyclicnumber which contains timesteps 
+      ; you'd like to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   3 (if first file: example_ts.3.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("start_f_3"))then  
+      
+          
+         start_f_3 = -1
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL/REQUIRED --end_f_3-- if more than one file of a job chain
+      ;                    END OF CYCLIC NUMBER OF THE 3RD INPUT FILE
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare 
+      ; the last cyclicnumber which contains timesteps you'd like to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   48 (if last file: example_ts.48.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("end_f_3"))then  
+      
+          
+         end_f_3 = -1 
+	 
+	 
+      end if   
+      ;***************************************************
+      ; OPTIONAL --name_legend_3-- 3rd LEGEND ITEM
+      ;
+      ; if no_files > 2: name of 3rd item in extra legend
+      ;
+      ; data type: string
+      ;
+      ; default:   "File 3" 
+      ;***************************************************
+      if (.not. isvar("name_legend_3"))then 
+      
+           
+         name_legend_3 = "File 3"
+	 
+	 
+      end if
+      ;***************************************************
+      ; REQUIRED if no_files > 3 --file_4-- 4TH INPUT FILE
+      ;
+      ; 4th input file produced by PALM; if there is more than one file for 
+      ; all timesteps of a job chain, 
+      ; declare path and file name without cycle number and ".nc" (first and 
+      ; last cycle numbers are given with the parameters 
+      ; 'start_f' and 'end_f'); 
+      ; otherwise declare path and full file name
+      ;
+      ; data type: string
+      ;
+      ; example: file_4 = "/path_to_file/file_pr"      
+      ;                     if you use more than one cycle number
+      ;          file_4 = "/path_to_file/file_pr.4.nc" 
+      ;                      if you use one file (e.g. with cycle number 4)
+      ;
+      ; default:   "File in" 
+      ;***************************************************
+      if(.not. isvar("file_4"))then
+
+
+         file_4 = "File in" 
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL/REQUIRED --start_f_4-- if more than one file of a job chain
+      ;                          START OF CYCLIC NUMBER OF THE 4TH INPUT FILE
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare the first cyclicnumber which contains timesteps 
+      ; you'd like to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   3 (if first file: example_ts.3.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("start_f_4"))then  
+      
+          
+         start_f_4 = -1
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL/REQUIRED --end_f_4-- if more than one file of a job chain
+      ;                   END OF CYCLIC NUMBER OF THE 4TH INPUT FILE
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare the last cyclicnumber which contains timesteps 
+      ; you'd like to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   48 (if last file: example_ts.48.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("end_f_4"))then  
+      
+          
+         end_f_4 = -1 
+	 
+	 
+      end if  
+      ;***************************************************
+      ; OPTIONAL --name_legend_4-- 4th LEGEND ITEM
+      ;
+      ; if no_files > 3: name of 4th item in extra legend
+      ;
+      ; data type: string
+      ;
+      ; default:   "File 4" 
+      ;***************************************************
+      if (.not. isvar("name_legend_4"))then    
+      
+        
+         name_legend_4 = "File 4"
+	 
+	 
+      end if
+      ;***************************************************
+      ; REQUIRED if no_files > 4 --file_5-- 5TH INPUT FILE
+      ;
+      ; 5th input file produced by PALM; if there is more than one file for 
+      ; all timesteps of a job chain, 
+      ; declare path and file name without cycle number and ".nc" (first and 
+      ; last cycle numbers are given with the parameters 
+      ; 'start_f' and 'end_f'); 
+      ; otherwise declare path and full file name
+      ;
+      ; data type: string
+      ;
+      ; example: file_5 = "/path_to_file/file_pr"      
+      ;                     if you use more than one cycle number
+      ;          file_5 = "/path_to_file/file_pr.4.nc" 
+      ;                     if you use one file (e.g. with cycle number 4)
+      ;
+      ; default:   "File in" 
+      ;***************************************************
+      if(.not. isvar("file_5"))then
+
+
+         file_5 = "File in" 
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL/REQUIRED --start_f_5-- if more than one file of a job chain
+      ;                     START OF CYCLIC NUMBER OF THE 5TH INPUT FILE
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare the first cyclicnumber which contains timesteps 
+      ; you'd like to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   3 (if first file: example_ts.3.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("start_f_5"))then  
+      
+          
+         start_f_5 = -1
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL/REQUIRED --end_f_5-- if more than one file of a job chain
+      ;END OF CYCLIC NUMBER OF THE 5TH INPUT FILE
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare the last cyclicnumber which contains timesteps 
+      ; you'd like to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   48 (if last file: example_ts.48.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("end_f_5"))then  
+      
+          
+         end_f_5 = -1 
+	 
+	 
+      end if   	 
+      ;***************************************************
+      ; OPTIONAL --name_legend_5-- 5th LEGEND ITEM
+      ;
+      ; if no_files > 4: name of 5th item in extra legend
+      ;
+      ; data type: string
+      ;
+      ; default:   "File 5" 
+      ;***************************************************
+      if (.not. isvar("name_legend_5"))then 
+      
+           
+         name_legend_5 = "File 5"
+	 
+	 
+      end if
+      ;***************************************************
+      ; REQUIRED if no_files > 5 --file_6-- 6TH INPUT FILE
+      ;
+      ; 6th input file produced by PALM; if there is more than one file for 
+      ; all timesteps of a job chain, 
+      ; declare path and file name without cycle number and ".nc" (first and 
+      ; last cycle numbers are given with the parameters 
+      ; 'start_f' and 'end_f'); 
+      ; otherwise declare path and full file name
+      ;
+      ; data type: string
+      ;
+      ; example: file_6 = "/path_to_file/file_pr"      
+      ;                     if you use more than one cycle number
+      ;          file_6 = "/path_to_file/file_pr.4.nc" 
+      ;                     if you use one file (e.g. with cycle number 4)
+      ;
+      ; default:   "File in" 
+      ;***************************************************
+      if(.not. isvar("file_6"))then
+
+
+         file_6 = "File in" 
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL/REQUIRED --start_f_6-- if more than one file of a job chain
+      ;                     START OF CYCLIC NUMBER OF THE 6TH INPUT FILE
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare the first cyclicnumber which contains timesteps 
+      ; you'd like to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   3 (if first file: example_ts.3.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("start_f_6"))then  
+      
+          
+         start_f_6 = -1
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL/REQUIRED --end_f_6-- if more than one file of a job chain
+      ; END OF CYCLIC NUMBER OF THE 6TH INPUT FILE
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare the last cyclicnumber which contains timesteps 
+      ; you'd like to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   48 (if last file: example_ts.48.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("end_f_6"))then  
+      
+          
+         end_f_6 = -1 
+	 
+	 
+      end if       	  	 
+      ;***************************************************
+      ; OPTIONAL --name_legend_6-- 6TH LEGEND ITEM
+      ;
+      ; if no_files > 5: name of 6th item in extra legend
+      ;
+      ; data type: string
+      ;
+      ; default:   "File 6" 
+      ;***************************************************
+      if (.not. isvar("name_legend_6"))then 
+      
+           
+         name_legend_6 = "File 6"
+	 
+	 
+      end if 	  	 
+      ;***************************************************
+   end if
+
+   ;******************************************************
+   ; parameters used by SPECTRA
+   ;******************************************************
+   
+   if (script .EQ. "spectra") then
+
+      ;***************************************************
+      ; REQUIRED --file_1-- INPUT FILE
+      ;
+      ; input file produced by PALM; if there is more than one file for 
+      ; all timesteps of a job chain, 
+      ; declare path and file name without cycle number and ".nc" (first and 
+      ; last cycle numbers are given with the parameters 
+      ; 'start_f' and 'end_f'); 
+      ; otherwise declare path and full file name
+      ;
+      ; data type: string
+      ;
+      ; example: file_1 = "/path_to_file/file_sp"      
+      ;                     if you use more than one cycle number
+      ;          file_1 = "/path_to_file/file_sp.4.nc" 
+      ;                     if you use one file (e.g. with cycle number 4)
+      ;
+      ; default:   "File in" 
+      ;***************************************************
+      if(.not. isvar("file_1"))then
+
+
+         file_1 = "File in" 
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL/REQUIRED if more than one file of a job chain 
+      ;           --start_f-- START OF CYCLIC NUMBER
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare the first cyclicnumber which contains timesteps 
+      ; you'd like to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   start_f = 3 (if first file: example_sp.3.nc) and
+      ;            start_f = 0 (if first file: example_sp.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("start_f"))then  
+      
+          
+         start_f = -1
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL/REQUIRED if more than one file of a job chain 
+      ;          --end_f-- END OF CYCLIC NUMBER
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare the last cyclicnumber which contains timesteps 
+      ; you'd like to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   end_f = 48 (if last file: example_sp.48.nc) and 
+      ;            end_f =  0 (if last file: example_sp.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("end_f"))then  
+      
+          
+         end_f = -1
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL --format_out-- OUTPUT FORMAT
+      ;
+      ; format of the output file; 
+      ; supported file formats: x11, pdf, ps, eps, epsi, ncgm or png 
+      ;
+      ; data type: string
+      ;
+      ; example: format_out = "pdf"
+      ;
+      ; default:   "x11" 
+      ;***************************************************
+      if (.not. isvar("format_out"))then	
+      
+       
+         format_out = "x11"
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --file_out-- OUTPUT FILE
+      ;
+      ; path and name of the output file
+      ;
+      ; data type: string
+      ;
+      ; example: file_out = "/home/path_to_output/test_sp"
+      ;
+      ; default:   "~/test_sp" 
+      ;***************************************************
+      if (.not. isvar("file_out"))then	
+      
+       
+         file_out = "~/test_sp"
+	 
+	 
+      end if 	
+      ;***************************************************
+      ; OPTIONAL --var-- OUTPUT VARIABLES
+      ;
+      ; names of output variables;
+      ; inidcate them with one comma before and after each variable
+      ; if the name contains double quotes (") use dq and the '+' operation to 
+      ; concatenate the strings
+      ;
+      ; data type: string 
+      ; 
+      ; example: var = ",u,v,w,"
+      ;
+      ; default:   "all" (all available variables are plotted)
+      ;***************************************************
+      if (.not. isvar("var"))then
+      
+      	 
+         var = "all"
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --start_time_step-- FIRST TIME STEP
+      ;
+      ; first time step of plot; there is no need to specify a precise 
+      ; time value from the input file,
+      ; 'start_time_step' is rounded to the next existent time step
+      ;
+      ; data type: double; dimension: [hour]
+      ;
+      ; example:   start_time_step = 0.5d
+      ;
+      ; default:   -1.d (first available time step)
+      ;***************************************************
+      if (.not. isvar("start_time_step"))then
+      
+      	 
+         start_time_step = -1.d
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --end_time_step-- LAST TIME STEP
+      ;
+      ; last time step of plot; there is no need to specify a precise 
+      ; time value from the input file,
+      ; 'end_time_step' is rounded to the next existent time step
+      ;
+      ; data type: double; dimension: [hour]
+      ;
+      ; example:   end_time_step = 2.0d
+      ;
+      ; default:   -1.d (last available time step)
+      ;***************************************************
+      if (.not. isvar("end_time_step"))then
+      
+      	 
+         end_time_step = -1.d
+	 
+	 
+      end if    
+      ;***************************************************
+      ; OPTIONAL --height_level-- HEIGHT LEVELS 
+      ;
+      ; defines if all levels or selected levels are output; 
+      ; a 1D array with up to 100 elements
+      ; from 0 to 99 must be indicated
+      ;
+      ; data type: integer array
+      ;
+      ; example: height_level=(/0,3,7/)
+      ;
+      ; default:   (/-1/) (all levels are output)
+      ;***************************************************
+      if (.not. isvar("height_level"))then
+      
+      	 
+         height_level = (/-1/)
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --sort-- TYPE OF SORTING 
+      ;
+      ; defines if all heights [="height"] or all timesteps [="time"] 
+      ; are merged in one plot
+      ;
+      ; data type: string
+      ;
+      ; example: sort = "height"
+      ;
+      ; default:   "height" 
+      ;***************************************************
+      if (.not. isvar("sort"))then
+      
+      	 
+         sort = "height"
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --no_columns-- NUMBER OF COLUMNS
+      ;
+      ; number of plots in one row 
+      ;
+      ; data type: integer
+      ; 
+      ; example: no_columns = 1
+      ;
+      ; default:   1
+      ;***************************************************
+      if (.not. isvar("no_columns"))then	 
+      
+      
+         no_columns = 1
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --no_rows-- NUMBER OF ROWS
+      ;
+      ; number of plots in one column 
+      ;
+      ; data type: integer
+      ; 
+      ; example: no_rows = 2
+      ;
+      ; default:   2 
+      ;***************************************************
+      if (.not. isvar("no_rows"))then
+      
+      	 
+         no_rows = 2
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --log_x-- LOGARITHMIC SCALE X-AXIS
+      ;
+      ; logarithmic scale for x-axis is switched on [=1] or off [=0]
+      ;
+      ; data type: integer
+      ;
+      ; example: log_x = 1
+      ;
+      ; default:   1
+      ;***************************************************
+      if (.not. isvar("log_x"))then   
+      
+         
+         log_x = 1
+	 
+	 
+      end if	 
+      ;***************************************************
+      ; OPTIONAL --log_y-- LOGARITHMIC SCALE Y-AXIS 
+      ;
+      ; logarithmic scale for y-axis is switched on [=1] or off [=0]
+      ;
+      ; data type: integer
+      ;
+      ; example: log_y = 1
+      ;
+      ; default:   1
+      ;***************************************************
+      if (.not. isvar("log_y"))then   
+      
+         
+         log_y = 1
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --norm_height-- NORMALISING X-AXIS WITH HEIGHT
+      ;
+      ; normalising the x-axis with the height of each spectra 
+      ; is switched on [=1] or off [=0]
+      ;
+      ; data type: integer
+      ;
+      ; example: norm_height = 0
+      ;
+      ; default:   0 (no normalising)
+      ;***************************************************
+      if (.not. isvar("norm_height"))then   
+      
+         
+         norm_height = 0
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --norm_x-- NORMALISING X-AXIS 
+      ;
+      ; value for normalising the x-axis
+      ;
+      ; data type: float
+      ;
+      ; example: norm_x = 1.
+      ;
+      ; default:   1. (no normalising)
+      ;***************************************************
+      if (.not. isvar("norm_x"))then   
+      
+         
+         norm_x = 1.
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL --norm_y-- NORMALISE Y-AXIS 
+      ;
+      ; value for normalising the y-axis
+      ;
+      ; data type: float
+      ;
+      ; example: norm_y = 1.
+      ;
+      ; default:   1. (no normalising)
+      ;***************************************************
+      if (.not. isvar("norm_y"))then     
+      
+       
+         norm_y = 1.
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL --unit_x--unit_y-- UNITS OF X-, Y-AXES
+      ;
+      ; unit of the x-axis can be set if norm_x is unequal 1, 
+      ; otherwise the unit is [1/m]; by default no unit is set for the y-axis 
+      ; 
+      ; data type: string, 
+      ;
+      ; example: unit_x = "100/m"
+      ;
+      ; default:   " " 
+      ;***************************************************
+      if(.not. isvar("unit_x"))then      
+      	 
+         unit_x = " "	 
+	 
+      end if
+      if(.not. isvar("unit_y"))then      
+      	 
+         unit_y = " "	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL --black-- BLACK OR COLOR LINES
+      ;
+      ; colored [=0] or black and white [=1] plots
+      ;
+      ; data type: integer
+      ;
+      ; example: black = 0
+      ;
+      ; default:   0
+      ;***************************************************
+      if (.not. isvar("black"))then 
+      
+           
+         black = 0
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --dash-- DASHED LINES 
+      ;
+      ; use of different line patterns [=1] or continous lines [=0]
+      ;
+      ; data type: integer
+      ;
+      ; example: dash = 0
+      ;
+      ; default:   0
+      ;***************************************************
+      if (.not. isvar("dash"))then   
+      
+         
+         dash = 0
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL --font_size-- FONT SIZE OF STRINGS 
+      ;
+      ; font size can be changed to fit to the current plot
+      ;
+      ; data type: float
+      ;
+      ; example: font_size = 0.02
+      ;
+      ; default:   0.02 
+      ;***************************************************
+      if(.not. isvar("font_size"))then
+      
+      	 
+         font_size = 0.02
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL --font_size_legend-- FONT SIZE OF LEGEND STRINGS 
+      ;
+      ; font size of the legend can be changed to fit to the current plot
+      ;
+      ; data type: float
+      ;
+      ; example: font_size_legend = 0.02
+      ;
+      ; default:   0.02 
+      ;***************************************************
+      if(.not. isvar("font_size_legend"))then
+      
+      	 
+         font_size_legend = 0.02
+	 
+	 
+      end if	 
+      ;***************************************************
+     
+   end if
+
+   ;******************************************************
+   ; parameters used by TIMESERIES
+   ;******************************************************
+
+   if (script .EQ. "timeseries") then
+
+      ;***************************************************
+      ; REQUIRED --file_1-- INPUT FILE
+      ;
+      ; input file produced by PALM; if there is more than one file for 
+      ; all timesteps of a job chain, 
+      ; declare path and file name without cycle number and ".nc" (first and 
+      ; last cycle numbers are given with the parameters 
+      ; 'start_f' and 'end_f'); 
+      ; otherwise declare path and full file name
+      ;
+      ; data type: string
+      ;
+      ; example: file_1 = "/path_to_file/file_ts"      
+      ;                      if you use more than one cycle number
+      ;          file_1 = "/path_to_file/file_ts.4.nc" 
+      ;                      if you use one file (e.g. with cycle number 4)
+      ;
+      ; default:   "File in" 
+      ;***************************************************
+      if(.not. isvar("file_1"))then
+
+
+         file_1 = "File in"
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL/REQUIRED if more than one file of a job chain 
+      ;          --start_f-- START OF CYCLIC NUMBER
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare the first cyclicnumber which contains timesteps 
+      ; you'd like to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   start_f = 3 (if first file: example_ts.3.nc) and 
+      ;            start_f = 0 (if first file: example_ts.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("start_f"))then  
+      
+          
+         start_f = -1
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL/REQUIRED if more than one file of a job chain 
+      ;           --end_f-- END OF CYCLIC NUMBER
+      ;
+      ; if there is more than one file for all timesteps of a job chain, 
+      ; declare the last cyclicnumber which contains timesteps 
+      ; you'd like to use
+      ;
+      ; data type: integer
+      ;
+      ; example:   end_f = 48 (if last file: example_ts.48.nc) and 
+      ;            end_f = 0 (if last file: example_ts.nc)
+      ;
+      ; default:   -1  
+      ;***************************************************
+      if (.not. isvar("end_f"))then  
+      
+          
+         end_f = -1
+	 
+	 
+      end if 
+      ;***************************************************
+      ; OPTIONAL --format_out-- OUTPUT FORMAT
+      ;
+      ; format of the output file; 
+      ; supported file formats: x11, pdf, ps, eps, epsi, ncgm or png 
+      ;
+      ; data type: string
+      ;
+      ; example: format_out = "pdf"
+      ;
+      ; default:   "x11" 
+      ;***************************************************
+      if (.not. isvar("format_out"))then	 
+      
+      
+         format_out = "x11"
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --file_out-- OUTPUT FILE
+      ;
+      ; path and name of the output file
+      ;
+      ; data type: string
+      ;
+      ; example: file_out = "/home/path_to_output/test_ts"
+      ;
+      ; default:   "~/test_ts" 
+      ;***************************************************
+      if (.not. isvar("file_out"))then	
+      
+       
+         file_out = "~/test_ts"
+	 
+	 
+      end if 
+ ;***************************************************
+      ; OPTIONAL --var-- OUTPUT VARIABLES
+      ;
+      ; names of output variables; 
+      ; inidcate them with one comma before and after each variable
+      ; if the name contains double quotes (") use dq and the '+' operation to 
+      ; concatenate the strings
+      ;
+      ; data type: string 
+      ; 
+      ; example: var = ",umax,vmax,wmax,w"+dq+"pt"+dq+"0,"
+      ;
+      ; default:   "all" (all available variables are plotted)
+      ;***************************************************
+      if (.not. isvar("var"))then
+      
+      	 
+         var = "all"
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --start_time_step-- FIRST TIME STEP
+      ;
+      ; first time step of plot; there is no need to specify a precise 
+      ; time value from the input file,
+      ; 'start_time_step' is rounded to the next existent time step
+      ;
+      ; data type: double; dimension: [hour]
+      ;
+      ; example:   start_time_step = 0.5d
+      ;
+      ; default:   -1.d (first available time step)
+      ;***************************************************
+      if (.not. isvar("start_time_step"))then
+      
+      	 
+         start_time_step = -1.d
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --end_time_step-- LAST TIME STEP
+      ;
+      ; last time step of plot; there is no need to specify a precise 
+      ; time value from the input file,
+      ; 'end_time_step' is rounded to the next existent time step
+      ;
+      ; data type: double; dimension: [hour]
+      ;
+      ; example:   end_time_step = 2.0d
+      ;
+      ; default:   -1.d (last available time step)
+      ;***************************************************
+      if (.not. isvar("end_time_step"))then
+      
+      	 
+         end_time_step = -1.d
+	 
+
+      end if 	 	 
+      ;***************************************************
+      ; OPTIONAL --over-- OVERLAYING
+      ;
+      ; predefined overlaying of standard variables are switched
+      ; on [=1] or off [=0];
+      ; this feature cannot be used with statistic regions
+      ;
+      ; data type: integer
+      ;
+      ; example: over = 0
+      ;
+      ; default:   0 
+      ;***************************************************
+      if (.not. isvar("over"))then
+      
+      	 
+         over = 0
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL --norm_t-- NORMALISING X-AXIS OF TIMESERIES PLOTS (T-AXIS)
+      ;
+      ; normalising the x-axis with the given value; 
+      ; the unit can be set explicitly; 
+      ; by default no normalising and unit is set to [s]
+      ;
+      ; data type: float
+      ;
+      ; example: norm_t = 3600.
+      ;
+      ; default:   1. 
+      ;***************************************************
+      if(.not. isvar("norm_t"))then
+      
+      	 
+         norm_t = 1.
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL --unit_t-- UNIT OF X-AXIS OF TIMESERIES PLOTS (T-AXIS)
+      ;
+      ; unit of the x-axis can be set; by default unit is set to [s]
+      ;
+      ; data type: string
+      ;
+      ; example: unit_t = "h"
+      ;
+      ; default:   " " 
+      ;***************************************************
+      if(.not. isvar("unit_t"))then
+      
+      	 
+         unit_t = " "
+	 
+	 
+      end if
+      ;***************************************************
+      ; OPTIONAL --no_columns-- NUMBER OF COLUMNS
+      ;
+      ; number of plots in one row 
+      ;
+      ; data type: integer
+      ; 
+      ; example: no_columns = 1
+      ;
+      ; default:   1
+      ;***************************************************
+      if (.not. isvar("no_columns"))then	
+      
+       
+         no_columns = 1
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --no_rows-- NUMBER OF ROWS
+      ;
+      ; number of plots in one column 
+      ;
+      ; data type: integer
+      ; 
+      ; example: no_rows = 2
+      ;
+      ; default:   2 
+      ;***************************************************
+      if (.not. isvar("no_rows"))then
+      
+      	 
+         no_rows = 2
+	 
+	 
+      end if 	 
+      ;***************************************************
+      ; OPTIONAL --font_size-- FONT SIZE OF STRINGS 
+      ;
+      ; font size can be changed to fit to the current plot
+      ;
+      ; data type: float
+      ;
+      ; example: font_size = 0.07
+      ;
+      ; default:   0.07 
+      ;***************************************************
+      if(.not. isvar("font_size"))then
+      
+      	 
+         font_size = 0.07
+	 
+	 
+      end if 
+      ;***************************************************
+
+   end if
+	 
+;*********************************************************	 
+   
+end

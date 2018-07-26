@@ -1,0 +1,75 @@
+#$Id: .palm.config.crayh 2834 2018-02-23 14:04:07Z raasch $
+#column 1          column 2
+#name of variable  value of variable (~ must not be used)
+#----------------------------------------------------------------------------
+%base_data           ~/palm/current_version/JOBS
+%base_directory      $HOME/palm/current_version
+%source_path         $HOME/palm/current_version/trunk/SOURCE
+%user_source_path    $base_directory/JOBS/$jobname/USER_CODE
+%fast_io_catalog     /gfs2/work/niksiraa
+%local_jobcatalog    /home/raasch/job_queue
+%remote_jobcatalog   /home/h/niksiraa/job_queue
+#
+%local_ip            130.75.105.103
+%local_username      raasch
+%remote_ip           130.75.4.1
+%remote_loginnode    hlogin1
+%remote_username     niksiraa
+%ssh_key             id_rsa_hlrn
+%defaultqueue        mpp2testq
+%submit_command      /opt/moab/default/bin/msub -E
+#
+%compiler_name       ftn
+%compiler_name_ser   ftn
+%cpp_options         -e Z -DMPI_REAL=MPI_DOUBLE_PRECISION -DMPI_2REAL=MPI_2DOUBLE_PRECISION -D__parallel -D__netcdf -D__netcdf4 -D__netcdf4_parallel -D__fftw
+%make_options        -j 4
+%compiler_options    -em -O3 -hnoomp -hnoacc -hfp3 -hdynamic
+%linker_options      -em -O3 -hnoomp -hnoacc -hfp3 -hdynamic -dynamic
+%execute_command     aprun  -n {{mpi_tasks}}  -N {{tasks_per_node}}  palm
+%execute_command_for_combine     aprun  -n 1  -N 1  ./combine_plot_fields.x
+%memory              2300
+%module_commands     module load fftw cray-hdf5-parallel cray-netcdf-hdf5parallel
+%login_init_cmd      module switch craype-ivybridge craype-haswell
+#
+# BATCH-directives to be used for batch jobs
+BD:#!/bin/bash
+BD:#PBS -A {{project_account}}
+BD:#PBS -N {{job_id}}
+BD:#PBS -l walltime={{cpu_hours}}:{{cpu_minutes}}:{{cpu_seconds}}
+BD:#PBS -l nodes={{nodes}}:ppn={{tasks_per_node}}
+BD:#PBS -o {{job_protocol_file}}
+BD:#PBS -j oe
+BD:#PBS -q {{queue}}
+#
+# BATCH-directives for batch jobs used to send back the jobfile from a remote to a local host
+BDT:#!/bin/bash
+BDT:#PBS -A {{project_account}}
+BDT:#PBS -N job_protocol_transfer
+BDT:#PBS -l walltime=00:30:00
+BDT:#PBS -l nodes=1:ppn=1
+BDT:#PBS -o {{job_transfer_protocol_file}}
+BDT:#PBS -j oe
+BDT:#PBS -q dataq
+#
+#----------------------------------------------------------------------------
+# INPUT-commands, executed before running PALM - lines must start with "IC:" 
+#----------------------------------------------------------------------------
+IC:export ATP_ENABLED=1
+IC:export MPICH_GNI_BTE_MULTI_CHANNEL=disabled
+IC:ulimit  -s unlimited
+#
+#----------------------------------------------------------------------------
+# ERROR-commands - executed when program terminates abnormally
+#----------------------------------------------------------------------------
+EC:[[ \$locat = execution ]]  &&  cat  RUN_CONTROL
+#
+#----------------------------------------------------------------------------
+# OUTPUT-commands - executed when program terminates normally
+#----------------------------------------------------------------------------
+#
+# Combine 1D- and 3D-profile output (these files are not usable for plotting)
+OC:[[ -f LIST_PROFIL_1D     ]]  &&  cat  LIST_PROFIL_1D  >>  LIST_PROFILE
+OC:[[ -f LIST_PROFIL        ]]  &&  cat  LIST_PROFIL     >>  LIST_PROFILE
+#
+# Combine all particle information files
+OC:[[ -f PARTICLE_INFOS/_0000 ]]  &&  cat  PARTICLE_INFOS/* >> PARTICLE_INFO

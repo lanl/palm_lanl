@@ -740,7 +740,7 @@
 
           !LPV adding solar forcing with depth
           IF ( PRESENT(s_flux_solar_t )) THEN
-            DO m = surf_s, surf_e
+            m = surf_def_h(2)%start_index(j,i)
               zval = 0.0_wp
               DO k = nzt,nzb+1,-1
                 flux1 = (1.0_wp - ideal_solar_division)*exp(ideal_solar_efolding2*zval) + &
@@ -750,11 +750,7 @@
                    ideal_solar_division*exp(ideal_solar_efolding2*zval)
 
                 tend(k,j,i) = tend(k,j,i) + s_flux_solar_t(m)*(flux1 - flux2) / ddzw(k)
-                if (maxval(s_flux_solar_t(:)) > 0.05) then
-                   print *, zval, flux1, flux2, ddzw(k)
-                 endif
               ENDDO
-            ENDDO
           ENDIF
        ENDIF
 

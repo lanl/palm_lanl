@@ -529,7 +529,7 @@
                                      surf_def_h(2)%sasws(m)*beta_S(k,j,i))
                  tod = simulated_time / 86400.0_wp
                  arg1 = cos(2.0_wp*pi*(tod - 0.5_wp))
-                 surf_def_h(2)%shf_sol(m) = wb_sfc*pi*max(arg1,0.0_wp)
+                 surf_def_h(2)%shf_sol(m) = wb_sfc/(g*alpha_T(k,j,i))*pi*max(arg1,0.0_wp)
              ENDIF
        enddo
     enddo

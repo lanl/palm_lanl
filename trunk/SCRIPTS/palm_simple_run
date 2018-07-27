@@ -91,7 +91,8 @@ mpi_ranks_per_node=1
 openmp_threads=1
 localhost_realname=$(hostname)
 cpumax=999999
-SCRIPT_LOCATION=~/palm/current_version/trunk/SCRIPTS
+dir=`pwd`
+SCRIPT_LOCATION=$dir/trunk/SCRIPTS
 work_dir=unknown
 restart_run=false
 remote_dir=true #assumes everything in work_dir
@@ -180,6 +181,7 @@ fi
    # Check, if include file exists
 if [[ "$remote_dir" = true ]]
 then
+   cp ${trunk_dir}/INSTALL/RUN.cmd.${run_config} ${working_dir}
    run_config_file=${working_dir}/RUN.cmd.${run_config}
 else
    run_config_file=${trunk_dir}/INSTALL/RUN.cmd.${run_config}

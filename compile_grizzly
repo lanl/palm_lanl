@@ -1,0 +1,9 @@
+#!/bin/bash
+
+export PATH="/lustre/scratch3/turquoise/lvanroekel/palm_les_updates/trunk/SCRIPTS:$PATH"
+module purge
+module load intel/17.0.1
+module load openmpi/1.10.5
+module use -a /usr/projects/climate/SHARED_CLIMATE/modulefiles/all
+module load netcdf/4.4.1
+palm_simple_build -b ifort.grizzly -w "/lustre/scratch3/turquoise/lvanroekel/palm/jobs/diurnal/"

@@ -1,0 +1,22 @@
+#!/bin/bash
+
+#SBATCH  --job-name=PALM_TEST
+#SBATCH  --nodes=4
+#SBATCH  --ntasks-per-node=32
+#SBATCH  --output=PALM_TEST.%j
+#SBATCH  --exclusive
+#SBATCH --qos=interactive
+#SBATCH --time=01:00:00
+#SBATCH -A climateacme
+
+cd $SLURM_SUBMIT_DIR
+export PATH="/lustre/scratch3/turquoise/lvanroekel/palm_les_updates/trunk/SCRIPTS:${PATH}"
+module purge
+module load intel/17.0.1
+module load openmpi/1.10.5
+module use -a /usr/projects/climate/SHARED_CLIMATE/modulefiles/all
+module load netcdf/4.4.1
+
+
+
+palm_simple_run -b ifort.grizzly -w "/lustre/scratch3/turquoise/lvanroekel/palm/jobs/diurnal" -c mpirun -s test_oceanml -n 32 -p 128 -t 1

@@ -135,7 +135,7 @@
            ONLY:  ddzu, ddzw, kh, tend, drho_air, rho_air_zw
        
        USE control_parameters,                                                 & 
-           ONLY: use_surface_fluxes, use_top_fluxes, idealized_diurnal
+           ONLY: use_surface_fluxes, use_top_fluxes
        
        USE grid_variables,                                                     &
            ONLY:  ddx, ddx2, ddy, ddy2

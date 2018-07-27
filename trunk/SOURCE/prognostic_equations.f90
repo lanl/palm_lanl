@@ -530,9 +530,6 @@
                  tod = simulated_time / 86400.0_wp
                  arg1 = cos(2.0_wp*pi*(tod - 0.5_wp))
                  surf_def_h(2)%shf_sol(m) = wb_sfc*pi*max(arg1,0.0_wp)
-                 if(tod > 0.5 .and. tod < 0.6) then
-                    print *, 'flux = ',tod,wb_sfc
-                 endif
              ENDIF
        enddo
     enddo

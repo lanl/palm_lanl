@@ -790,6 +790,7 @@
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  rho_ocean  !< density of ocean
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  alpha_T    !< drhodT
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  beta_S     !< drhodS
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  solar3d    !< 3d solar tendency
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  s          !< passive scalar
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  s_p        !< prognostic value of passive scalar
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  sa         !< ocean salinity
@@ -886,6 +887,7 @@
     REAL(wp), DIMENSION(:,:,:), POINTER, CONTIGUOUS ::  rho_ocean  !< pointer: density of ocean
     REAL(wp), DIMENSION(:,:,:), POINTER, CONTIGUOUS ::  alpha_T    !< pointer: thermal expansion coefficent
     REAL(wp), DIMENSION(:,:,:), POINTER, CONTIGUOUS ::  beta_S     !< pointer: haline contraction coefficient
+    REAL(wp), DIMENSION(:,:,:), POINTER, CONTIGUOUS ::  solar3d    !< pointer: 3d solar tendency
     REAL(wp), DIMENSION(:,:,:), POINTER, CONTIGUOUS ::  s          !< pointer: passive scalar
     REAL(wp), DIMENSION(:,:,:), POINTER, CONTIGUOUS ::  s_p        !< pointer: prognostic value of passive scalar
     REAL(wp), DIMENSION(:,:,:), POINTER, CONTIGUOUS ::  sa         !< pointer: ocean salinity
@@ -983,6 +985,7 @@
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  rho_ocean_av  !< avg. ocean density
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  alpha_T_av       !< avg. thermal expansion coefficient
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  beta_S_av        !< avg. haline contraction coefficient
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  solar3d_av    !< avg. 3d solar tendency
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  s_av          !< avg. passive scalar
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  sa_av         !< avg. salinity
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  u_av          !< avg. horizontal velocity component u 

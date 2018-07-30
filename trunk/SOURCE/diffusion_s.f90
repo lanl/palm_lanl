@@ -132,7 +132,7 @@
                                s_flux_usm_v_east,  s_flux_usm_v_west )
 
        USE arrays_3d,                                                          &
-           ONLY:  ddzu, ddzw, kh, tend, drho_air, rho_air_zw
+           ONLY:  dzw, ddzu, ddzw, kh, tend, drho_air, rho_air_zw
        
        USE control_parameters,                                                 & 
            ONLY: use_surface_fluxes, use_top_fluxes
@@ -445,7 +445,7 @@
                                s_flux_solar_t)       
 
        USE arrays_3d,                                                          &
-           ONLY:  ddzu, ddzw, kh, tend, drho_air, rho_air_zw
+           ONLY:  dzw, ddzu, ddzw, kh, tend, drho_air, rho_air_zw, solar3d
            
        USE control_parameters,                                                 & 
            ONLY: use_surface_fluxes, use_top_fluxes, ideal_solar_division,     &
@@ -744,13 +744,16 @@
               zval = 0.0_wp
               DO k = nzt,nzb+1,-1
                 flux1 = (1.0_wp - ideal_solar_division)*exp(ideal_solar_efolding2*zval) + &
-                   ideal_solar_division*exp(ideal_solar_efolding2*zval)
-                zval = zval - ddzw(k)
+                   ideal_solar_division*exp(ideal_solar_efolding1*zval)
+                zval = zval - dzw(k)
                 flux2 = (1.0_wp - ideal_solar_division)*exp(ideal_solar_efolding2*zval) + &
-                   ideal_solar_division*exp(ideal_solar_efolding2*zval)
+                   ideal_solar_division*exp(ideal_solar_efolding1*zval)
 
-                tend(k,j,i) = tend(k,j,i) + s_flux_solar_t(m)*(flux1 - flux2) / ddzw(k)
+                tend(k,j,i) = tend(k,j,i) + s_flux_solar_t(m)*(flux1 - flux2) / dzw(k)
+
+                solar3d(k,j,i) = s_flux_solar_t(m)*(flux1 - flux2) / dzw(k)
               ENDDO
+
           ENDIF
        ENDIF
 

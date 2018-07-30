@@ -1195,6 +1195,11 @@
              WRITE ( 14 )  rho_ocean_av
           ENDIF
 
+          IF ( ALLOCATED( solar3d_av ) )  THEN
+             CALL wrd_write_string( 'solar3d_av' ) 
+             WRITE ( 14 )  solar3d_av
+          ENDIF
+
           IF ( ALLOCATED( alpha_T_av ) )  THEN
              CALL wrd_write_string( 'alpha_T_av' ) 
              WRITE ( 14 )  alpha_T_av

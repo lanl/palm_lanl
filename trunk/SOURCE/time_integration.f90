@@ -350,7 +350,7 @@
         ONLY:  diss, diss_p, dzu, e, e_p, nc, nc_p, nr, nr_p, prho, pt, pt_p, pt_init, &
                q_init, q, qc, qc_p, ql, ql_c, ql_v, ql_vp, qr, qr_p, q_p,      &
                ref_state, rho_ocean, s, s_p, sa_p, tend, u, u_p, v, vpt,       &
-               v_p, w, w_p, alpha_T, beta_S
+               v_p, w, w_p, alpha_T, beta_S, solar3d
 
     USE calc_mean_profile_mod,                                                 &
         ONLY:  calc_mean_profile
@@ -727,6 +727,7 @@
              CALL exchange_horiz( prho, nbgp )
              CALL exchange_horiz( alpha_T, nbgp )
              CALL exchange_horiz( beta_S, nbgp )
+             call exchange_horiz( solar3d, nbgp )
           ENDIF
           IF ( humidity )  THEN
              CALL exchange_horiz( q_p, nbgp )

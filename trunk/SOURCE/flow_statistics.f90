@@ -280,7 +280,7 @@
                momentumflux_output_conversion, nc, nr, p, prho, prr, pt, q,    &
                qc, ql, qr, rho_air, rho_air_zw, rho_ocean, s,                  &
                sa, u, ug, v, vg, vpt, w, w_subs, waterflux_output_conversion,  &
-               zw, alpha_T, beta_S
+               zw, alpha_T, beta_S, solar3d
         
     USE cloud_parameters,                                                      &
         ONLY:   l_d_cp, pt_d_t
@@ -1361,6 +1361,8 @@
                                                        rmask(j,i,sr) * flag
                    sums_l(k,151,tn) = sums_l(k,151,tn) + beta_S(k,j,i) *       &
                                                        rmask(j,i,sr) * flag
+                   sums_l(k,152,tn) = sums_l(k,152,tn) + solar3d(k,j,i) *      &
+                                                       rmask(j,i,sr) * flag
                    sums_l(k,71,tn) = sums_l(k,71,tn) + prho(k,j,i) *           &
                                                        rmask(j,i,sr) * flag
                 ENDIF
@@ -1955,6 +1957,7 @@
        hom(:,1,64,sr) = sums(:,64)     ! rho_ocean
        hom(:,1,150,sr) = sums(:,150)   ! alpha_T
        hom(:,1,151,sr) = sums(:,151)   ! beta_S
+       hom(:,1,152,sr) = sums(:,152)   ! 3d solar tend
        hom(:,1,65,sr) = sums(:,65)     ! w"sa"
        hom(:,1,66,sr) = sums(:,66)     ! w*sa*
        hom(:,1,67,sr) = sums(:,65) + sums(:,66)    ! wsa

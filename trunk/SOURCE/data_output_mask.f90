@@ -125,13 +125,13 @@
 #if defined( __netcdf )
     USE arrays_3d,                                                             &
         ONLY:  e, nc, nr, p, pt, q, qc, ql, ql_c, ql_v, qr, rho_ocean, s, sa,  &
-               tend, u, v, vpt, w, alpha_T, beta_S
+               tend, u, v, vpt, w, alpha_T, beta_S, solar3d
     
     USE averaging,                                                             &
         ONLY:  e_av, lpt_av, nc_av, nr_av, p_av, pc_av, pr_av, pt_av, q_av,    &
                qc_av, ql_av, ql_c_av, ql_v_av, ql_vp_av, qv_av, qr_av,         &
                rho_ocean_av, s_av, sa_av, u_av, v_av, vpt_av, w_av,            &
-               alpha_T_av, beta_S_av
+               alpha_T_av, beta_S_av, solar3d_av
     
     USE cloud_parameters,                                                      &
         ONLY:  l_d_cp, pt_d_t
@@ -471,6 +471,13 @@
                 to_be_resorted => rho_ocean
              ELSE
                 to_be_resorted => rho_ocean_av
+             ENDIF
+
+          CASE ( 'solar3d' )
+             IF ( av == 0 )  THEN
+                to_be_resorted => solar3d
+             ELSE
+                to_be_resorted => solar3d_av
              ENDIF
 
           CASE ( 'alpha_T' )

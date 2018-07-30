@@ -828,6 +828,7 @@
                  rho_ocean(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                     &
                  alpha_T(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                       &
                  beta_S(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                        &
+                 solar3d(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                       &
                  sa(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                            &
                  sa_p(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                          &
                  tsa_m(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
@@ -836,6 +837,7 @@
                  rho_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                         &
                  alpha_T(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                       &
                  beta_S(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                        &
+                 solar3d(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                       &
                  sa_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                          &
                  sa_2(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                          &
                  sa_3(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )

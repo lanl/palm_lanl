@@ -899,7 +899,7 @@
 !--             Most variables are defined on the scalar grid
                 CASE ( 'e', 'lpt', 'nc', 'nr', 'p', 'pc', 'pr', 'prr', 'pt',   &
                        'q', 'qc', 'ql', 'ql_c', 'ql_v', 'ql_vp', 'qr', 'qv',   &
-                       'rho_ocean', 'alpha_T', 'beta_S', 's', 'sa', 'vpt'  )
+                       'rho_ocean', 'alpha_T', 'beta_S', 'solar3d', 's', 'sa', 'vpt'  )
 
                    grid_x = 'x'
                    grid_y = 'y'
@@ -1448,7 +1448,7 @@
 !--             Most variables are defined on the scalar grid
                 CASE ( 'e', 'lpt', 'nc', 'nr', 'p', 'pc', 'pr', 'prr', 'pt',   &
                        'q', 'qc', 'ql', 'ql_c', 'ql_v', 'ql_vp', 'qr', 'qv',   &
-                       'rho_ocean', 'alpha_T', 'beta_S', 's', 'sa', 'vpt' )
+                       'rho_ocean', 'alpha_T', 'beta_S', 'solar3d', 's', 'sa', 'vpt' )
 
                    grid_x = 'x'
                    grid_y = 'y'
@@ -4657,7 +4657,7 @@
 !--             Most variables are defined on the zu levels
                 CASE ( 'e', 'lpt', 'nc', 'nr', 'p', 'pc', 'pr', 'prr', 'pt',   &
                        'q', 'qc', 'ql', 'ql_c', 'ql_v', 'ql_vp', 'qr', 'qv',   &
-                       'rho_ocean', 'alpha_T', 'beta_S', 's', 'sa', 'u', 'v', 'vpt' )
+                       'rho_ocean', 'alpha_T', 'beta_S', 'solar3d', 's', 'sa', 'u', 'v', 'vpt' )
 
                    grid_z = 'zu'
 !

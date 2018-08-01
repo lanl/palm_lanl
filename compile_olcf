@@ -1,4 +1,4 @@
 #!/bin/bash
 
 module load cray-netcdf-hdf5parallel/4.4.1.1 
-palm_simple_build -x -b ifort.titan -w "/lustre/atlas1/cli127/proj-shared/vanroek/palm/jobs/diurnal/"
+palm_simple_build -b ifort.titan -w "/lustre/atlas1/cli127/proj-shared/vanroek/palm/jobs/diurnal/"

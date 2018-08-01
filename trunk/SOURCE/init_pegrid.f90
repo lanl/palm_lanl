@@ -266,16 +266,9 @@
     USE spectra_mod,                                                           &
         ONLY:  calculate_spectra, dt_dosp
 
-    USE synthetic_turbulence_generator_mod,                                    &
-        ONLY:  id_stg_left, id_stg_north, id_stg_right, id_stg_south,          &
-               use_syn_turb_gen
-
     USE transpose_indices,                                                     &
         ONLY:  nxl_y, nxl_yd, nxl_z, nxr_y, nxr_yd, nxr_z, nyn_x, nyn_z, nys_x,&
                nys_z, nzb_x, nzb_y, nzb_yd, nzt_x, nzt_yd, nzt_y
-
-    USE vertical_nesting_mod,                                                  &
-        ONLY:  vnested, vnest_init_pegrid_domain, vnest_init_pegrid_rank
 
     IMPLICIT NONE
 
@@ -284,10 +277,6 @@
     INTEGER(iwp) ::  id_outflow_l             !< local value of id_outflow
     INTEGER(iwp) ::  id_outflow_source_l      !< local value of id_outflow_source
     INTEGER(iwp) ::  id_recycling_l           !<
-    INTEGER(iwp) ::  id_stg_left_l            !< left lateral boundary local core id in case of turbulence generator  
-    INTEGER(iwp) ::  id_stg_north_l           !< north lateral boundary local core id in case of turbulence generator  
-    INTEGER(iwp) ::  id_stg_right_l           !< right lateral boundary local core id in case of turbulence generator  
-    INTEGER(iwp) ::  id_stg_south_l           !< south lateral boundary local core id in case of turbulence generator  
     INTEGER(iwp) ::  ind(5)                   !<
     INTEGER(iwp) ::  j                        !<
     INTEGER(iwp) ::  k                        !<
@@ -440,10 +429,6 @@
        ENDIF
     ENDIF
 !
-!-- Vertical nesting: store four lists that identify partner ranks to exchange 
-!-- data
-    IF ( vnested )  CALL vnest_init_pegrid_rank
-
 !
 !-- Determine sub-topologies for transpositions
 !-- Transposition from z to x:
@@ -735,7 +720,7 @@
     CALL MPI_TYPE_VECTOR( ngp_xy, 1, nzt-nzb+2, MPI_REAL, type_xy, ierr )
     CALL MPI_TYPE_COMMIT( type_xy, ierr )
 
-    IF ( TRIM( coupling_mode ) /= 'uncoupled' .AND. .NOT. vnested )  THEN
+    IF ( TRIM( coupling_mode ) /= 'uncoupled' )  THEN
    
 !
 !--    Pass the number of grid points of the atmosphere model to
@@ -839,7 +824,6 @@
 !
 !-- Store partner grid point co-ordinates as lists.
 !-- Create custom MPI vector datatypes for contiguous data transfer
-    IF ( vnested )  CALL vnest_init_pegrid_domain
 
 #else
 
@@ -1281,45 +1265,6 @@
 !-- In case of synthetic turbulence geneartor determine ids. 
 !-- Please note, if no forcing or nesting is applied, the generator is applied
 !-- only at the left lateral boundary.
-    IF ( use_syn_turb_gen )  THEN
-       IF ( force_bound_l  .OR.  nest_bound_l  .OR.  inflow_l )  THEN
-          id_stg_left_l = myidx
-       ELSE
-          id_stg_left_l = 0
-       ENDIF
-       IF ( force_bound_r  .OR.  nest_bound_r )  THEN
-          id_stg_right_l = myidx
-       ELSE
-          id_stg_right_l = 0
-       ENDIF
-       IF ( force_bound_s  .OR.  nest_bound_s )  THEN
-          id_stg_south_l = myidy
-       ELSE
-          id_stg_south_l = 0
-       ENDIF
-       IF ( force_bound_n  .OR.  nest_bound_n )  THEN
-          id_stg_north_l = myidy
-       ELSE
-          id_stg_north_l = 0
-       ENDIF
-
-       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-       CALL MPI_ALLREDUCE( id_stg_left_l, id_stg_left,   1, MPI_INTEGER,       &
-                           MPI_SUM, comm1dx, ierr )
-
-       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-       CALL MPI_ALLREDUCE( id_stg_right_l, id_stg_right, 1, MPI_INTEGER,       &
-                           MPI_SUM, comm1dx, ierr )
-
-       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-       CALL MPI_ALLREDUCE( id_stg_south_l, id_stg_south, 1, MPI_INTEGER,       &
-                           MPI_SUM, comm1dy, ierr )
-
-       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-       CALL MPI_ALLREDUCE( id_stg_north_l, id_stg_north, 1, MPI_INTEGER,       &
-                           MPI_SUM, comm1dy, ierr )
-
-    ENDIF 
  
 !
 !-- Broadcast the id of the inflow PE

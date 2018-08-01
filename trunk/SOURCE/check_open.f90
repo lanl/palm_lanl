@@ -194,10 +194,6 @@ SUBROUTINE check_open( file_id )
                id_set_3d, nc_stat, netcdf_create_file, netcdf_data_format,     &
                netcdf_define_header, netcdf_handle_error, netcdf_open_write_file
 
-    USE particle_attributes,                                                   &
-        ONLY:  max_number_of_particle_groups, number_of_particle_groups,       &
-               particle_groups
-
     USE pegrid
 
     USE posix_calls_from_fortran,                                              &
@@ -471,82 +467,6 @@ SUBROUTINE check_open( file_id )
 #endif
           ENDIF
 
-       CASE ( 80 )
-
-          IF ( myid_char == '' )  THEN
-             OPEN ( 80, FILE='PARTICLE_INFOS'//TRIM(coupling_char)//myid_char, &
-                        FORM='FORMATTED', POSITION='APPEND' )
-          ELSE
-             IF ( myid == 0  .AND.  .NOT. openfile(80)%opened_before )  THEN
-                CALL local_system( 'mkdir  PARTICLE_INFOS' //                  &
-                                   TRIM( coupling_char ) )
-             ENDIF
-#if defined( __parallel )
-!
-!--          Set a barrier in order to allow that thereafter all other
-!--          processors in the directory created by PE0 can open their file.
-!--          WARNING: The following barrier will lead to hanging jobs, if
-!--                   check_open is first called from routine
-!--                   allocate_prt_memory!
-             IF ( .NOT. openfile(80)%opened_before )  THEN
-                CALL MPI_BARRIER( comm2d, ierr )
-             ENDIF
-#endif
-             OPEN ( 80, FILE='PARTICLE_INFOS'//TRIM( coupling_char )//'/'//    &
-                             myid_char,                                        &
-                        FORM='FORMATTED', POSITION='APPEND' )
-          ENDIF
-
-          IF ( .NOT. openfile(80)%opened_before )  THEN
-             WRITE ( 80, 8000 )  TRIM( run_description_header )
-          ENDIF
-
-       CASE ( 85 )
-
-          IF ( myid_char == '' )  THEN
-             OPEN ( 85, FILE='PARTICLE_DATA'//TRIM(coupling_char)//myid_char,  &
-                        FORM='UNFORMATTED', POSITION='APPEND' )
-          ELSE
-             IF ( myid == 0  .AND.  .NOT. openfile(85)%opened_before )  THEN
-                CALL local_system( 'mkdir  PARTICLE_DATA' //                   &
-                                   TRIM( coupling_char ) )
-             ENDIF
-#if defined( __parallel )
-!
-!--          Set a barrier in order to allow that thereafter all other
-!--          processors in the directory created by PE0 can open their file
-             CALL MPI_BARRIER( comm2d, ierr )
-#endif
-             ioerr = 1
-             DO WHILE ( ioerr /= 0 )
-                OPEN ( 85, FILE='PARTICLE_DATA'//TRIM( coupling_char )//'/'//  &
-                           myid_char,                                          &
-                           FORM='UNFORMATTED', POSITION='APPEND', IOSTAT=ioerr )
-                IF ( ioerr /= 0 )  THEN
-                   WRITE( 9, * )  '*** could not open "PARTICLE_DATA'//        &
-                                  TRIM( coupling_char )//'/'//myid_char//      &
-                                  '"! Trying again in 1 sec.'
-                   CALL fortran_sleep( 1 )
-                ENDIF
-             ENDDO
-
-          ENDIF
-
-          IF ( .NOT. openfile(85)%opened_before )  THEN
-             WRITE ( 85 )  run_description_header
-!
-!--          Attention: change version number whenever the output format on
-!--                     unit 85 is changed (see also in routine
-!--                     lpm_data_output_particles)
-             rtext = 'data format version 3.1'
-             WRITE ( 85 )  rtext
-             WRITE ( 85 )  number_of_particle_groups,                          &
-                           max_number_of_particle_groups
-             WRITE ( 85 )  particle_groups
-             WRITE ( 85 )  nxl, nxr, nys, nyn, nzb, nzt, nbgp
-          ENDIF
-
-!
 !--    File where sky-view factors and further required data is stored will be 
 !--    read
        CASE ( 88 )

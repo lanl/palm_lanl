@@ -133,9 +133,6 @@
                rho_ocean_av, s_av, sa_av, u_av, v_av, vpt_av, w_av,            &
                alpha_T_av, beta_S_av, solar3d_av
     
-    USE cloud_parameters,                                                      &
-        ONLY:  l_d_cp, pt_d_t
-    
     USE control_parameters,                                                    &
         ONLY:  cloud_physics, domask, domask_no, domask_time_count, mask_i,    &
                mask_j, mask_k, mask_size, mask_size_l, mask_start_l,           &
@@ -154,14 +151,7 @@
         ONLY:  id_set_mask, id_var_domask, id_var_time_mask, nc_stat,          &
                netcdf_data_format, netcdf_handle_error
     
-    USE particle_attributes,                                                   &
-        ONLY:  grid_particles, number_of_particles, particles,                 &
-               particle_advection_start, prt_count
-    
     USE pegrid
-
-    USE radiation_model_mod,                                                   &
-        ONLY:  radiation, radiation_data_output_mask
 
     IMPLICIT NONE
 
@@ -243,7 +233,6 @@
                              mask_size_l(mid,3)) )
        ENDIF
 !
-!--    Set flag to steer output of radiation, land-surface, or user-defined
 !--    quantities
        found = .FALSE.
 !
@@ -286,87 +275,9 @@
                 to_be_resorted => p_av
              ENDIF
 
-          CASE ( 'pc' )  ! particle concentration (requires ghostpoint exchange)
-             IF ( av == 0 )  THEN
-                tend = prt_count
-                CALL exchange_horiz( tend, nbgp )
-                DO  i = 1, mask_size_l(mid,1)
-                   DO  j = 1, mask_size_l(mid,2)
-                      DO  k = 1, mask_size_l(mid,3)
-                         local_pf(i,j,k) =  tend(mask_k(mid,k), &
-                                   mask_j(mid,j),mask_i(mid,i))
-                      ENDDO
-                   ENDDO
-                ENDDO
-                resorted = .TRUE.
-             ELSE
-                CALL exchange_horiz( pc_av, nbgp )
-                to_be_resorted => pc_av
-             ENDIF
-
-          CASE ( 'pr' )  ! mean particle radius (effective radius)
-             IF ( av == 0 )  THEN
-                IF ( simulated_time >= particle_advection_start )  THEN
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                         DO  k = nzb, nz_do3d
-                            number_of_particles = prt_count(k,j,i)
-                            IF (number_of_particles <= 0)  CYCLE
-                            particles => grid_particles(k,j,i)%particles(1:number_of_particles)
-                            s_r2 = 0.0_wp
-                            s_r3 = 0.0_wp
-                            DO  n = 1, number_of_particles
-                               IF ( particles(n)%particle_mask )  THEN
-                                  s_r2 = s_r2 + grid_particles(k,j,i)%particles(n)%radius**2 * &
-                                         grid_particles(k,j,i)%particles(n)%weight_factor
-                                  s_r3 = s_r3 + grid_particles(k,j,i)%particles(n)%radius**3 * &
-                                         grid_particles(k,j,i)%particles(n)%weight_factor
-                               ENDIF
-                            ENDDO
-                            IF ( s_r2 > 0.0_wp )  THEN
-                               mean_r = s_r3 / s_r2
-                            ELSE
-                               mean_r = 0.0_wp
-                            ENDIF
-                            tend(k,j,i) = mean_r
-                         ENDDO
-                      ENDDO
-                   ENDDO
-                   CALL exchange_horiz( tend, nbgp )
-                ELSE
-                   tend = 0.0_wp
-                ENDIF
-                DO  i = 1, mask_size_l(mid,1)
-                   DO  j = 1, mask_size_l(mid,2)
-                      DO  k = 1, mask_size_l(mid,3)
-                         local_pf(i,j,k) =  tend(mask_k(mid,k), &
-                                   mask_j(mid,j),mask_i(mid,i))
-                      ENDDO
-                   ENDDO
-                ENDDO
-                resorted = .TRUE.
-             ELSE
-                CALL exchange_horiz( pr_av, nbgp )
-                to_be_resorted => pr_av
-             ENDIF
-
           CASE ( 'pt' )
              IF ( av == 0 )  THEN
-                IF ( .NOT. cloud_physics ) THEN
                    to_be_resorted => pt
-                ELSE
-                   DO  i = 1, mask_size_l(mid,1)
-                      DO  j = 1, mask_size_l(mid,2)
-                         DO  k = 1, mask_size_l(mid,3)
-                            local_pf(i,j,k) =  &
-                                 pt(mask_k(mid,k),mask_j(mid,j),mask_i(mid,i)) &
-                                 + l_d_cp * pt_d_t(mask_k(mid,k)) * &
-                                   ql(mask_k(mid,k),mask_j(mid,j),mask_i(mid,i))
-                         ENDDO
-                      ENDDO
-                   ENDDO
-                   resorted = .TRUE.
-                ENDIF
              ELSE
                 to_be_resorted => pt_av
              ENDIF
@@ -404,43 +315,6 @@
                 to_be_resorted => ql_v
              ELSE
                 to_be_resorted => ql_v_av
-             ENDIF
-
-          CASE ( 'ql_vp' )
-             IF ( av == 0 )  THEN
-                IF ( simulated_time >= particle_advection_start )  THEN
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                         DO  k = nzb, nz_do3d
-                            number_of_particles = prt_count(k,j,i)
-                            IF (number_of_particles <= 0)  CYCLE
-                            particles => grid_particles(k,j,i)%particles(1:number_of_particles)
-                            DO  n = 1, number_of_particles
-                               IF ( particles(n)%particle_mask )  THEN
-                                  tend(k,j,i) = tend(k,j,i) + &
-                                          particles(n)%weight_factor / &
-                                          prt_count(k,j,i)
-                               ENDIF
-                            ENDDO
-                         ENDDO
-                      ENDDO
-                   ENDDO
-                   CALL exchange_horiz( tend, nbgp )
-                ELSE
-                   tend = 0.0_wp
-                ENDIF
-                DO  i = 1, mask_size_l(mid,1)
-                   DO  j = 1, mask_size_l(mid,2)
-                      DO  k = 1, mask_size_l(mid,3)
-                         local_pf(i,j,k) =  tend(mask_k(mid,k), &
-                                   mask_j(mid,j),mask_i(mid,i))
-                      ENDDO
-                   ENDDO
-                ENDDO
-                resorted = .TRUE.
-             ELSE
-                CALL exchange_horiz( ql_vp_av, nbgp )
-                to_be_resorted => ql_vp_av
              ENDIF
 
           CASE ( 'qv' )
@@ -540,19 +414,6 @@
           CASE DEFAULT
 
 !
-!--          Radiation quantity
-             IF ( radiation )  THEN
-                CALL radiation_data_output_mask(av, domask(mid,av,ivar), found,&
-                                                local_pf )
-             ENDIF
-
-!
-!--          User defined quantity
-             IF ( .NOT. found )  THEN
-                CALL user_data_output_mask(av, domask(mid,av,ivar), found,     &
-                                           local_pf )
-             ENDIF
-
              resorted = .TRUE.
 
              IF ( .NOT. found )  THEN

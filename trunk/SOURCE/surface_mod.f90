@@ -182,8 +182,6 @@
                alpha_T, beta_S, rho_air, rho_air_zw, zu, zw,                   &
                waterflux_input_conversion
 
-    USE chem_modules
-
     USE control_parameters
 
     USE constants
@@ -195,10 +193,6 @@
         ONLY:  dx, dy
 
     USE kinds
-
-    USE model_1d_mod,                                                          &
-        ONLY:  rif1d, us1d, usws1d, vsws1d
-
 
     IMPLICIT NONE
 
@@ -255,7 +249,6 @@
 
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt1       !< Potential temperature at first grid level
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  qv1       !< mixing ratio at first grid level
-       REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  css     !< scaling parameter chemical species
 !
 !--    Define arrays for surface fluxes
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  usws      !< vertical momentum flux for u-component at horizontal surfaces
@@ -270,7 +263,6 @@
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  nrsws     !< surface flux nr
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  sasws     !< surface flux salinity
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  shf_sol   !< surface solar heat flux -- based on shf and sasws 
-       REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  cssws   !< surface flux chemical species
 !
 !--    Required for horizontal walls in production_e
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  u_0       !< virtual velocity component (see production_e_init for further explanation)
@@ -1027,22 +1019,11 @@
 !--    surface temperature
        DEALLOCATE ( surfaces%pt_surface ) 
 !
-!--    Characteristic humidity and surface flux of latent heat
-       IF ( humidity )  THEN
-          DEALLOCATE ( surfaces%qs ) 
-          DEALLOCATE ( surfaces%qsws )      
-       ENDIF 
 !
 !--    Characteristic scalar and surface flux of scalar
        IF ( passive_scalar )  THEN
           DEALLOCATE ( surfaces%ss )   
           DEALLOCATE ( surfaces%ssws ) 
-       ENDIF 
-!
-!--    Scaling parameter (cs*) and surface flux of chemical species
-       IF ( air_chemistry )  THEN
-          DEALLOCATE ( surfaces%css )   
-          DEALLOCATE ( surfaces%cssws ) 
        ENDIF 
 !
 !--    Arrays for storing potential temperature and
@@ -1051,21 +1032,6 @@
        DEALLOCATE ( surfaces%qv1 )
 !
 !--       
-       IF ( cloud_physics .AND. microphysics_morrison)  THEN
-          DEALLOCATE ( surfaces%qcs )
-          DEALLOCATE ( surfaces%ncs )
-          DEALLOCATE ( surfaces%qcsws )
-          DEALLOCATE ( surfaces%ncsws )
-       ENDIF
-!
-!--       
-       IF ( cloud_physics .AND. microphysics_seifert)  THEN
-          DEALLOCATE ( surfaces%qrs )
-          DEALLOCATE ( surfaces%nrs )
-          DEALLOCATE ( surfaces%qrsws )
-          DEALLOCATE ( surfaces%nrsws )
-       ENDIF
-!
 !--    Salinity surface flux
        IF ( ocean ) THEN
          DEALLOCATE ( surfaces%sasws )
@@ -1154,22 +1120,10 @@
 !--    surface temperature
        ALLOCATE ( surfaces%pt_surface(1:surfaces%ns) ) 
 !
-!--    Characteristic humidity and surface flux of latent heat
-       IF ( humidity )  THEN
-          ALLOCATE ( surfaces%qs(1:surfaces%ns)   ) 
-          ALLOCATE ( surfaces%qsws(1:surfaces%ns) )      
-       ENDIF 
-!
 !--    Characteristic scalar and surface flux of scalar
        IF ( passive_scalar )  THEN
           ALLOCATE ( surfaces%ss(1:surfaces%ns)   )   
           ALLOCATE ( surfaces%ssws(1:surfaces%ns) ) 
-       ENDIF 
-!
-!--    Scaling parameter (cs*) and surface flux of chemical species
-       IF ( air_chemistry )  THEN
-          ALLOCATE ( surfaces%css(1:nvar,1:surfaces%ns)   )   
-          ALLOCATE ( surfaces%cssws(1:nvar,1:surfaces%ns) ) 
        ENDIF 
 !
 !--    Arrays for storing potential temperature and
@@ -1178,21 +1132,6 @@
        ALLOCATE ( surfaces%qv1(1:surfaces%ns) )
 !
 !--       
-       IF ( cloud_physics .AND. microphysics_morrison)  THEN
-          ALLOCATE ( surfaces%qcs(1:surfaces%ns)   )
-          ALLOCATE ( surfaces%ncs(1:surfaces%ns)   )
-          ALLOCATE ( surfaces%qcsws(1:surfaces%ns) )
-          ALLOCATE ( surfaces%ncsws(1:surfaces%ns) )
-       ENDIF
-!
-!--       
-       IF ( cloud_physics .AND. microphysics_seifert)  THEN
-          ALLOCATE ( surfaces%qrs(1:surfaces%ns)   )
-          ALLOCATE ( surfaces%nrs(1:surfaces%ns)   )
-          ALLOCATE ( surfaces%qrsws(1:surfaces%ns) )
-          ALLOCATE ( surfaces%nrsws(1:surfaces%ns) )
-       ENDIF
-!
 !--    Salinity surface flux
        IF ( ocean )  THEN
          ALLOCATE ( surfaces%sasws(1:surfaces%ns) )
@@ -1234,32 +1173,10 @@
 !--    Sensible heat flux
        DEALLOCATE ( surfaces%shf )    
 !
-!--    Latent heat flux
-       IF ( humidity .OR. coupling_mode == 'ocean_to_atmosphere')  THEN
-          DEALLOCATE ( surfaces%qsws )      
-       ENDIF 
-!
 !--    Scalar flux
        IF ( passive_scalar )  THEN
           DEALLOCATE ( surfaces%ssws ) 
        ENDIF 
-!
-!--    Chemical species flux
-       IF ( air_chemistry )  THEN
-          DEALLOCATE ( surfaces%cssws ) 
-       ENDIF 
-!
-!--       
-       IF ( cloud_physics .AND. microphysics_morrison)  THEN
-          DEALLOCATE ( surfaces%qcsws )
-          DEALLOCATE ( surfaces%ncsws )
-       ENDIF
-!
-!--       
-       IF ( cloud_physics .AND. microphysics_seifert)  THEN
-          DEALLOCATE ( surfaces%qrsws )
-          DEALLOCATE ( surfaces%nrsws )
-       ENDIF
 !
 !--    Salinity flux
        IF ( ocean )  THEN
@@ -1309,32 +1226,10 @@
 !--    Sensible heat flux
        ALLOCATE ( surfaces%shf(1:surfaces%ns) )    
 !
-!--    Latent heat flux
-       IF ( humidity .OR. coupling_mode == 'ocean_to_atmosphere')  THEN
-          ALLOCATE ( surfaces%qsws(1:surfaces%ns) )      
-       ENDIF 
-!
 !--    Scalar flux
        IF ( passive_scalar )  THEN
           ALLOCATE ( surfaces%ssws(1:surfaces%ns) ) 
        ENDIF 
-!
-!--    Chemical species flux
-       IF ( air_chemistry )  THEN
-          ALLOCATE ( surfaces%cssws(1:nvar,1:surfaces%ns) ) 
-       ENDIF 
-!
-!--       
-       IF ( cloud_physics .AND. microphysics_morrison)  THEN
-          ALLOCATE ( surfaces%qcsws(1:surfaces%ns) )
-          ALLOCATE ( surfaces%ncsws(1:surfaces%ns) )
-       ENDIF
-!
-!--       
-       IF ( cloud_physics .AND. microphysics_seifert)  THEN
-          ALLOCATE ( surfaces%qrsws(1:surfaces%ns) )
-          ALLOCATE ( surfaces%nrsws(1:surfaces%ns) )
-       ENDIF
 !
 !--    Salinity flux
        IF ( ocean )  THEN
@@ -1417,43 +1312,17 @@
 !--    surface temperature
        DEALLOCATE ( surfaces%pt_surface ) 
 !
-!--    Characteristic humidity and surface flux of latent heat
-       IF ( humidity )  THEN
-          DEALLOCATE ( surfaces%qs ) 
-          DEALLOCATE ( surfaces%qsws )      
-       ENDIF 
-!
 !--    Characteristic scalar and surface flux of scalar
        IF ( passive_scalar )  THEN
           DEALLOCATE ( surfaces%ss )   
           DEALLOCATE ( surfaces%ssws ) 
        ENDIF
 !
-!--    Scaling parameter (cs*) and surface flux of chemical species
-       IF ( air_chemistry )  THEN
-             DEALLOCATE ( surfaces%css )   
-             DEALLOCATE ( surfaces%cssws ) 
-       ENDIF 
-!
 !--    Arrays for storing potential temperature and
 !--    mixing ratio at first grid level
        DEALLOCATE ( surfaces%pt1 )
        DEALLOCATE ( surfaces%qv1 )
 
-       IF ( cloud_physics .AND. microphysics_seifert)  THEN
-          DEALLOCATE ( surfaces%qcs )
-          DEALLOCATE ( surfaces%ncs )
-          DEALLOCATE ( surfaces%qcsws )
-          DEALLOCATE ( surfaces%ncsws )
-       ENDIF
-
-       IF ( cloud_physics .AND. microphysics_seifert)  THEN
-          DEALLOCATE ( surfaces%qrs )
-          DEALLOCATE ( surfaces%nrs )
-          DEALLOCATE ( surfaces%qrsws )
-          DEALLOCATE ( surfaces%nrsws )
-       ENDIF
-!
 !--    Salinity surface flux
        IF ( ocean )  THEN
          DEALLOCATE ( surfaces%sasws )
@@ -1542,43 +1411,17 @@
 !--    surface temperature
        ALLOCATE ( surfaces%pt_surface(1:surfaces%ns) ) 
 !
-!--    Characteristic humidity and surface flux of latent heat
-       IF ( humidity )  THEN
-          ALLOCATE ( surfaces%qs(1:surfaces%ns)   ) 
-          ALLOCATE ( surfaces%qsws(1:surfaces%ns) )      
-       ENDIF 
-!
 !--    Characteristic scalar and surface flux of scalar
        IF ( passive_scalar )  THEN
           ALLOCATE ( surfaces%ss(1:surfaces%ns)   )   
           ALLOCATE ( surfaces%ssws(1:surfaces%ns) ) 
        ENDIF
 !
-!--    Scaling parameter (cs*) and surface flux of chemical species
-       IF ( air_chemistry )  THEN
-             ALLOCATE ( surfaces%css(1:nvar,1:surfaces%ns)   )   
-             ALLOCATE ( surfaces%cssws(1:nvar,1:surfaces%ns) ) 
-       ENDIF 
-!
 !--    Arrays for storing potential temperature and
 !--    mixing ratio at first grid level
        ALLOCATE ( surfaces%pt1(1:surfaces%ns) )
        ALLOCATE ( surfaces%qv1(1:surfaces%ns) )
 
-       IF ( cloud_physics .AND. microphysics_seifert)  THEN
-          ALLOCATE ( surfaces%qcs(1:surfaces%ns)   )
-          ALLOCATE ( surfaces%ncs(1:surfaces%ns)   )
-          ALLOCATE ( surfaces%qcsws(1:surfaces%ns) )
-          ALLOCATE ( surfaces%ncsws(1:surfaces%ns) )
-       ENDIF
-
-       IF ( cloud_physics .AND. microphysics_seifert)  THEN
-          ALLOCATE ( surfaces%qrs(1:surfaces%ns)   )
-          ALLOCATE ( surfaces%nrs(1:surfaces%ns)   )
-          ALLOCATE ( surfaces%qrsws(1:surfaces%ns) )
-          ALLOCATE ( surfaces%nrsws(1:surfaces%ns) )
-       ENDIF
-!
 !--    Salinity surface flux
        IF ( ocean )  THEN
          ALLOCATE ( surfaces%sasws(1:surfaces%ns) )
@@ -2025,8 +1868,6 @@
              INTEGER(iwp)  ::  k                !< running index z-direction
              INTEGER(iwp)  ::  num_h            !< current number of surface element
              INTEGER(iwp)  ::  num_h_kji        !< dummy increment
-             INTEGER(iwp)  ::  lsp              !< running index chemical species
-             INTEGER(iwp)  ::  lsp_pr           !< running index chemical species??
 
              LOGICAL       ::  upward_facing    !< flag indicating upward-facing surface
              LOGICAL       ::  downward_facing  !< flag indicating downward-facing surface
@@ -2055,41 +1896,13 @@
              surf%z0h(num_h)   = z0h_factor * roughness_length
              surf%z0q(num_h)   = z0h_factor * roughness_length          
 !
-!--          Initialization in case of 1D pre-cursor run
-             IF ( INDEX( initializing_actions, 'set_1d-model_profiles' ) /= 0 )&
-             THEN
-                IF ( .NOT. constant_diffusion )  THEN
-                   IF ( constant_flux_layer )  THEN
-                      surf%ol(num_h)   = surf%z_mo(num_h) /                    &
-                                            ( rif1d(nzb+1) + 1.0E-20_wp )
-                      surf%us(num_h)   = us1d
-                      surf%usws(num_h) = usws1d
-                      surf%vsws(num_h) = vsws1d
-                   ELSE
-                      surf%ol(num_h)   = surf%z_mo(num_h) / zeta_min
-                      surf%us(num_h)   = 0.0_wp
-                      surf%usws(num_h) = 0.0_wp
-                      surf%vsws(num_h) = 0.0_wp
-                   ENDIF
-                ELSE
-                   surf%ol(num_h)   = surf%z_mo(num_h) / zeta_min
-                   surf%us(num_h)   = 0.0_wp
-                   surf%usws(num_h) = 0.0_wp
-                   surf%vsws(num_h) = 0.0_wp
-                ENDIF
-!
-!--          Initialization in all other cases
-             ELSE
-
-                surf%ol(num_h)   = surf%z_mo(num_h) / zeta_min
+             surf%ol(num_h)   = surf%z_mo(num_h) / zeta_min
 !
 !--             Very small number is required for calculation of Obukhov length 
 !--             at first timestep     
-                surf%us(num_h)    = 1E-30_wp 
-                surf%usws(num_h)  = 0.0_wp
-                surf%vsws(num_h)  = 0.0_wp
-        
-             ENDIF
+             surf%us(num_h)    = 1E-30_wp 
+             surf%usws(num_h)  = 0.0_wp
+             surf%vsws(num_h)  = 0.0_wp
 
              surf%rib(num_h)     = 0.0_wp 
              surf%uvw_abs(num_h) = 0.0_wp
@@ -2101,35 +1914,8 @@
 
              surf%ts(num_h)   = 0.0_wp
 
-             IF ( humidity )  THEN
-                surf%qs(num_h)   = 0.0_wp
-                IF ( cloud_physics .AND. microphysics_morrison)  THEN
-                   surf%qcs(num_h) = 0.0_wp
-                   surf%ncs(num_h) = 0.0_wp
-   
-                   surf%qcsws(num_h) = 0.0_wp
-                   surf%ncsws(num_h) = 0.0_wp
-
-                ENDIF
-                IF ( cloud_physics .AND. microphysics_seifert)  THEN
-                   surf%qrs(num_h) = 0.0_wp
-                   surf%nrs(num_h) = 0.0_wp
-   
-                   surf%qrsws(num_h) = 0.0_wp
-                   surf%nrsws(num_h) = 0.0_wp
-
-                   surf%pt1(num_h) = 0.0_wp
-                   surf%qv1(num_h) = 0.0_wp
-
-                ENDIF
-             ENDIF
-
              IF ( passive_scalar )  surf%ss(num_h) = 0.0_wp
 
-             DO  lsp = 1, nvar
-                IF ( air_chemistry )  surf%css(lsp,num_h) = 0.0_wp
-             ENDDO
-!
 !--          Set initial value for surface temperature
              surf%pt_surface(num_h) = pt_surface
 !
@@ -2163,24 +1949,6 @@
                                              heatflux_input_conversion(k)
                 ENDIF
 
-                IF ( humidity )  THEN
-                   IF ( upward_facing )  THEN
-                      IF ( constant_waterflux )  THEN
-                         surf%qsws(num_h) = surface_waterflux *                &
-                                                 waterflux_input_conversion(k-1)
-                         IF ( k-1 /= 0 )  THEN
-                            surf%qsws(num_h) = wall_humidityflux(0) *          &
-                                                 waterflux_input_conversion(k-1)
-                         ENDIF
-                      ELSE
-                         surf%qsws(num_h) = 0.0_wp
-                      ENDIF
-                   ELSE
-                      surf%qsws(num_h) = wall_humidityflux(5) *                &
-                                             heatflux_input_conversion(k)
-                   ENDIF
-                ENDIF
-
                 IF ( passive_scalar )  THEN
                    IF ( upward_facing )  THEN
                       IF ( constant_scalarflux )  THEN
@@ -2196,36 +1964,6 @@
                    ELSE
                       surf%ssws(num_h) = wall_scalarflux(5) * rho_air_zw(k)
                    ENDIF
-                ENDIF
-
-                IF ( air_chemistry )  THEN
-                   lsp_pr = 1
-                   DO  WHILE ( TRIM( surface_csflux_name( lsp_pr ) ) /= 'novalue' )   !<'novalue' is the default
-                      DO  lsp = 1, nvar
-!
-!--                      Assign surface flux for each variable species
-                         IF ( TRIM( spc_names(lsp) ) == TRIM( surface_csflux_name(lsp_pr) ) )  THEN   
-                            IF ( upward_facing )  THEN
-                               IF ( constant_csflux(lsp_pr) )  THEN
-                                  surf%cssws(lsp,num_h) =                      &
-                                                       surface_csflux(lsp_pr) *&
-                                                       rho_air_zw(k-1)
-
-                                  IF ( k-1 /= 0 )                              &
-                                     surf%cssws(lsp,num_h) =                   &
-                                                       wall_csflux(lsp,0) *    &
-                                                       rho_air_zw(k-1) 
-                               ELSE
-                                  surf%cssws(lsp,num_h) = 0.0_wp
-                               ENDIF
-                            ELSE
-                               surf%cssws(lsp,num_h) = wall_csflux(lsp,5) *    &
-                                                       rho_air_zw(k)
-                            ENDIF
-                         ENDIF
-                      ENDDO
-                      lsp_pr = lsp_pr + 1
-                   ENDDO
                 ENDIF
 
                 IF ( ocean )  THEN
@@ -2267,7 +2005,6 @@
              INTEGER(iwp)  ::  k                !< running index z-direction
              INTEGER(iwp)  ::  num_h            !< current number of surface element
              INTEGER(iwp)  ::  num_h_kji        !< dummy increment
-             INTEGER(iwp)  ::  lsp              !< running index for chemical species
              REAL(WP)      ::  wb_sfc, tod,arg1      !< surface buoyancy forcing -- only matters for ocean
 
              TYPE( surf_type ) :: surf          !< respective surface type
@@ -2293,29 +2030,9 @@
                 surf%qsws(num_h) = 0.0_wp
              ENDIF
 !
-!--          Prescribe latent heat flux at the top      
-             IF ( humidity )  THEN
-                surf%qsws(num_h) = 0.0_wp
-                IF ( cloud_physics  .AND.  microphysics_morrison ) THEN
-                   surf%ncsws(num_h) = 0.0_wp
-                   surf%qcsws(num_h) = 0.0_wp
-                ENDIF
-                IF ( cloud_physics  .AND.  microphysics_seifert ) THEN
-                   surf%nrsws(num_h) = 0.0_wp
-                   surf%qrsws(num_h) = 0.0_wp
-                ENDIF
-             ENDIF
-!
 !--          Prescribe top scalar flux
              IF ( passive_scalar .AND. constant_top_scalarflux )               &
                 surf%ssws(num_h) = top_scalarflux * rho_air_zw(nzt+1)
-!
-!--          Prescribe top chemical species' flux
-             DO  lsp = 1, nvar
-                IF ( air_chemistry  .AND.  constant_top_csflux(lsp) )  THEN 
-                   surf%cssws(lsp,num_h) = top_csflux(lsp) * rho_air_zw(nzt+1)
-                ENDIF
-             ENDDO
 !
 !--          Prescribe top salinity flux
              IF ( ocean .AND. constant_top_salinityflux)                       &
@@ -2364,7 +2081,6 @@
              INTEGER(iwp)  ::  l               !< index variable for the surface type, indicating the facing 
              INTEGER(iwp)  ::  num_v           !< current number of surface element
              INTEGER(iwp)  ::  num_v_kji       !< current number of surface element at (j,i)
-             INTEGER(iwp)  ::  lsp             !< running index for chemical species
 
 
              LOGICAL       ::  east_facing     !< flag indicating east-facing surfaces
@@ -2434,40 +2150,11 @@
 !--          Set initial value for surface temperature
              surf%pt_surface(num_v) = pt_surface
 
-             IF ( humidity )  THEN
-                surf%qs(num_v)   = 0.0_wp
-                surf%qsws(num_v) = wall_humidityflux(component)
-!
-!--             Following wall fluxes are assumed to be zero 
-                IF ( cloud_physics .AND. microphysics_morrison)  THEN
-                   surf%qcs(num_v) = 0.0_wp
-                   surf%ncs(num_v) = 0.0_wp
-   
-                   surf%qcsws(num_v) = 0.0_wp
-                   surf%ncsws(num_v) = 0.0_wp
-                ENDIF
-                IF ( cloud_physics .AND. microphysics_seifert)  THEN
-                   surf%qrs(num_v) = 0.0_wp
-                   surf%nrs(num_v) = 0.0_wp
-   
-                   surf%qrsws(num_v) = 0.0_wp
-                   surf%nrsws(num_v) = 0.0_wp
-                ENDIF
-             ENDIF
-
              IF ( passive_scalar )  THEN
                 surf%ss(num_v)   = 0.0_wp
                 surf%ssws(num_v) = wall_scalarflux(component)
              ENDIF
 
-             IF ( air_chemistry )  THEN        
-                DO  lsp = 1, nvar
-                   surf%css(lsp,num_v)   = 0.0_wp
-                   surf%cssws(lsp,num_v) = wall_csflux(lsp,component)
-                ENDDO
-             ENDIF
-
-!
 !--          So far, salinityflux at vertical surfaces is simply zero 
 !--          at the moment  
              IF ( ocean )  surf%sasws(num_v) = wall_salinityflux(component)
@@ -2583,7 +2270,6 @@
        INTEGER(iwp)                 ::  i             !< running index x-direction
        INTEGER(iwp)                 ::  j             !< running index y-direction
        INTEGER(iwp)                 ::  l             !< index surface type orientation
-       INTEGER(iwp)                 ::  lsp           !< running index chemical species
        INTEGER(iwp)                 ::  m             !< running index for surface elements on individual surface array
        INTEGER(iwp), DIMENSION(0:2) ::  start_index_h !< start index for horizontal surface elements on gathered surface array
        INTEGER(iwp), DIMENSION(0:3) ::  mm            !< running index for surface elements on gathered surface array
@@ -2657,16 +2343,6 @@
                       surf_h(l)%qsws(mm(l))    = surf_def_h(l)%qsws(m)
                    IF ( ALLOCATED( surf_def_h(l)%ssws ) )                      &
                       surf_h(l)%ssws(mm(l))    = surf_def_h(l)%ssws(m)
-                   IF ( ALLOCATED( surf_def_h(l)%css ) )  THEN 
-                      DO  lsp = 1,nvar
-                         surf_h(l)%css(lsp,mm(l)) = surf_def_h(l)%css(lsp,m)
-                      ENDDO
-                   ENDIF
-                   IF ( ALLOCATED( surf_def_h(l)%cssws ) )  THEN 
-                      DO  lsp = 1,nvar
-                         surf_h(l)%cssws(lsp,mm(l)) = surf_def_h(l)%cssws(lsp,m)
-                      ENDDO
-                   ENDIF
                    IF ( ALLOCATED( surf_def_h(l)%ncsws ) )                     &
                       surf_h(l)%ncsws(mm(l))   = surf_def_h(l)%ncsws(m)
                    IF ( ALLOCATED( surf_def_h(l)%nrsws ) )                     &
@@ -2712,16 +2388,6 @@
                          surf_h(0)%qsws(mm(0))    = surf_lsm_h%qsws(m)
                       IF ( ALLOCATED( surf_lsm_h%ssws ) )                      &
                          surf_h(0)%ssws(mm(0))    = surf_lsm_h%ssws(m)
-                      IF ( ALLOCATED( surf_lsm_h%css ) )  THEN                  
-                         DO  lsp = 1, nvar
-                            surf_h(0)%css(lsp,mm(0)) = surf_lsm_h%css(lsp,m)
-                         ENDDO
-                      ENDIF
-                      IF ( ALLOCATED( surf_lsm_h%cssws ) )  THEN
-                         DO  lsp = 1, nvar
-                            surf_h(0)%cssws(lsp,mm(0)) = surf_lsm_h%cssws(lsp,m)
-                         ENDDO 
-                      ENDIF
                       IF ( ALLOCATED( surf_lsm_h%ncsws ) )                     &
                          surf_h(0)%ncsws(mm(0))   = surf_lsm_h%ncsws(m)
                       IF ( ALLOCATED( surf_lsm_h%nrsws ) )                     &
@@ -2767,16 +2433,6 @@
                          surf_h(0)%qsws(mm(0))    = surf_usm_h%qsws(m)
                       IF ( ALLOCATED( surf_usm_h%ssws ) )                      &
                          surf_h(0)%ssws(mm(0))    = surf_usm_h%ssws(m)
-                      IF ( ALLOCATED( surf_usm_h%css ) )  THEN             
-                         DO lsp = 1, nvar
-                            surf_h(0)%css(lsp,mm(0)) = surf_usm_h%css(lsp,m)
-                         ENDDO
-                      ENDIF
-                      IF ( ALLOCATED( surf_usm_h%cssws ) )  THEN             
-                         DO lsp = 1, nvar
-                            surf_h(0)%cssws(lsp,mm(0)) = surf_usm_h%cssws(lsp,m)
-                         ENDDO
-                      ENDIF
                       IF ( ALLOCATED( surf_usm_h%ncsws ) )                     &
                          surf_h(0)%ncsws(mm(0))   = surf_usm_h%ncsws(m)
                       IF ( ALLOCATED( surf_usm_h%nrsws ) )                     &
@@ -2859,16 +2515,6 @@
                       surf_v(l)%qsws(mm(l))    = surf_def_v(l)%qsws(m)
                    IF ( ALLOCATED( surf_def_v(l)%ssws ) )                      &
                       surf_v(l)%ssws(mm(l))    = surf_def_v(l)%ssws(m)
-                   IF ( ALLOCATED( surf_def_v(l)%css ) )  THEN               
-                      DO  lsp = 1, nvar
-                         surf_v(l)%css(lsp,mm(l)) = surf_def_v(l)%css(lsp,m)
-                      ENDDO
-                   ENDIF
-                   IF ( ALLOCATED( surf_def_v(l)%cssws ) )  THEN               
-                      DO  lsp = 1, nvar
-                         surf_v(l)%cssws(lsp,mm(l)) = surf_def_v(l)%cssws(lsp,m)
-                      ENDDO
-                   ENDIF
                    IF ( ALLOCATED( surf_def_v(l)%ncsws ) )                     &
                       surf_v(l)%ncsws(mm(l))   = surf_def_v(l)%ncsws(m)
                    IF ( ALLOCATED( surf_def_v(l)%nrsws ) )                     &
@@ -2919,16 +2565,6 @@
                       surf_v(l)%qsws(mm(l))    = surf_lsm_v(l)%qsws(m)
                    IF ( ALLOCATED( surf_lsm_v(l)%ssws ) )                      &
                       surf_v(l)%ssws(mm(l))    = surf_lsm_v(l)%ssws(m)
-                   IF ( ALLOCATED( surf_lsm_v(l)%css ) )  THEN              
-                      DO  lsp = 1, nvar
-                         surf_v(l)%css(lsp,mm(l)) = surf_lsm_v(l)%css(lsp,m)
-                      ENDDO
-                   ENDIF
-                   IF ( ALLOCATED( surf_lsm_v(l)%cssws ) )  THEN              
-                      DO  lsp = 1, nvar
-                         surf_v(l)%cssws(lsp,mm(l)) = surf_lsm_v(l)%cssws(lsp,m)
-                      ENDDO
-                   ENDIF
                    IF ( ALLOCATED( surf_lsm_v(l)%ncsws ) )                     &
                       surf_v(l)%ncsws(mm(l))   = surf_lsm_v(l)%ncsws(m)
                    IF ( ALLOCATED( surf_lsm_v(l)%nrsws ) )                     &
@@ -2979,16 +2615,6 @@
                       surf_v(l)%qsws(mm(l))    = surf_usm_v(l)%qsws(m)
                    IF ( ALLOCATED( surf_usm_v(l)%ssws ) )                      &
                       surf_v(l)%ssws(mm(l))    = surf_usm_v(l)%ssws(m)
-                   IF ( ALLOCATED( surf_usm_v(l)%css ) )  THEN              
-                      DO  lsp = 1, nvar
-                         surf_v(l)%css(lsp,mm(l)) = surf_usm_v(l)%css(lsp,m)
-                      ENDDO
-                   ENDIF
-                   IF ( ALLOCATED( surf_usm_v(l)%cssws ) )  THEN              
-                      DO  lsp = 1, nvar
-                         surf_v(l)%cssws(lsp,mm(l)) = surf_usm_v(l)%cssws(lsp,m)
-                      ENDDO
-                   ENDIF
                    IF ( ALLOCATED( surf_usm_v(l)%ncsws ) )                     &
                       surf_v(l)%ncsws(mm(l))   = surf_usm_v(l)%ncsws(m)
                    IF ( ALLOCATED( surf_usm_v(l)%nrsws ) )                     &
@@ -3134,16 +2760,6 @@
              WRITE ( 14 )  surf_h(l)%ssws
           ENDIF
 
-          IF ( ALLOCATED ( surf_h(l)%css ) )  THEN 
-             CALL wrd_write_string( 'surf_h(' // dum // ')%css' )
-             WRITE ( 14 )  surf_h(l)%css
-          ENDIF
-
-          IF ( ALLOCATED ( surf_h(l)%cssws ) )  THEN 
-             CALL wrd_write_string( 'surf_h(' // dum // ')%cssws' )
-             WRITE ( 14 )  surf_h(l)%cssws
-          ENDIF
-
           IF ( ALLOCATED ( surf_h(l)%qcsws ) )  THEN
              CALL wrd_write_string( 'surf_h(' // dum // ')%qcsws' )  
              WRITE ( 14 )  surf_h(l)%qcsws
@@ -3250,16 +2866,6 @@
              CALL wrd_write_string( 'surf_v(' // dum // ')%ssws' )  
              WRITE ( 14 )  surf_v(l)%ssws
           ENDIF
-
-          IF ( ALLOCATED ( surf_v(l)%css ) )  THEN
-             CALL wrd_write_string( 'surf_v(' // dum // ')%css' )  
-             WRITE ( 14 )  surf_v(l)%css
-          ENDIF
-
-          IF ( ALLOCATED ( surf_v(l)%cssws ) )  THEN
-             CALL wrd_write_string( 'surf_v(' // dum // ')%cssws' ) 
-             WRITE ( 14 )  surf_v(l)%cssws
-          ENDIF  
 
           IF ( ALLOCATED ( surf_v(l)%qcsws ) )  THEN
              CALL wrd_write_string( 'surf_v(' // dum // ')%qcsws' ) 
@@ -3488,12 +3094,6 @@
           CASE ( 'surf_h(0)%ssws' )         
              IF ( ALLOCATED( surf_h(0)%ssws )  .AND.  kk == 1 )                &
                 READ ( 13 )  surf_h(0)%ssws
-          CASE ( 'surf_h(0)%css' )
-             IF ( ALLOCATED( surf_h(0)%css )  .AND.  kk == 1 )                 &
-                READ ( 13 )  surf_h(0)%css
-          CASE ( 'surf_h(0)%cssws' )         
-             IF ( ALLOCATED( surf_h(0)%cssws )  .AND.  kk == 1 )               &
-                READ ( 13 )  surf_h(0)%cssws
           CASE ( 'surf_h(0)%qcsws' )         
              IF ( ALLOCATED( surf_h(0)%qcsws )  .AND.  kk == 1 )               &
                 READ ( 13 )  surf_h(0)%qcsws
@@ -3565,12 +3165,6 @@
           CASE ( 'surf_h(1)%ssws' )         
              IF ( ALLOCATED( surf_h(1)%ssws )  .AND.  kk == 1 )                &
                 READ ( 13 )  surf_h(1)%ssws
-          CASE ( 'surf_h(1)%css' )
-             IF ( ALLOCATED( surf_h(1)%css )  .AND.  kk == 1 )                 &
-                READ ( 13 )  surf_h(1)%css
-          CASE ( 'surf_h(1)%cssws' )         
-             IF ( ALLOCATED( surf_h(1)%cssws )  .AND.  kk == 1 )               &
-                READ ( 13 )  surf_h(1)%cssws
           CASE ( 'surf_h(1)%qcsws' )         
              IF ( ALLOCATED( surf_h(1)%qcsws )  .AND.  kk == 1 )               &
                 READ ( 13 )  surf_h(1)%qcsws
@@ -3642,12 +3236,6 @@
           CASE ( 'surf_h(2)%ssws' )         
              IF ( ALLOCATED( surf_h(2)%ssws )  .AND.  kk == 1 )                &
                 READ ( 13 )  surf_h(2)%ssws
-          CASE ( 'surf_h(2)%css' )
-             IF ( ALLOCATED( surf_h(2)%css )  .AND.  kk == 1 )                 &
-                READ ( 13 )  surf_h(2)%css
-          CASE ( 'surf_h(2)%cssws' )         
-             IF ( ALLOCATED( surf_h(2)%cssws )  .AND.  kk == 1 )               &
-                READ ( 13 )  surf_h(2)%cssws
           CASE ( 'surf_h(2)%qcsws' )         
              IF ( ALLOCATED( surf_h(2)%qcsws )  .AND.  kk == 1 )               &
                 READ ( 13 )  surf_h(2)%qcsws
@@ -3715,12 +3303,6 @@
           CASE ( 'surf_v(0)%ssws' )         
              IF ( ALLOCATED( surf_v(0)%ssws )  .AND.  kk == 1 )                &
                 READ ( 13 )  surf_v(0)%ssws
-          CASE ( 'surf_v(0)%css' ) 
-             IF ( ALLOCATED( surf_v(0)%css )  .AND.  kk == 1 )                 &
-                READ ( 13 )  surf_v(0)%css
-          CASE ( 'surf_v(0)%cssws' )         
-             IF ( ALLOCATED( surf_v(0)%cssws )  .AND.  kk == 1 )               &
-                READ ( 13 )  surf_v(0)%cssws
           CASE ( 'surf_v(0)%qcsws' )         
              IF ( ALLOCATED( surf_v(0)%qcsws )  .AND.  kk == 1 )               &
                 READ ( 13 )  surf_v(0)%qcsws
@@ -3795,12 +3377,6 @@
           CASE ( 'surf_v(1)%ssws' )         
              IF ( ALLOCATED( surf_v(1)%ssws )  .AND.  kk == 1 )                &
                 READ ( 13 )  surf_v(1)%ssws
-          CASE ( 'surf_v(1)%css' ) 
-             IF ( ALLOCATED( surf_v(1)%css )  .AND.  kk == 1 )                 &
-                READ ( 13 )  surf_v(1)%css
-          CASE ( 'surf_v(1)%cssws' )         
-             IF ( ALLOCATED( surf_v(1)%cssws )  .AND.  kk == 1 )               &
-                READ ( 13 )  surf_v(1)%cssws
           CASE ( 'surf_v(1)%qcsws' )         
              IF ( ALLOCATED( surf_v(1)%qcsws )  .AND.  kk == 1 )               &
                 READ ( 13 )  surf_v(1)%qcsws
@@ -3875,12 +3451,6 @@
           CASE ( 'surf_v(2)%ssws' )         
              IF ( ALLOCATED( surf_v(2)%ssws )  .AND.  kk == 1 )                &
                 READ ( 13 )  surf_v(2)%ssws
-          CASE ( 'surf_v(2)%css' ) 
-             IF ( ALLOCATED( surf_v(2)%css )  .AND.  kk == 1 )                 &
-                READ ( 13 )  surf_v(2)%css
-          CASE ( 'surf_v(2)%cssws' )         
-             IF ( ALLOCATED( surf_v(2)%cssws )  .AND.  kk == 1 )               &
-                READ ( 13 )  surf_v(2)%cssws
           CASE ( 'surf_v(2)%qcsws' )         
              IF ( ALLOCATED( surf_v(2)%qcsws )  .AND.  kk == 1 )               &
                 READ ( 13 )  surf_v(2)%qcsws
@@ -3955,12 +3525,6 @@
           CASE ( 'surf_v(3)%ssws' )         
              IF ( ALLOCATED( surf_v(3)%ssws )  .AND.  kk == 1 )                &
                 READ ( 13 )  surf_v(3)%ssws
-          CASE ( 'surf_v(3)%css' ) 
-             IF ( ALLOCATED( surf_v(3)%css )  .AND.  kk == 1 )                 &
-                READ ( 13 )  surf_v(3)%css
-          CASE ( 'surf_v(3)%cssws' )         
-             IF ( ALLOCATED( surf_v(3)%cssws )  .AND.  kk == 1 )               &
-                READ ( 13 )  surf_v(3)%cssws
           CASE ( 'surf_v(3)%qcsws' )         
              IF ( ALLOCATED( surf_v(3)%qcsws )  .AND.  kk == 1 )               &
                 READ ( 13 )  surf_v(3)%qcsws
@@ -4116,7 +3680,6 @@
 
              INTEGER(iwp)      ::  m_file      !< respective surface-element index of current surface array 
              INTEGER(iwp)      ::  m_target    !< respecitve surface-element index of surface array on file
-             INTEGER(iwp)      ::  lsp         !< running index chemical species
 
              TYPE( surf_type ) ::  surf_target !< target surface type
              TYPE( surf_type ) ::  surf_file   !< surface type on file
@@ -4186,23 +3749,6 @@
                 IF ( ALLOCATED( surf_target%ssws )  .AND.                      &
                      ALLOCATED( surf_file%ssws   ) )                           & 
                    surf_target%ssws(m_target) = surf_file%ssws(m_file)
-             ENDIF
-
-             IF ( INDEX( restart_string(1:length), '%css' ) /= 0 )  THEN 
-                IF ( ALLOCATED( surf_target%css )  .AND.                     &
-                     ALLOCATED( surf_file%css   ) )  THEN                  
-                   DO  lsp = 1, nvar
-                      surf_target%css(lsp,m_target) = surf_file%css(lsp,m_file)
-                   ENDDO
-                ENDIF
-             ENDIF
-             IF ( INDEX( restart_string(1:length), '%cssws' ) /= 0 )  THEN 
-                IF ( ALLOCATED( surf_target%cssws )  .AND.                     &
-                     ALLOCATED( surf_file%cssws   ) )  THEN                  
-                   DO  lsp = 1, nvar
-                      surf_target%cssws(lsp,m_target) = surf_file%cssws(lsp,m_file)
-                   ENDDO
-                ENDIF
              ENDIF
 
              IF ( INDEX( restart_string(1:length), '%qcs' ) /= 0 )  THEN 

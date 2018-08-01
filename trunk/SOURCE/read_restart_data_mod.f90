@@ -107,36 +107,16 @@
        USE date_and_time_mod,                                                  &
            ONLY:  day_of_year_init, time_utc_init
 
-       USE flight_mod,                                                         &
-           ONLY: flight_rrd_global
-
        USE grid_variables,                                                     &
            ONLY:  dx, dy
-
-       USE gust_mod,                                                           &
-           ONLY :  gust_rrd_global
 
        USE indices,                                                            &
            ONLY:  nz, nx, nx_on_file, ny, ny_on_file
 
-       USE microphysics_mod,                                                   &
-           ONLY:  c_sedimentation, collision_turbulence,                       &
-                  cloud_water_sedimentation, limiter_sedimentation,            &
-                  nc_const, ventilation_effect
-
-       USE model_1d_mod,                                                       &
-           ONLY:  damp_level_1d, dt_pr_1d, dt_run_control_1d, end_time_1d
-
        USE netcdf_interface,                                                   &
            ONLY:  netcdf_precision, output_for_t0
 
-       USE particle_attributes,                                                &
-           ONLY:  curvature_solution_effects
-
        USE pegrid
-
-       USE radiation_model_mod,                                                &
-           ONLY:  time_radiation
 
        USE spectra_mod,                                                        &
            ONLY:  average_count_sp, spectrum_x, spectrum_y
@@ -144,18 +124,6 @@
        USE statistics,                                                         &
            ONLY:  statistic_regions, hom, hom_sum, pr_palm, u_max, u_max_ijk,  &
                   v_max, v_max_ijk, w_max, w_max_ijk, z_i
-
-       USE synthetic_turbulence_generator_mod,                                 &
-           ONLY: stg_rrd_global
-
-       USE user_read_restart_data_mod,                                         &
-           ONLY:  user_rrd_global 
-
-       USE vertical_nesting_mod,                                               &
-           ONLY:  vnest_init
-
-       USE wind_turbine_model_mod,                                             &
-           ONLY: wtm_rrd_global
 
 
        IMPLICIT NONE
@@ -325,8 +293,6 @@
                 READ ( 13 )  building_wall_left
              CASE ( 'building_wall_south' )
                 READ ( 13 )  building_wall_south
-             CASE ( 'c_sedimentation' )
-                READ ( 13 )  c_sedimentation
              CASE ( 'call_psolver_at_all_substeps' )
                 READ ( 13 )  call_psolver_at_all_substeps
              CASE ( 'canyon_height' )
@@ -349,12 +315,8 @@
                 READ ( 13 )  cloud_scheme
              CASE ( 'cloud_top_radiation' )
                 READ ( 13 )  cloud_top_radiation
-             CASE ( 'cloud_water_sedimentation' )
-                READ ( 13 )  cloud_water_sedimentation
              CASE ( 'collective_wait' )
                 READ ( 13 )  collective_wait
-             CASE ( 'collision_turbulence' )
-                READ ( 13 )  collision_turbulence
              CASE ( 'conserve_volume_flow' )
                 READ ( 13 )  conserve_volume_flow
              CASE ( 'conserve_volume_flow_mode' )
@@ -365,16 +327,8 @@
                 READ ( 13 )  coupling_start_time
              CASE ( 'current_timestep_number' )
                 READ ( 13 )  current_timestep_number
-             CASE ( 'curvature_solution_effects' )
-                READ ( 13 )  curvature_solution_effects
              CASE ( 'cycle_mg' )
                 READ ( 13 )  cycle_mg
-             CASE ( 'damp_level_1d' )
-                READ ( 13 )  damp_level_1d
-             CASE ( 'day_of_year_init' )
-                READ ( 13 )  day_of_year_init
-             CASE ( 'dissipation_1d' )
-                READ ( 13 )  dissipation_1d
              CASE ( 'do2d_xy_time_count' )
                 READ ( 13 )  do2d_xy_time_count
              CASE ( 'do2d_xz_time_count' )
@@ -393,12 +347,6 @@
                 READ ( 13 )  dpdxy
              CASE ( 'dt_3d' )
                 READ ( 13 )  dt_3d
-             CASE ( 'dt_pr_1d' )
-                READ ( 13 )  dt_pr_1d
-             CASE ( 'dt_run_control_1d' )
-                READ ( 13 )  dt_run_control_1d
-             CASE ( 'dvrp_filecount' )
-                READ ( 13 )  dvrp_filecount
              CASE ( 'dx' )
                 READ ( 13 )  dx
              CASE ( 'dy' )
@@ -419,8 +367,6 @@
                 READ ( 13 )  dz_stretch_level_start
              CASE ( 'e_min' )
                 READ ( 13 )  e_min
-             CASE ( 'end_time_1d' )
-                READ ( 13 )  end_time_1d
              CASE ( 'fft_method' )
                 READ ( 13 )  fft_method
              CASE ( 'first_call_lpm' )
@@ -454,8 +400,6 @@
                 READ ( 13 )  large_scale_subsidence
              CASE ( 'latitude' )
                 READ ( 13 )  latitude
-             CASE ( 'limiter_sedimentation' )
-                READ ( 13 )  limiter_sedimentation
              CASE ( 'longitude' )
                 READ ( 13 )  longitude
              CASE ( 'loop_optimization' )
@@ -477,8 +421,6 @@
                 READ ( 13 )  momentum_advec
              CASE ( 'most_method' )
                 READ ( 13 )  most_method
-             CASE ( 'nc_const' )
-                READ ( 13 )  nc_const
              CASE ( 'netcdf_precision' )
                 READ ( 13 )  netcdf_precision
              CASE ( 'neutral' )
@@ -647,10 +589,6 @@
                 READ ( 13 )  time_dosp
              CASE ( 'time_dots' )
                 READ ( 13 )  time_dots
-             CASE ( 'time_dvrp' )
-                READ ( 13 )  time_dvrp
-             CASE ( 'time_radiation' )
-                READ ( 13 )  time_radiation
              CASE ( 'time_restart' )
                 READ ( 13 )  time_restart
              CASE ( 'time_run_control' )
@@ -725,8 +663,6 @@
                 READ ( 13 )  v_max
              CASE ( 'v_max_ijk' )
                 READ ( 13 )  v_max_ijk
-             CASE ( 'ventilation_effect' )
-                READ ( 13 )  ventilation_effect
              CASE ( 'vg' )
                 READ ( 13 )  vg
              CASE ( 'vg_surface' )
@@ -739,8 +675,6 @@
                 READ ( 13 )  vg_vertical_gradient_level_ind
              CASE ( 'virtual_flight' )
                 READ ( 13 )  virtual_flight
-             CASE ( 'vnest_init' )
-                READ ( 13 )  vnest_init
              CASE ( 'volume_flow_area' )
                 READ ( 13 )  volume_flow_area
              CASE ( 'volume_flow_initial' )
@@ -778,16 +712,6 @@
 
 
              CASE DEFAULT
-
-                IF ( .NOT. found ) CALL wtm_rrd_global( found )
-
-                IF ( .NOT. found ) CALL flight_rrd_global( found )
-
-                IF ( .NOT. found ) CALL stg_rrd_global ( found )
-
-                IF ( .NOT. found ) CALL gust_rrd_global( found )
-
-                IF ( .NOT. found ) CALL user_rrd_global( found )
 
                 IF ( .NOT. found )  THEN
                    WRITE( message_string, * ) 'unknown variable named "',      &
@@ -1061,14 +985,8 @@
 
     USE averaging
 
-    USE chemistry_model_mod,                                                   &
-        ONLY:  chem_rrd_local, chem_species, nspec                                
-
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point_s
-
-    USE gust_mod,                                                           &
-        ONLY :  gust_rrd_local
 
     USE indices,                                                               &
         ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, nx_on_file, ny, nys, nysg, nyn, &
@@ -1076,16 +994,7 @@
 
     USE kinds
 
-    USE land_surface_model_mod,                                                &
-        ONLY:  lsm_rrd_local
-
-    USE particle_attributes,                                                   &
-        ONLY:  iran_part
-
     USE pegrid
-
-    USE radiation_model_mod,                                                   &
-        ONLY: radiation, radiation_rrd_local
 
     USE random_function_mod,                                                   &
         ONLY:  random_iv, random_iy
@@ -1096,12 +1005,6 @@
     USE surface_mod,                                                           &
         ONLY :  surface_rrd_local
         
-    USE urban_surface_mod,                                                     &
-        ONLY:  usm_rrd_local
-
-    USE user_read_restart_data_mod,                                            &
-        ONLY:  user_rrd_local 
- 
 
     IMPLICIT NONE
 
@@ -1418,10 +1321,6 @@
                    IF ( k == 1 )  READ ( 13 )  tmp_3d
                    e_av(:,nysc-nbgp:nync+nbgp,nxlc-nbgp:nxrc+nbgp) =           &
                       tmp_3d(:,nysf-nbgp:nynf+nbgp,nxlf-nbgp:nxrf+nbgp)
-
-                CASE ( 'iran' ) ! matching random numbers is still unresolved
-                                ! issue
-                   IF ( k == 1 )  READ ( 13 )  iran, iran_part
 
                 CASE ( 'kh' )
                    IF ( k == 1 )  READ ( 13 )  tmp_3d
@@ -2005,53 +1904,6 @@
                                            nys_on_file, found )
 
 !
-!--                Read urban surface restart data
-                   IF ( .NOT. found ) CALL usm_rrd_local( i, k, nxlf,          & 
-                                           nxlc, nxl_on_file, nxrf, nxrc,      &
-                                           nxr_on_file, nynf, nync,            &
-                                           nyn_on_file, nysf, nysc,            &
-                                           nys_on_file, found )
-
-!
-!--                Read land surface restart data
-                   IF ( .NOT. found ) CALL lsm_rrd_local( i, k, nxlf,          & 
-                                           nxlc, nxl_on_file, nxrf, nxrc,      &
-                                           nxr_on_file, nynf, nync,            &
-                                           nyn_on_file, nysf, nysc,            &
-                                           nys_on_file, tmp_2d, found )
-
-!
-!--                Read radiation restart data
-                   IF ( .NOT. found ) CALL radiation_rrd_local( i, k, nxlf,    &
-                                           nxlc, nxl_on_file, nxrf, nxrc,      &
-                                           nxr_on_file, nynf, nync,            &
-                                           nyn_on_file, nysf, nysc,            &
-                                           nys_on_file, tmp_2d, tmp_3d, found )
-
-!
-!--                Read chemistry restart data
-                   IF ( .NOT. found ) CALL chem_rrd_local( i, k, nxlf,         &
-                                           nxlc, nxl_on_file, nxrf, nxrc,      &
-                                           nxr_on_file, nynf, nync,            & 
-                                           nyn_on_file, nysf, nysc,            &
-                                           nys_on_file, tmp_3d, found )
-
-!
-!--                Read gust module restart data
-                   IF ( .NOT. found ) CALL gust_rrd_local( i, k, nxlf,         &
-                                           nxlc, nxl_on_file, nxrf, nxrc,      &
-                                           nxr_on_file, nynf, nync,            &
-                                           nyn_on_file, nysf, nysc,            &
-                                           nys_on_file, tmp_2d, tmp_3d, found )
-
-!
-!--                Read user-defined restart data
-                   IF ( .NOT. found ) CALL user_rrd_local( i, k, nxlf,         &
-                                           nxlc, nxl_on_file, nxrf, nxrc,      &
-                                           nxr_on_file, nynf, nync,            &
-                                           nyn_on_file, nysf, nysc,            &
-                                           nys_on_file, tmp_3d, found )
-
 
                    IF ( .NOT. found )  THEN
                       WRITE( message_string, * ) 'unknown variable named "',   &

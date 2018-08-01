@@ -368,9 +368,6 @@
     USE surface_mod,                                                           &
         ONLY:  get_topography_top_index, get_topography_top_index_ji, init_bc
 
-    USE vertical_nesting_mod,                                                  &
-        ONLY:  vnested, vnest_init_grid
-
     IMPLICIT NONE
 
     INTEGER(iwp) ::  i                           !< index variable along x 
@@ -799,7 +796,6 @@
 !
 !-- Determine the maximum level of topography. It is used for
 !-- steering the degradation of order of the applied advection scheme, 
-!-- as well in the lpm. 
 !-- In case of non-cyclic lateral boundaries, the order of the advection
 !-- scheme has to be reduced up to nzt (required at the lateral boundaries).
     k_top = 0
@@ -1107,10 +1103,6 @@
        nzb_diff_s_outer   = nzb_s_outer + 1
     ENDIF
 !
-!-- Vertical nesting: communicate vertical grid level arrays between fine and
-!-- coarse grid
-    IF ( vnested )  CALL vnest_init_grid
-
  END SUBROUTINE init_grid
 
 
@@ -2315,9 +2307,7 @@
 !   
 !--       The DEFAULT case is reached either if the parameter topography
 !--       contains a wrong character string or if the user has defined a special
-!--       case in the user interface. There, the subroutine user_init_grid 
 !--       checks which of these two conditions applies.
-          CALL user_init_grid( topo )
           CALL filter_topography( topo )
 
     END SELECT
@@ -2536,7 +2526,6 @@
                 wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 21 )
 !
 !--          Special flag on scalar grid, former nzb_s_inner+1. Used for 
-!--          lpm_sgs_tke
              IF ( BTEST( wall_flags_0(k,j,i),   0 )  .AND.                     &
                   BTEST( wall_flags_0(k-1,j,i), 0 )  .AND.                     &
                   BTEST( wall_flags_0(k+1,j,i), 0 ) )                          &

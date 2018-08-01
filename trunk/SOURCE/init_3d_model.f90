@@ -484,45 +484,24 @@
 
     USE arrays_3d
 
-    USE chemistry_model_mod,                                                   &
-        ONLY:  chem_emissions
+    USE cloud_parameters,                                                   &
+       ONLY:  cp, r_d, l_v
 
-    USE cloud_parameters,                                                      &
-        ONLY:  cp, l_v, r_d
 
     USE constants,                                                             &
         ONLY:  pi
     
     USE control_parameters
     
-    USE flight_mod,                                                            &
-        ONLY:  flight_init
-    
     USE grid_variables,                                                        &
         ONLY:  dx, dy, ddx2_mg, ddy2_mg
 
-    USE gust_mod,                                                              &
-        ONLY:  gust_init, gust_init_arrays, gust_module_enabled
-    
     USE indices
 
-    USE lpm_init_mod,                                                          &
-        ONLY:  lpm_init
-    
     USE kinds
 
-    USE land_surface_model_mod,                                                &
-        ONLY:  lsm_init, lsm_init_arrays
-  
     USE lsf_nudging_mod,                                                       &
         ONLY:  lsf_init, ls_forcing_surf, nudge_init
-
-    USE microphysics_mod,                                                      &
-        ONLY:  collision_turbulence, microphysics_init
-
-    USE model_1d_mod,                                                          &
-        ONLY:  e1d, init_1d_model, kh1d, km1d, l1d, rif1d, u1d, us1d, usws1d,  &
-               v1d, vsws1d 
 
     USE netcdf_interface,                                                      &
         ONLY:  dots_max, dots_num, dots_unit, dots_label
@@ -530,24 +509,7 @@
     USE netcdf_data_input_mod,                                                 &
         ONLY:  init_3d, netcdf_data_input_interpolate, netcdf_data_input_init_3d
     
-    USE particle_attributes,                                                   &
-        ONLY:  particle_advection, use_sgs_for_particles, wang_kernel
-    
     USE pegrid
-    
-    USE plant_canopy_model_mod,                                                &
-        ONLY:  pcm_init
-
-    USE pmc_interface,                                                         &
-        ONLY:  nested_run
-
-    USE radiation_model_mod,                                                   &
-        ONLY:  average_radiation,                                              &
-               radiation_init, radiation, radiation_scheme,                    &
-               radiation_calc_svf, radiation_write_svf,                        &
-               radiation_interaction, radiation_interactions,                  &
-               radiation_interaction_init, radiation_read_svf,                 &
-               radiation_presimulate_solar_pos, radiation_interactions_on
     
     USE random_function_mod 
     
@@ -563,9 +525,6 @@
                sums_l_l, sums_wsts_bc_l, ts_value,                             &
                weight_pres, weight_substep
 
-    USE synthetic_turbulence_generator_mod,                                    &
-        ONLY:  stg_init, use_syn_turb_gen
-
     USE surface_layer_fluxes_mod,                                              &
         ONLY:  init_surface_layer_fluxes
 
@@ -577,15 +536,6 @@
 
     USE turbulence_closure_mod,                                                &
         ONLY:  tcm_init_arrays, tcm_init
-
-    USE urban_surface_mod,                                                     &
-        ONLY:  usm_init_urban_surface, usm_allocate_surface
-
-    USE uv_exposure_model_mod,                                                 &
-        ONLY:  uvem_init, uvem_init_arrays
-
-    USE wind_turbine_model_mod,                                                &
-        ONLY:  wtm_init, wtm_init_arrays
 
     IMPLICIT NONE
 
@@ -706,107 +656,6 @@
        ALLOCATE( tric(nxl_z:nxr_z,nys_z:nyn_z,0:nz-1) )
     ENDIF
 
-    IF ( humidity )  THEN
-!
-!--    3D-humidity
-#if defined( __nopointer )
-       ALLOCATE( q(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                             &
-                 q_p(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                           &
-                 tq_m(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                          &
-                 vpt(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-#else
-       ALLOCATE( q_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                           &
-                 q_2(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                           &
-                 q_3(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                           &
-                 vpt_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ) 
-#endif
-
-       IF ( cloud_physics )  THEN
-!
-!--          Liquid water content
-#if defined( __nopointer )
-          ALLOCATE ( ql(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-#else
-          ALLOCATE ( ql_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-#endif
-
-!
-!--       3D-cloud water content
-          IF ( .NOT. microphysics_morrison )  THEN
-#if defined( __nopointer )
-             ALLOCATE( qc(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-#else
-             ALLOCATE( qc_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-#endif
-          ENDIF
-!
-!--       Precipitation amount and rate (only needed if output is switched)
-          ALLOCATE( precipitation_amount(nysg:nyng,nxlg:nxrg) )
-
-!
-!--       3d-precipitation rate
-          ALLOCATE( prr(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-
-          IF ( microphysics_morrison )  THEN
-!
-!--          3D-cloud drop water content, cloud drop concentration arrays
-#if defined( __nopointer )
-             ALLOCATE( nc(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                      &
-                       nc_p(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                    &
-                       qc(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                      &
-                       qc_p(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                    &
-                       tnc_m(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                   & 
-                       tqc_m(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-#else
-             ALLOCATE( nc_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                    &
-                       nc_2(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                    &
-                       nc_3(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                    &
-                       qc_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                    &
-                       qc_2(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                    &
-                       qc_3(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-#endif
-          ENDIF
-
-          IF ( microphysics_seifert )  THEN
-!
-!--          3D-rain water content, rain drop concentration arrays
-#if defined( __nopointer )
-             ALLOCATE( nr(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                      &
-                       nr_p(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                    &
-                       qr(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                      &
-                       qr_p(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                    &
-                       tnr_m(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                   &
-                       tqr_m(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-#else
-             ALLOCATE( nr_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                    &
-                       nr_2(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                    &
-                       nr_3(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                    &
-                       qr_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                    &
-                       qr_2(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                    &
-                       qr_3(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-#endif
-          ENDIF
-
-       ENDIF
-
-       IF ( cloud_droplets )  THEN
-!
-!--       Liquid water content, change in liquid water content
-#if defined( __nopointer )
-          ALLOCATE ( ql(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                        &
-                     ql_c(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-#else
-          ALLOCATE ( ql_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                      &
-                     ql_2(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-#endif
-!
-!--       Real volume of particles (with weighting), volume of particles
-          ALLOCATE ( ql_v(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                      &
-                     ql_vp(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-       ENDIF
-
-    ENDIF   
-    
     IF ( passive_scalar )  THEN
 
 !
@@ -857,7 +706,7 @@
 
 !
 !-- Density profile calculation for anelastic approximation
-    t_surface = pt_surface * ( surface_pressure / 1000.0_wp )**( r_d / cp )
+    t_surface = pt_surface 
     IF ( TRIM( approximation ) == 'anelastic' ) THEN
        DO  k = nzb, nzt+1
           p_hydrostatic(k)    = surface_pressure * 100.0_wp *                  &
@@ -996,48 +845,6 @@
     ENDIF
 
 !
-!-- 1D-array for large scale subsidence velocity
-    IF ( .NOT. ALLOCATED( w_subs ) )  THEN
-       ALLOCATE ( w_subs(nzb:nzt+1) )
-       w_subs = 0.0_wp
-    ENDIF
-
-!
-!-- Arrays to store velocity data from t-dt and the phase speeds which
-!-- are needed for radiation boundary conditions
-    IF ( outflow_l )  THEN
-       ALLOCATE( u_m_l(nzb:nzt+1,nysg:nyng,1:2),                               &
-                 v_m_l(nzb:nzt+1,nysg:nyng,0:1),                               &
-                 w_m_l(nzb:nzt+1,nysg:nyng,0:1) )
-    ENDIF
-    IF ( outflow_r )  THEN
-       ALLOCATE( u_m_r(nzb:nzt+1,nysg:nyng,nx-1:nx),                           &
-                 v_m_r(nzb:nzt+1,nysg:nyng,nx-1:nx),                           &
-                 w_m_r(nzb:nzt+1,nysg:nyng,nx-1:nx) )
-    ENDIF
-    IF ( outflow_l  .OR.  outflow_r )  THEN
-       ALLOCATE( c_u(nzb:nzt+1,nysg:nyng), c_v(nzb:nzt+1,nysg:nyng),           &
-                 c_w(nzb:nzt+1,nysg:nyng) )
-    ENDIF
-    IF ( outflow_s )  THEN
-       ALLOCATE( u_m_s(nzb:nzt+1,0:1,nxlg:nxrg),                               &
-                 v_m_s(nzb:nzt+1,1:2,nxlg:nxrg),                               &
-                 w_m_s(nzb:nzt+1,0:1,nxlg:nxrg) )
-    ENDIF
-    IF ( outflow_n )  THEN
-       ALLOCATE( u_m_n(nzb:nzt+1,ny-1:ny,nxlg:nxrg),                           &
-                 v_m_n(nzb:nzt+1,ny-1:ny,nxlg:nxrg),                           &
-                 w_m_n(nzb:nzt+1,ny-1:ny,nxlg:nxrg) )
-    ENDIF
-    IF ( outflow_s  .OR.  outflow_n )  THEN
-       ALLOCATE( c_u(nzb:nzt+1,nxlg:nxrg), c_v(nzb:nzt+1,nxlg:nxrg),           &
-                 c_w(nzb:nzt+1,nxlg:nxrg) )
-    ENDIF
-    IF ( outflow_l  .OR.  outflow_r  .OR.  outflow_s  .OR.  outflow_n )  THEN
-       ALLOCATE( c_u_m_l(nzb:nzt+1), c_v_m_l(nzb:nzt+1), c_w_m_l(nzb:nzt+1) )                   
-       ALLOCATE( c_u_m(nzb:nzt+1), c_v_m(nzb:nzt+1), c_w_m(nzb:nzt+1) )
-    ENDIF
-
 
 #if ! defined( __nopointer )
 !
@@ -1051,31 +858,6 @@
     v  => v_1;   v_p  => v_2;   tv_m  => v_3
     w  => w_1;   w_p  => w_2;   tw_m  => w_3
 
-    IF ( humidity )  THEN
-       q => q_1;  q_p => q_2;  tq_m => q_3
-       IF ( humidity )  THEN
-          vpt  => vpt_1    
-          IF ( cloud_physics )  THEN
-             ql => ql_1
-             IF ( .NOT. microphysics_morrison )  THEN
-                qc => qc_1
-             ENDIF
-             IF ( microphysics_morrison )  THEN
-                qc => qc_1;  qc_p  => qc_2;  tqc_m  => qc_3
-                nc => nc_1;  nc_p  => nc_2;  tnc_m  => nc_3
-             ENDIF
-             IF ( microphysics_seifert )  THEN
-                qr => qr_1;  qr_p  => qr_2;  tqr_m  => qr_3
-                nr => nr_1;  nr_p  => nr_2;  tnr_m  => nr_3
-             ENDIF
-          ENDIF
-       ENDIF
-       IF ( cloud_droplets )  THEN
-          ql   => ql_1
-          ql_c => ql_2
-       ENDIF
-    ENDIF
-    
     IF ( passive_scalar )  THEN
        s => s_1;  s_p => s_2;  ts_m => s_3
     ENDIF    
@@ -1091,39 +873,6 @@
 !-- Initialize surface arrays
     CALL init_surface_arrays
 !
-!-- Allocate land surface model arrays
-    IF ( land_surface )  THEN
-       CALL lsm_init_arrays
-    ENDIF
-
-!
-!-- Allocate wind turbine model arrays
-    IF ( wind_turbine )  THEN
-       CALL wtm_init_arrays
-    ENDIF
-!
-!-- Allocate gust module arrays
-    IF ( gust_module_enabled )  THEN
-       CALL gust_init_arrays
-    ENDIF
-
-!
-!-- Initialize virtual flight measurements
-    IF ( virtual_flight )  THEN
-       CALL flight_init
-    ENDIF
-
-!
-!-- Read uv exposure input data
-    IF ( uv_exposure )  THEN
-       CALL uvem_init
-    ENDIF
-!
-!-- Allocate uv exposure arrays
-    IF ( uv_exposure )  THEN
-       CALL uvem_init_arrays
-    ENDIF
-
 !
 !-- Allocate arrays containing the RK coefficient for calculation of 
 !-- perturbation pressure and turbulent fluxes. At this point values are
@@ -1197,11 +946,6 @@
                                              zu(nzb+1:nzt+1),                  &
                                              init_3d%zu_atmos )
                                              
-             IF ( humidity  .AND.  init_3d%lod_q == 1 )                        &
-                CALL netcdf_data_input_interpolate(                            &
-                                             init_3d%q_init(nzb+1:nzt+1),      &
-                                             zu(nzb+1:nzt+1),                  &
-                                             init_3d%zu_atmos )
           ENDIF
 !
 !--       In case of LOD=1, initialize 1D profiles and 3D data.  
@@ -1209,22 +953,16 @@
           IF( init_3d%lod_v == 1 )  v_init = init_3d%v_init    
           IF( .NOT. neutral  .AND.  init_3d%lod_pt == 1 )                      &
              pt_init = init_3d%pt_init
-          IF( humidity  .AND.  init_3d%lod_q == 1 )                            &
-             q_init  = init_3d%q_init
-
 !
 !--       Please note, Inifor provides data from nzb+1 to nzt+1. 
 !--       Initialize pt and q with Neumann condition at nzb.
           IF( .NOT. neutral )  pt_init(nzb) = pt_init(nzb+1)
-          IF( humidity      )  q_init(nzb)  = q_init(nzb+1)
           DO  i = nxlg, nxrg
              DO  j = nysg, nyng
                 IF( init_3d%lod_u == 1 )  u(:,j,i) = u_init(:)
                 IF( init_3d%lod_v == 1 )  v(:,j,i) = v_init(:)
                 IF( .NOT. neutral  .AND.  init_3d%lod_pt == 1 )                &
                    pt(:,j,i) = pt_init(:)
-                IF( humidity  .AND.  init_3d%lod_q == 1 )                      &
-                   q(:,j,i)  = q_init(:)
              ENDDO
           ENDDO
 !
@@ -1245,28 +983,6 @@
 !--       Set inital w to 0
           w = 0.0_wp
 !
-!--       Initialize the remaining quantities
-          IF ( humidity )  THEN
-             IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
-                DO  i = nxlg, nxrg
-                   DO  j = nysg, nyng
-                      qc(:,j,i) = 0.0_wp
-                      nc(:,j,i) = 0.0_wp
-                   ENDDO
-                ENDDO
-             ENDIF
-
-             IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
-                DO  i = nxlg, nxrg
-                   DO  j = nysg, nyng
-                      qr(:,j,i) = 0.0_wp
-                      nr(:,j,i) = 0.0_wp
-                   ENDDO
-                ENDDO
-             ENDIF
-
-          ENDIF
-
           IF ( passive_scalar )  THEN
              DO  i = nxlg, nxrg
                 DO  j = nysg, nyng
@@ -1294,102 +1010,12 @@
 !--       fluxes, etc. 
           CALL init_surfaces
 !
-!--       Initialize turbulence generator
-          IF( use_syn_turb_gen )  CALL stg_init
-
           CALL location_message( 'finished', .TRUE. )
 !
-!--    Initialization via computed 1D-model profiles
-       ELSEIF ( INDEX( initializing_actions, 'set_1d-model_profiles' ) /= 0 )  THEN
-
-          CALL location_message( 'initializing with 1D model profiles', .FALSE. )
-!
-!--       Use solutions of the 1D model as initial profiles,
-!--       start 1D model
-          CALL init_1d_model
-!
-!--       Transfer initial profiles to the arrays of the 3D model
-          DO  i = nxlg, nxrg
-             DO  j = nysg, nyng
-                pt(:,j,i) = pt_init
-                u(:,j,i)  = u1d
-                v(:,j,i)  = v1d
-             ENDDO
-          ENDDO
-
-          IF ( humidity )  THEN
-             DO  i = nxlg, nxrg
-                DO  j = nysg, nyng
-                   q(:,j,i) = q_init
-                ENDDO
-             ENDDO
-             IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
-                DO  i = nxlg, nxrg
-                   DO  j = nysg, nyng
-                      qc(:,j,i) = 0.0_wp
-                      nc(:,j,i) = 0.0_wp
-                   ENDDO
-                ENDDO
-             ENDIF
-             IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
-                DO  i = nxlg, nxrg
-                   DO  j = nysg, nyng
-                      qr(:,j,i) = 0.0_wp
-                      nr(:,j,i) = 0.0_wp
-                   ENDDO
-                ENDDO
-             ENDIF
-          ENDIF
-
-          IF ( passive_scalar )  THEN
-             DO  i = nxlg, nxrg
-                DO  j = nysg, nyng
-                   s(:,j,i) = s_init
-                ENDDO
-             ENDDO   
-          ENDIF
-!
-!--          Store initial profiles for output purposes etc.
-          IF ( .NOT. constant_diffusion )  THEN
-             hom(:,1,25,:) = SPREAD( l1d, 2, statistic_regions+1 )
-          ENDIF
-!
-!--       Set velocities back to zero
-          u = MERGE( u, 0.0_wp, BTEST( wall_flags_0, 1 ) )
-          v = MERGE( v, 0.0_wp, BTEST( wall_flags_0, 2 ) )         
-!
-!--       WARNING: The extra boundary conditions set after running the
-!--       -------  1D model impose an error on the divergence one layer
-!--                below the topography; need to correct later 
-!--       ATTENTION: Provisional correction for Piacsek & Williams
-!--       ---------  advection scheme: keep u and v zero one layer below
-!--                  the topography.
-          IF ( ibc_uv_b == 1 )  THEN
-!
-!--          Neumann condition
-             DO  i = nxl-1, nxr+1
-                DO  j = nys-1, nyn+1
-                   u(nzb,j,i) = u(nzb+1,j,i)
-                   v(nzb,j,i) = v(nzb+1,j,i)
-                ENDDO
-             ENDDO
-
-          ENDIF
-!
-!--       Initialize surface variables, e.g. friction velocity, momentum 
-!--       fluxes, etc. 
-          CALL init_surfaces
-
-          CALL location_message( 'finished', .TRUE. )
-
        ELSEIF ( INDEX(initializing_actions, 'set_constant_profiles') /= 0 )    &
        THEN
 
           CALL location_message( 'initializing with constant profiles', .FALSE. )
-!
-!--       Overwrite initial profiles in case of synthetic turbulence generator
-          IF( use_syn_turb_gen )  CALL stg_init
-
 !
 !--       Use constructed initial profiles (velocity constant with height,
 !--       temperature profile with constant gradient)
@@ -1426,32 +1052,6 @@
              ENDDO
           ENDIF
 
-          IF ( humidity )  THEN
-             DO  i = nxlg, nxrg
-                DO  j = nysg, nyng
-                   q(:,j,i) = q_init
-                ENDDO
-             ENDDO
-             IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
-                DO  i = nxlg, nxrg
-                   DO  j = nysg, nyng
-                      qc(:,j,i) = 0.0_wp
-                      nc(:,j,i) = 0.0_wp
-                   ENDDO
-                ENDDO
-             ENDIF
-
-             IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
-                DO  i = nxlg, nxrg
-                   DO  j = nysg, nyng
-                      qr(:,j,i) = 0.0_wp
-                      nr(:,j,i) = 0.0_wp
-                   ENDDO
-                ENDDO
-             ENDIF
-
-          ENDIF
-          
           IF ( passive_scalar )  THEN
              DO  i = nxlg, nxrg
                 DO  j = nysg, nyng
@@ -1488,9 +1088,6 @@
 !--       user-defined initialization of surface quantities. 
           CALL init_surfaces
 !
-!--       Initialization will completely be done by the user
-          CALL user_init_3d_model
-
           CALL location_message( 'finished', .TRUE. )
 
        ENDIF
@@ -1513,10 +1110,6 @@
        ENDIF
 
 !
-!--    Calculate virtual potential temperature
-       IF ( humidity )  vpt = pt * ( 1.0_wp + 0.61_wp * q )
-
-!
 !--    Store initial profiles for output purposes etc.. Please note, in case of 
 !--    initialization of u, v, w, pt, and q via output data derived from larger 
 !--    scale models, data will not be horizontally homogeneous. Actually, a mean 
@@ -1536,22 +1129,6 @@
           hom(:,1,26,:)  = SPREAD( sa(:,nys,nxl), 2, statistic_regions+1 )
        ENDIF
 
-       IF ( humidity )  THEN
-!
-!--       Store initial profile of total water content, virtual potential
-!--       temperature 
-          hom(:,1,26,:) = SPREAD(   q(:,nys,nxl), 2, statistic_regions+1 )
-          hom(:,1,29,:) = SPREAD( vpt(:,nys,nxl), 2, statistic_regions+1 )
-!
-!--       Store initial profile of mixing ratio and potential
-!--       temperature
-          IF ( cloud_physics  .OR.  cloud_droplets ) THEN
-             hom(:,1,27,:) = SPREAD(  q(:,nys,nxl), 2, statistic_regions+1 )
-             hom(:,1,28,:) = SPREAD( pt(:,nys,nxl), 2, statistic_regions+1 )
-          ENDIF
-       ENDIF
-
-!
 !--    Store initial scalar profile
        IF ( passive_scalar )  THEN
           hom(:,1,121,:) = SPREAD(  s(:,nys,nxl), 2, statistic_regions+1 )
@@ -1568,17 +1145,9 @@
 !--    Set the reference state to be used in the buoyancy terms (for ocean runs
 !--    the reference state will be set (overwritten) in init_ocean)
        IF ( use_single_reference_value )  THEN
-          IF (  .NOT.  humidity )  THEN
              ref_state(:) = pt_reference
-          ELSE
-             ref_state(:) = vpt_reference
-          ENDIF
        ELSE
-          IF (  .NOT.  humidity )  THEN
              ref_state(:) = pt_init(:)
-          ELSE
-             ref_state(:) = vpt(:,nys,nxl)
-          ENDIF
        ENDIF
 
 !
@@ -1593,15 +1162,6 @@
 !--    In case of iterative solvers, p must get an initial value
        IF ( psolver(1:9) == 'multigrid'  .OR.  psolver == 'sor' )  p = 0.0_wp
 
-!
-!--    Treating cloud physics, liquid water content and precipitation amount
-!--    are zero at beginning of the simulation
-       IF ( cloud_physics )  THEN
-          ql = 0.0_wp
-          qc = 0.0_wp
-
-          precipitation_amount = 0.0_wp
-       ENDIF
 !
 !--    Impose vortex with vertical axis on the initial velocity profile
        IF ( INDEX( initializing_actions, 'initialize_vortex' ) /= 0 )  THEN
@@ -1625,35 +1185,14 @@
 !
 !--    If required, change the surface humidity/scalar at the start of the 3D
 !--    run
-       IF ( humidity  .AND.  q_surface_initial_change /= 0.0_wp )              &
-          q(nzb,:,:) = q(nzb,:,:) + q_surface_initial_change
-          
        IF ( passive_scalar .AND.  s_surface_initial_change /= 0.0_wp )         &
           s(nzb,:,:) = s(nzb,:,:) + s_surface_initial_change
-        
 
 !
 !--    Initialize old and new time levels.
        tpt_m = 0.0_wp; tu_m = 0.0_wp; tv_m = 0.0_wp; tw_m = 0.0_wp
        pt_p = pt; u_p = u; v_p = v; w_p = w
 
-       IF ( humidity  )  THEN
-          tq_m = 0.0_wp
-          q_p = q
-          IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
-             tqc_m = 0.0_wp
-             qc_p  = qc
-             tnc_m = 0.0_wp
-             nc_p  = nc
-          ENDIF
-          IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
-             tqr_m = 0.0_wp
-             qr_p  = qr
-             tnr_m = 0.0_wp
-             nr_p  = nr
-          ENDIF
-       ENDIF
-       
        IF ( passive_scalar )  THEN
           ts_m = 0.0_wp
           s_p  = s
@@ -1733,172 +1272,6 @@
        ENDIF
 
 !
-!--    Initialization of the turbulence recycling method
-       IF ( TRIM( initializing_actions ) == 'cyclic_fill'  .AND.               &
-            turbulent_inflow )  THEN
-!
-!--       First store the profiles to be used at the inflow.
-!--       These profiles are the (temporally) and horizontally averaged vertical
-!--       profiles from the prerun. Alternatively, prescribed profiles
-!--       for u,v-components can be used.
-          ALLOCATE( mean_inflow_profiles(nzb:nzt+1,7) )
-
-          IF ( use_prescribed_profile_data )  THEN
-             mean_inflow_profiles(:,1) = u_init            ! u
-             mean_inflow_profiles(:,2) = v_init            ! v
-          ELSE
-             mean_inflow_profiles(:,1) = hom_sum(:,1,0)    ! u
-             mean_inflow_profiles(:,2) = hom_sum(:,2,0)    ! v
-          ENDIF
-          mean_inflow_profiles(:,4) = hom_sum(:,4,0)       ! pt
-          IF ( humidity )                                                      &
-             mean_inflow_profiles(:,6) = hom_sum(:,41,0)   ! q
-          IF ( passive_scalar )                                                &
-             mean_inflow_profiles(:,7) = hom_sum(:,115,0)   ! s
-!
-!--       In case of complex terrain, determine vertical displacement at inflow 
-!--       boundary and adjust mean inflow profiles
-          IF ( complex_terrain )  THEN
-             IF ( nxlg <= 0 .AND. nxrg >= 0 .AND. nysg <= 0 .AND. nyng >= 0 )  THEN
-                nz_u_shift_l = get_topography_top_index_ji( 0, 0, 'u' )
-                nz_v_shift_l = get_topography_top_index_ji( 0, 0, 'v' )
-                nz_w_shift_l = get_topography_top_index_ji( 0, 0, 'w' )
-                nz_s_shift_l = get_topography_top_index_ji( 0, 0, 's' )
-             ELSE
-                nz_u_shift_l = 0
-                nz_v_shift_l = 0
-                nz_w_shift_l = 0
-                nz_s_shift_l = 0
-             ENDIF
-
-#if defined( __parallel )
-             CALL MPI_ALLREDUCE(nz_u_shift_l, nz_u_shift, 1, MPI_INTEGER,      &
-                                MPI_MAX, comm2d, ierr)
-             CALL MPI_ALLREDUCE(nz_v_shift_l, nz_v_shift, 1, MPI_INTEGER,      &
-                                MPI_MAX, comm2d, ierr)
-             CALL MPI_ALLREDUCE(nz_w_shift_l, nz_w_shift, 1, MPI_INTEGER,      & 
-                                MPI_MAX, comm2d, ierr)
-             CALL MPI_ALLREDUCE(nz_s_shift_l, nz_s_shift, 1, MPI_INTEGER,      &
-                                MPI_MAX, comm2d, ierr)
-#else
-             nz_u_shift = nz_u_shift_l
-             nz_v_shift = nz_v_shift_l
-             nz_w_shift = nz_w_shift_l
-             nz_s_shift = nz_s_shift_l
-#endif
-
-             mean_inflow_profiles(:,1) = 0.0_wp
-             mean_inflow_profiles(nz_u_shift:nzt+1,1) = hom_sum(0:nzt+1-nz_u_shift,1,0)  ! u
-
-             mean_inflow_profiles(:,2) = 0.0_wp
-             mean_inflow_profiles(nz_v_shift:nzt+1,2) = hom_sum(0:nzt+1-nz_v_shift,2,0)  ! v
-
-             mean_inflow_profiles(nz_s_shift:nzt+1,4) = hom_sum(0:nzt+1-nz_s_shift,4,0)  ! pt
-
-          ENDIF
-
-!
-!--       If necessary, adjust the horizontal flow field to the prescribed
-!--       profiles
-          IF ( use_prescribed_profile_data )  THEN
-             DO  i = nxlg, nxrg
-                DO  j = nysg, nyng
-                   DO  k = nzb, nzt+1
-                      u(k,j,i) = u(k,j,i) - hom_sum(k,1,0) + u_init(k)
-                      v(k,j,i) = v(k,j,i) - hom_sum(k,2,0) + v_init(k)
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
-
-!
-!--       Use these mean profiles at the inflow (provided that Dirichlet
-!--       conditions are used)
-          IF ( inflow_l )  THEN
-             DO  j = nysg, nyng
-                DO  k = nzb, nzt+1
-                   u(k,j,nxlg:-1)  = mean_inflow_profiles(k,1)
-                   v(k,j,nxlg:-1)  = mean_inflow_profiles(k,2)
-                   w(k,j,nxlg:-1)  = 0.0_wp
-                   pt(k,j,nxlg:-1) = mean_inflow_profiles(k,4)
-                   IF ( humidity )                                             &
-                      q(k,j,nxlg:-1)  = mean_inflow_profiles(k,6)
-                   IF ( passive_scalar )                                       &
-                      s(k,j,nxlg:-1)  = mean_inflow_profiles(k,7)                      
-                ENDDO
-             ENDDO
-          ENDIF
-
-!
-!--       Calculate the damping factors to be used at the inflow. For a
-!--       turbulent inflow the turbulent fluctuations have to be limited
-!--       vertically because otherwise the turbulent inflow layer will grow
-!--       in time.
-          IF ( inflow_damping_height == 9999999.9_wp )  THEN
-!
-!--          Default: use the inversion height calculated by the prerun; if
-!--          this is zero, inflow_damping_height must be explicitly
-!--          specified.
-             IF ( hom_sum(nzb+6,pr_palm,0) /= 0.0_wp )  THEN
-                inflow_damping_height = hom_sum(nzb+6,pr_palm,0)
-             ELSE
-                WRITE( message_string, * ) 'inflow_damping_height must be ',   &
-                     'explicitly specified because&the inversion height ',     &
-                     'calculated by the prerun is zero.'
-                CALL message( 'init_3d_model', 'PA0318', 1, 2, 0, 6, 0 )
-             ENDIF
-
-          ENDIF
-
-          IF ( inflow_damping_width == 9999999.9_wp )  THEN
-!
-!--          Default for the transition range: one tenth of the undamped
-!--          layer
-             inflow_damping_width = 0.1_wp * inflow_damping_height
-
-          ENDIF
-
-          ALLOCATE( inflow_damping_factor(nzb:nzt+1) )
-
-          DO  k = nzb, nzt+1
-
-             IF ( zu(k) <= inflow_damping_height )  THEN
-                inflow_damping_factor(k) = 1.0_wp
-             ELSEIF ( zu(k) <= ( inflow_damping_height + inflow_damping_width ) )  THEN
-                inflow_damping_factor(k) = 1.0_wp -                            &
-                                           ( zu(k) - inflow_damping_height ) / &
-                                           inflow_damping_width
-             ELSE
-                inflow_damping_factor(k) = 0.0_wp
-             ENDIF
-
-          ENDDO
-
-       ENDIF
-
-!
-!--    Inside buildings set velocities back to zero
-       IF ( TRIM( initializing_actions ) == 'cyclic_fill' .AND.                &
-            topography /= 'flat' )  THEN
-!
-!--       Inside buildings set velocities back to zero.
-!--       Other scalars (pt, q, s, p, sa, ...) are ignored at present,
-!--       maybe revise later.
-          DO  i = nxlg, nxrg
-             DO  j = nysg, nyng
-                DO  k = nzb, nzt
-                   u(k,j,i)     = MERGE( u(k,j,i), 0.0_wp,                     &
-                                         BTEST( wall_flags_0(k,j,i), 1 ) )
-                   v(k,j,i)     = MERGE( v(k,j,i), 0.0_wp,                     &
-                                         BTEST( wall_flags_0(k,j,i), 2 ) )
-                   w(k,j,i)     = MERGE( w(k,j,i), 0.0_wp,                     &
-                                         BTEST( wall_flags_0(k,j,i), 3 ) )
-                ENDDO
-             ENDDO
-          ENDDO
-
-       ENDIF
-
 !
 !--    Calculate initial temperature field and other constants used in case
 !--    of a sloping surface
@@ -1908,17 +1281,6 @@
 !--    Initialize new time levels (only done in order to set boundary values
 !--    including ghost points)
        pt_p = pt; u_p = u; v_p = v; w_p = w
-       IF ( humidity )  THEN
-          q_p = q
-          IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
-             qc_p = qc
-             nc_p = nc
-          ENDIF
-          IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
-             qr_p = qr
-             nr_p = nr
-          ENDIF
-       ENDIF
        IF ( passive_scalar )  s_p  = s
        IF ( ocean          )  sa_p = sa
 
@@ -1927,23 +1289,9 @@
 !--    have to be predefined here because they are used (but multiplied with 0)
 !--    there before they are set. 
        tpt_m = 0.0_wp; tu_m = 0.0_wp; tv_m = 0.0_wp; tw_m = 0.0_wp
-       IF ( humidity )  THEN
-          tq_m = 0.0_wp
-          IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
-             tqc_m = 0.0_wp
-             tnc_m = 0.0_wp
-          ENDIF
-          IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
-             tqr_m = 0.0_wp
-             tnr_m = 0.0_wp
-          ENDIF
-       ENDIF
        IF ( passive_scalar )  ts_m  = 0.0_wp
        IF ( ocean          )  tsa_m = 0.0_wp
 !
-!--    Initialize synthetic turbulence generator in case of restart.
-       IF ( TRIM( initializing_actions ) == 'read_restart_data'  .AND.         &
-            use_syn_turb_gen )  CALL stg_init
 
        CALL location_message( 'finished', .TRUE. )
 
@@ -1958,32 +1306,6 @@
 !-- Initialize TKE, Kh and Km
     CALL tcm_init
 
-
-    IF (  TRIM( initializing_actions ) /= 'read_restart_data' )  THEN
-!
-!--    Initialize old timelevels needed for radiation boundary conditions
-       IF ( outflow_l )  THEN
-          u_m_l(:,:,:) = u(:,:,1:2)
-          v_m_l(:,:,:) = v(:,:,0:1)
-          w_m_l(:,:,:) = w(:,:,0:1)
-       ENDIF
-       IF ( outflow_r )  THEN
-          u_m_r(:,:,:) = u(:,:,nx-1:nx)
-          v_m_r(:,:,:) = v(:,:,nx-1:nx)
-          w_m_r(:,:,:) = w(:,:,nx-1:nx)
-       ENDIF
-       IF ( outflow_s )  THEN
-          u_m_s(:,:,:) = u(:,0:1,:)
-          v_m_s(:,:,:) = v(:,1:2,:)
-          w_m_s(:,:,:) = w(:,0:1,:)
-       ENDIF
-       IF ( outflow_n )  THEN
-          u_m_n(:,:,:) = u(:,ny-1:ny,:)
-          v_m_n(:,:,:) = v(:,ny-1:ny,:)
-          w_m_n(:,:,:) = w(:,ny-1:ny,:)
-       ENDIF
-       
-    ENDIF
 
 !
 !-- Calculate the initial volume flow at the right and north boundary
@@ -2190,9 +1512,6 @@
     rmask(:,nxlg:nxl-1,:) = 0.0_wp;  rmask(:,nxr+1:nxrg,:) = 0.0_wp
     rmask(nysg:nys-1,:,:) = 0.0_wp;  rmask(nyn+1:nyng,:,:) = 0.0_wp
 !
-!-- User-defined initializing actions
-    CALL user_init
-!
 !-- To do: New concept for these non-topography grid points!
     DO  sr = 0, statistic_regions
        DO  i = nxl, nxr
@@ -2339,60 +1658,8 @@
     ENDIF
 
 !
-!-- If required, initialize quantities needed for the plant canopy model
-    IF ( plant_canopy )  THEN
-       CALL location_message( 'initializing plant canopy model', .FALSE. )    
-       CALL pcm_init
-       CALL location_message( 'finished', .TRUE. )
-    ENDIF
-
-!
-!-- If required, initialize dvrp-software
-    IF ( dt_dvrp /= 9999999.9_wp )  CALL init_dvrp
-
-    IF ( ocean )  THEN
-!
 !--    Initialize quantities needed for the ocean model
        CALL init_ocean
-
-    ELSE
-!
-!--    Initialize quantities for handling cloud physics
-!--    This routine must be called before lpm_init, because
-!--    otherwise, array pt_d_t, needed in data_output_dvrp (called by
-!--    lpm_init) is not defined.
-       CALL init_cloud_physics
-!
-!--    Initialize bulk cloud microphysics
-       CALL microphysics_init
-    ENDIF
-
-!
-!-- If required, initialize particles
-    IF ( particle_advection )  CALL lpm_init
-
-!
-!-- If required, initialize quantities needed for the LSM
-    IF ( land_surface )  THEN
-       CALL location_message( 'initializing land surface model', .FALSE. )
-       CALL lsm_init
-       CALL location_message( 'finished', .TRUE. )
-    ENDIF
-
-!
-!-- If required, allocate USM and LSM surfaces
-    IF ( urban_surface )  THEN
-       CALL location_message( 'initializing and allocating urban surfaces', .FALSE. )
-       CALL usm_allocate_surface
-       CALL location_message( 'finished', .TRUE. )
-    ENDIF
-!
-!-- If required, initialize urban surface model
-    IF ( urban_surface )  THEN
-       CALL location_message( 'initializing urban surface model', .FALSE. )
-       CALL usm_init_urban_surface
-       CALL location_message( 'finished', .TRUE. )
-    ENDIF
 
 !
 !-- Initialize surface layer (done after LSM as roughness length are required
@@ -2401,109 +1668,6 @@
        CALL location_message( 'initializing surface layer', .FALSE. )
        CALL init_surface_layer_fluxes
        CALL location_message( 'finished', .TRUE. )
-    ENDIF
-
-!
-!-- If required, set chemical emissions
-!-- (todo(FK): This should later on be CALLed time-dependently in init_3d_model)
-    IF ( air_chemistry )  THEN
-       CALL chem_emissions
-    ENDIF
-
-!
-!-- Initialize radiation processes
-    IF ( radiation )  THEN
-!
-!--    Activate radiation_interactions according to the existence of vertical surfaces and/or trees.
-!--    The namelist parameter radiation_interactions_on can override this behavior.
-!--    (This check cannot be performed in check_parameters, because vertical_surfaces_exist is first set in 
-!--    init_surface_arrays.)
-       IF ( radiation_interactions_on )  THEN
-          IF ( vertical_surfaces_exist  .OR.  plant_canopy )  THEN
-             radiation_interactions    = .TRUE.
-             average_radiation         = .TRUE.
-          ELSE
-             radiation_interactions_on = .FALSE.   !< reset namelist parameter: no interactions 
-                                                   !< calculations necessary in case of flat surface
-          ENDIF
-       ELSEIF ( vertical_surfaces_exist  .OR.  plant_canopy )  THEN
-          message_string = 'radiation_interactions_on is set to .FALSE. although '     // &
-                           'vertical surfaces and/or trees exist. The model will run ' // &
-                           'without RTM (no shadows, no radiation reflections)'
-          CALL message( 'init_3d_model', 'PA0348', 0, 1, 0, 6, 0 )
-       ENDIF
-!
-!--    If required, initialize radiation interactions between surfaces 
-!--    via sky-view factors. This must be done before radiation is initialized.
-       IF ( radiation_interactions )  CALL radiation_interaction_init
-
-!
-!--    Initialize radiation model
-       CALL location_message( 'initializing radiation model', .FALSE. )
-       CALL radiation_init
-       CALL location_message( 'finished', .TRUE. )
-
-!
-!--    Find all discretized apparent solar_pos
-
-!
-!--    If required, read or calculate and write out the SVF 
-       IF ( radiation_interactions .AND. read_svf)  THEN
-!
-!--       Read sky-view factors and further required data from file
-          CALL location_message( '    Start reading SVF from file', .FALSE. )
-          CALL radiation_read_svf()
-          CALL location_message( '    Reading SVF from file has finished', .TRUE. )
-
-       ELSEIF ( radiation_interactions .AND. .NOT. read_svf)  THEN
-!
-!--       calculate SFV and CSF
-          CALL location_message( '    Start calculation of SVF', .FALSE. )
-          CALL radiation_calc_svf()
-          CALL location_message( '    Calculation of SVF has finished', .TRUE. )
-       ENDIF
-
-       IF ( radiation_interactions .AND. write_svf)  THEN
-!
-!--       Write svf, csf svfsurf and csfsurf data to file
-          CALL location_message( '    Start writing SVF in file', .FALSE. )
-          CALL radiation_write_svf()
-          CALL location_message( '    Writing SVF in file has finished', .TRUE. )
-       ENDIF
-
-!
-!--    Adjust radiative fluxes. In case of urban and land surfaces, also 
-!--    call an initial interaction.
-       IF ( radiation_interactions )  THEN
-          CALL radiation_interaction
-       ENDIF
-    ENDIF
-
-!
-!-- Temporary solution to add LSM and radiation time series to the default
-!-- output
-    IF ( land_surface  .OR.  radiation )  THEN
-       IF ( TRIM( radiation_scheme ) == 'rrtmg' )  THEN
-          dots_num = dots_num + 15
-       ELSE
-          dots_num = dots_num + 11
-       ENDIF
-    ENDIF
-    
-
-
-!
-!-- If required, initialize quantities needed for the wind turbine model
-    IF ( wind_turbine )  THEN
-       CALL location_message( 'initializing wind turbine model', .FALSE. )
-       CALL wtm_init
-       CALL location_message( 'finished', .TRUE. )
-    ENDIF
-
-!
-!-- If required, initialize quantities needed for the gust module
-    IF ( gust_module_enabled )  THEN
-       CALL gust_init( dots_label, dots_unit, dots_num, dots_max )
     ENDIF
 
 !
@@ -2644,13 +1808,6 @@
 !-- after call of user_init!
     CALL close_file( 13 )
 !
-!-- In case of nesting, put an barrier to assure that all parent and child 
-!-- domains finished initialization. 
-#if defined( __parallel )
-    IF ( nested_run )  CALL MPI_BARRIER( MPI_COMM_WORLD, ierr )
-#endif
-
-
     CALL location_message( 'leaving init_3d_model', .TRUE. )
 
  END SUBROUTINE init_3d_model

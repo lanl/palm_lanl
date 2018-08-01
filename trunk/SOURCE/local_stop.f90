@@ -83,18 +83,9 @@
 
     USE pegrid
 
-    USE pmc_interface,                                                         &
-        ONLY:  nested_run
-
 
 #if defined( __parallel )
     IF ( coupling_mode == 'uncoupled' )  THEN
-       IF ( nested_run )  THEN
-!
-!--       Workaround: If any of the nested model crashes, it aborts the whole
-!--       run with MPI_ABORT, regardless of the reason given by abort_mode
-          CALL MPI_ABORT( MPI_COMM_WORLD, 9999, ierr )
-       ELSE
           IF ( abort_mode == 1 )  THEN
              CALL MPI_FINALIZE( ierr )
              STOP
@@ -103,14 +94,6 @@
           ELSEIF ( abort_mode == 3 )  THEN
              CALL MPI_ABORT( MPI_COMM_WORLD, 9999, ierr )
           ENDIF
-       ENDIF
-    ELSEIF ( coupling_mode(1:8) == 'vnested_' )  THEN
-
-       PRINT*, '+++ local_stop:'
-       PRINT*, '     model "', TRIM( coupling_mode ), '" terminated'
-!
-!--    Abort both coarse and fine grid
-       CALL MPI_ABORT( MPI_COMM_WORLD, 9999, ierr )
     ELSE
 
        SELECT CASE ( terminate_coupled_remote )

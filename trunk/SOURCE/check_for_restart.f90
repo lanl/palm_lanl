@@ -96,9 +96,6 @@
 
     USE pegrid
 
-    USE pmc_interface,                                                         &
-        ONLY:  comm_world_nesting, cpl_id, nested_run
-
     IMPLICIT NONE
 
     INTEGER ::  global_communicator       !< global communicator to be used here
@@ -125,11 +122,7 @@
 !
 !-- Set the global communicator to be used (depends on the mode in which PALM is
 !-- running)
-    IF ( nested_run )  THEN
-       global_communicator = comm_world_nesting
-    ELSE
-       global_communicator = comm2d
-    ENDIF
+    global_communicator = comm2d
 
 #if defined( __parallel )
 !
@@ -291,7 +284,7 @@
 !-- If the run is stopped, set a flag file which is necessary to initiate
 !-- the start of a continuation run, except if the user forced to stop the
 !-- run without restart
-    IF ( terminate_run  .AND.  myid == 0  .AND.  cpl_id == 1  .AND.            &
+    IF ( terminate_run  .AND.  myid == 0  .AND.            &
          .NOT. do_stop_now)  THEN
 
        OPEN ( 90, FILE='CONTINUE_RUN', FORM='FORMATTED' )

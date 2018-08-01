@@ -233,9 +233,6 @@
         
     USE averaging
         
-    USE cloud_parameters,                                                      &
-        ONLY:  cp, hyrho, l_d_cp, l_v, pt_d_t
-               
     USE control_parameters,                                                    &
         ONLY:  cloud_physics, data_output_2d_on_each_pe, data_output_xy,       &
                data_output_xz, data_output_yz, do2d,                           &
@@ -253,17 +250,11 @@
     USE grid_variables,                                                        &
         ONLY:  dx, dy
 
-    USE gust_mod,                                                              &
-        ONLY:  gust_data_output_2d, gust_module_enabled
-        
     USE indices,                                                               &
         ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, ny, nyn, nyng, nys, nysg, nz,   &
                nzb, nzt, wall_flags_0
                
     USE kinds
-    
-    USE land_surface_model_mod,                                                &
-        ONLY:  lsm_data_output_2d, zs
     
 #if defined( __netcdf )
     USE NETCDF
@@ -274,25 +265,13 @@
                id_var_time_xy, id_var_time_xz, id_var_time_yz, nc_stat,        &
                netcdf_data_format, netcdf_handle_error
 
-    USE particle_attributes,                                                   &
-        ONLY:  grid_particles, number_of_particles, particle_advection_start,  &
-               particles, prt_count
-    
     USE pegrid
 
-    USE radiation_model_mod,                                                   &
-        ONLY:  radiation, radiation_data_output_2d
-
     USE surface_mod,                                                           &
-        ONLY:  ind_pav_green, ind_veg_wall, ind_wat_win, surf_def_h,           &
-               surf_lsm_h, surf_usm_h
+        ONLY:  ind_pav_green, ind_veg_wall, ind_wat_win, surf_def_h
 
     USE turbulence_closure_mod,                                                &
         ONLY:  tcm_data_output_2d
-
-    USE uv_exposure_model_mod,                                                 &
-        ONLY:  uvem_data_output_2d
-
 
     IMPLICIT NONE
 
@@ -600,55 +579,12 @@
                 ENDIF
                 IF ( mode == 'xy' )  level_z = zu
 
-             CASE ( 'ghf*_xy' )        ! 2d-array
-                IF ( av == 0 )  THEN
-                   DO  m = 1, surf_lsm_h%ns
-                      i                   = surf_lsm_h%i(m)            
-                      j                   = surf_lsm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%ghf(m)
-                   ENDDO
-                   DO  m = 1, surf_usm_h%ns
-                      i                   = surf_usm_h%i(m)            
-                      j                   = surf_usm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%frac(ind_veg_wall,m)  *  &
-                                            surf_usm_h%wghf_eb(m)        +      &
-                                            surf_usm_h%frac(ind_pav_green,m) *  &
-                                            surf_usm_h%wghf_eb_green(m)  +      &
-                                            surf_usm_h%frac(ind_wat_win,m)   *  &
-                                            surf_usm_h%wghf_eb_window(m)
-                   ENDDO
-                ELSE
-                   IF ( .NOT. ALLOCATED( ghf_av ) ) THEN
-                      ALLOCATE( ghf_av(nysg:nyng,nxlg:nxrg) )
-                      ghf_av = REAL( fill_value, KIND = wp )
-                   ENDIF
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                         local_pf(i,j,nzb+1) = ghf_av(j,i)
-                      ENDDO
-                   ENDDO
-                ENDIF
-
-                resorted = .TRUE.
-                two_d = .TRUE.
-                level_z(nzb+1) = zu(nzb+1)
-
              CASE ( 'ol*_xy' )        ! 2d-array
                 IF ( av == 0 ) THEN
                    DO  m = 1, surf_def_h(0)%ns
                       i = surf_def_h(0)%i(m)
                       j = surf_def_h(0)%j(m)
                       local_pf(i,j,nzb+1) = surf_def_h(0)%ol(m)
-                   ENDDO
-                   DO  m = 1, surf_lsm_h%ns
-                      i = surf_lsm_h%i(m)
-                      j = surf_lsm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%ol(m)
-                   ENDDO
-                   DO  m = 1, surf_usm_h%ns
-                      i = surf_usm_h%i(m)
-                      j = surf_usm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%ol(m)
                    ENDDO
                 ELSE
                    IF ( .NOT. ALLOCATED( ol_av ) ) THEN
@@ -679,80 +615,6 @@
                 ENDIF
                 IF ( mode == 'xy' )  level_z = zu
 
-             CASE ( 'pc_xy', 'pc_xz', 'pc_yz' )  ! particle concentration
-                IF ( av == 0 )  THEN
-                   IF ( simulated_time >= particle_advection_start )  THEN
-                      tend = prt_count
-!                      CALL exchange_horiz( tend, nbgp )
-                   ELSE
-                      tend = 0.0_wp
-                   ENDIF
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                         DO  k = nzb, nzt+1
-                            local_pf(i,j,k) = tend(k,j,i)
-                         ENDDO
-                      ENDDO
-                   ENDDO
-                   resorted = .TRUE.
-                ELSE
-                   IF ( .NOT. ALLOCATED( pc_av ) ) THEN
-                      ALLOCATE( pc_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-                      pc_av = REAL( fill_value, KIND = wp )
-                   ENDIF
-!                   CALL exchange_horiz( pc_av, nbgp )
-                   to_be_resorted => pc_av
-                ENDIF
-
-             CASE ( 'pr_xy', 'pr_xz', 'pr_yz' )  ! mean particle radius (effective radius)
-                IF ( av == 0 )  THEN
-                   IF ( simulated_time >= particle_advection_start )  THEN
-                      DO  i = nxl, nxr
-                         DO  j = nys, nyn
-                            DO  k = nzb, nzt+1
-                               number_of_particles = prt_count(k,j,i)
-                               IF (number_of_particles <= 0)  CYCLE
-                               particles => grid_particles(k,j,i)%particles(1:number_of_particles)
-                               s_r2 = 0.0_wp
-                               s_r3 = 0.0_wp
-                               DO  n = 1, number_of_particles
-                                  IF ( particles(n)%particle_mask )  THEN
-                                     s_r2 = s_r2 + particles(n)%radius**2 * &
-                                            particles(n)%weight_factor
-                                     s_r3 = s_r3 + particles(n)%radius**3 * &
-                                            particles(n)%weight_factor
-                                  ENDIF
-                               ENDDO
-                               IF ( s_r2 > 0.0_wp )  THEN
-                                  mean_r = s_r3 / s_r2
-                               ELSE
-                                  mean_r = 0.0_wp
-                               ENDIF
-                               tend(k,j,i) = mean_r
-                            ENDDO
-                         ENDDO
-                      ENDDO
-!                      CALL exchange_horiz( tend, nbgp )
-                   ELSE
-                      tend = 0.0_wp
-                   ENDIF
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                         DO  k = nzb, nzt+1
-                            local_pf(i,j,k) = tend(k,j,i)
-                         ENDDO
-                      ENDDO
-                   ENDDO
-                   resorted = .TRUE.
-                ELSE
-                   IF ( .NOT. ALLOCATED( pr_av ) ) THEN
-                      ALLOCATE( pr_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-                      pr_av = REAL( fill_value, KIND = wp )
-                   ENDIF
-!                   CALL exchange_horiz( pr_av, nbgp )
-                   to_be_resorted => pr_av
-                ENDIF
-
              CASE ( 'pra*_xy' )        ! 2d-array / integral quantity => no av
 !                CALL exchange_horiz_2d( precipitation_amount )
                    DO  i = nxl, nxr
@@ -765,49 +627,9 @@
                 two_d = .TRUE.
                 level_z(nzb+1) = zu(nzb+1)
 
-             CASE ( 'prr_xy', 'prr_xz', 'prr_yz' )
-                IF ( av == 0 )  THEN
-!                   CALL exchange_horiz( prr, nbgp )
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                         DO  k = nzb, nzt+1
-                            local_pf(i,j,k) = prr(k,j,i) * hyrho(nzb+1)
-                         ENDDO
-                      ENDDO
-                   ENDDO
-                ELSE
-                   IF ( .NOT. ALLOCATED( prr_av ) ) THEN
-                      ALLOCATE( prr_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-                      prr_av = REAL( fill_value, KIND = wp )
-                   ENDIF
-!                   CALL exchange_horiz( prr_av, nbgp )
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                         DO  k = nzb, nzt+1
-                            local_pf(i,j,k) = prr_av(k,j,i) * hyrho(nzb+1)
-                         ENDDO
-                      ENDDO
-                   ENDDO
-                ENDIF
-                resorted = .TRUE.
-                IF ( mode == 'xy' )  level_z = zu
-
              CASE ( 'pt_xy', 'pt_xz', 'pt_yz' )
                 IF ( av == 0 )  THEN
-                   IF ( .NOT. cloud_physics ) THEN
                       to_be_resorted => pt
-                   ELSE
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                            DO  k = nzb, nzt+1
-                               local_pf(i,j,k) = pt(k,j,i) + l_d_cp *          &
-                                                             pt_d_t(k) *       &
-                                                             ql(k,j,i)
-                            ENDDO
-                         ENDDO
-                      ENDDO
-                      resorted = .TRUE.
-                   ENDIF
                 ELSE
                    IF ( .NOT. ALLOCATED( pt_av ) ) THEN
                       ALLOCATE( pt_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
@@ -877,47 +699,6 @@
                 ENDIF
                 IF ( mode == 'xy' )  level_z = zu
 
-             CASE ( 'ql_vp_xy', 'ql_vp_xz', 'ql_vp_yz' )
-                IF ( av == 0 )  THEN
-                   IF ( simulated_time >= particle_advection_start )  THEN
-                      DO  i = nxl, nxr
-                         DO  j = nys, nyn
-                            DO  k = nzb, nzt+1
-                               number_of_particles = prt_count(k,j,i)
-                               IF (number_of_particles <= 0)  CYCLE
-                               particles => grid_particles(k,j,i)%particles(1:number_of_particles)
-                               DO  n = 1, number_of_particles
-                                  IF ( particles(n)%particle_mask )  THEN
-                                     tend(k,j,i) =  tend(k,j,i) +                 &
-                                                    particles(n)%weight_factor /  &
-                                                    prt_count(k,j,i)
-                                  ENDIF
-                               ENDDO
-                            ENDDO
-                         ENDDO
-                      ENDDO
-!                      CALL exchange_horiz( tend, nbgp )
-                   ELSE
-                      tend = 0.0_wp
-                   ENDIF
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                         DO  k = nzb, nzt+1
-                            local_pf(i,j,k) = tend(k,j,i)
-                         ENDDO
-                      ENDDO
-                   ENDDO
-                   resorted = .TRUE.
-                ELSE
-                   IF ( .NOT. ALLOCATED( ql_vp_av ) ) THEN
-                      ALLOCATE( ql_vp_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-                      ql_vp_av = REAL( fill_value, KIND = wp )
-                   ENDIF
-!                   CALL exchange_horiz( ql_vp_av, nbgp )
-                   to_be_resorted => ql_vp_av
-                ENDIF
-                IF ( mode == 'xy' )  level_z = zu
-
              CASE ( 'qr_xy', 'qr_xz', 'qr_yz' )
                 IF ( av == 0 )  THEN
                    to_be_resorted => qr
@@ -929,46 +710,6 @@
                    to_be_resorted => qr_av
                 ENDIF
                 IF ( mode == 'xy' )  level_z = zu
-
-             CASE ( 'qsws*_xy' )        ! 2d-array
-                IF ( av == 0 ) THEN
-!
-!--                In case of default surfaces, clean-up flux by density.
-!--                In case of land- and urban-surfaces, convert fluxes into
-!--                dynamic units
-                   DO  m = 1, surf_def_h(0)%ns
-                      i = surf_def_h(0)%i(m)
-                      j = surf_def_h(0)%j(m)
-                      k = surf_def_h(0)%k(m)
-                      local_pf(i,j,nzb+1) = surf_def_h(0)%qsws(m) *            &
-                                            waterflux_output_conversion(k)
-                   ENDDO
-                   DO  m = 1, surf_lsm_h%ns
-                      i = surf_lsm_h%i(m)
-                      j = surf_lsm_h%j(m)
-                      k = surf_lsm_h%k(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%qsws(m) * l_v
-                   ENDDO
-                   DO  m = 1, surf_usm_h%ns
-                      i = surf_usm_h%i(m)
-                      j = surf_usm_h%j(m)
-                      k = surf_usm_h%k(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%qsws(m) * l_v
-                   ENDDO
-                ELSE
-                   IF ( .NOT. ALLOCATED( qsws_av ) ) THEN
-                      ALLOCATE( qsws_av(nysg:nyng,nxlg:nxrg) )
-                      qsws_av = REAL( fill_value, KIND = wp )
-                   ENDIF
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn 
-                         local_pf(i,j,nzb+1) =  qsws_av(j,i)
-                      ENDDO
-                   ENDDO
-                ENDIF
-                resorted = .TRUE.
-                two_d = .TRUE.
-                level_z(nzb+1) = zu(nzb+1)
 
              CASE ( 'qv_xy', 'qv_xz', 'qv_yz' )
                 IF ( av == 0 )  THEN
@@ -988,40 +729,6 @@
                    to_be_resorted => qv_av
                 ENDIF
                 IF ( mode == 'xy' )  level_z = zu
-
-             CASE ( 'r_a*_xy' )        ! 2d-array
-                IF ( av == 0 )  THEN
-                   DO  m = 1, surf_lsm_h%ns
-                      i                   = surf_lsm_h%i(m)            
-                      j                   = surf_lsm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%r_a(m)
-                   ENDDO
-
-                   DO  m = 1, surf_usm_h%ns
-                      i   = surf_usm_h%i(m)            
-                      j   = surf_usm_h%j(m)
-                      local_pf(i,j,nzb+1) =                                          &
-                                 ( surf_usm_h%frac(ind_veg_wall,m)  *                &
-                                   surf_usm_h%r_a(m)       +                         & 
-                                   surf_usm_h%frac(ind_pav_green,m) *                &
-                                   surf_usm_h%r_a_green(m) +                         & 
-                                   surf_usm_h%frac(ind_wat_win,m)   *                &
-                                   surf_usm_h%r_a_window(m) )
-                   ENDDO
-                ELSE
-                   IF ( .NOT. ALLOCATED( r_a_av ) ) THEN
-                      ALLOCATE( r_a_av(nysg:nyng,nxlg:nxrg) )
-                      r_a_av = REAL( fill_value, KIND = wp )
-                   ENDIF
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                         local_pf(i,j,nzb+1) = r_a_av(j,i)
-                      ENDDO
-                   ENDDO
-                ENDIF
-                resorted       = .TRUE.
-                two_d          = .TRUE.
-                level_z(nzb+1) = zu(nzb+1)
 
              CASE ( 'rho_ocean_xy', 'rho_ocean_xz', 'rho_ocean_yz' )
                 IF ( av == 0 )  THEN
@@ -1069,18 +776,6 @@
                       local_pf(i,j,nzb+1) = surf_def_h(0)%shf_sol(m) *             &
                                             heatflux_output_conversion(k)
                    ENDDO
-                   DO  m = 1, surf_lsm_h%ns
-                      i = surf_lsm_h%i(m)
-                      j = surf_lsm_h%j(m)
-                      k = surf_lsm_h%k(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%shf_sol(m) * cp
-                   ENDDO
-                   DO  m = 1, surf_usm_h%ns
-                      i = surf_usm_h%i(m)
-                      j = surf_usm_h%j(m)
-                      k = surf_usm_h%k(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%shf_sol(m) * cp
-                   ENDDO
                 ELSE
                    IF ( .NOT. ALLOCATED( shf_sol_av ) ) THEN
                       ALLOCATE( shf_sol_av(nysg:nyng,nxlg:nxrg) )
@@ -1109,18 +804,6 @@
                       local_pf(i,j,nzb+1) = surf_def_h(0)%shf(m) *             &
                                             heatflux_output_conversion(k)
                    ENDDO
-                   DO  m = 1, surf_lsm_h%ns
-                      i = surf_lsm_h%i(m)
-                      j = surf_lsm_h%j(m)
-                      k = surf_lsm_h%k(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%shf(m) * cp
-                   ENDDO
-                   DO  m = 1, surf_usm_h%ns
-                      i = surf_usm_h%i(m)
-                      j = surf_usm_h%j(m)
-                      k = surf_usm_h%k(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%shf(m) * cp
-                   ENDDO
                 ELSE
                    IF ( .NOT. ALLOCATED( shf_av ) ) THEN
                       ALLOCATE( shf_av(nysg:nyng,nxlg:nxrg) )
@@ -1142,16 +825,6 @@
                       i = surf_def_h(0)%i(m)
                       j = surf_def_h(0)%j(m)
                       local_pf(i,j,nzb+1) = surf_def_h(0)%ssws(m)
-                   ENDDO
-                   DO  m = 1, surf_lsm_h%ns
-                      i = surf_lsm_h%i(m)
-                      j = surf_lsm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%ssws(m)
-                   ENDDO
-                   DO  m = 1, surf_usm_h%ns
-                      i = surf_usm_h%i(m)
-                      j = surf_usm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%ssws(m)
                    ENDDO
                 ELSE
                    IF ( .NOT. ALLOCATED( ssws_av ) ) THEN
@@ -1175,16 +848,6 @@
                       j = surf_def_h(0)%j(m)
                       local_pf(i,j,nzb+1) = surf_def_h(0)%ts(m)
                    ENDDO
-                   DO  m = 1, surf_lsm_h%ns
-                      i = surf_lsm_h%i(m)
-                      j = surf_lsm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%ts(m)
-                   ENDDO
-                   DO  m = 1, surf_usm_h%ns
-                      i = surf_usm_h%i(m)
-                      j = surf_usm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%ts(m)
-                   ENDDO
                 ELSE
                    IF ( .NOT. ALLOCATED( ts_av ) ) THEN
                       ALLOCATE( ts_av(nysg:nyng,nxlg:nxrg) )
@@ -1206,18 +869,6 @@
                       i                   = surf_def_h(0)%i(m)            
                       j                   = surf_def_h(0)%j(m)
                       local_pf(i,j,nzb+1) = surf_def_h(0)%pt_surface(m)
-                   ENDDO
-
-                   DO  m = 1, surf_lsm_h%ns
-                      i                   = surf_lsm_h%i(m)            
-                      j                   = surf_lsm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%pt_surface(m)
-                   ENDDO
-
-                   DO  m = 1, surf_usm_h%ns
-                      i   = surf_usm_h%i(m)            
-                      j   = surf_usm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%pt_surface(m)
                    ENDDO
 
                 ELSE
@@ -1260,16 +911,6 @@
                       i = surf_def_h(0)%i(m)
                       j = surf_def_h(0)%j(m)
                       local_pf(i,j,nzb+1) = surf_def_h(0)%us(m)
-                   ENDDO
-                   DO  m = 1, surf_lsm_h%ns
-                      i = surf_lsm_h%i(m)
-                      j = surf_lsm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%us(m)
-                   ENDDO
-                   DO  m = 1, surf_usm_h%ns
-                      i = surf_usm_h%i(m)
-                      j = surf_usm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%us(m)
                    ENDDO
                 ELSE
                    IF ( .NOT. ALLOCATED( us_av ) ) THEN
@@ -1337,16 +978,6 @@
                       j = surf_def_h(0)%j(m)
                       local_pf(i,j,nzb+1) = surf_def_h(0)%z0(m)
                    ENDDO
-                   DO  m = 1, surf_lsm_h%ns
-                      i = surf_lsm_h%i(m)
-                      j = surf_lsm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%z0(m)
-                   ENDDO
-                   DO  m = 1, surf_usm_h%ns
-                      i = surf_usm_h%i(m)
-                      j = surf_usm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%z0(m)
-                   ENDDO
                 ELSE
                    IF ( .NOT. ALLOCATED( z0_av ) ) THEN
                       ALLOCATE( z0_av(nysg:nyng,nxlg:nxrg) )
@@ -1368,16 +999,6 @@
                       i = surf_def_h(0)%i(m)
                       j = surf_def_h(0)%j(m)
                       local_pf(i,j,nzb+1) = surf_def_h(0)%z0h(m)
-                   ENDDO
-                   DO  m = 1, surf_lsm_h%ns
-                      i = surf_lsm_h%i(m)
-                      j = surf_lsm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%z0h(m)
-                   ENDDO
-                   DO  m = 1, surf_usm_h%ns
-                      i = surf_usm_h%i(m)
-                      j = surf_usm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%z0h(m)
                    ENDDO
                 ELSE
                    IF ( .NOT. ALLOCATED( z0h_av ) ) THEN
@@ -1401,16 +1022,6 @@
                       j = surf_def_h(0)%j(m)
                       local_pf(i,j,nzb+1) = surf_def_h(0)%z0q(m)
                    ENDDO
-                   DO  m = 1, surf_lsm_h%ns
-                      i = surf_lsm_h%i(m)
-                      j = surf_lsm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%z0q(m)
-                   ENDDO
-                   DO  m = 1, surf_usm_h%ns
-                      i = surf_usm_h%i(m)
-                      j = surf_usm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%z0q(m)
-                   ENDDO
                 ELSE
                    IF ( .NOT. ALLOCATED( z0q_av ) ) THEN
                       ALLOCATE( z0q_av(nysg:nyng,nxlg:nxrg) )
@@ -1429,13 +1040,6 @@
              CASE DEFAULT
 
 !
-!--             Land surface model quantity
-                IF ( land_surface )  THEN
-                   CALL lsm_data_output_2d( av, do2d(av,if), found, grid, mode,&
-                                            local_pf, two_d, nzb_do, nzt_do )
-                ENDIF
-
-!
 !--             Turbulence closure variables
                 IF ( .NOT. found )  THEN
                    CALL tcm_data_output_2d( av, do2d(av,if), found, grid, mode,&
@@ -1443,34 +1047,6 @@
                 ENDIF
 
 !
-!--             Radiation quantity
-                IF ( .NOT. found  .AND.  radiation )  THEN
-                   CALL radiation_data_output_2d( av, do2d(av,if), found, grid,&
-                                                  mode, local_pf, two_d,       &
-                                                  nzb_do, nzt_do  )
-                ENDIF
-
-!
-!--             Gust module quantities
-                IF ( .NOT. found  .AND.  gust_module_enabled )  THEN
-                   CALL gust_data_output_2d( av, do2d(av,if), found, grid,     &
-                                             local_pf, two_d, nzb_do, nzt_do )
-                ENDIF
-
-!
-!--             UV exposure model quantity
-                IF ( uv_exposure )  THEN
-                   CALL uvem_data_output_2d( av, do2d(av,if), found, grid, mode,&
-                                             local_pf, two_d, nzb_do, nzt_do )
-                ENDIF
-
-!
-!--             User defined quantity
-                IF ( .NOT. found )  THEN
-                   CALL user_data_output_2d( av, do2d(av,if), found, grid,     &
-                                             local_pf, two_d, nzb_do, nzt_do )
-                ENDIF
-
                 resorted = .TRUE.
 
                 IF ( grid == 'zu' )  THEN
@@ -1479,8 +1055,6 @@
                    IF ( mode == 'xy' )  level_z = zw
                 ELSEIF ( grid == 'zu1' ) THEN
                    IF ( mode == 'xy' )  level_z(nzb+1) = zu(nzb+1)
-                ELSEIF ( grid == 'zs' ) THEN
-                   IF ( mode == 'xy' )  level_z = zs
                 ENDIF
 
                 IF ( .NOT. found )  THEN

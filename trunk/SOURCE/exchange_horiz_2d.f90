@@ -99,9 +99,6 @@
     
     USE pegrid
 
-    USE pmc_interface,                                                         &
-        ONLY : nesting_mode
-
 
     IMPLICIT NONE
 
@@ -179,35 +176,6 @@
 
 
 #endif
-
-!
-!-- Neumann-conditions at inflow/outflow/nested boundaries
-    IF ( nesting_mode /= 'vertical' )  THEN
-       IF ( inflow_l .OR. outflow_l .OR. nest_bound_l  .OR.  force_bound_l )   &
-       THEN
-          DO  i = nbgp, 1, -1
-             ar(:,nxl-i) = ar(:,nxl)
-          ENDDO
-       ENDIF
-       IF ( inflow_r .OR. outflow_r .OR. nest_bound_r  .OR.  force_bound_r )   &
-       THEN
-          DO  i = 1, nbgp
-             ar(:,nxr+i) = ar(:,nxr)
-          ENDDO
-       ENDIF
-       IF ( inflow_s .OR. outflow_s .OR. nest_bound_s  .OR.  force_bound_s )   &
-       THEN
-          DO  i = nbgp, 1, -1
-             ar(nys-i,:) = ar(nys,:)
-          ENDDO
-       ENDIF
-       IF ( inflow_n .OR. outflow_n .OR. nest_bound_n  .OR.  force_bound_n )   &
-       THEN
-          DO  i = 1, nbgp
-             ar(nyn+i,:) = ar(nyn,:)
-          ENDDO
-       ENDIF
-    ENDIF
 
     CALL cpu_log( log_point_s(13), 'exchange_horiz_2d', 'stop' )
 

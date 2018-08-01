@@ -198,49 +198,25 @@
                u_av, us_av, v_av, vpt_av, w_av, z0_av, z0h_av, z0q_av,         &
                alpha_T_av, beta_S_av, shf_sol_av, solar3d_av
 
-    USE chemistry_model_mod,                                                   &
-        ONLY:  chem_3d_data_averaging, chem_integrate, chem_species, nspec                                   
-
-    USE cloud_parameters,                                                      &
-        ONLY:  cp, l_d_cp, l_v, pt_d_t
-
     USE control_parameters,                                                    &
-        ONLY:  air_chemistry, average_count_3d, cloud_physics, doav, doav_n,   &
-               land_surface, rho_surface, urban_surface, uv_exposure,          &
+        ONLY:  average_count_3d, doav, doav_n,   &
+               rho_surface,          &
                varnamelength
 
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point
-
-    USE gust_mod,                                                              &
-        ONLY:  gust_3d_data_averaging, gust_module_enabled
 
     USE indices,                                                               &
         ONLY:  nxl, nxlg, nxr, nxrg, nyn, nyng, nys, nysg, nzb, nzt 
 
     USE kinds
 
-    USE land_surface_model_mod,                                                &
-        ONLY:  lsm_3d_data_averaging
-
-    USE particle_attributes,                                                   &
-        ONLY:  grid_particles, number_of_particles, particles, prt_count
-
-    USE radiation_model_mod,                                                   &
-        ONLY:  radiation, radiation_3d_data_averaging
-
     USE surface_mod,                                                           &
         ONLY:  ind_pav_green, ind_veg_wall, ind_wat_win,                       &
-               surf_def_h, surf_lsm_h, surf_usm_h
+               surf_def_h
 
     USE turbulence_closure_mod,                                                &
         ONLY:  tcm_3d_data_averaging
-
-    USE urban_surface_mod,                                                     &
-        ONLY:  usm_average_3d_data
-
-    USE uv_exposure_model_mod,                                                &
-        ONLY:  uvem_3d_data_averaging
 
 
     IMPLICIT NONE
@@ -272,11 +248,6 @@
 !
 !--       Temporary solution to account for data output within the new urban 
 !--       surface model (urban_surface_mod.f90), see also SELECT CASE ( trimvar )
-          trimvar = TRIM( doav(ii) )
-          IF ( urban_surface  .AND.  trimvar(1:4) == 'usm_' )  THEN
-             trimvar = 'usm_output'
-          ENDIF
-       
           SELECT CASE ( trimvar )
 
              CASE ( 'ghf*' )
@@ -526,12 +497,6 @@
                 ENDIF
                 z0q_av = 0.0_wp
 !             
-!--          Block of urban surface model outputs 
-             CASE ( 'usm_output' )
-
-                CALL usm_average_3d_data( 'allocate', doav(ii) )
-              
-
              CASE DEFAULT
 
 !
@@ -539,41 +504,6 @@
                 CALL tcm_3d_data_averaging( 'allocate', doav(ii) )
 
 !
-!--             Land surface quantity
-                IF ( land_surface )  THEN
-                   CALL lsm_3d_data_averaging( 'allocate', doav(ii) )
-                ENDIF
-
-!
-!--             Radiation quantity
-                IF ( radiation )  THEN
-                   CALL radiation_3d_data_averaging( 'allocate', doav(ii) )
-                ENDIF
-
-!
-!--             Gust module quantities
-                IF ( gust_module_enabled )  THEN
-                   CALL gust_3d_data_averaging( 'allocate', doav(ii) )
-                ENDIF
-
-!
-!--             Chemical quantity                                           
-#if defined( __chem )                
-                IF ( air_chemistry  .AND.  trimvar(1:3) == 'kc_')  THEN
-                   CALL chem_3d_data_averaging( 'allocate', doav(ii) )
-                ENDIF
-#endif
-
-!
-!--             UV exposure quantity
-                IF ( uv_exposure  .AND.  trimvar(1:5) == 'uvem_')  THEN
-                   CALL uvem_3d_data_averaging( 'allocate', doav(ii) )
-                ENDIF
-
-!
-!--             User-defined quantity
-                CALL user_3d_data_averaging( 'allocate', doav(ii) )
-
           END SELECT
 
        ENDDO
@@ -586,33 +516,9 @@
 !
 !--       Temporary solution to account for data output within the new urban 
 !--       surface model (urban_surface_mod.f90), see also SELECT CASE ( trimvar )
-          trimvar = TRIM( doav(ii) )
-          IF ( urban_surface  .AND.  trimvar(1:4) == 'usm_' )  THEN
-             trimvar = 'usm_output'
-          ENDIF
 !
 !--    Store the array chosen on the temporary array.
        SELECT CASE ( trimvar )
-
-          CASE ( 'ghf*' )
-             IF ( ALLOCATED( ghf_av ) ) THEN
-                DO  m = 1, surf_lsm_h%ns
-                   i   = surf_lsm_h%i(m)            
-                   j   = surf_lsm_h%j(m)
-                   ghf_av(j,i) = ghf_av(j,i) + surf_lsm_h%ghf(m)
-                ENDDO
-
-                DO  m = 1, surf_usm_h%ns
-                   i   = surf_usm_h%i(m)            
-                   j   = surf_usm_h%j(m)
-                   ghf_av(j,i) = ghf_av(j,i) + surf_usm_h%frac(ind_veg_wall,m)  * &
-                                               surf_usm_h%wghf_eb(m)        +     &
-                                               surf_usm_h%frac(ind_pav_green,m) * &
-                                               surf_usm_h%wghf_eb_green(m)  +     &
-                                               surf_usm_h%frac(ind_wat_win,m)   * &
-                                               surf_usm_h%wghf_eb_window(m)
-                ENDDO
-             ENDIF
 
           CASE ( 'e' )
              IF ( ALLOCATED( e_av ) ) THEN
@@ -675,16 +581,6 @@
                    j = surf_def_h(0)%j(m)
                    ol_av(j,i) = ol_av(j,i) + surf_def_h(0)%ol(m)
                 ENDDO
-                DO  m = 1, surf_lsm_h%ns
-                   i = surf_lsm_h%i(m)
-                   j = surf_lsm_h%j(m)
-                   ol_av(j,i) = ol_av(j,i) + surf_lsm_h%ol(m)
-                ENDDO
-                DO  m = 1, surf_usm_h%ns
-                   i = surf_usm_h%i(m)
-                   j = surf_usm_h%j(m)
-                   ol_av(j,i) = ol_av(j,i) + surf_usm_h%ol(m)
-                ENDDO
              ENDIF
 
           CASE ( 'p' )
@@ -693,49 +589,6 @@
                    DO  j = nysg, nyng
                       DO  k = nzb, nzt+1
                          p_av(k,j,i) = p_av(k,j,i) + p(k,j,i)
-                      ENDDO
-                   ENDDO
-                ENDDO
-             ENDIF
-
-          CASE ( 'pc' )
-             IF ( ALLOCATED( pc_av ) ) THEN
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb, nzt+1
-                         pc_av(k,j,i) = pc_av(k,j,i) + prt_count(k,j,i)
-                      ENDDO
-                   ENDDO
-                ENDDO
-             ENDIF
-
-          CASE ( 'pr' )
-             IF ( ALLOCATED( pr_av ) ) THEN
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb, nzt+1
-                         number_of_particles = prt_count(k,j,i)
-                         IF ( number_of_particles <= 0 )  CYCLE
-                         particles =>                                          &
-                         grid_particles(k,j,i)%particles(1:number_of_particles)
-                         s_r2 = 0.0_wp
-                         s_r3 = 0.0_wp
-
-                         DO  n = 1, number_of_particles
-                            IF ( particles(n)%particle_mask )  THEN
-                               s_r2 = s_r2 + particles(n)%radius**2 *          &
-                                   particles(n)%weight_factor
-                               s_r3 = s_r3 + particles(n)%radius**3 *          &
-                                   particles(n)%weight_factor
-                            ENDIF
-                         ENDDO
-
-                         IF ( s_r2 > 0.0_wp )  THEN
-                            mean_r = s_r3 / s_r2
-                         ELSE
-                            mean_r = 0.0_wp
-                         ENDIF
-                         pr_av(k,j,i) = pr_av(k,j,i) + mean_r
                       ENDDO
                    ENDDO
                 ENDDO
@@ -754,7 +607,6 @@
 
           CASE ( 'pt' )
              IF ( ALLOCATED( pt_av ) ) THEN
-                IF ( .NOT. cloud_physics ) THEN
                 DO  i = nxlg, nxrg
                    DO  j = nysg, nyng
                       DO  k = nzb, nzt+1
@@ -762,16 +614,6 @@
                          ENDDO
                       ENDDO
                    ENDDO
-                ELSE
-                DO  i = nxlg, nxrg
-                   DO  j = nysg, nyng
-                      DO  k = nzb, nzt+1
-                            pt_av(k,j,i) = pt_av(k,j,i) + pt(k,j,i) + l_d_cp * &
-                                                          pt_d_t(k) * ql(k,j,i)
-                         ENDDO
-                      ENDDO
-                   ENDDO
-                ENDIF
              ENDIF
 
           CASE ( 'q' )
@@ -829,27 +671,6 @@
                 ENDDO
              ENDIF
 
-          CASE ( 'ql_vp' )
-             IF ( ALLOCATED( ql_vp_av ) ) THEN 
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb, nzt+1
-                         number_of_particles = prt_count(k,j,i)
-                         IF ( number_of_particles <= 0 )  CYCLE
-                         particles =>                                          & 
-                         grid_particles(k,j,i)%particles(1:number_of_particles)
-                         DO  n = 1, number_of_particles
-                            IF ( particles(n)%particle_mask )  THEN
-                               ql_vp_av(k,j,i) = ql_vp_av(k,j,i) + &
-                                                 particles(n)%weight_factor /  &
-                                                 number_of_particles
-                            ENDIF
-                         ENDDO
-                      ENDDO
-                   ENDDO
-                ENDDO
-             ENDIF
-
           CASE ( 'qr' )
              IF ( ALLOCATED( qr_av ) ) THEN 
                 DO  i = nxlg, nxrg
@@ -861,31 +682,6 @@
                 ENDDO
              ENDIF
 
-          CASE ( 'qsws*' )
-!
-!--          In case of default surfaces, clean-up flux by density.
-!--          In case of land- and urban-surfaces, convert fluxes into
-!--          dynamic units.
-             IF ( ALLOCATED( qsws_av ) ) THEN 
-                DO  m = 1, surf_def_h(0)%ns
-                   i = surf_def_h(0)%i(m)
-                   j = surf_def_h(0)%j(m)
-                   k = surf_def_h(0)%k(m)
-                   qsws_av(j,i) = qsws_av(j,i) + surf_def_h(0)%qsws(m) *          &
-                                                 waterflux_output_conversion(k)
-                ENDDO
-                DO  m = 1, surf_lsm_h%ns
-                   i = surf_lsm_h%i(m)
-                   j = surf_lsm_h%j(m)
-                   qsws_av(j,i) = qsws_av(j,i) + surf_lsm_h%qsws(m) * l_v
-                ENDDO
-                DO  m = 1, surf_usm_h%ns
-                   i = surf_usm_h%i(m)
-                   j = surf_usm_h%j(m)
-                   qsws_av(j,i) = qsws_av(j,i) + surf_usm_h%qsws(m) * l_v
-                ENDDO
-             ENDIF
-
           CASE ( 'qv' )
              IF ( ALLOCATED( qv_av ) ) THEN 
                 DO  i = nxlg, nxrg
@@ -894,31 +690,6 @@
                          qv_av(k,j,i) = qv_av(k,j,i) + q(k,j,i) - ql(k,j,i)
                       ENDDO
                    ENDDO
-                ENDDO
-             ENDIF
-
-          CASE ( 'r_a*' )
-             IF ( ALLOCATED( r_a_av ) ) THEN 
-                DO  m = 1, surf_lsm_h%ns
-                   i   = surf_lsm_h%i(m)            
-                   j   = surf_lsm_h%j(m)
-                   r_a_av(j,i) = r_a_av(j,i) + surf_lsm_h%r_a(m)
-                ENDDO
-!
-!--             Please note, resistance is also applied at urban-type surfaces, 
-!--             and is output only as a single variable. Here, tile approach is
-!--             already implemented, so for each surface fraction resistance 
-!--             need to be summed-up.
-                DO  m = 1, surf_usm_h%ns
-                   i   = surf_usm_h%i(m)            
-                   j   = surf_usm_h%j(m)
-                   r_a_av(j,i) = r_a_av(j,i) +                                    &
-                              ( surf_usm_h%frac(ind_veg_wall,m)  *                &
-                                surf_usm_h%r_a(m)       +                         & 
-                                surf_usm_h%frac(ind_pav_green,m) *                &
-                                surf_usm_h%r_a_green(m) +                         & 
-                                surf_usm_h%frac(ind_wat_win,m)   *                &
-                                surf_usm_h%r_a_window(m) )
                 ENDDO
              ENDIF
 
@@ -1003,16 +774,6 @@
                    shf_av(j,i) = shf_av(j,i) + surf_def_h(0)%shf(m)  *            &
                                                heatflux_output_conversion(k)
                 ENDDO
-                DO  m = 1, surf_lsm_h%ns
-                   i = surf_lsm_h%i(m)
-                   j = surf_lsm_h%j(m)
-                   shf_av(j,i) = shf_av(j,i) + surf_lsm_h%shf(m) * cp
-                ENDDO
-                DO  m = 1, surf_usm_h%ns
-                   i = surf_usm_h%i(m)
-                   j = surf_usm_h%j(m)
-                   shf_av(j,i) = shf_av(j,i) + surf_usm_h%shf(m) * cp
-                ENDDO
              ENDIF
 
           CASE ( 'shf_sol*' )
@@ -1024,16 +785,6 @@
                    shf_sol_av(j,i) = shf_sol_av(j,i) + surf_def_h(0)%shf_sol(m)  *            &
                                                heatflux_output_conversion(k)
                 ENDDO
-                DO  m = 1, surf_lsm_h%ns
-                   i = surf_lsm_h%i(m)
-                   j = surf_lsm_h%j(m)
-                   shf_sol_av(j,i) = shf_sol_av(j,i) + surf_lsm_h%shf_sol(m) * cp
-                ENDDO
-                DO  m = 1, surf_usm_h%ns
-                   i = surf_usm_h%i(m)
-                   j = surf_usm_h%j(m)
-                   shf_sol_av(j,i) = shf_sol_av(j,i) + surf_usm_h%shf_sol(m) * cp
-                ENDDO
              ENDIF
 
           CASE ( 'ssws*' )
@@ -1042,16 +793,6 @@
                    i = surf_def_h(0)%i(m)
                    j = surf_def_h(0)%j(m)
                    ssws_av(j,i) = ssws_av(j,i) + surf_def_h(0)%ssws(m)
-                ENDDO
-                DO  m = 1, surf_lsm_h%ns
-                   i = surf_lsm_h%i(m)
-                   j = surf_lsm_h%j(m)
-                   ssws_av(j,i) = ssws_av(j,i) + surf_lsm_h%ssws(m)
-                ENDDO
-                DO  m = 1, surf_usm_h%ns
-                   i = surf_usm_h%i(m)
-                   j = surf_usm_h%j(m)
-                   ssws_av(j,i) = ssws_av(j,i) + surf_usm_h%ssws(m)
                 ENDDO
              ENDIF
 
@@ -1062,16 +803,6 @@
                    j = surf_def_h(0)%j(m)
                    ts_av(j,i) = ts_av(j,i) + surf_def_h(0)%ts(m)
                 ENDDO
-                DO  m = 1, surf_lsm_h%ns
-                   i = surf_lsm_h%i(m)
-                   j = surf_lsm_h%j(m)
-                   ts_av(j,i) = ts_av(j,i) + surf_lsm_h%ts(m)
-                ENDDO
-                DO  m = 1, surf_usm_h%ns
-                   i = surf_usm_h%i(m)
-                   j = surf_usm_h%j(m)
-                   ts_av(j,i) = ts_av(j,i) + surf_usm_h%ts(m)
-                ENDDO
              ENDIF
 
           CASE ( 'tsurf*' )
@@ -1081,20 +812,7 @@
                    j   = surf_def_h(0)%j(m)
                    tsurf_av(j,i) = tsurf_av(j,i) + surf_def_h(0)%pt_surface(m)
                 ENDDO
-
-                DO  m = 1, surf_lsm_h%ns
-                   i   = surf_lsm_h%i(m)            
-                   j   = surf_lsm_h%j(m)
-                   tsurf_av(j,i) = tsurf_av(j,i) + surf_lsm_h%pt_surface(m)
-                ENDDO
-
-                DO  m = 1, surf_usm_h%ns
-                   i   = surf_usm_h%i(m)            
-                   j   = surf_usm_h%j(m)
-                   tsurf_av(j,i) = tsurf_av(j,i) + surf_usm_h%pt_surface(m)
-                ENDDO
              ENDIF
-
           CASE ( 'u' )
              IF ( ALLOCATED( u_av ) ) THEN
                 DO  i = nxlg, nxrg
@@ -1113,16 +831,6 @@
                    j = surf_def_h(0)%j(m)
                    us_av(j,i) = us_av(j,i) + surf_def_h(0)%us(m)
                 ENDDO
-                DO  m = 1, surf_lsm_h%ns
-                   i = surf_lsm_h%i(m)
-                   j = surf_lsm_h%j(m)
-                   us_av(j,i) = us_av(j,i) + surf_lsm_h%us(m)
-                ENDDO
-                DO  m = 1, surf_usm_h%ns
-                   i = surf_usm_h%i(m)
-                   j = surf_usm_h%j(m)
-                   us_av(j,i) = us_av(j,i) + surf_usm_h%us(m)
-                ENDDO
              ENDIF
 
           CASE ( 'v' )
@@ -1131,17 +839,6 @@
                    DO  j = nysg, nyng
                       DO  k = nzb, nzt+1
                          v_av(k,j,i) = v_av(k,j,i) + v(k,j,i)
-                      ENDDO
-                   ENDDO
-                ENDDO
-             ENDIF
-
-          CASE ( 'vpt' )
-             IF ( ALLOCATED( vpt_av ) ) THEN 
-                DO  i = nxlg, nxrg
-                   DO  j = nysg, nyng
-                      DO  k = nzb, nzt+1
-                         vpt_av(k,j,i) = vpt_av(k,j,i) + vpt(k,j,i)
                       ENDDO
                    ENDDO
                 ENDDO
@@ -1165,16 +862,6 @@
                    j = surf_def_h(0)%j(m)
                    z0_av(j,i) = z0_av(j,i) + surf_def_h(0)%z0(m)
                 ENDDO
-                DO  m = 1, surf_lsm_h%ns
-                   i = surf_lsm_h%i(m)
-                   j = surf_lsm_h%j(m)
-                   z0_av(j,i) = z0_av(j,i) + surf_lsm_h%z0(m)
-                ENDDO
-                DO  m = 1, surf_usm_h%ns
-                   i = surf_usm_h%i(m)
-                   j = surf_usm_h%j(m)
-                   z0_av(j,i) = z0_av(j,i) + surf_usm_h%z0(m)
-                ENDDO
              ENDIF
 
           CASE ( 'z0h*' )
@@ -1183,16 +870,6 @@
                    i = surf_def_h(0)%i(m)
                    j = surf_def_h(0)%j(m)
                    z0h_av(j,i) = z0h_av(j,i) + surf_def_h(0)%z0h(m)
-                ENDDO
-                DO  m = 1, surf_lsm_h%ns
-                   i = surf_lsm_h%i(m)
-                   j = surf_lsm_h%j(m)
-                   z0h_av(j,i) = z0h_av(j,i) + surf_lsm_h%z0h(m)
-                ENDDO
-                DO  m = 1, surf_usm_h%ns
-                   i = surf_usm_h%i(m)
-                   j = surf_usm_h%j(m)
-                   z0h_av(j,i) = z0h_av(j,i) + surf_usm_h%z0h(m)
                 ENDDO
              ENDIF
    
@@ -1203,64 +880,12 @@
                    j = surf_def_h(0)%j(m)
                    z0q_av(j,i) = z0q_av(j,i) + surf_def_h(0)%z0q(m)
                 ENDDO
-                DO  m = 1, surf_lsm_h%ns
-                   i = surf_lsm_h%i(m)
-                   j = surf_lsm_h%j(m)
-                   z0q_av(j,i) = z0q_av(j,i) + surf_lsm_h%z0q(m)
-                ENDDO
-                DO  m = 1, surf_usm_h%ns
-                   i = surf_usm_h%i(m)
-                   j = surf_usm_h%j(m)
-                   z0q_av(j,i) = z0q_av(j,i) + surf_usm_h%z0q(m)
-                ENDDO
              ENDIF
-!             
-!--       Block of urban surface model outputs. 
-!--       In case of urban surface variables it should be always checked
-!--       if respective arrays are allocated, at least in case of a restart 
-!--       run, as averaged usm arrays are not read from file at the moment. 
-          CASE ( 'usm_output' )
-             CALL usm_average_3d_data( 'allocate', doav(ii) )
-             CALL usm_average_3d_data( 'sum', doav(ii) )
 
           CASE DEFAULT
 !
 !--          Turbulence closure module
              CALL tcm_3d_data_averaging( 'sum', doav(ii) )
-
-!
-!--          Land surface quantity
-             IF ( land_surface )  THEN
-                CALL lsm_3d_data_averaging( 'sum', doav(ii) )
-             ENDIF
-
-!
-!--          Radiation quantity
-             IF ( radiation )  THEN
-                CALL radiation_3d_data_averaging( 'sum', doav(ii) )
-             ENDIF
-
-!
-!--          Gust module quantities
-             IF ( gust_module_enabled )  THEN
-                CALL gust_3d_data_averaging( 'sum', doav(ii) )
-             ENDIF
-
-!
-!--          Chemical quantity
-             IF ( air_chemistry  .AND.  trimvar(1:3) == 'kc_')  THEN
-                CALL chem_3d_data_averaging( 'sum',doav(ii) )
-             ENDIF
-
-!
-!--          UV exposure quantity
-             IF ( uv_exposure )  THEN
-                CALL uvem_3d_data_averaging( 'sum', doav(ii) )
-             ENDIF
-
-!
-!--          User-defined quantity
-             CALL user_3d_data_averaging( 'sum', doav(ii) )
 
        END SELECT
 

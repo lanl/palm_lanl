@@ -617,11 +617,6 @@
        CASE DEFAULT
 !
 !--       The DEFAULT case is reached either if the parameter data_output_sp(m)
-!--       contains a wrong character string or if the user has coded a special
-!--       case in the user interface. There, the subroutine user_spectra
-!--       checks which of these two conditions applies.
-          CALL user_spectra( 'preprocess', m, pr )
-          
        END SELECT
 
 !

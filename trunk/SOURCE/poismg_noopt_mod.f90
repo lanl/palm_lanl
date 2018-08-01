@@ -166,7 +166,6 @@
     USE control_parameters,                                                    &
         ONLY:  grid_level, force_bound_l, force_bound_n, force_bound_r,        &
                force_bound_s, forcing, inflow_l, inflow_n, inflow_r, inflow_s, &
-               nest_bound_l, nest_bound_n, nest_bound_r, nest_bound_s,         &
                outflow_l, outflow_n, outflow_r, outflow_s
 
     USE cpulog,                                                                &
@@ -258,20 +257,6 @@
        d(nzb,:,:) = d(nzb+1,:,:)
        IF ( ibc_p_t == 1 )  d(nzt+1,:,: ) = d(nzt,:,:)
 !
-!--    Set lateral boundary conditions in non-cyclic case
-       IF ( .NOT. bc_lr_cyc )  THEN
-          IF ( inflow_l .OR. outflow_l .OR. nest_bound_l .OR. force_bound_l )  &
-             d(:,:,nxl-1) = d(:,:,nxl)
-          IF ( inflow_r .OR. outflow_r .OR. nest_bound_r .OR. force_bound_r )  &
-             d(:,:,nxr+1) = d(:,:,nxr)
-       ENDIF
-       IF ( .NOT. bc_ns_cyc )  THEN
-          IF ( inflow_n .OR. outflow_n .OR. nest_bound_n .OR. force_bound_n )  &
-             d(:,nyn+1,:) = d(:,nyn,:)
-          IF ( inflow_s .OR. outflow_s .OR. nest_bound_s .OR. force_bound_s )  &
-             d(:,nys-1,:) = d(:,nys,:)
-       ENDIF
-
 !
 !--    Initiation of the multigrid scheme. Does n cycles until the 
 !--    residual is smaller than the given limit. The accuracy of the solution 
@@ -440,25 +425,6 @@
 !--    Horizontal boundary conditions
        CALL exchange_horiz( r, 1)
 
-       IF ( .NOT. bc_lr_cyc )  THEN
-          IF ( inflow_l .OR. outflow_l .OR. nest_bound_l .OR. force_bound_l )  THEN
-             r(:,:,nxl_mg(l)-1) = r(:,:,nxl_mg(l))
-          ENDIF
-          IF ( inflow_r .OR. outflow_r .OR. nest_bound_r .OR. force_bound_r )  THEN
-             r(:,:,nxr_mg(l)+1) = r(:,:,nxr_mg(l))
-          ENDIF
-       ENDIF
-
-       IF ( .NOT. bc_ns_cyc )  THEN
-          IF ( inflow_n .OR. outflow_n .OR. nest_bound_n .OR. force_bound_n )  THEN
-             r(:,nyn_mg(l)+1,:) = r(:,nyn_mg(l),:)
-          ENDIF
-          IF ( inflow_s .OR. outflow_s .OR. nest_bound_s .OR. force_bound_s )  THEN
-             r(:,nys_mg(l)-1,:) = r(:,nys_mg(l),:)
-          ENDIF
-       ENDIF
-
-!
 !--    Boundary conditions at bottom and top of the domain.
 !--    These points are not handled by the above loop. Points may be within
 !--    buildings, but that doesn't matter. 
@@ -655,25 +621,6 @@
 !--    Horizontal boundary conditions
        CALL exchange_horiz( f_mg, 1)
 
-       IF ( .NOT. bc_lr_cyc )  THEN
-          IF ( inflow_l .OR. outflow_l .OR. nest_bound_l .OR. force_bound_l )  THEN
-             f_mg(:,:,nxl_mg(l)-1) = f_mg(:,:,nxl_mg(l))
-          ENDIF
-          IF ( inflow_r .OR. outflow_r .OR. nest_bound_r .OR. force_bound_r )  THEN
-             f_mg(:,:,nxr_mg(l)+1) = f_mg(:,:,nxr_mg(l))
-          ENDIF
-       ENDIF
-
-       IF ( .NOT. bc_ns_cyc )  THEN
-          IF ( inflow_n .OR. outflow_n .OR. nest_bound_n .OR. force_bound_n )  THEN
-             f_mg(:,nyn_mg(l)+1,:) = f_mg(:,nyn_mg(l),:)
-          ENDIF
-          IF ( inflow_s .OR. outflow_s .OR. nest_bound_s .OR. force_bound_s )  THEN
-             f_mg(:,nys_mg(l)-1,:) = f_mg(:,nys_mg(l),:)
-          ENDIF
-       ENDIF
-
-!
 !--    Boundary conditions at bottom and top of the domain.
 !--    These points are not handled by the above loop. Points may be within
 !--    buildings, but that doesn't matter. 
@@ -768,25 +715,6 @@
 !-- Horizontal boundary conditions
     CALL exchange_horiz( temp, 1)
 
-    IF ( .NOT. bc_lr_cyc )  THEN
-       IF ( inflow_l .OR. outflow_l .OR. nest_bound_l .OR. force_bound_l )  THEN
-          temp(:,:,nxl_mg(l)-1) = temp(:,:,nxl_mg(l))
-       ENDIF
-       IF ( inflow_r .OR. outflow_r .OR. nest_bound_r .OR. force_bound_r )  THEN
-          temp(:,:,nxr_mg(l)+1) = temp(:,:,nxr_mg(l))
-       ENDIF
-    ENDIF
-
-    IF ( .NOT. bc_ns_cyc )  THEN
-       IF ( inflow_n .OR. outflow_n .OR. nest_bound_n .OR. force_bound_n )  THEN
-          temp(:,nyn_mg(l)+1,:) = temp(:,nyn_mg(l),:)
-       ENDIF
-       IF ( inflow_s .OR. outflow_s .OR. nest_bound_s .OR. force_bound_s )  THEN
-          temp(:,nys_mg(l)-1,:) = temp(:,nys_mg(l),:)
-       ENDIF
-    ENDIF
-
-!
 !-- Bottom and top boundary conditions
     IF ( ibc_p_b == 1 )  THEN
        temp(nzb,:,: ) = temp(nzb+1,:,:)
@@ -1198,24 +1126,6 @@
 !--          Horizontal boundary conditions
              CALL exchange_horiz( p_mg, 1 )
 
-             IF ( .NOT. bc_lr_cyc )  THEN
-                IF ( inflow_l .OR. outflow_l .OR. nest_bound_l .OR. force_bound_l )  THEN
-                   p_mg(:,:,nxl_mg(l)-1) = p_mg(:,:,nxl_mg(l))
-                ENDIF
-                IF ( inflow_r .OR. outflow_r .OR. nest_bound_r .OR. force_bound_r )  THEN
-                   p_mg(:,:,nxr_mg(l)+1) = p_mg(:,:,nxr_mg(l))
-                ENDIF
-             ENDIF
-
-             IF ( .NOT. bc_ns_cyc )  THEN
-                IF ( inflow_n .OR. outflow_n .OR. nest_bound_n .OR. force_bound_n )  THEN
-                   p_mg(:,nyn_mg(l)+1,:) = p_mg(:,nyn_mg(l),:)
-                ENDIF
-                IF ( inflow_s .OR. outflow_s .OR. nest_bound_s .OR. force_bound_s )  THEN
-                   p_mg(:,nys_mg(l)-1,:) = p_mg(:,nys_mg(l),:)
-                ENDIF
-             ENDIF
-
 !
 !--          Bottom and top boundary conditions
              IF ( ibc_p_b == 1 )  THEN
@@ -1421,7 +1331,7 @@
            ONLY:  bc_lr_dirrad, bc_lr_raddir, bc_ns_dirrad, bc_ns_raddir,      &
                   gamma_mg, grid_level_count, ibc_p_b, ibc_p_t,                &
                   maximum_grid_level,                                          &
-                  mg_switch_to_pe0_level, mg_switch_to_pe0, nest_domain, ngsrb
+                  mg_switch_to_pe0_level, mg_switch_to_pe0, ngsrb
 
 
        USE indices,                                                            &
@@ -1570,9 +1480,6 @@
                 inflow_r  = .TRUE.
                 outflow_l = .TRUE.
                 outflow_r = .FALSE.
-             ELSEIF ( nest_domain )  THEN
-                nest_bound_l = .TRUE.
-                nest_bound_r = .TRUE.
              ELSEIF ( forcing )  THEN
                 force_bound_l = .TRUE.
                 force_bound_r = .TRUE.
@@ -1588,9 +1495,6 @@
                 inflow_s  = .TRUE.
                 outflow_n = .TRUE.
                 outflow_s = .FALSE.
-             ELSEIF ( nest_domain )  THEN
-                nest_bound_s = .TRUE.
-                nest_bound_n = .TRUE.
              ELSEIF ( forcing )  THEN
                 force_bound_s = .TRUE.
                 force_bound_n = .TRUE.
@@ -1659,13 +1563,6 @@
              outflow_l = .FALSE.;  outflow_r = .FALSE.
              outflow_n = .FALSE.;  outflow_s = .FALSE.
 !
-!--          In case of nesting, restore lateral boundary conditions
-             IF ( nest_domain )  THEN
-                nest_bound_l = .FALSE.
-                nest_bound_r = .FALSE.
-                nest_bound_s = .FALSE.
-                nest_bound_n = .FALSE.      
-             ENDIF
              IF ( forcing )  THEN
                 force_bound_l = .FALSE.
                 force_bound_r = .FALSE.
@@ -1678,8 +1575,6 @@
                    inflow_l  = .TRUE.
                 ELSEIF ( bc_lr_raddir )  THEN
                    outflow_l = .TRUE.
-                ELSEIF ( nest_domain )  THEN
-                   nest_bound_l = .TRUE.
                 ELSEIF ( forcing )  THEN
                    force_bound_l = .TRUE.
                 ENDIF
@@ -1690,8 +1585,6 @@
                    outflow_r = .TRUE.
                 ELSEIF ( bc_lr_raddir )  THEN
                    inflow_r  = .TRUE.
-                ELSEIF ( nest_domain )  THEN
-                   nest_bound_r = .TRUE.
                 ELSEIF ( forcing )  THEN
                    force_bound_r = .TRUE.
                 ENDIF
@@ -1702,8 +1595,6 @@
                    outflow_s = .TRUE.
                 ELSEIF ( bc_ns_raddir )  THEN
                    inflow_s  = .TRUE.
-                ELSEIF ( nest_domain )  THEN
-                   nest_bound_s = .TRUE.
                 ELSEIF ( forcing )  THEN
                    force_bound_s = .TRUE.
                 ENDIF
@@ -1714,8 +1605,6 @@
                    inflow_n  = .TRUE.
                 ELSEIF ( bc_ns_raddir )  THEN
                    outflow_n = .TRUE.
-                ELSEIF ( nest_domain )  THEN
-                   nest_bound_n = .TRUE.
                 ELSEIF ( forcing )  THEN
                    force_bound_n = .TRUE.
                 ENDIF
@@ -1894,32 +1783,6 @@
 !--          nys_l-1 / nyn_l+1 / nxl_l-1 / nxr_l+1. 
              CALL exchange_horiz_int( topo_tmp, nys_l, nyn_l, nxl_l, nxr_l, nzt_l, 1 )
 !
-!--          Set non-cyclic boundary conditions on respective multigrid level
-             IF ( .NOT. bc_ns_cyc )  THEN
-                IF ( inflow_s  .OR.  outflow_s  .OR.  nest_bound_s  .OR.       &
-                     force_bound_s )  THEN
-!                    topo_tmp(:,-2,:) = topo_tmp(:,0,:)
-                   topo_tmp(:,-1,:) = topo_tmp(:,0,:)
-                ENDIF
-                IF ( inflow_n  .OR.  outflow_n  .OR.  nest_bound_n  .OR.       &
-                     force_bound_n )  THEN
-!                    topo_tmp(:,nyn_l+2,:) = topo_tmp(:,nyn_l,:)
-                   topo_tmp(:,nyn_l+1,:) = topo_tmp(:,nyn_l,:)
-                ENDIF
-             ENDIF
-             IF ( .NOT. bc_lr_cyc )  THEN
-                IF ( inflow_l  .OR.  outflow_l  .OR.  nest_bound_l  .OR.       &
-                     force_bound_l )  THEN
-!                    topo_tmp(:,:,-2) = topo_tmp(:,:,0)
-                   topo_tmp(:,:,-1) = topo_tmp(:,:,0)
-                ENDIF
-                IF ( inflow_r  .OR.  outflow_r  .OR.  nest_bound_r  .OR.       &
-                     force_bound_r )  THEN
-!                    topo_tmp(:,:,nxr_l+2) = topo_tmp(:,:,nxr_l)      
-                   topo_tmp(:,:,nxr_l+1) = topo_tmp(:,:,nxr_l)    
-                ENDIF        
-             ENDIF
-                       
              DO  i = nxl_l, nxr_l
                 DO  j = nys_l, nyn_l
                    DO  k = nzb, nzt_l     

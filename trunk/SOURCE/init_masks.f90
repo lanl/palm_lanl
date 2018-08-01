@@ -156,9 +156,6 @@
     USE netcdf_interface,                                                      &
         ONLY:  domask_unit, netcdf_data_format
 
-    USE particle_attributes,                                                   &
-        ONLY:  particle_advection
-
     USE pegrid
 
     IMPLICIT NONE
@@ -307,104 +304,6 @@
                 ENDIF
                 unit = 'm2/s2'
 
-             CASE ( 'lpt' )
-                IF ( .NOT. cloud_physics )  THEN
-                   WRITE ( message_string, * ) 'output of "', TRIM( var ),     &
-                        '" requires cloud_physics = .TRUE.'
-                   CALL message( 'init_masks', 'PA0108', 1, 2, 0, 6, 0 )
-                ENDIF
-                unit = 'K'
-
-             CASE ( 'nc' )
-                IF ( .NOT. cloud_physics )  THEN
-                   WRITE ( message_string, * ) 'output of "', TRIM( var ),     &
-                        '" requires cloud_physics = .TRUE.'
-                   CALL message( 'init_masks', 'PA0108', 1, 2, 0, 6, 0 )
-                 ELSEIF ( .NOT. microphysics_morrison ) THEN
-                   message_string = 'output of "' // TRIM( var ) // '" ' //    &
-                         'requires  = morrison'
-                   CALL message( 'check_parameters', 'PA0359', 1, 2, 0, 6, 0 )
-                ENDIF
-                unit = '1/m3'
-
-             CASE ( 'nr' )
-                IF ( .NOT. cloud_physics )  THEN
-                   WRITE ( message_string, * ) 'output of "', TRIM( var ),     &
-                        '" requires cloud_physics = .TRUE.'
-                   CALL message( 'init_masks', 'PA0108', 1, 2, 0, 6, 0 )
-                 ELSEIF ( .NOT. microphysics_seifert ) THEN
-                   message_string = 'output of "' // TRIM( var ) // '"' //     &
-                         'requires cloud_scheme = seifert_beheng'
-                   CALL message( 'check_parameters', 'PA0359', 1, 2, 0, 6, 0 )
-                ENDIF
-                unit = '1/m3'
-
-             CASE ( 'pc', 'pr' )
-                IF ( .NOT. particle_advection )  THEN
-                   WRITE ( message_string, * ) 'output of "', TRIM( var ),     &
-                        '" requires a "particles_par"-NAMELIST in the ',       &
-                        'parameter file (PARIN)'
-                   CALL message( 'init_masks', 'PA0104', 1, 2, 0, 6, 0 )
-                ENDIF
-                IF ( TRIM( var ) == 'pc' )  unit = 'number'
-                IF ( TRIM( var ) == 'pr' )  unit = 'm'
-
-             CASE ( 'q', 'vpt' )
-                IF ( .NOT. humidity )  THEN
-                   WRITE ( message_string, * ) 'output of "', TRIM( var ),     &
-                        '" requires humidity = .TRUE.'
-                   CALL message( 'init_masks', 'PA0105', 1, 2, 0, 6, 0 )
-                ENDIF
-                IF ( TRIM( var ) == 'q'   )  unit = 'kg/kg'
-                IF ( TRIM( var ) == 'vpt' )  unit = 'K'
-
-             CASE ( 'qc' )
-                IF ( .NOT. cloud_physics )  THEN
-                   message_string = 'output of "' // TRIM( var ) // '"' //     &
-                            'requires cloud_physics = .TRUE.'
-                   CALL message( 'check_parameters', 'PA0108', 1, 2, 0, 6, 0 )
-                ENDIF
-                unit = 'kg/kg'
-
-             CASE ( 'ql' )
-                IF ( .NOT. ( cloud_physics  .OR.  cloud_droplets ) )  THEN
-                   WRITE ( message_string, * ) 'output of "', TRIM( var ),     &
-                        '" requires cloud_physics = .TRUE. or cloud_droplets', &
-                        ' = .TRUE.'
-                   CALL message( 'init_masks', 'PA0106', 1, 2, 0, 6, 0 )
-                ENDIF
-                unit = 'kg/kg'
-
-             CASE ( 'ql_c', 'ql_v', 'ql_vp' )
-                IF ( .NOT. cloud_droplets )  THEN
-                   WRITE ( message_string, * ) 'output of "', TRIM( var ),     &
-                        '" requires cloud_droplets = .TRUE.'
-                   CALL message( 'init_masks', 'PA0107', 1, 2, 0, 6, 0 )
-                ENDIF
-                IF ( TRIM( var ) == 'ql_c'  )  unit = 'kg/kg'
-                IF ( TRIM( var ) == 'ql_v'  )  unit = 'm3'
-                IF ( TRIM( var ) == 'ql_vp' )  unit = 'none'
-
-             CASE ( 'qv' )
-                IF ( .NOT. cloud_physics )  THEN
-                   WRITE ( message_string, * ) 'output of "', TRIM( var ),     &
-                        '" requires cloud_physics = .TRUE.'
-                   CALL message( 'init_masks', 'PA0108', 1, 2, 0, 6, 0 )
-                ENDIF
-                unit = 'kg/kg'
-
-             CASE ( 'qr' )
-                IF ( .NOT. cloud_physics )  THEN
-                   message_string = 'output of "' // TRIM( var ) // '" ' //    &
-                            'requires cloud_physics = .TRUE.'
-                   CALL message( 'check_parameters', 'PA0108', 1, 2, 0, 6, 0 )
-                ELSEIF ( .NOT. microphysics_seifert ) THEN
-                   message_string = 'output of "' // TRIM( var ) // '" ' //    &
-                            'requires cloud_scheme = seifert_beheng'
-                   CALL message( 'check_parameters', 'PA0359', 1, 2, 0, 6, 0 )
-                ENDIF
-                unit = 'kg/kg'
-
              CASE ( 'rho_ocean' )
                 IF ( .NOT. ocean )  THEN
                    WRITE ( message_string, * ) 'output of "', TRIM( var ),     &
@@ -444,8 +343,6 @@
                 CONTINUE
 
              CASE DEFAULT
-                CALL user_check_data_output( var, unit )
-
                 IF ( unit == 'illegal' )  THEN
                    IF ( do_mask_user(mid,1) /= ' ' )  THEN
                       WRITE ( message_string, * ) 'illegal value for data_',   &

@@ -282,16 +282,6 @@
                tu_m, tv_m, tw_m, u, ug, u_init, u_p, v, vg, vpt, v_init, v_p,  &
                w, w_p, alpha_T, beta_S
 
-    USE chemistry_model_mod,                                                   &
-        ONLY:  chem_integrate, chem_prognostic_equations,                      &
-               chem_species, nspec, nvar, spc_names
-           
-    USE chem_photolysis_mod,                                                   &
-        ONLY:  photolysis_control
-
-    USE chem_modules,                                                          &
-        ONLY:  call_chem_at_all_substeps, chem_gasphase_on
-
     USE kinds
 
     USE control_parameters,                                                    &
@@ -355,9 +345,6 @@
     USE buoyancy_mod,                                                          &
         ONLY:  buoyancy
 
-    USE calc_radiation_mod,                                                    &
-        ONLY:  calc_radiation
-
     USE coriolis_mod,                                                          &
         ONLY:  coriolis
 
@@ -378,27 +365,11 @@
     USE lsf_nudging_mod,                                                       &
         ONLY:  ls_advec, nudge
 
-    USE microphysics_mod,                                                      &
-        ONLY:  microphysics_control
-
-    USE plant_canopy_model_mod,                                                &
-        ONLY:  cthf, pcm_tendency
-
-    USE radiation_model_mod,                                                   &
-        ONLY:  radiation, radiation_tendency,                                  &
-               skip_time_do_radiation
-
     USE statistics,                                                            &
         ONLY:  hom
 
-    USE subsidence_mod,                                                        &
-        ONLY:  subsidence
-
     USE turbulence_closure_mod,                                                &
         ONLY:  tcm_prognostic
-
-    USE user_actions_mod,                                                      &
-        ONLY:  user_actions
 
     USE surface_mod,                                                           &
         ONLY :  surf_def_h, surf_def_v, surf_lsm_h, surf_lsm_v, surf_usm_h,    &
@@ -406,11 +377,6 @@
 
     USE constants 
 
-    USE wind_turbine_model_mod,                                                &
-        ONLY:  wtm_tendencies
-
-
-    PRIVATE
     PUBLIC prognostic_equations_cache, prognostic_equations_vector
 
     INTERFACE prognostic_equations_cache
@@ -458,61 +424,6 @@
 !
 !-- Time measurement can only be performed for the whole set of equations
     CALL cpu_log( log_point(32), 'all progn.equations', 'start' )
-
-!
-!-- Calculation of chemical reactions. This is done outside of main loop,
-!-- since exchange of ghost points is required after this update of the
-!-- concentrations of chemical species                                    
-    IF ( air_chemistry )  THEN
-!
-!--    If required, calculate photolysis frequencies - 
-!--    UNFINISHED: Why not before the intermediate timestep loop?
-       IF ( intermediate_timestep_count ==  1 )  THEN
-          CALL photolysis_control
-       ENDIF
-!
-!--    Chemical reactions
-       CALL cpu_log( log_point(82), '(chem react + exch_h)', 'start' )
-  
-       IF ( chem_gasphase_on ) THEN
-          DO  i = nxl, nxr
-             DO  j = nys, nyn
-
-                IF ( intermediate_timestep_count == 1 .OR.                        &
-                     call_chem_at_all_substeps ) THEN
-                   CALL chem_integrate (i,j)                                                
-                ENDIF
-             ENDDO
-          ENDDO
-       ENDIF
-!
-!--    Loop over chemical species       
-       CALL cpu_log( log_point_s(84), 'chemistry exch-horiz ', 'start' )
-       DO  n = 1, nspec
-          CALL exchange_horiz( chem_species(n)%conc, nbgp )     
-       ENDDO
-       CALL cpu_log( log_point_s(84), 'chemistry exch-horiz ', 'stop' )
-     
-       CALL cpu_log( log_point(82), '(chem react + exch_h)', 'stop' )
-
-    ENDIF       
-
-!
-!-- If required, calculate cloud microphysics
-    IF ( cloud_physics  .AND.  .NOT. microphysics_sat_adjust  .AND.            &
-         ( intermediate_timestep_count == 1  .OR.                              &
-           call_microphysics_at_all_substeps ) )                               &
-    THEN
-       !$OMP PARALLEL PRIVATE (i,j)
-       !$OMP DO
-       DO  i = nxlg, nxrg
-          DO  j = nysg, nyng
-             CALL microphysics_control( i, j )
-           ENDDO
-       ENDDO
-       !$OMP END PARALLEL
-    ENDIF
-
 !
 !-- Loop over all prognostic equations
     !$OMP PARALLEL PRIVATE (i,i_omp_start,j,k,loop_start,tn)
@@ -567,11 +478,6 @@
                 CALL buoyancy( i, j, pt, 1 )
              ENDIF
 
-!
-!--          Drag by plant canopy
-             IF ( plant_canopy )  CALL pcm_tendency( i, j, 1 )
-
-!
 !--          External pressure gradient
              IF ( dp_external )  THEN
                 DO  k = dp_level_ind_b+1, nzt
@@ -583,12 +489,6 @@
 !--          Nudging
              IF ( nudging )  CALL nudge( i, j, simulated_time, 'u' )
 
-!
-!--          Forces by wind turbines
-             IF ( wind_turbine )  CALL wtm_tendencies( i, j, 1 )
-
-             CALL user_actions( i, j, 'u-tendency' )
-!
 !--          Prognostic equation for u-velocity component
              DO  k = nzb+1, nzt
 
@@ -639,10 +539,6 @@
              CALL coriolis( i, j, 2 )
 
 !
-!--          Drag by plant canopy
-             IF ( plant_canopy )  CALL pcm_tendency( i, j, 2 )
-
-!
 !--          External pressure gradient
              IF ( dp_external )  THEN
                 DO  k = dp_level_ind_b+1, nzt
@@ -654,12 +550,6 @@
 !--          Nudging
              IF ( nudging )  CALL nudge( i, j, simulated_time, 'v' )
 
-!
-!--          Forces by wind turbines
-             IF ( wind_turbine )  CALL wtm_tendencies( i, j, 2 )
-
-             CALL user_actions( i, j, 'v-tendency' )
-!
 !--          Prognostic equation for v-velocity component
              DO  k = nzb+1, nzt
                 v_p(k,j,i) = v(k,j,i) + ( dt_3d *                              &
@@ -706,27 +596,9 @@
           CALL coriolis( i, j, 3 )
 
           IF ( .NOT. neutral )  THEN
-             IF ( ocean )  THEN
                 CALL buoyancy( i, j, rho_ocean, 3 )
-             ELSE
-                IF ( .NOT. humidity )  THEN
-                   CALL buoyancy( i, j, pt, 3 )
-                ELSE
-                   CALL buoyancy( i, j, vpt, 3 )
-                ENDIF
-             ENDIF
           ENDIF
 
-!
-!--       Drag by plant canopy
-          IF ( plant_canopy )  CALL pcm_tendency( i, j, 3 )
-
-!
-!--       Forces by wind turbines
-          IF ( wind_turbine )  CALL wtm_tendencies( i, j, 3 )
-
-          CALL user_actions( i, j, 'w-tendency' )
-!
 !--       Prognostic equation for w-velocity component
           DO  k = nzb+1, nzt-1
              w_p(k,j,i) = w(k,j,i) + ( dt_3d *                                 &
@@ -782,20 +654,6 @@
                                surf_usm_v(2)%shf, surf_usm_v(3)%shf,           &
                                surf_def_h(2)%shf_sol )
 !
-!--          If required compute heating/cooling due to long wave radiation
-!--          processes
-             IF ( cloud_top_radiation )  THEN
-                CALL calc_radiation( i, j )
-             ENDIF
-
-!
-!--          Consideration of heat sources within the plant canopy
-             IF ( plant_canopy  .AND.                                          &
-                (cthf /= 0.0_wp  .OR. urban_surface  .OR.  land_surface) )  THEN
-                CALL pcm_tendency( i, j, 4 )
-             ENDIF
-
-!
 !--          Large scale advection
              IF ( large_scale_forcing )  THEN
                 CALL ls_advec( i, j, simulated_time, 'pt' )
@@ -805,23 +663,6 @@
 !--          Nudging
              IF ( nudging )  CALL nudge( i, j, simulated_time, 'pt' )
 
-!
-!--          If required, compute effect of large-scale subsidence/ascent
-             IF ( large_scale_subsidence  .AND.                                &
-                  .NOT. use_subsidence_tendencies )  THEN
-                CALL subsidence( i, j, tend, pt, pt_init, 2 )
-             ENDIF
-
-!
-!--          If required, add tendency due to radiative heating/cooling
-             IF ( radiation  .AND.                                             &
-                  simulated_time > skip_time_do_radiation )  THEN
-                CALL radiation_tendency ( i, j, tend )
-             ENDIF
-
-
-             CALL user_actions( i, j, 'pt-tendency' )
-!
 !--          Prognostic equation for potential temperature
              DO  k = nzb+1, nzt
                 pt_p(k,j,i) = pt(k,j,i) + ( dt_3d *                            &
@@ -884,9 +725,6 @@
                                surf_lsm_v(2)%sasws, surf_lsm_v(3)%sasws,       &
                                surf_usm_v(0)%sasws, surf_usm_v(1)%sasws,       &
                                surf_usm_v(2)%sasws, surf_usm_v(3)%sasws )
-
-             CALL user_actions( i, j, 'sa-tendency' )
-
 !
 !--          Prognostic equation for salinity
              DO  k = nzb+1, nzt
@@ -922,325 +760,6 @@
              CALL eqn_state_seawater( i, j )
 
           ENDIF
-
-!
-!--       If required, compute prognostic equation for total water content
-          IF ( humidity )  THEN
-
-!
-!--          Tendency-terms for total water content / scalar
-             tend(:,j,i) = 0.0_wp
-             IF ( timestep_scheme(1:5) == 'runge' ) &
-             THEN
-                IF ( ws_scheme_sca )  THEN
-                   CALL advec_s_ws( i, j, q, 'q', flux_s_q, &
-                                diss_s_q, flux_l_q, diss_l_q, i_omp_start, tn )
-                ELSE
-                   CALL advec_s_pw( i, j, q )
-                ENDIF
-             ELSE
-                CALL advec_s_up( i, j, q )
-             ENDIF
-             CALL diffusion_s( i, j, q,                                        &
-                               surf_def_h(0)%qsws, surf_def_h(1)%qsws,         &
-                               surf_def_h(2)%qsws,                             &
-                               surf_lsm_h%qsws,    surf_usm_h%qsws,            &
-                               surf_def_v(0)%qsws, surf_def_v(1)%qsws,         &
-                               surf_def_v(2)%qsws, surf_def_v(3)%qsws,         &
-                               surf_lsm_v(0)%qsws, surf_lsm_v(1)%qsws,         &
-                               surf_lsm_v(2)%qsws, surf_lsm_v(3)%qsws,         &
-                               surf_usm_v(0)%qsws, surf_usm_v(1)%qsws,         &
-                               surf_usm_v(2)%qsws, surf_usm_v(3)%qsws )
-
-!
-!--          Sink or source of humidity due to canopy elements
-             IF ( plant_canopy )  CALL pcm_tendency( i, j, 5 )
-
-!
-!--          Large scale advection
-             IF ( large_scale_forcing )  THEN
-                CALL ls_advec( i, j, simulated_time, 'q' )
-             ENDIF
-
-!
-!--          Nudging
-             IF ( nudging )  CALL nudge( i, j, simulated_time, 'q' )
-
-!
-!--          If required compute influence of large-scale subsidence/ascent
-             IF ( large_scale_subsidence  .AND.                                &
-                  .NOT. use_subsidence_tendencies )  THEN
-                CALL subsidence( i, j, tend, q, q_init, 3 )
-             ENDIF
-
-             CALL user_actions( i, j, 'q-tendency' )
-
-!
-!--          Prognostic equation for total water content / scalar
-             DO  k = nzb+1, nzt
-                q_p(k,j,i) = q(k,j,i) + ( dt_3d *                              &
-                                                ( tsc(2) * tend(k,j,i) +       &
-                                                  tsc(3) * tq_m(k,j,i) )       &
-                                                - tsc(5) * rdf_sc(k) *         &
-                                                      ( q(k,j,i) - q_init(k) ) &
-                                        )                                      &
-                                       * MERGE( 1.0_wp, 0.0_wp,                &
-                                                BTEST( wall_flags_0(k,j,i), 0 )&
-                                              )                
-                IF ( q_p(k,j,i) < 0.0_wp )  q_p(k,j,i) = 0.1_wp * q(k,j,i)
-             ENDDO
-
-!
-!--          Calculate tendencies for the next Runge-Kutta step
-             IF ( timestep_scheme(1:5) == 'runge' )  THEN
-                IF ( intermediate_timestep_count == 1 )  THEN
-                   DO  k = nzb+1, nzt
-                      tq_m(k,j,i) = tend(k,j,i)
-                   ENDDO
-                ELSEIF ( intermediate_timestep_count < &
-                         intermediate_timestep_count_max )  THEN
-                   DO  k = nzb+1, nzt
-                      tq_m(k,j,i) =   -9.5625_wp * tend(k,j,i) +               &
-                                       5.3125_wp * tq_m(k,j,i)
-                   ENDDO
-                ENDIF
-             ENDIF
-
-!
-!--          If required, calculate prognostic equations for cloud water content
-!--          and cloud drop concentration
-             IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
-!
-!--             Calculate prognostic equation for cloud water content
-                tend(:,j,i) = 0.0_wp
-                IF ( timestep_scheme(1:5) == 'runge' ) &
-                THEN
-                   IF ( ws_scheme_sca )  THEN
-                      CALL advec_s_ws( i, j, qc, 'qc', flux_s_qc,       &
-                                       diss_s_qc, flux_l_qc, diss_l_qc, &
-                                       i_omp_start, tn )
-                   ELSE
-                      CALL advec_s_pw( i, j, qc )
-                   ENDIF
-                ELSE
-                   CALL advec_s_up( i, j, qc )
-                ENDIF
-                CALL diffusion_s( i, j, qc,                                   &
-                                  surf_def_h(0)%qcsws, surf_def_h(1)%qcsws,   &
-                                  surf_def_h(2)%qcsws,                        &
-                                  surf_lsm_h%qcsws,    surf_usm_h%qcsws,      &  
-                                  surf_def_v(0)%qcsws, surf_def_v(1)%qcsws,   &
-                                  surf_def_v(2)%qcsws, surf_def_v(3)%qcsws,   &
-                                  surf_lsm_v(0)%qcsws, surf_lsm_v(1)%qcsws,   &
-                                  surf_lsm_v(2)%qcsws, surf_lsm_v(3)%qcsws,   &
-                                  surf_usm_v(0)%qcsws, surf_usm_v(1)%qcsws,   &
-                                  surf_usm_v(2)%qcsws, surf_usm_v(3)%qcsws )
-
-!
-!--             Prognostic equation for cloud water content
-                DO  k = nzb+1, nzt
-                   qc_p(k,j,i) = qc(k,j,i) + ( dt_3d *                         &
-                                                      ( tsc(2) * tend(k,j,i) + &
-                                                        tsc(3) * tqc_m(k,j,i) )&
-                                                      - tsc(5) * rdf_sc(k)     &
-                                                               * qc(k,j,i)     &
-                                             )                                 &
-                                       * MERGE( 1.0_wp, 0.0_wp,                &
-                                                BTEST( wall_flags_0(k,j,i), 0 )&
-                                              ) 
-                   IF ( qc_p(k,j,i) < 0.0_wp )  qc_p(k,j,i) = 0.0_wp
-                ENDDO
-!
-!--             Calculate tendencies for the next Runge-Kutta step
-                IF ( timestep_scheme(1:5) == 'runge' )  THEN
-                   IF ( intermediate_timestep_count == 1 )  THEN
-                      DO  k = nzb+1, nzt
-                         tqc_m(k,j,i) = tend(k,j,i)
-                      ENDDO
-                   ELSEIF ( intermediate_timestep_count < &
-                            intermediate_timestep_count_max )  THEN
-                      DO  k = nzb+1, nzt
-                         tqc_m(k,j,i) =   -9.5625_wp * tend(k,j,i) +           &
-                                           5.3125_wp * tqc_m(k,j,i)
-                      ENDDO
-                   ENDIF
-                ENDIF
-
-!
-!--             Calculate prognostic equation for cloud drop concentration.
-                tend(:,j,i) = 0.0_wp
-                IF ( timestep_scheme(1:5) == 'runge' )  THEN
-                   IF ( ws_scheme_sca )  THEN
-                      CALL advec_s_ws( i, j, nc, 'nc', flux_s_nc,    &
-                                    diss_s_nc, flux_l_nc, diss_l_nc, &
-                                    i_omp_start, tn )
-                   ELSE
-                      CALL advec_s_pw( i, j, nc )
-                   ENDIF
-                ELSE
-                   CALL advec_s_up( i, j, nc )
-                ENDIF
-                CALL diffusion_s( i, j, nc,                                    &
-                                  surf_def_h(0)%ncsws, surf_def_h(1)%ncsws,    &
-                                  surf_def_h(2)%ncsws,                         &
-                                  surf_lsm_h%ncsws,    surf_usm_h%ncsws,       &
-                                  surf_def_v(0)%ncsws, surf_def_v(1)%ncsws,    &
-                                  surf_def_v(2)%ncsws, surf_def_v(3)%ncsws,    &
-                                  surf_lsm_v(0)%ncsws, surf_lsm_v(1)%ncsws,    &
-                                  surf_lsm_v(2)%ncsws, surf_lsm_v(3)%ncsws,    &
-                                  surf_usm_v(0)%ncsws, surf_usm_v(1)%ncsws,    &
-                                  surf_usm_v(2)%ncsws, surf_usm_v(3)%ncsws )
-
-!
-!--             Prognostic equation for cloud drop concentration
-                DO  k = nzb+1, nzt
-                   nc_p(k,j,i) = nc(k,j,i) + ( dt_3d *                         &
-                                                      ( tsc(2) * tend(k,j,i) + &
-                                                        tsc(3) * tnc_m(k,j,i) )&
-                                                      - tsc(5) * rdf_sc(k)     &
-                                                               * nc(k,j,i)     &
-                                             )                                 &
-                                       * MERGE( 1.0_wp, 0.0_wp,                &
-                                                BTEST( wall_flags_0(k,j,i), 0 )&
-                                              )
-                   IF ( nc_p(k,j,i) < 0.0_wp )  nc_p(k,j,i) = 0.0_wp
-                ENDDO
-!
-!--             Calculate tendencies for the next Runge-Kutta step
-                IF ( timestep_scheme(1:5) == 'runge' )  THEN
-                   IF ( intermediate_timestep_count == 1 )  THEN
-                      DO  k = nzb+1, nzt
-                         tnc_m(k,j,i) = tend(k,j,i)
-                      ENDDO
-                   ELSEIF ( intermediate_timestep_count < &
-                            intermediate_timestep_count_max )  THEN
-                      DO  k = nzb+1, nzt
-                         tnc_m(k,j,i) =   -9.5625_wp * tend(k,j,i) +           &
-                                           5.3125_wp * tnc_m(k,j,i)
-                      ENDDO
-                   ENDIF
-                ENDIF
-
-             ENDIF
-!
-!--          If required, calculate prognostic equations for rain water content
-!--          and rain drop concentration
-             IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
-!
-!--             Calculate prognostic equation for rain water content
-                tend(:,j,i) = 0.0_wp
-                IF ( timestep_scheme(1:5) == 'runge' ) &
-                THEN
-                   IF ( ws_scheme_sca )  THEN
-                      CALL advec_s_ws( i, j, qr, 'qr', flux_s_qr,       &
-                                       diss_s_qr, flux_l_qr, diss_l_qr, &
-                                       i_omp_start, tn )
-                   ELSE
-                      CALL advec_s_pw( i, j, qr )
-                   ENDIF
-                ELSE
-                   CALL advec_s_up( i, j, qr )
-                ENDIF
-                CALL diffusion_s( i, j, qr,                                   &
-                                  surf_def_h(0)%qrsws, surf_def_h(1)%qrsws,   &
-                                  surf_def_h(2)%qrsws,                        &
-                                  surf_lsm_h%qrsws,    surf_usm_h%qrsws,      &  
-                                  surf_def_v(0)%qrsws, surf_def_v(1)%qrsws,   &
-                                  surf_def_v(2)%qrsws, surf_def_v(3)%qrsws,   &
-                                  surf_lsm_v(0)%qrsws, surf_lsm_v(1)%qrsws,   &
-                                  surf_lsm_v(2)%qrsws, surf_lsm_v(3)%qrsws,   &
-                                  surf_usm_v(0)%qrsws, surf_usm_v(1)%qrsws,   &
-                                  surf_usm_v(2)%qrsws, surf_usm_v(3)%qrsws )
-
-!
-!--             Prognostic equation for rain water content
-                DO  k = nzb+1, nzt
-                   qr_p(k,j,i) = qr(k,j,i) + ( dt_3d *                         &
-                                                      ( tsc(2) * tend(k,j,i) + &
-                                                        tsc(3) * tqr_m(k,j,i) )&
-                                                      - tsc(5) * rdf_sc(k)     &
-                                                               * qr(k,j,i)     &
-                                             )                                 &
-                                       * MERGE( 1.0_wp, 0.0_wp,                &
-                                                BTEST( wall_flags_0(k,j,i), 0 )&
-                                              ) 
-                   IF ( qr_p(k,j,i) < 0.0_wp )  qr_p(k,j,i) = 0.0_wp
-                ENDDO
-!
-!--             Calculate tendencies for the next Runge-Kutta step
-                IF ( timestep_scheme(1:5) == 'runge' )  THEN
-                   IF ( intermediate_timestep_count == 1 )  THEN
-                      DO  k = nzb+1, nzt
-                         tqr_m(k,j,i) = tend(k,j,i)
-                      ENDDO
-                   ELSEIF ( intermediate_timestep_count < &
-                            intermediate_timestep_count_max )  THEN
-                      DO  k = nzb+1, nzt
-                         tqr_m(k,j,i) =   -9.5625_wp * tend(k,j,i) +           &
-                                           5.3125_wp * tqr_m(k,j,i)
-                      ENDDO
-                   ENDIF
-                ENDIF
-
-!
-!--             Calculate prognostic equation for rain drop concentration.
-                tend(:,j,i) = 0.0_wp
-                IF ( timestep_scheme(1:5) == 'runge' )  THEN
-                   IF ( ws_scheme_sca )  THEN
-                      CALL advec_s_ws( i, j, nr, 'nr', flux_s_nr,    &
-                                    diss_s_nr, flux_l_nr, diss_l_nr, &
-                                    i_omp_start, tn )
-                   ELSE
-                      CALL advec_s_pw( i, j, nr )
-                   ENDIF
-                ELSE
-                   CALL advec_s_up( i, j, nr )
-                ENDIF
-                CALL diffusion_s( i, j, nr,                                    &
-                                  surf_def_h(0)%nrsws, surf_def_h(1)%nrsws,    &
-                                  surf_def_h(2)%nrsws,                         &
-                                  surf_lsm_h%nrsws,    surf_usm_h%nrsws,       &
-                                  surf_def_v(0)%nrsws, surf_def_v(1)%nrsws,    &
-                                  surf_def_v(2)%nrsws, surf_def_v(3)%nrsws,    &
-                                  surf_lsm_v(0)%nrsws, surf_lsm_v(1)%nrsws,    &
-                                  surf_lsm_v(2)%nrsws, surf_lsm_v(3)%nrsws,    &
-                                  surf_usm_v(0)%nrsws, surf_usm_v(1)%nrsws,    &
-                                  surf_usm_v(2)%nrsws, surf_usm_v(3)%nrsws )
-
-!
-!--             Prognostic equation for rain drop concentration
-                DO  k = nzb+1, nzt
-                   nr_p(k,j,i) = nr(k,j,i) + ( dt_3d *                         &
-                                                      ( tsc(2) * tend(k,j,i) + &
-                                                        tsc(3) * tnr_m(k,j,i) )&
-                                                      - tsc(5) * rdf_sc(k)     &
-                                                               * nr(k,j,i)     &
-                                             )                                 &
-                                       * MERGE( 1.0_wp, 0.0_wp,                &
-                                                BTEST( wall_flags_0(k,j,i), 0 )&
-                                              )
-                   IF ( nr_p(k,j,i) < 0.0_wp )  nr_p(k,j,i) = 0.0_wp
-                ENDDO
-!
-!--             Calculate tendencies for the next Runge-Kutta step
-                IF ( timestep_scheme(1:5) == 'runge' )  THEN
-                   IF ( intermediate_timestep_count == 1 )  THEN
-                      DO  k = nzb+1, nzt
-                         tnr_m(k,j,i) = tend(k,j,i)
-                      ENDDO
-                   ELSEIF ( intermediate_timestep_count < &
-                            intermediate_timestep_count_max )  THEN
-                      DO  k = nzb+1, nzt
-                         tnr_m(k,j,i) =   -9.5625_wp * tend(k,j,i) +           &
-                                           5.3125_wp * tnr_m(k,j,i)
-                      ENDDO
-                   ENDIF
-                ENDIF
-
-             ENDIF
-
-          ENDIF
-
 !
 !--       If required, compute prognostic equation for scalar
           IF ( passive_scalar )  THEN
@@ -1269,34 +788,6 @@
                                surf_usm_v(0)%ssws, surf_usm_v(1)%ssws,         &
                                surf_usm_v(2)%ssws, surf_usm_v(3)%ssws )
 
-!
-!--          Sink or source of scalar concentration due to canopy elements
-             IF ( plant_canopy )  CALL pcm_tendency( i, j, 7 )
-
-!
-!--          Large scale advection, still need to be extended for scalars
-!              IF ( large_scale_forcing )  THEN
-!                 CALL ls_advec( i, j, simulated_time, 's' )
-!              ENDIF
-
-!
-!--          Nudging, still need to be extended for scalars
-!              IF ( nudging )  CALL nudge( i, j, simulated_time, 's' )
-
-!
-!--          If required compute influence of large-scale subsidence/ascent.
-!--          Note, the last argument is of no meaning in this case, as it is
-!--          only used in conjunction with large_scale_forcing, which is to
-!--          date not implemented for scalars.
-             IF ( large_scale_subsidence  .AND.                                &
-                  .NOT. use_subsidence_tendencies  .AND.                       &
-                  .NOT. large_scale_forcing )  THEN
-                CALL subsidence( i, j, tend, s, s_init, 3 )
-             ENDIF
-
-             CALL user_actions( i, j, 's-tendency' )
-
-!
 !--          Prognostic equation for scalar
              DO  k = nzb+1, nzt
                 s_p(k,j,i) = s(k,j,i) + (  dt_3d *                             &
@@ -1332,27 +823,6 @@
 !--       Calculate prognostic equations for turbulence closure
           CALL tcm_prognostic( i, j, i_omp_start, tn )
 
-!
-!--       If required, compute prognostic equation for chemical quantites
-          IF ( air_chemistry )  THEN
-             CALL cpu_log( log_point(83), '(chem advec+diff+prog)', 'start' )
-!
-!--          Loop over chemical species
-             DO  lsp = 1, nvar                         
-                CALL chem_prognostic_equations ( chem_species(lsp)%conc_p,     &
-                                     chem_species(lsp)%conc,                   &
-                                     chem_species(lsp)%tconc_m,                &
-                                     chem_species(lsp)%conc_pr_init,           &
-                                     i, j, i_omp_start, tn, lsp,               &
-                                     chem_species(lsp)%flux_s_cs,              &
-                                     chem_species(lsp)%diss_s_cs,              &
-                                     chem_species(lsp)%flux_l_cs,              &
-                                     chem_species(lsp)%diss_l_cs )       
-             ENDDO
-
-             CALL cpu_log( log_point(83), '(chem advec+diff+prog)', 'stop' )             
-          ENDIF   ! Chemicals equations                     
-
        ENDDO
     ENDDO
     !$OMP END PARALLEL
@@ -1382,18 +852,6 @@
 
     REAL(wp)     ::  sbt  !<
 
-
-!
-!-- If required, calculate cloud microphysical impacts
-    IF ( cloud_physics  .AND.  .NOT. microphysics_sat_adjust  .AND.            &
-         ( intermediate_timestep_count == 1  .OR.                              &
-           call_microphysics_at_all_substeps )                                 &
-       )  THEN
-       CALL cpu_log( log_point(51), 'microphysics', 'start' )
-       CALL microphysics_control
-       CALL cpu_log( log_point(51), 'microphysics', 'stop' )
-    ENDIF
-
 !
 !-- u-velocity component
     CALL cpu_log( log_point(5), 'u-equation', 'start' )
@@ -1415,10 +873,6 @@
     ENDIF
 
 !
-!-- Drag by plant canopy
-    IF ( plant_canopy )  CALL pcm_tendency( 1 )
-
-!
 !-- External pressure gradient
     IF ( dp_external )  THEN
        DO  i = nxlu, nxr
@@ -1433,12 +887,6 @@
 !
 !-- Nudging
     IF ( nudging )  CALL nudge( simulated_time, 'u' )
-
-!
-!-- Forces by wind turbines
-    IF ( wind_turbine )  CALL wtm_tendencies( 1 )
-
-    CALL user_actions( 'u-tendency' )
 
 !
 !-- Prognostic equation for u-velocity component
@@ -1500,10 +948,6 @@
     CALL coriolis( 2 )
 
 !
-!-- Drag by plant canopy
-    IF ( plant_canopy )  CALL pcm_tendency( 2 )
-
-!
 !-- External pressure gradient
     IF ( dp_external )  THEN
        DO  i = nxl, nxr
@@ -1518,12 +962,6 @@
 !
 !-- Nudging
     IF ( nudging )  CALL nudge( simulated_time, 'v' )
-
-!
-!-- Forces by wind turbines
-    IF ( wind_turbine )  CALL wtm_tendencies( 2 )
-
-    CALL user_actions( 'v-tendency' )
 
 !
 !-- Prognostic equation for v-velocity component
@@ -1584,27 +1022,7 @@
     CALL diffusion_w
     CALL coriolis( 3 )
 
-    IF ( .NOT. neutral )  THEN
-       IF ( ocean )  THEN
-          CALL buoyancy( rho_ocean, 3 )
-       ELSE
-          IF ( .NOT. humidity )  THEN
-             CALL buoyancy( pt, 3 )
-          ELSE
-             CALL buoyancy( vpt, 3 )
-          ENDIF
-       ENDIF
-    ENDIF
-
-!
-!-- Drag by plant canopy
-    IF ( plant_canopy )  CALL pcm_tendency( 3 )
-
-!
-!-- Forces by wind turbines
-    IF ( wind_turbine )  CALL wtm_tendencies( 3 )
-
-    CALL user_actions( 'w-tendency' )
+    CALL buoyancy( rho_ocean, 3 )
 
 !
 !-- Prognostic equation for w-velocity component
@@ -1695,19 +1113,6 @@
                          surf_usm_v(0)%shf, surf_usm_v(1)%shf,                 &
                          surf_usm_v(2)%shf, surf_usm_v(3)%shf )
 !
-!--    If required compute heating/cooling due to long wave radiation processes
-       IF ( cloud_top_radiation )  THEN
-          CALL calc_radiation
-       ENDIF
-
-!
-!--    Consideration of heat sources within the plant canopy
-       IF ( plant_canopy  .AND.                                          &
-            (cthf /= 0.0_wp  .OR. urban_surface  .OR.  land_surface) )  THEN
-          CALL pcm_tendency( 4 )
-       ENDIF
-
-!
 !--    Large scale advection
        IF ( large_scale_forcing )  THEN
           CALL ls_advec( simulated_time, 'pt' )
@@ -1717,23 +1122,6 @@
 !--    Nudging
        IF ( nudging )  CALL nudge( simulated_time, 'pt' )
 
-!
-!--    If required compute influence of large-scale subsidence/ascent
-       IF ( large_scale_subsidence  .AND.                                      &
-            .NOT. use_subsidence_tendencies )  THEN
-          CALL subsidence( tend, pt, pt_init, 2 )
-       ENDIF
-
-!
-!--    If required, add tendency due to radiative heating/cooling
-       IF ( radiation  .AND.                                                   &
-            simulated_time > skip_time_do_radiation )  THEN
-            CALL radiation_tendency ( tend )
-       ENDIF
-
-       CALL user_actions( 'pt-tendency' )
-
-!
 !--    Prognostic equation for potential temperature
        DO  i = nxl, nxr
           DO  j = nys, nyn
@@ -1825,9 +1213,6 @@
                          surf_usm_v(0)%sasws, surf_usm_v(1)%sasws,             &
                          surf_usm_v(2)%sasws, surf_usm_v(3)%sasws )
 
-       CALL user_actions( 'sa-tendency' )
-
-!
 !--    Prognostic equation for salinity
        DO  i = nxl, nxr
           DO  j = nys, nyn
@@ -1879,480 +1264,6 @@
 
     ENDIF
 
-!
-!-- If required, compute prognostic equation for total water content
-    IF ( humidity )  THEN
-
-       CALL cpu_log( log_point(29), 'q-equation', 'start' )
-
-!
-!--    Scalar/q-tendency terms with communication
-       sbt = tsc(2)
-       IF ( scalar_advec == 'bc-scheme' )  THEN
-
-          IF ( timestep_scheme(1:5) /= 'runge' )  THEN
-!
-!--          Bott-Chlond scheme always uses Euler time step. Thus:
-             sbt = 1.0_wp
-          ENDIF
-          tend = 0.0_wp
-          CALL advec_s_bc( q, 'q' )
-
-       ENDIF
-
-!
-!--    Scalar/q-tendency terms with no communication
-       IF ( scalar_advec /= 'bc-scheme' )  THEN
-          tend = 0.0_wp
-          IF ( timestep_scheme(1:5) == 'runge' )  THEN
-             IF ( ws_scheme_sca )  THEN
-                CALL advec_s_ws( q, 'q' )
-             ELSE
-                CALL advec_s_pw( q )
-             ENDIF
-          ELSE
-             CALL advec_s_up( q )
-          ENDIF
-       ENDIF
-
-       CALL diffusion_s( q,                                                    &
-                         surf_def_h(0)%qsws, surf_def_h(1)%qsws,               &
-                         surf_def_h(2)%qsws,                                   &
-                         surf_lsm_h%qsws,    surf_usm_h%qsws,                  &
-                         surf_def_v(0)%qsws, surf_def_v(1)%qsws,               &
-                         surf_def_v(2)%qsws, surf_def_v(3)%qsws,               &
-                         surf_lsm_v(0)%qsws, surf_lsm_v(1)%qsws,               &
-                         surf_lsm_v(2)%qsws, surf_lsm_v(3)%qsws,               &
-                         surf_usm_v(0)%qsws, surf_usm_v(1)%qsws,               &
-                         surf_usm_v(2)%qsws, surf_usm_v(3)%qsws )
-
-!
-!--    Sink or source of humidity due to canopy elements
-       IF ( plant_canopy ) CALL pcm_tendency( 5 )
-
-!
-!--    Large scale advection
-       IF ( large_scale_forcing )  THEN
-          CALL ls_advec( simulated_time, 'q' )
-       ENDIF
-
-!
-!--    Nudging
-       IF ( nudging )  CALL nudge( simulated_time, 'q' )
-
-!
-!--    If required compute influence of large-scale subsidence/ascent
-       IF ( large_scale_subsidence  .AND.                                      &
-            .NOT. use_subsidence_tendencies )  THEN
-         CALL subsidence( tend, q, q_init, 3 )
-       ENDIF
-
-       CALL user_actions( 'q-tendency' )
-
-!
-!--    Prognostic equation for total water content
-       DO  i = nxl, nxr
-          DO  j = nys, nyn
-             DO  k = nzb+1, nzt
-                q_p(k,j,i) = q(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +        &
-                                                 tsc(3) * tq_m(k,j,i) )        &
-                                               - tsc(5) * rdf_sc(k) *          &
-                                                      ( q(k,j,i) - q_init(k) ) &
-                                        ) * MERGE( 1.0_wp, 0.0_wp,             &
-                                                   BTEST( wall_flags_0(k,j,i), 0 ) &
-                                                 )
-                IF ( q_p(k,j,i) < 0.0_wp )  q_p(k,j,i) = 0.1_wp * q(k,j,i)
-             ENDDO
-          ENDDO
-       ENDDO
-
-!
-!--    Calculate tendencies for the next Runge-Kutta step
-       IF ( timestep_scheme(1:5) == 'runge' )  THEN
-          IF ( intermediate_timestep_count == 1 )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb+1, nzt
-                      tq_m(k,j,i) = tend(k,j,i)
-                   ENDDO
-                ENDDO
-             ENDDO
-          ELSEIF ( intermediate_timestep_count < &
-                   intermediate_timestep_count_max )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb+1, nzt
-                      tq_m(k,j,i) =   -9.5625_wp * tend(k,j,i)                 &
-                                     + 5.3125_wp * tq_m(k,j,i)
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
-       ENDIF
-
-       CALL cpu_log( log_point(29), 'q-equation', 'stop' )
-
-!
-!--    If required, calculate prognostic equations for cloud water content
-!--    and cloud drop concentration
-       IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
-
-          CALL cpu_log( log_point(67), 'qc-equation', 'start' )
-
-!
-!--       Calculate prognostic equation for cloud water content
-          sbt = tsc(2)
-          IF ( scalar_advec == 'bc-scheme' )  THEN
-
-             IF ( timestep_scheme(1:5) /= 'runge' )  THEN
-!
-!--             Bott-Chlond scheme always uses Euler time step. Thus:
-                sbt = 1.0_wp
-             ENDIF
-             tend = 0.0_wp
-             CALL advec_s_bc( qc, 'qc' )
-
-          ENDIF
-
-!
-!--       qc-tendency terms with no communication
-          IF ( scalar_advec /= 'bc-scheme' )  THEN
-             tend = 0.0_wp
-             IF ( timestep_scheme(1:5) == 'runge' )  THEN
-                IF ( ws_scheme_sca )  THEN
-                   CALL advec_s_ws( qc, 'qc' )
-                ELSE
-                   CALL advec_s_pw( qc )
-                ENDIF
-             ELSE
-                CALL advec_s_up( qc )
-             ENDIF
-          ENDIF
-
-          CALL diffusion_s( qc,                                                &
-                            surf_def_h(0)%qcsws, surf_def_h(1)%qcsws,          &
-                            surf_def_h(2)%qcsws,                               &
-                            surf_lsm_h%qcsws,    surf_usm_h%qcsws,             &
-                            surf_def_v(0)%qcsws, surf_def_v(1)%qcsws,          &
-                            surf_def_v(2)%qcsws, surf_def_v(3)%qcsws,          &
-                            surf_lsm_v(0)%qcsws, surf_lsm_v(1)%qcsws,          &
-                            surf_lsm_v(2)%qcsws, surf_lsm_v(3)%qcsws,          &
-                            surf_usm_v(0)%qcsws, surf_usm_v(1)%qcsws,          &
-                            surf_usm_v(2)%qcsws, surf_usm_v(3)%qcsws )
-
-!
-!--       Prognostic equation for cloud water content
-          DO  i = nxl, nxr
-             DO  j = nys, nyn
-                DO  k = nzb+1, nzt
-                   qc_p(k,j,i) = qc(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +   &
-                                                      tsc(3) * tqc_m(k,j,i) )  &
-                                                    - tsc(5) * rdf_sc(k) *     &
-                                                               qc(k,j,i)       &
-                                             )                                 &
-                                    * MERGE( 1.0_wp, 0.0_wp,                   &
-                                             BTEST( wall_flags_0(k,j,i), 0 )   &
-                                          )
-                   IF ( qc_p(k,j,i) < 0.0_wp )  qc_p(k,j,i) = 0.0_wp
-                ENDDO
-             ENDDO
-          ENDDO
-
-!
-!--       Calculate tendencies for the next Runge-Kutta step
-          IF ( timestep_scheme(1:5) == 'runge' )  THEN
-             IF ( intermediate_timestep_count == 1 )  THEN
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb+1, nzt
-                         tqc_m(k,j,i) = tend(k,j,i)
-                      ENDDO
-                   ENDDO
-                ENDDO
-             ELSEIF ( intermediate_timestep_count < &
-                      intermediate_timestep_count_max )  THEN
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb+1, nzt
-                         tqc_m(k,j,i) =   -9.5625_wp * tend(k,j,i)             &
-                                         + 5.3125_wp * tqc_m(k,j,i)
-                      ENDDO
-                   ENDDO
-                ENDDO
-             ENDIF
-          ENDIF
-
-          CALL cpu_log( log_point(67), 'qc-equation', 'stop' )
-          CALL cpu_log( log_point(68), 'nc-equation', 'start' )
-
-!
-!--       Calculate prognostic equation for cloud drop concentration
-          sbt = tsc(2)
-          IF ( scalar_advec == 'bc-scheme' )  THEN
-
-             IF ( timestep_scheme(1:5) /= 'runge' )  THEN
-!
-!--             Bott-Chlond scheme always uses Euler time step. Thus:
-                sbt = 1.0_wp
-             ENDIF
-             tend = 0.0_wp
-             CALL advec_s_bc( nc, 'nc' )
-
-          ENDIF
-
-!
-!--       nc-tendency terms with no communication
-          IF ( scalar_advec /= 'bc-scheme' )  THEN
-             tend = 0.0_wp
-             IF ( timestep_scheme(1:5) == 'runge' )  THEN
-                IF ( ws_scheme_sca )  THEN
-                   CALL advec_s_ws( nc, 'nc' )
-                ELSE
-                   CALL advec_s_pw( nc )
-                ENDIF
-             ELSE
-                CALL advec_s_up( nc )
-             ENDIF
-          ENDIF
-
-          CALL diffusion_s( nc,                                                &
-                            surf_def_h(0)%ncsws, surf_def_h(1)%ncsws,          &
-                            surf_def_h(2)%ncsws,                               &
-                            surf_lsm_h%ncsws,    surf_usm_h%ncsws,             & 
-                            surf_def_v(0)%ncsws, surf_def_v(1)%ncsws,          &
-                            surf_def_v(2)%ncsws, surf_def_v(3)%ncsws,          &
-                            surf_lsm_v(0)%ncsws, surf_lsm_v(1)%ncsws,          &
-                            surf_lsm_v(2)%ncsws, surf_lsm_v(3)%ncsws,          &
-                            surf_usm_v(0)%ncsws, surf_usm_v(1)%ncsws,          &
-                            surf_usm_v(2)%ncsws, surf_usm_v(3)%ncsws )
-
-!
-!--       Prognostic equation for cloud drop concentration
-          DO  i = nxl, nxr
-             DO  j = nys, nyn
-                DO  k = nzb+1, nzt
-                   nc_p(k,j,i) = nc(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +   &
-                                                      tsc(3) * tnc_m(k,j,i) )  &
-                                                    - tsc(5) * rdf_sc(k) *     &
-                                                               nc(k,j,i)       &
-                                             )                                 &
-                                   * MERGE( 1.0_wp, 0.0_wp,                    &
-                                             BTEST( wall_flags_0(k,j,i), 0 )   &
-                                          )
-                   IF ( nc_p(k,j,i) < 0.0_wp )  nc_p(k,j,i) = 0.0_wp
-                ENDDO
-             ENDDO
-          ENDDO
-
-!
-!--       Calculate tendencies for the next Runge-Kutta step
-          IF ( timestep_scheme(1:5) == 'runge' )  THEN
-             IF ( intermediate_timestep_count == 1 )  THEN
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb+1, nzt
-                         tnc_m(k,j,i) = tend(k,j,i)
-                      ENDDO
-                   ENDDO
-                ENDDO
-             ELSEIF ( intermediate_timestep_count < &
-                      intermediate_timestep_count_max )  THEN
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb+1, nzt
-                         tnc_m(k,j,i) =  -9.5625_wp * tend(k,j,i)             &
-                                         + 5.3125_wp * tnc_m(k,j,i)
-                      ENDDO
-                   ENDDO
-                ENDDO
-             ENDIF
-          ENDIF
-
-          CALL cpu_log( log_point(68), 'nc-equation', 'stop' )
-
-       ENDIF
-!
-!--    If required, calculate prognostic equations for rain water content
-!--    and rain drop concentration
-       IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
-
-          CALL cpu_log( log_point(52), 'qr-equation', 'start' )
-
-!
-!--       Calculate prognostic equation for rain water content
-          sbt = tsc(2)
-          IF ( scalar_advec == 'bc-scheme' )  THEN
-
-             IF ( timestep_scheme(1:5) /= 'runge' )  THEN
-!
-!--             Bott-Chlond scheme always uses Euler time step. Thus:
-                sbt = 1.0_wp
-             ENDIF
-             tend = 0.0_wp
-             CALL advec_s_bc( qr, 'qr' )
-
-          ENDIF
-
-!
-!--       qr-tendency terms with no communication
-          IF ( scalar_advec /= 'bc-scheme' )  THEN
-             tend = 0.0_wp
-             IF ( timestep_scheme(1:5) == 'runge' )  THEN
-                IF ( ws_scheme_sca )  THEN
-                   CALL advec_s_ws( qr, 'qr' )
-                ELSE
-                   CALL advec_s_pw( qr )
-                ENDIF
-             ELSE
-                CALL advec_s_up( qr )
-             ENDIF
-          ENDIF
-
-          CALL diffusion_s( qr,                                                &
-                            surf_def_h(0)%qrsws, surf_def_h(1)%qrsws,          &
-                            surf_def_h(2)%qrsws,                               &
-                            surf_lsm_h%qrsws,    surf_usm_h%qrsws,             &
-                            surf_def_v(0)%qrsws, surf_def_v(1)%qrsws,          &
-                            surf_def_v(2)%qrsws, surf_def_v(3)%qrsws,          &
-                            surf_lsm_v(0)%qrsws, surf_lsm_v(1)%qrsws,          &
-                            surf_lsm_v(2)%qrsws, surf_lsm_v(3)%qrsws,          &
-                            surf_usm_v(0)%qrsws, surf_usm_v(1)%qrsws,          &
-                            surf_usm_v(2)%qrsws, surf_usm_v(3)%qrsws )
-
-!
-!--       Prognostic equation for rain water content
-          DO  i = nxl, nxr
-             DO  j = nys, nyn
-                DO  k = nzb+1, nzt
-                   qr_p(k,j,i) = qr(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +   &
-                                                      tsc(3) * tqr_m(k,j,i) )  &
-                                                    - tsc(5) * rdf_sc(k) *     &
-                                                               qr(k,j,i)       &
-                                             )                                 &
-                                    * MERGE( 1.0_wp, 0.0_wp,                   &
-                                             BTEST( wall_flags_0(k,j,i), 0 )   &
-                                          )
-                   IF ( qr_p(k,j,i) < 0.0_wp )  qr_p(k,j,i) = 0.0_wp
-                ENDDO
-             ENDDO
-          ENDDO
-
-!
-!--       Calculate tendencies for the next Runge-Kutta step
-          IF ( timestep_scheme(1:5) == 'runge' )  THEN
-             IF ( intermediate_timestep_count == 1 )  THEN
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb+1, nzt
-                         tqr_m(k,j,i) = tend(k,j,i)
-                      ENDDO
-                   ENDDO
-                ENDDO
-             ELSEIF ( intermediate_timestep_count < &
-                      intermediate_timestep_count_max )  THEN
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb+1, nzt
-                         tqr_m(k,j,i) =   -9.5625_wp * tend(k,j,i)             &
-                                         + 5.3125_wp * tqr_m(k,j,i)
-                      ENDDO
-                   ENDDO
-                ENDDO
-             ENDIF
-          ENDIF
-
-          CALL cpu_log( log_point(52), 'qr-equation', 'stop' )
-          CALL cpu_log( log_point(53), 'nr-equation', 'start' )
-
-!
-!--       Calculate prognostic equation for rain drop concentration
-          sbt = tsc(2)
-          IF ( scalar_advec == 'bc-scheme' )  THEN
-
-             IF ( timestep_scheme(1:5) /= 'runge' )  THEN
-!
-!--             Bott-Chlond scheme always uses Euler time step. Thus:
-                sbt = 1.0_wp
-             ENDIF
-             tend = 0.0_wp
-             CALL advec_s_bc( nr, 'nr' )
-
-          ENDIF
-
-!
-!--       nr-tendency terms with no communication
-          IF ( scalar_advec /= 'bc-scheme' )  THEN
-             tend = 0.0_wp
-             IF ( timestep_scheme(1:5) == 'runge' )  THEN
-                IF ( ws_scheme_sca )  THEN
-                   CALL advec_s_ws( nr, 'nr' )
-                ELSE
-                   CALL advec_s_pw( nr )
-                ENDIF
-             ELSE
-                CALL advec_s_up( nr )
-             ENDIF
-          ENDIF
-
-          CALL diffusion_s( nr,                                                &
-                            surf_def_h(0)%nrsws, surf_def_h(1)%nrsws,          &
-                            surf_def_h(2)%nrsws,                               &
-                            surf_lsm_h%nrsws,    surf_usm_h%nrsws,             & 
-                            surf_def_v(0)%nrsws, surf_def_v(1)%nrsws,          &
-                            surf_def_v(2)%nrsws, surf_def_v(3)%nrsws,          &
-                            surf_lsm_v(0)%nrsws, surf_lsm_v(1)%nrsws,          &
-                            surf_lsm_v(2)%nrsws, surf_lsm_v(3)%nrsws,          &
-                            surf_usm_v(0)%nrsws, surf_usm_v(1)%nrsws,          &
-                            surf_usm_v(2)%nrsws, surf_usm_v(3)%nrsws )
-
-!
-!--       Prognostic equation for rain drop concentration
-          DO  i = nxl, nxr
-             DO  j = nys, nyn
-                DO  k = nzb+1, nzt
-                   nr_p(k,j,i) = nr(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +   &
-                                                      tsc(3) * tnr_m(k,j,i) )  &
-                                                    - tsc(5) * rdf_sc(k) *     &
-                                                               nr(k,j,i)       &
-                                             )                                 &
-                                   * MERGE( 1.0_wp, 0.0_wp,                    &
-                                             BTEST( wall_flags_0(k,j,i), 0 )   &
-                                          )
-                   IF ( nr_p(k,j,i) < 0.0_wp )  nr_p(k,j,i) = 0.0_wp
-                ENDDO
-             ENDDO
-          ENDDO
-
-!
-!--       Calculate tendencies for the next Runge-Kutta step
-          IF ( timestep_scheme(1:5) == 'runge' )  THEN
-             IF ( intermediate_timestep_count == 1 )  THEN
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb+1, nzt
-                         tnr_m(k,j,i) = tend(k,j,i)
-                      ENDDO
-                   ENDDO
-                ENDDO
-             ELSEIF ( intermediate_timestep_count < &
-                      intermediate_timestep_count_max )  THEN
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb+1, nzt
-                         tnr_m(k,j,i) =  -9.5625_wp * tend(k,j,i)             &
-                                         + 5.3125_wp * tnr_m(k,j,i)
-                      ENDDO
-                   ENDDO
-                ENDDO
-             ENDIF
-          ENDIF
-
-          CALL cpu_log( log_point(53), 'nr-equation', 'stop' )
-
-       ENDIF
-
-    ENDIF
-!
 !-- If required, compute prognostic equation for scalar
     IF ( passive_scalar )  THEN
 
@@ -2400,49 +1311,6 @@
                          surf_usm_v(2)%ssws, surf_usm_v(3)%ssws )
 
 !
-!--    Sink or source of humidity due to canopy elements
-       IF ( plant_canopy ) CALL pcm_tendency( 7 )
-
-!
-!--    Large scale advection. Not implemented for scalars so far.
-!        IF ( large_scale_forcing )  THEN
-!           CALL ls_advec( simulated_time, 'q' )
-!        ENDIF
-
-!
-!--    Nudging. Not implemented for scalars so far.
-!        IF ( nudging )  CALL nudge( simulated_time, 'q' )
-
-!
-!--    If required compute influence of large-scale subsidence/ascent.
-!--    Not implemented for scalars so far.
-       IF ( large_scale_subsidence  .AND.                                      &
-            .NOT. use_subsidence_tendencies  .AND.                             &
-            .NOT. large_scale_forcing )  THEN
-         CALL subsidence( tend, s, s_init, 3 )
-       ENDIF
-
-       CALL user_actions( 's-tendency' )
-
-!
-!--    Prognostic equation for total water content
-       DO  i = nxl, nxr
-          DO  j = nys, nyn
-             DO  k = nzb+1, nzt
-                s_p(k,j,i) = s(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +        &
-                                                 tsc(3) * ts_m(k,j,i) )        &
-                                               - tsc(5) * rdf_sc(k) *          &
-                                                    ( s(k,j,i) - s_init(k) )   &
-                                        )                                      &
-                                   * MERGE( 1.0_wp, 0.0_wp,                    &
-                                             BTEST( wall_flags_0(k,j,i), 0 )   &
-                                          )
-                IF ( s_p(k,j,i) < 0.0_wp )  s_p(k,j,i) = 0.1_wp * s(k,j,i)
-             ENDDO
-          ENDDO
-       ENDDO
-
-!
 !--    Calculate tendencies for the next Runge-Kutta step
        IF ( timestep_scheme(1:5) == 'runge' )  THEN
           IF ( intermediate_timestep_count == 1 )  THEN
@@ -2471,24 +1339,6 @@
     ENDIF
 
     CALL tcm_prognostic()
-
-!
-!-- If required, compute prognostic equation for chemical quantites
-    IF ( air_chemistry )  THEN
-       CALL cpu_log( log_point(83), '(chem advec+diff+prog)', 'start' )
-!
-!--    Loop over chemical species
-       DO  lsp = 1, nvar                         
-          CALL chem_prognostic_equations ( chem_species(lsp)%conc_p,           &
-                                           chem_species(lsp)%conc,             &
-                                           chem_species(lsp)%tconc_m,          &
-                                           chem_species(lsp)%conc_pr_init,     &
-                                           lsp )       
-       ENDDO
-
-       CALL cpu_log( log_point(83), '(chem advec+diff+prog)', 'stop' )             
-    ENDIF   ! Chemicals equations
-
 
  END SUBROUTINE prognostic_equations_vector
 

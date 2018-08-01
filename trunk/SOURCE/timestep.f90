@@ -147,20 +147,11 @@
 
     USE kinds
 
-    USE microphysics_mod,                                                      &
-        ONLY:  dt_precipitation
-
     USE pegrid
-
-    USE pmc_interface,                                                         &
-        ONLY:  nested_run
 
     USE statistics,                                                            &
         ONLY:  flow_statistics_called, hom, u_max, u_max_ijk, v_max, v_max_ijk,&
                w_max, w_max_ijk
-
-    USE vertical_nesting_mod,                                                  &
-        ONLY:  vnested, vnest_timestep_sync
 
     IMPLICIT NONE
 
@@ -331,7 +322,7 @@
 !--    The time step is the minimum of the 3-4 components and the diffusion time
 !--    step minus a reduction (cfl_factor) to be on the safe side.
 !--    The time step must not exceed the maximum allowed value.
-       dt_3d = cfl_factor * MIN( dt_diff, dt_u, dt_v, dt_w, dt_precipitation )
+       dt_3d = cfl_factor * MIN( dt_diff, dt_u, dt_v, dt_w )
        dt_3d = MIN( dt_3d, dt_max )
 !
 !--    In RANS mode, the time step must not increase by more than a factor of 2
@@ -396,18 +387,6 @@
        ENDIF
 
 !
-!--    In case of nested runs all parent/child processes have to terminate if
-!--    one process has set the stop flag, i.e. they need to set the stop flag
-!--    too.
-       IF ( nested_run )  THEN
-          stop_dt_local = stop_dt
-#if defined( __parallel )
-          CALL MPI_ALLREDUCE( stop_dt_local, stop_dt, 1, MPI_LOGICAL, MPI_LOR, &
-                              MPI_COMM_WORLD, ierr )
-#endif
-       ENDIF
-
-!
 !--    Ensure a smooth value (two significant digits) of the timestep.
        div = 1000.0_wp
        DO  WHILE ( dt_3d < div )
@@ -418,9 +397,6 @@
     ENDIF
 
 !
-!-- Vertical nesting: coarse and fine grid timestep has to be identical    
-    IF ( vnested )  CALL vnest_timestep_sync
-
     CALL cpu_log( log_point(12), 'calculate_timestep', 'stop' )
 
  END SUBROUTINE timestep

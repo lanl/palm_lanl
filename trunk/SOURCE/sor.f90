@@ -172,21 +172,6 @@
        CALL exchange_horiz( p, nbgp )
 
 !
-!--    Horizontal (Neumann) boundary conditions in case of non-cyclic boundaries
-       IF ( .NOT. bc_lr_cyc )  THEN
-          IF ( inflow_l      .OR.  outflow_l  .OR.                                 &
-               nest_bound_l  .OR.  force_bound_l )  p(:,:,nxl-1) = p(:,:,nxl)
-          IF ( inflow_r      .OR.  outflow_r  .OR.                                 &
-               nest_bound_r  .OR.  force_bound_r )  p(:,:,nxr+1) = p(:,:,nxr)
-       ENDIF
-       IF ( .NOT. bc_ns_cyc )  THEN
-          IF ( inflow_n      .OR.  outflow_n  .OR.                                 &
-               nest_bound_n  .OR.  force_bound_n )  p(:,nyn+1,:) = p(:,nyn,:)
-          IF ( inflow_s      .OR.  outflow_s  .OR.                                 &
-               nest_bound_s  .OR.  force_bound_s )  p(:,nys-1,:) = p(:,nys,:)
-       ENDIF
-
-!
 !--    BLACK-part
        DO  i = nxl1, nxr, 2
           DO  j = nys1, nyn, 2
@@ -238,20 +223,6 @@
        ENDIF
 
 !
-!--    Horizontal (Neumann) boundary conditions in case of non-cyclic boundaries
-       IF ( .NOT. bc_lr_cyc )  THEN
-          IF ( inflow_l      .OR.  outflow_l  .OR.                             &
-               nest_bound_l  .OR.  force_bound_l )  p(:,:,nxl-1) = p(:,:,nxl)
-          IF ( inflow_r      .OR.  outflow_r  .OR.                             &
-               nest_bound_r  .OR.  force_bound_r )  p(:,:,nxr+1) = p(:,:,nxr)
-       ENDIF
-       IF ( .NOT. bc_ns_cyc )  THEN
-          IF ( inflow_n      .OR.  outflow_n  .OR.                             &
-               nest_bound_n  .OR.  force_bound_n )  p(:,nyn+1,:) = p(:,nyn,:)
-          IF ( inflow_s      .OR.  outflow_s  .OR.                             &
-               nest_bound_s  .OR.  force_bound_s )  p(:,nys-1,:) = p(:,nys,:)
-       ENDIF
-
 
     ENDDO
 

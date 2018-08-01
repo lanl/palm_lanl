@@ -135,12 +135,6 @@
 
 #endif
 
-    USE chemistry_model_mod,                                                   &
-        ONLY:  chem_swap_timelevel 
-
-    USE land_surface_model_mod,                                                &
-        ONLY: lsm_swap_timelevel
-
     USE cpulog,                                                                &
         ONLY: cpu_log, log_point
 
@@ -150,20 +144,12 @@
                microphysics_morrison, microphysics_seifert, neutral, ocean,    &
                passive_scalar, timestep_count, urban_surface
 
-    USE gust_mod,                                                              &
-        ONLY: gust_module_enabled, gust_swap_timelevel
-
     USE indices,                                                               &
         ONLY:  nxlg, nxrg, nyng, nysg, nzb, nzt
 
-    USE pmc_interface,                                                         &
-        ONLY: nested_run, pmci_set_swaplevel
 
     USE turbulence_closure_mod,                                                &
         ONLY:  tcm_swap_timelevel
-
-    USE urban_surface_mod,                                                     &
-        ONLY:  usm_swap_timelevel
 
 
     IMPLICIT NONE
@@ -193,36 +179,9 @@
 
     CALL tcm_swap_timelevel ( 0 )
 
-    IF ( ocean )  THEN
-       sa = sa_p
-    ENDIF
-
-    IF ( humidity )  THEN
-       q = q_p
-       IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
-          qc = qc_p
-          nc = nc_p
-       ENDIF             
-       IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
-          qr = qr_p
-          nr = nr_p
-       ENDIF
-    ENDIF
+    sa = sa_p
 
     IF ( passive_scalar )  s = s_p             
-
-    IF ( land_surface )  THEN
-       CALL lsm_swap_timelevel ( 0 )
-    ENDIF
-
-    IF ( urban_surface )  THEN
-       CALL usm_swap_timelevel ( 0 )
-    ENDIF
-
-    IF ( gust_module_enabled )  THEN
-       CALL gust_swap_timelevel ( 0 )
-    ENDIF
-
 
     CALL cpu_log( log_point(28), 'swap_timelevel (nop)', 'stop' )
 #else
@@ -238,25 +197,10 @@
           IF ( .NOT. neutral )  THEN
              pt => pt_1;  pt_p => pt_2
           ENDIF
-          IF ( ocean )  THEN
-             sa => sa_1;  sa_p => sa_2
-          ENDIF
-          IF ( humidity )  THEN
-             q => q_1;    q_p => q_2
-             IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
-                qc => qc_1;    qc_p => qc_2
-                nc => nc_1;    nc_p => nc_2
-             ENDIF
-             IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
-                qr => qr_1;    qr_p => qr_2
-                nr => nr_1;    nr_p => nr_2
-             ENDIF
-          ENDIF
+          sa => sa_1;  sa_p => sa_2
           IF ( passive_scalar )  THEN
              s => s_1;    s_p => s_2
           ENDIF
-
-          IF ( air_chemistry )  CALL chem_swap_timelevel(0)
 
           swap_level = 1
 
@@ -268,47 +212,14 @@
           IF ( .NOT. neutral )  THEN
              pt => pt_2;  pt_p => pt_1
           ENDIF
-          IF ( ocean )  THEN
-             sa => sa_2;  sa_p => sa_1
-          ENDIF
-          IF ( humidity )  THEN
-             q => q_2;    q_p => q_1
-             IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
-                qc => qc_2;    qc_p => qc_1
-                nc => nc_2;    nc_p => nc_1
-             ENDIF
-             IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
-                qr => qr_2;    qr_p => qr_1
-                nr => nr_2;    nr_p => nr_1
-             ENDIF
-          ENDIF
+          sa => sa_2;  sa_p => sa_1
           IF ( passive_scalar )  THEN
              s => s_2;    s_p => s_1
           ENDIF
 
-          IF ( air_chemistry )  CALL chem_swap_timelevel(1)
-
           swap_level = 2
 
     END SELECT
-
-    CALL tcm_swap_timelevel ( MOD( timestep_count, 2) )
-
-    IF ( land_surface )  THEN
-       CALL lsm_swap_timelevel ( MOD( timestep_count, 2) )
-    ENDIF
-
-    IF ( urban_surface )  THEN
-       CALL usm_swap_timelevel ( MOD( timestep_count, 2) )
-    ENDIF
-
-    IF ( gust_module_enabled )  THEN
-       CALL gust_swap_timelevel ( MOD( timestep_count, 2) )
-    ENDIF
-
-!
-!-- Set the swap level for steering the pmc data transfer
-    IF ( nested_run )  CALL pmci_set_swaplevel( swap_level )
 
     CALL cpu_log( log_point(28), 'swap_timelevel', 'stop' )
 #endif

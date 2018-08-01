@@ -78,8 +78,6 @@
     
     USE pegrid
 
-    USE vertical_nesting_mod
-
     IMPLICIT NONE
 
 !
@@ -107,13 +105,7 @@
     IF ( myid == 0 )  THEN
        READ (*,*,ERR=10,END=10)  coupling_mode, bc_data(1), bc_data(2)
 10     CONTINUE
-       IF ( TRIM( coupling_mode ) == 'coupled_run' )  THEN
-          i = 1
-       ELSEIF ( TRIM( coupling_mode ) == 'vnested_twi' )  THEN
-          i = 9
-       ELSE
-          i = 0
-       ENDIF
+       i = 0
        bc_data(0) = i
 
 !
@@ -140,8 +132,6 @@
 
 !
 !--    Set a flag to identify runs with vertical nesting
-       vnested = .TRUE.
-       
        comm_inter = MPI_COMM_WORLD
        
 !

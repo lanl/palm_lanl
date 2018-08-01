@@ -282,9 +282,6 @@
                sa, u, ug, v, vg, vpt, w, w_subs, waterflux_output_conversion,  &
                zw, alpha_T, beta_S, solar3d
         
-    USE cloud_parameters,                                                      &
-        ONLY:   l_d_cp, pt_d_t
-        
     USE control_parameters,                                                    &
         ONLY:   average_count_pr, cloud_droplets, cloud_physics, do_sum,       &
                 dt_3d, g, humidity, initializing_actions, kappa, land_surface, &
@@ -301,18 +298,12 @@
     USE grid_variables,                                                        &
         ONLY:   ddx, ddy
 
-    USE gust_mod,                                                              &
-        ONLY:  gust_module_enabled, gust_statistics
-        
     USE indices,                                                               &
         ONLY:   ngp_2dh, ngp_2dh_s_inner, ngp_3d, ngp_3d_inner, ngp_sums,      &
                 ngp_sums_ls, nxl, nxr, nyn, nys, nzb, nzt, topo_min_level,     &
                 wall_flags_0
         
     USE kinds
-
-    USE land_surface_model_mod,                                                &
-        ONLY:   m_soil_h, nzb_soil, nzt_soil, t_soil_h
 
     USE lsf_nudging_mod,                                                       &
         ONLY:   td_lsa_lpt, td_lsa_q, td_sub_lpt, td_sub_q, time_vert
@@ -322,20 +313,10 @@
 
     USE pegrid
 
-    USE radiation_model_mod,                                                   &
-        ONLY:  radiation, radiation_scheme,                                    &
-               rad_lw_in, rad_lw_out, rad_lw_cs_hr, rad_lw_hr,                 &
-               rad_sw_in, rad_sw_out, rad_sw_cs_hr, rad_sw_hr
-
-#if defined ( __rrtmg )
-    USE radiation_model_mod,                                                   &
-        ONLY:  rrtm_aldif, rrtm_aldir, rrtm_asdif, rrtm_asdir
-#endif
-  
     USE statistics
 
        USE surface_mod,                                                        &
-          ONLY :  surf_def_h, surf_lsm_h, surf_usm_h
+          ONLY :  surf_def_h
 
 
     IMPLICIT NONE
@@ -447,14 +428,13 @@
 
        ENDIF
 
+
        IF ( ws_scheme_sca .AND. sr == 0 )  THEN
 
           DO  i = 0, threads_per_task-1
              sums_l(:,17,i)                        = sums_wspts_ws_l(:,i)      &
                                            * heatflux_output_conversion  ! w*pt*
              IF ( ocean          ) sums_l(:,66,i)  = sums_wssas_ws_l(:,i) ! w*sa*
-             IF ( humidity       ) sums_l(:,49,i)  = sums_wsqs_ws_l(:,i)       &
-                                           * waterflux_output_conversion  ! w*q*
              IF ( passive_scalar ) sums_l(:,114,i) = sums_wsss_ws_l(:,i)  ! w*s*
           ENDDO
 
@@ -498,42 +478,6 @@
        ENDIF
 
 !
-!--    Horizontally averaged profiles of virtual potential temperature,
-!--    total water content, water vapor mixing ratio and liquid water potential
-!--    temperature
-       IF ( humidity )  THEN
-          !$OMP DO
-          DO  i = nxl, nxr
-             DO  j =  nys, nyn
-                DO  k = nzb, nzt+1
-                   flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 22 ) )
-                   sums_l(k,44,tn)  = sums_l(k,44,tn) +                        &
-                                      vpt(k,j,i) * rmask(j,i,sr) * flag
-                   sums_l(k,41,tn)  = sums_l(k,41,tn) +                        &
-                                      q(k,j,i) * rmask(j,i,sr)   * flag
-                ENDDO
-             ENDDO
-          ENDDO
-          IF ( cloud_physics )  THEN
-             !$OMP DO
-             DO  i = nxl, nxr
-                DO  j =  nys, nyn
-                   DO  k = nzb, nzt+1
-                      flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 22 ) )
-                      sums_l(k,42,tn) = sums_l(k,42,tn) +                      &
-                                      ( q(k,j,i) - ql(k,j,i) ) * rmask(j,i,sr) &
-                                                               * flag
-                      sums_l(k,43,tn) = sums_l(k,43,tn) + (                    &
-                                      pt(k,j,i) + l_d_cp*pt_d_t(k) * ql(k,j,i) &
-                                                          ) * rmask(j,i,sr)    &
-                                                            * flag
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
-       ENDIF
-
-!
 !--    Horizontally averaged profiles of passive scalar
        IF ( passive_scalar )  THEN
           !$OMP DO
@@ -559,14 +503,6 @@
              IF ( ocean )  THEN
                 sums_l(:,23,0) = sums_l(:,23,0) + sums_l(:,23,i)
              ENDIF
-             IF ( humidity )  THEN
-                sums_l(:,41,0) = sums_l(:,41,0) + sums_l(:,41,i)
-                sums_l(:,44,0) = sums_l(:,44,0) + sums_l(:,44,i)
-                IF ( cloud_physics )  THEN
-                   sums_l(:,42,0) = sums_l(:,42,0) + sums_l(:,42,i)
-                   sums_l(:,43,0) = sums_l(:,43,0) + sums_l(:,43,i)
-                ENDIF
-             ENDIF
              IF ( passive_scalar )  THEN
                 sums_l(:,115,0) = sums_l(:,115,0) + sums_l(:,115,i)
              ENDIF
@@ -590,23 +526,6 @@
           CALL MPI_ALLREDUCE( sums_l(nzb,23,0), sums(nzb,23), nzt+2-nzb,       &
                               MPI_REAL, MPI_SUM, comm2d, ierr )
        ENDIF
-       IF ( humidity ) THEN
-          IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-          CALL MPI_ALLREDUCE( sums_l(nzb,44,0), sums(nzb,44), nzt+2-nzb,       &
-                              MPI_REAL, MPI_SUM, comm2d, ierr )
-          IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-          CALL MPI_ALLREDUCE( sums_l(nzb,41,0), sums(nzb,41), nzt+2-nzb,       &
-                              MPI_REAL, MPI_SUM, comm2d, ierr )
-          IF ( cloud_physics ) THEN
-             IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-             CALL MPI_ALLREDUCE( sums_l(nzb,42,0), sums(nzb,42), nzt+2-nzb,    &
-                                 MPI_REAL, MPI_SUM, comm2d, ierr )
-             IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-             CALL MPI_ALLREDUCE( sums_l(nzb,43,0), sums(nzb,43), nzt+2-nzb,    &
-                                 MPI_REAL, MPI_SUM, comm2d, ierr )
-          ENDIF
-       ENDIF
-
        IF ( passive_scalar )  THEN
           IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
           CALL MPI_ALLREDUCE( sums_l(nzb,115,0), sums(nzb,115), nzt+2-nzb,       &
@@ -617,14 +536,6 @@
        sums(:,2) = sums_l(:,2,0)
        sums(:,4) = sums_l(:,4,0)
        IF ( ocean )  sums(:,23) = sums_l(:,23,0)
-       IF ( humidity ) THEN
-          sums(:,44) = sums_l(:,44,0)
-          sums(:,41) = sums_l(:,41,0)
-          IF ( cloud_physics ) THEN
-             sums(:,42) = sums_l(:,42,0)
-             sums(:,43) = sums_l(:,43,0)
-          ENDIF
-       ENDIF
        IF ( passive_scalar )  sums(:,115) = sums_l(:,115,0)
 #endif
 
@@ -644,21 +555,6 @@
        IF ( ocean )  THEN
           sums(:,23) = sums(:,23) / ngp_2dh_s_inner(:,sr)
           hom(:,1,23,sr) = sums(:,23)             ! sa
-       ENDIF
-
-!
-!--    Humidity and cloud parameters
-       IF ( humidity ) THEN
-          sums(:,44) = sums(:,44) / ngp_2dh_s_inner(:,sr)
-          sums(:,41) = sums(:,41) / ngp_2dh_s_inner(:,sr)
-          hom(:,1,44,sr) = sums(:,44)             ! vpt
-          hom(:,1,41,sr) = sums(:,41)             ! qv (q)
-          IF ( cloud_physics ) THEN
-             sums(:,42) = sums(:,42) / ngp_2dh_s_inner(:,sr)
-             sums(:,43) = sums(:,43) / ngp_2dh_s_inner(:,sr)
-             hom(:,1,42,sr) = sums(:,42)             ! qv
-             hom(:,1,43,sr) = sums(:,43)             ! pt
-          ENDIF
        ENDIF
 
 !
@@ -704,11 +600,6 @@
                                   ( pt(k,j,i)-hom(k,1,4,sr) )**2 * rmask(j,i,sr)&
                                                                  * flag
 
-                IF ( humidity )  THEN
-                   sums_l(k,70,tn) = sums_l(k,70,tn) + &
-                                  ( q(k,j,i)-hom(k,1,41,sr) )**2 * rmask(j,i,sr)&
-                                                                 * flag
-                ENDIF
                 IF ( passive_scalar )  THEN
                    sums_l(k,116,tn) = sums_l(k,116,tn) + &
                                   ( s(k,j,i)-hom(k,1,115,sr) )**2 * rmask(j,i,sr)&
@@ -745,10 +636,6 @@
                                         surf_def_h(top_bottom_flag)%vsws(m) * rmask(j,i,sr)
                 sums_l(nzb+3,pr_palm,tn) = sums_l(nzb+3,pr_palm,tn) +          &
                                         surf_def_h(top_bottom_flag)%ts(m)   * rmask(j,i,sr)
-                IF ( humidity )  THEN
-                   sums_l(nzb+12,pr_palm,tn) = sums_l(nzb+12,pr_palm,tn) +     &
-                                            surf_def_h(top_bottom_flag)%qs(m)   * rmask(j,i,sr)
-                ENDIF
                 IF ( passive_scalar )  THEN
                    sums_l(nzb+13,pr_palm,tn) = sums_l(nzb+13,pr_palm,tn) +     &
                                             surf_def_h(top_bottom_flag)%ss(m)   * rmask(j,i,sr)
@@ -777,54 +664,6 @@
                             surf_def_h(2)%sasws(m) * rmask(j,i,sr)
 
             ENDIF
-            IF ( surf_lsm_h%end_index(j,i) >= surf_lsm_h%start_index(j,i) )  THEN
-                m = surf_lsm_h%start_index(j,i)
-                sums_l(nzb,pr_palm,tn)   = sums_l(nzb,pr_palm,tn) +            &
-                                        surf_lsm_h%us(m)   * rmask(j,i,sr)
-                sums_l(nzb+1,pr_palm,tn) = sums_l(nzb+1,pr_palm,tn) +          &
-                                        surf_lsm_h%usws(m) * rmask(j,i,sr)
-                sums_l(nzb+2,pr_palm,tn) = sums_l(nzb+2,pr_palm,tn) +          &
-                                        surf_lsm_h%vsws(m) * rmask(j,i,sr)
-                sums_l(nzb+3,pr_palm,tn) = sums_l(nzb+3,pr_palm,tn) +          &
-                                        surf_lsm_h%ts(m)   * rmask(j,i,sr)
-                IF ( humidity )  THEN
-                   sums_l(nzb+12,pr_palm,tn) = sums_l(nzb+12,pr_palm,tn) +     &
-                                            surf_lsm_h%qs(m)   * rmask(j,i,sr)
-                ENDIF
-                IF ( passive_scalar )  THEN
-                   sums_l(nzb+13,pr_palm,tn) = sums_l(nzb+13,pr_palm,tn) +     &
-                                            surf_lsm_h%ss(m)   * rmask(j,i,sr)
-                ENDIF
-!
-!--             Summation of surface temperature.
-                sums_l(nzb+14,pr_palm,tn) = sums_l(nzb+14,pr_palm,tn)   +      &
-                                            surf_lsm_h%pt_surface(m)    *      &
-                                            rmask(j,i,sr)
-             ENDIF
-             IF ( surf_usm_h%end_index(j,i) >= surf_usm_h%start_index(j,i) )  THEN
-                m = surf_usm_h%start_index(j,i)
-                sums_l(nzb,pr_palm,tn)   = sums_l(nzb,pr_palm,tn) +            &
-                                        surf_usm_h%us(m)   * rmask(j,i,sr)
-                sums_l(nzb+1,pr_palm,tn) = sums_l(nzb+1,pr_palm,tn) +          &
-                                        surf_usm_h%usws(m) * rmask(j,i,sr)
-                sums_l(nzb+2,pr_palm,tn) = sums_l(nzb+2,pr_palm,tn) +          &
-                                        surf_usm_h%vsws(m) * rmask(j,i,sr)
-                sums_l(nzb+3,pr_palm,tn) = sums_l(nzb+3,pr_palm,tn) +          &
-                                        surf_usm_h%ts(m)   * rmask(j,i,sr)
-                IF ( humidity )  THEN
-                   sums_l(nzb+12,pr_palm,tn) = sums_l(nzb+12,pr_palm,tn) +     &
-                                            surf_usm_h%qs(m)   * rmask(j,i,sr)
-                ENDIF
-                IF ( passive_scalar )  THEN
-                   sums_l(nzb+13,pr_palm,tn) = sums_l(nzb+13,pr_palm,tn) +     &
-                                            surf_usm_h%ss(m)   * rmask(j,i,sr)
-                ENDIF
-!
-!--             Summation of surface temperature.
-                sums_l(nzb+14,pr_palm,tn) = sums_l(nzb+14,pr_palm,tn)   +      &
-                                            surf_usm_h%pt_surface(m)    *      &
-                                            rmask(j,i,sr)
-             ENDIF
           ENDDO
        ENDDO
 
@@ -951,32 +790,6 @@
                 ENDIF
 
 !
-!--             Buoyancy flux, water flux (humidity flux) w"q"
-                IF ( humidity ) THEN
-                   sums_l(k,45,tn) = sums_l(k,45,tn)                           &
-                                         - 0.5_wp * ( kh(k,j,i) + kh(k+1,j,i) )&
-                                               * ( vpt(k+1,j,i) - vpt(k,j,i) ) &
-                                               * rho_air_zw(k)                 &
-                                               * heatflux_output_conversion(k) &
-                                               * ddzu(k+1) * rmask(j,i,sr) * flag
-                   sums_l(k,48,tn) = sums_l(k,48,tn)                           &
-                                         - 0.5_wp * ( kh(k,j,i) + kh(k+1,j,i) )&
-                                               * ( q(k+1,j,i) - q(k,j,i) )     &
-                                               * rho_air_zw(k)                 &
-                                               * waterflux_output_conversion(k)&
-                                               * ddzu(k+1) * rmask(j,i,sr) * flag
-
-                   IF ( cloud_physics ) THEN
-                      sums_l(k,51,tn) = sums_l(k,51,tn)                        &
-                                         - 0.5_wp * ( kh(k,j,i) + kh(k+1,j,i) )&
-                                               * ( ( q(k+1,j,i) - ql(k+1,j,i) )&
-                                                - ( q(k,j,i) - ql(k,j,i) ) )   &
-                                               * rho_air_zw(k)                 &
-                                               * waterflux_output_conversion(k)&
-                                               * ddzu(k+1) * rmask(j,i,sr) * flag
-                   ENDIF
-                ENDIF
-
 !
 !--             Passive scalar flux
                 IF ( passive_scalar )  THEN
@@ -1016,30 +829,6 @@
                             sums_l(k+ki,65,tn) = sums_l(k+ki,65,tn) + &
                                        surf_def_h(l)%sasws(m) * rmask(j,i,sr)  ! w"sa"
                          ENDIF
-                         IF ( humidity )  THEN
-                            sums_l(k+ki,48,tn) = sums_l(k+ki,48,tn) +                     &
-                                       waterflux_output_conversion(k+ki) *      &
-                                       surf_def_h(l)%qsws(m) * rmask(j,i,sr)  ! w"q" (w"qv")
-                            sums_l(k+ki,45,tn) = sums_l(k+ki,45,tn) + (                   &
-                                       ( 1.0_wp + 0.61_wp * q(k+ki,j,i) ) *     &
-                                       surf_def_h(l)%shf(m) + 0.61_wp * pt(k+ki,j,i) *      &
-                                                  surf_def_h(l)%qsws(m) )                  &
-                                       * heatflux_output_conversion(k+ki)
-                            IF ( cloud_droplets )  THEN
-                               sums_l(k+ki,45,tn) = sums_l(k+ki,45,tn) + (                &
-                                         ( 1.0_wp + 0.61_wp * q(k+ki,j,i) -     &
-                                           ql(k+ki,j,i) ) * surf_def_h(l)%shf(m) +          &
-                                           0.61_wp * pt(k+ki,j,i) * surf_def_h(l)%qsws(m) ) &
-                                          * heatflux_output_conversion(k+ki)
-                            ENDIF
-                            IF ( cloud_physics )  THEN
-!
-!--                            Formula does not work if ql(k+ki) /= 0.0
-                               sums_l(k+ki,51,tn) = sums_l(k+ki,51,tn) +                  &
-                                          waterflux_output_conversion(k+ki) *   &
-                                          surf_def_h(l)%qsws(m) * rmask(j,i,sr) ! w"q" (w"qv")
-                            ENDIF
-                         ENDIF
                          IF ( passive_scalar )  THEN
                             sums_l(k+ki,117,tn) = sums_l(k+ki,117,tn) +                     &
                                         surf_def_h(l)%ssws(m) * rmask(j,i,sr) ! w"s"
@@ -1049,108 +838,6 @@
 
                    ENDIF
                 ENDDO
-                IF ( surf_lsm_h%end_index(j,i) >=                              &
-                     surf_lsm_h%start_index(j,i) )  THEN
-                   m = surf_lsm_h%start_index(j,i)
-                   sums_l(nzb,12,tn) = sums_l(nzb,12,tn) + &
-                                    momentumflux_output_conversion(nzb) * &
-                                    surf_lsm_h%usws(m) * rmask(j,i,sr)     ! w"u"
-                   sums_l(nzb,14,tn) = sums_l(nzb,14,tn) + &
-                                    momentumflux_output_conversion(nzb) * &
-                                    surf_lsm_h%vsws(m) * rmask(j,i,sr)     ! w"v"
-                   sums_l(nzb,16,tn) = sums_l(nzb,16,tn) + &
-                                    heatflux_output_conversion(nzb) * &
-                                    surf_lsm_h%shf(m)  * rmask(j,i,sr)     ! w"pt"
-                   sums_l(nzb,58,tn) = sums_l(nzb,58,tn) + &
-                                    0.0_wp * rmask(j,i,sr)        ! u"pt"
-                   sums_l(nzb,61,tn) = sums_l(nzb,61,tn) + &
-                                    0.0_wp * rmask(j,i,sr)        ! v"pt"
-                   IF ( ocean )  THEN
-                      sums_l(nzb,65,tn) = sums_l(nzb,65,tn) + &
-                                       surf_lsm_h%sasws(m) * rmask(j,i,sr)  ! w"sa"
-                   ENDIF
-                   IF ( humidity )  THEN
-                      sums_l(nzb,48,tn) = sums_l(nzb,48,tn) +                     &
-                                       waterflux_output_conversion(nzb) *      &
-                                       surf_lsm_h%qsws(m) * rmask(j,i,sr)  ! w"q" (w"qv")
-                      sums_l(nzb,45,tn) = sums_l(nzb,45,tn) + (                   &
-                                       ( 1.0_wp + 0.61_wp * q(nzb,j,i) ) *     &
-                                       surf_lsm_h%shf(m) + 0.61_wp * pt(nzb,j,i) *      &
-                                                  surf_lsm_h%qsws(m) )                  &
-                                       * heatflux_output_conversion(nzb)
-                      IF ( cloud_droplets )  THEN
-                         sums_l(nzb,45,tn) = sums_l(nzb,45,tn) + (                &
-                                         ( 1.0_wp + 0.61_wp * q(nzb,j,i) -     &
-                                           ql(nzb,j,i) ) * surf_lsm_h%shf(m) +          &
-                                           0.61_wp * pt(nzb,j,i) * surf_lsm_h%qsws(m) ) &
-                                          * heatflux_output_conversion(nzb)
-                      ENDIF
-                      IF ( cloud_physics )  THEN
-!
-!--                      Formula does not work if ql(nzb) /= 0.0
-                         sums_l(nzb,51,tn) = sums_l(nzb,51,tn) +                  &
-                                          waterflux_output_conversion(nzb) *   &
-                                          surf_lsm_h%qsws(m) * rmask(j,i,sr) ! w"q" (w"qv")
-                      ENDIF
-                   ENDIF
-                   IF ( passive_scalar )  THEN
-                      sums_l(nzb,117,tn) = sums_l(nzb,117,tn) +                     &
-                                        surf_lsm_h%ssws(m) * rmask(j,i,sr) ! w"s"
-                   ENDIF
-
-
-                ENDIF
-                IF ( surf_usm_h%end_index(j,i) >=                              &
-                     surf_usm_h%start_index(j,i) )  THEN
-                   m = surf_usm_h%start_index(j,i)
-                   sums_l(nzb,12,tn) = sums_l(nzb,12,tn) + &
-                                    momentumflux_output_conversion(nzb) * &
-                                    surf_usm_h%usws(m) * rmask(j,i,sr)     ! w"u"
-                   sums_l(nzb,14,tn) = sums_l(nzb,14,tn) + &
-                                    momentumflux_output_conversion(nzb) * &
-                                    surf_usm_h%vsws(m) * rmask(j,i,sr)     ! w"v"
-                   sums_l(nzb,16,tn) = sums_l(nzb,16,tn) + &
-                                    heatflux_output_conversion(nzb) * &
-                                    surf_usm_h%shf(m)  * rmask(j,i,sr)     ! w"pt"
-                   sums_l(nzb,58,tn) = sums_l(nzb,58,tn) + &
-                                    0.0_wp * rmask(j,i,sr)        ! u"pt"
-                   sums_l(nzb,61,tn) = sums_l(nzb,61,tn) + &
-                                    0.0_wp * rmask(j,i,sr)        ! v"pt"
-                   IF ( ocean )  THEN
-                      sums_l(nzb,65,tn) = sums_l(nzb,65,tn) + &
-                                       surf_usm_h%sasws(m) * rmask(j,i,sr)  ! w"sa"
-                   ENDIF
-                   IF ( humidity )  THEN
-                      sums_l(nzb,48,tn) = sums_l(nzb,48,tn) +                     &
-                                       waterflux_output_conversion(nzb) *      &
-                                       surf_usm_h%qsws(m) * rmask(j,i,sr)  ! w"q" (w"qv")
-                      sums_l(nzb,45,tn) = sums_l(nzb,45,tn) + (                   &
-                                       ( 1.0_wp + 0.61_wp * q(nzb,j,i) ) *     &
-                                       surf_usm_h%shf(m) + 0.61_wp * pt(nzb,j,i) *      &
-                                                  surf_usm_h%qsws(m) )                  &
-                                       * heatflux_output_conversion(nzb)
-                      IF ( cloud_droplets )  THEN
-                         sums_l(nzb,45,tn) = sums_l(nzb,45,tn) + (                &
-                                         ( 1.0_wp + 0.61_wp * q(nzb,j,i) -     &
-                                           ql(nzb,j,i) ) * surf_usm_h%shf(m) +          &
-                                           0.61_wp * pt(nzb,j,i) * surf_usm_h%qsws(m) ) &
-                                          * heatflux_output_conversion(nzb)
-                      ENDIF
-                      IF ( cloud_physics )  THEN
-!
-!--                      Formula does not work if ql(nzb) /= 0.0
-                         sums_l(nzb,51,tn) = sums_l(nzb,51,tn) +                  &
-                                          waterflux_output_conversion(nzb) *   &
-                                          surf_usm_h%qsws(m) * rmask(j,i,sr) ! w"q" (w"qv")
-                      ENDIF
-                   ENDIF
-                   IF ( passive_scalar )  THEN
-                      sums_l(nzb,117,tn) = sums_l(nzb,117,tn) +                     &
-                                        surf_usm_h%ssws(m) * rmask(j,i,sr) ! w"s"
-                   ENDIF
-
-
-                ENDIF
 
              ENDIF
 
@@ -1161,115 +848,8 @@
                    sums_l(nzb,112,tn) = sums_l(nzb,112,tn) +                   &
                                         surf_def_h(0)%ol(m)  * rmask(j,i,sr) ! L
                 ENDIF
-                IF ( surf_lsm_h%end_index(j,i) >=                              &
-                     surf_lsm_h%start_index(j,i) )  THEN
-                   m = surf_lsm_h%start_index(j,i)
-                   sums_l(nzb,112,tn) = sums_l(nzb,112,tn) +                   &
-                                        surf_lsm_h%ol(m)  * rmask(j,i,sr) ! L
-                ENDIF
-                IF ( surf_usm_h%end_index(j,i) >=                              &
-                     surf_usm_h%start_index(j,i) )  THEN
-                   m = surf_usm_h%start_index(j,i)
-                   sums_l(nzb,112,tn) = sums_l(nzb,112,tn) +                   &
-                                        surf_usm_h%ol(m)  * rmask(j,i,sr) ! L
-                ENDIF
              ENDIF
 
-             IF ( radiation )  THEN
-                IF ( surf_def_h(0)%end_index(j,i) >=                           &
-                     surf_def_h(0)%start_index(j,i) )  THEN
-                   m = surf_def_h(0)%start_index(j,i)
-                   sums_l(nzb,99,tn)  = sums_l(nzb,99,tn)  +                   &
-                                        surf_def_h(0)%rad_net(m) * rmask(j,i,sr)
-                   sums_l(nzb,100,tn) = sums_l(nzb,100,tn)  +                  &
-                                        surf_def_h(0)%rad_lw_in(m) * rmask(j,i,sr)
-                   sums_l(nzb,101,tn) = sums_l(nzb,101,tn)  +                  &
-                                        surf_def_h(0)%rad_lw_out(m) * rmask(j,i,sr)
-                   sums_l(nzb,102,tn) = sums_l(nzb,102,tn)  +                  &
-                                        surf_def_h(0)%rad_sw_in(m) * rmask(j,i,sr)
-                   sums_l(nzb,103,tn) = sums_l(nzb,103,tn)  +                  &
-                                        surf_def_h(0)%rad_sw_out(m) * rmask(j,i,sr)
-                ENDIF
-                IF ( surf_lsm_h%end_index(j,i) >=                              &
-                     surf_lsm_h%start_index(j,i) )  THEN
-                   m = surf_lsm_h%start_index(j,i)
-                   sums_l(nzb,99,tn)  = sums_l(nzb,99,tn)  +                   &
-                                        surf_lsm_h%rad_net(m) * rmask(j,i,sr)
-                   sums_l(nzb,100,tn) = sums_l(nzb,100,tn)  +                  &
-                                        surf_lsm_h%rad_lw_in(m) * rmask(j,i,sr)
-                   sums_l(nzb,101,tn) = sums_l(nzb,101,tn)  +                  &
-                                        surf_lsm_h%rad_lw_out(m) * rmask(j,i,sr)
-                   sums_l(nzb,102,tn) = sums_l(nzb,102,tn)  +                  &
-                                        surf_lsm_h%rad_sw_in(m) * rmask(j,i,sr)
-                   sums_l(nzb,103,tn) = sums_l(nzb,103,tn)  +                  &
-                                        surf_lsm_h%rad_sw_out(m) * rmask(j,i,sr)
-                ENDIF
-                IF ( surf_usm_h%end_index(j,i) >=                              &
-                     surf_usm_h%start_index(j,i) )  THEN
-                   m = surf_usm_h%start_index(j,i)
-                   sums_l(nzb,99,tn)  = sums_l(nzb,99,tn)  +                   &
-                                        surf_usm_h%rad_net(m) * rmask(j,i,sr)
-                   sums_l(nzb,100,tn) = sums_l(nzb,100,tn)  +                  &
-                                        surf_usm_h%rad_lw_in(m) * rmask(j,i,sr)
-                   sums_l(nzb,101,tn) = sums_l(nzb,101,tn)  +                  &
-                                        surf_usm_h%rad_lw_out(m) * rmask(j,i,sr)
-                   sums_l(nzb,102,tn) = sums_l(nzb,102,tn)  +                  &
-                                        surf_usm_h%rad_sw_in(m) * rmask(j,i,sr)
-                   sums_l(nzb,103,tn) = sums_l(nzb,103,tn)  +                  &
-                                        surf_usm_h%rad_sw_out(m) * rmask(j,i,sr)
-                ENDIF
-
-#if defined ( __rrtmg )
-                IF ( radiation_scheme == 'rrtmg' )  THEN
-
-                   IF ( surf_def_h(0)%end_index(j,i) >=                        &
-                        surf_def_h(0)%start_index(j,i) )  THEN
-                      m = surf_def_h(0)%start_index(j,i)
-                      sums_l(nzb,108,tn)  = sums_l(nzb,108,tn)  +              &
-                                   surf_def_h(0)%rrtm_aldif(0,m) * rmask(j,i,sr)
-                      sums_l(nzb,109,tn) = sums_l(nzb,109,tn)  +               &
-                                   surf_def_h(0)%rrtm_aldir(0,m) * rmask(j,i,sr)
-                      sums_l(nzb,110,tn) = sums_l(nzb,110,tn)  +               &
-                                   surf_def_h(0)%rrtm_asdif(0,m) * rmask(j,i,sr)
-                      sums_l(nzb,111,tn) = sums_l(nzb,111,tn)  +               &
-                                   surf_def_h(0)%rrtm_asdir(0,m) * rmask(j,i,sr)
-                   ENDIF
-                   IF ( surf_lsm_h%end_index(j,i) >=                           &
-                        surf_lsm_h%start_index(j,i) )  THEN
-                      m = surf_lsm_h%start_index(j,i)
-                      sums_l(nzb,108,tn)  = sums_l(nzb,108,tn)  +              &
-                               SUM( surf_lsm_h%frac(:,m) *                     &
-                                    surf_lsm_h%rrtm_aldif(:,m) ) * rmask(j,i,sr)
-                      sums_l(nzb,109,tn) = sums_l(nzb,109,tn)  +               &
-                               SUM( surf_lsm_h%frac(:,m) *                     &
-                                    surf_lsm_h%rrtm_aldir(:,m) ) * rmask(j,i,sr)
-                      sums_l(nzb,110,tn) = sums_l(nzb,110,tn)  +               &
-                               SUM( surf_lsm_h%frac(:,m) *                     &
-                                    surf_lsm_h%rrtm_asdif(:,m) ) * rmask(j,i,sr)
-                      sums_l(nzb,111,tn) = sums_l(nzb,111,tn)  +               &
-                               SUM( surf_lsm_h%frac(:,m) *                     &
-                                    surf_lsm_h%rrtm_asdir(:,m) ) * rmask(j,i,sr)
-                   ENDIF
-                   IF ( surf_usm_h%end_index(j,i) >=                           &
-                        surf_usm_h%start_index(j,i) )  THEN
-                      m = surf_usm_h%start_index(j,i)
-                      sums_l(nzb,108,tn)  = sums_l(nzb,108,tn)  +              &
-                               SUM( surf_usm_h%frac(:,m) *                     &
-                                    surf_usm_h%rrtm_aldif(:,m) ) * rmask(j,i,sr)
-                      sums_l(nzb,109,tn) = sums_l(nzb,109,tn)  +               &
-                               SUM( surf_usm_h%frac(:,m) *                     &
-                                    surf_usm_h%rrtm_aldir(:,m) ) * rmask(j,i,sr)
-                      sums_l(nzb,110,tn) = sums_l(nzb,110,tn)  +               &
-                               SUM( surf_usm_h%frac(:,m) *                     &
-                                    surf_usm_h%rrtm_asdif(:,m) ) * rmask(j,i,sr)
-                      sums_l(nzb,111,tn) = sums_l(nzb,111,tn)  +               &
-                               SUM( surf_usm_h%frac(:,m) *                     &
-                                    surf_usm_h%rrtm_asdir(:,m) ) * rmask(j,i,sr)
-                   ENDIF
-
-                ENDIF
-#endif
-             ENDIF
 !
 !--          Subgridscale fluxes at the top surface
              IF ( use_top_fluxes )  THEN
@@ -1291,33 +871,6 @@
                 IF ( ocean )  THEN
                    sums_l(nzt,65,tn) = sums_l(nzt,65,tn) + &
                                        surf_def_h(2)%sasws(m) * rmask(j,i,sr)  ! w"sa"
-                ENDIF
-                IF ( humidity )  THEN
-                   sums_l(nzt,48,tn) = sums_l(nzt,48,tn) +                     &
-                                       waterflux_output_conversion(nzt) *      &
-                                       surf_def_h(2)%qsws(m) * rmask(j,i,sr) ! w"q" (w"qv")
-                   sums_l(nzt,45,tn) = sums_l(nzt,45,tn) + (                   &
-                                       ( 1.0_wp + 0.61_wp * q(nzt,j,i) ) *     &
-                                       surf_def_h(2)%shf(m) +                  &
-                                       0.61_wp * pt(nzt,j,i) *    &
-                                       surf_def_h(2)%qsws(m) )      &
-                                       * heatflux_output_conversion(nzt)
-                   IF ( cloud_droplets )  THEN
-                      sums_l(nzt,45,tn) = sums_l(nzt,45,tn) + (                &
-                                          ( 1.0_wp + 0.61_wp * q(nzt,j,i) -    &
-                                            ql(nzt,j,i) ) *                    &
-                                            surf_def_h(2)%shf(m) +             &
-                                           0.61_wp * pt(nzt,j,i) *             &
-                                           surf_def_h(2)%qsws(m) )&
-                                           * heatflux_output_conversion(nzt)
-                   ENDIF
-                   IF ( cloud_physics )  THEN
-!
-!--                   Formula does not work if ql(nzb) /= 0.0
-                      sums_l(nzt,51,tn) = sums_l(nzt,51,tn) + &   ! w"q" (w"qv")
-                                          waterflux_output_conversion(nzt) *   &
-                                          surf_def_h(2)%qsws(m) * rmask(j,i,sr)
-                   ENDIF
                 ENDIF
                 IF ( passive_scalar )  THEN
                    sums_l(nzt,117,tn) = sums_l(nzt,117,tn) + &
@@ -1368,69 +921,6 @@
                 ENDIF
 
 !
-!--             Buoyancy flux, water flux, humidity flux, liquid water
-!--             content, rain drop concentration and rain water content
-                IF ( humidity )  THEN
-                   IF ( cloud_physics .OR. cloud_droplets )  THEN
-                      pts = 0.5_wp * ( vpt(k,j,i)   - hom(k,1,44,sr) +         &
-                                    vpt(k+1,j,i) - hom(k+1,1,44,sr) )
-                      sums_l(k,46,tn) = sums_l(k,46,tn) + pts * w(k,j,i) *     &
-                                               heatflux_output_conversion(k) * &
-                                                          rmask(j,i,sr) * flag
-                      sums_l(k,54,tn) = sums_l(k,54,tn) + ql(k,j,i) * rmask(j,i,sr) &
-                                                                    * flag
-
-                      IF ( .NOT. cloud_droplets )  THEN
-                         pts = 0.5_wp *                                        &
-                              ( ( q(k,j,i) - ql(k,j,i) ) -                     &
-                              hom(k,1,42,sr) +                                 &
-                              ( q(k+1,j,i) - ql(k+1,j,i) ) -                   &
-                              hom(k+1,1,42,sr) )
-                         sums_l(k,52,tn) = sums_l(k,52,tn) + pts * w(k,j,i) *  &
-                                             waterflux_output_conversion(k) *  &
-                                                             rmask(j,i,sr)  *  &
-                                                             flag
-                         sums_l(k,75,tn) = sums_l(k,75,tn) + qc(k,j,i) *       &
-                                                             rmask(j,i,sr) *   &
-                                                             flag
-                         sums_l(k,76,tn) = sums_l(k,76,tn) + prr(k,j,i) *      &
-                                                             rmask(j,i,sr) *   &
-                                                             flag
-                         IF ( microphysics_morrison )  THEN
-                            sums_l(k,123,tn) = sums_l(k,123,tn) + nc(k,j,i) *  &
-                                                                rmask(j,i,sr) *&
-                                                                flag
-                         ENDIF
-                         IF ( microphysics_seifert )  THEN
-                            sums_l(k,73,tn) = sums_l(k,73,tn) + nr(k,j,i) *    &
-                                                                rmask(j,i,sr) *&
-                                                                flag 
-                            sums_l(k,74,tn) = sums_l(k,74,tn) + qr(k,j,i) *    &
-                                                                rmask(j,i,sr) *&
-                                                                flag
-                         ENDIF
-                      ENDIF
-
-                   ELSE
-                      IF( .NOT. ws_scheme_sca .OR. sr /= 0 )  THEN
-                         pts = 0.5_wp * ( vpt(k,j,i)   - hom(k,1,44,sr) +      &
-                                          vpt(k+1,j,i) - hom(k+1,1,44,sr) )
-                         sums_l(k,46,tn) = sums_l(k,46,tn) + pts * w(k,j,i) *  &
-                                              heatflux_output_conversion(k) *  &
-                                                             rmask(j,i,sr)  *  &
-                                                             flag
-                      ELSE IF ( ws_scheme_sca .AND. sr == 0 )  THEN
-                         sums_l(k,46,tn) = ( ( 1.0_wp + 0.61_wp *              & 
-                                               hom(k,1,41,sr) ) *              &
-                                             sums_l(k,17,tn) +                 &
-                                             0.61_wp * hom(k,1,4,sr) *         &
-                                             sums_l(k,49,tn)                   &
-                                           ) * heatflux_output_conversion(k) * &
-                                               flag
-                      END IF
-                   END IF
-                ENDIF
-!
 !--             Passive scalar flux
                 IF ( passive_scalar .AND. ( .NOT. ws_scheme_sca                &
                      .OR. sr /= 0 ) )  THEN
@@ -1452,51 +942,6 @@
           ENDDO
        ENDDO
        !$OMP END PARALLEL
-!
-!--    Treat land-surface quantities according to new wall model structure. 
-       IF ( land_surface )  THEN
-          tn = 0
-          !$OMP PARALLEL PRIVATE( i, j, m, tn )
-          !$ tn = omp_get_thread_num()
-          !$OMP DO
-          DO  m = 1, surf_lsm_h%ns
-             i = surf_lsm_h%i(m)
-             j = surf_lsm_h%j(m)
-        
-             IF ( i >= nxl  .AND.  i <= nxr  .AND.                             &
-                  j >= nys  .AND.  j <= nyn )  THEN 
-                sums_l(nzb,93,tn)  = sums_l(nzb,93,tn) + surf_lsm_h%ghf(m)
-                sums_l(nzb,94,tn)  = sums_l(nzb,94,tn) + surf_lsm_h%qsws_liq(m)
-                sums_l(nzb,95,tn)  = sums_l(nzb,95,tn) + surf_lsm_h%qsws_soil(m)
-                sums_l(nzb,96,tn)  = sums_l(nzb,96,tn) + surf_lsm_h%qsws_veg(m)
-                sums_l(nzb,97,tn)  = sums_l(nzb,97,tn) + surf_lsm_h%r_a(m)
-                sums_l(nzb,98,tn) = sums_l(nzb,98,tn)+ surf_lsm_h%r_s(m)
-             ENDIF
-          ENDDO
-          !$OMP END PARALLEL
-
-          tn = 0
-          !$OMP PARALLEL PRIVATE( i, j, k, m, tn )
-          !$ tn = omp_get_thread_num()
-          !$OMP DO
-          DO  m = 1, surf_lsm_h%ns
-
-             i = surf_lsm_h%i(m)            
-             j = surf_lsm_h%j(m)
-
-             IF ( i >= nxl  .AND.  i <= nxr  .AND.                             &
-                  j >= nys  .AND.  j <= nyn )  THEN 
-
-                DO  k = nzb_soil, nzt_soil
-                   sums_l(k,89,tn)  = sums_l(k,89,tn)  + t_soil_h%var_2d(k,m)  &
-                                      * rmask(j,i,sr)
-                   sums_l(k,91,tn)  = sums_l(k,91,tn)  + m_soil_h%var_2d(k,m)  &
-                                      * rmask(j,i,sr)
-                ENDDO
-             ENDIF
-          ENDDO
-          !$OMP END PARALLEL
-       ENDIF
 !
 !--    For speed optimization fluxes which have been computed in part directly
 !--    inside the WS advection routines are treated seperatly
@@ -1559,13 +1004,6 @@
                              pt(k+1,j,i) - hom(k+1,1,4,sr) )                   &
                            * heatflux_output_conversion(k)                     &
                            * w(k,j,i) * rmask(j,i,sr) * flag
-                   IF ( humidity )  THEN
-                      pts = 0.5_wp * ( q(k,j,i)   - hom(k,1,41,sr) +           &
-                                      q(k+1,j,i) - hom(k+1,1,41,sr) )
-                      sums_l(k,49,tn) = sums_l(k,49,tn) + pts * w(k,j,i) *     &
-                                       waterflux_output_conversion(k) *        &
-                                       rmask(j,i,sr) * flag
-                   ENDIF
                    IF ( passive_scalar )  THEN
                       pts = 0.5_wp * ( s(k,j,i)   - hom(k,1,115,sr) +           &
                                       s(k+1,j,i) - hom(k+1,1,115,sr) )
@@ -1759,46 +1197,6 @@
 
        ENDIF
 
-       tn = 0
-       !$OMP PARALLEL PRIVATE( i, j, k, tn )
-       !$ tn = omp_get_thread_num()       
-       IF ( radiation .AND. radiation_scheme == 'rrtmg' )  THEN
-          !$OMP DO
-          DO  i = nxl, nxr
-             DO  j =  nys, nyn
-                DO  k = nzb+1, nzt+1
-                   flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
-
-                   sums_l(k,100,tn)  = sums_l(k,100,tn)  + rad_lw_in(k,j,i)    &
-                                       * rmask(j,i,sr) * flag
-                   sums_l(k,101,tn)  = sums_l(k,101,tn)  + rad_lw_out(k,j,i)   &
-                                       * rmask(j,i,sr) * flag
-                   sums_l(k,102,tn)  = sums_l(k,102,tn)  + rad_sw_in(k,j,i)    &
-                                       * rmask(j,i,sr) * flag
-                   sums_l(k,103,tn)  = sums_l(k,103,tn)  + rad_sw_out(k,j,i)   &
-                                       * rmask(j,i,sr) * flag
-                   sums_l(k,104,tn)  = sums_l(k,104,tn)  + rad_lw_cs_hr(k,j,i) &
-                                       * rmask(j,i,sr) * flag
-                   sums_l(k,105,tn)  = sums_l(k,105,tn)  + rad_lw_hr(k,j,i)    &
-                                       * rmask(j,i,sr) * flag
-                   sums_l(k,106,tn)  = sums_l(k,106,tn)  + rad_sw_cs_hr(k,j,i) &
-                                       * rmask(j,i,sr) * flag
-                   sums_l(k,107,tn)  = sums_l(k,107,tn)  + rad_sw_hr(k,j,i)    &
-                                       * rmask(j,i,sr) * flag
-                ENDDO
-             ENDDO
-          ENDDO
-       ENDIF
-!
-!--    Calculate the gust module profiles
-       IF ( gust_module_enabled )  THEN
-          CALL gust_statistics( 'profiles', sr, tn, dots_max )
-       ENDIF
-!
-!--    Calculate the user-defined profiles
-       CALL user_statistics( 'profiles', sr, tn )
-       !$OMP END PARALLEL
-
 !
 !--    Summation of thread sums
        IF ( threads_per_task > 1 )  THEN
@@ -1974,7 +1372,7 @@
                                        ! 77 is initial density profile
        hom(:,1,78,sr) = ug             ! ug
        hom(:,1,79,sr) = vg             ! vg
-       hom(:,1,80,sr) = w_subs         ! w_subs
+       hom(:,1,80,sr) = 0.0_wp         ! w_subs
 
        IF ( large_scale_forcing )  THEN
           hom(:,1,81,sr) = sums_ls_l(:,0)          ! td_lsa_lpt
@@ -1990,40 +1388,6 @@
           hom(:,1,86,sr) = sums(:,86)              ! td_nud_q
           hom(:,1,87,sr) = sums(:,87)              ! td_nud_u
           hom(:,1,88,sr) = sums(:,88)              ! td_nud_v
-       ENDIF
-
-       IF ( land_surface )  THEN
-          hom(:,1,89,sr) = sums(:,89)              ! t_soil
-                                                   ! 90 is initial t_soil profile
-          hom(:,1,91,sr) = sums(:,91)              ! m_soil
-                                                   ! 92 is initial m_soil profile
-          hom(:,1,93,sr)  = sums(:,93)             ! ghf
-          hom(:,1,94,sr)  = sums(:,94)             ! qsws_liq
-          hom(:,1,95,sr)  = sums(:,95)             ! qsws_soil
-          hom(:,1,96,sr)  = sums(:,96)             ! qsws_veg
-          hom(:,1,97,sr)  = sums(:,97)             ! r_a
-          hom(:,1,98,sr) = sums(:,98)              ! r_s
-
-       ENDIF
-
-       IF ( radiation )  THEN
-          hom(:,1,99,sr) = sums(:,99)            ! rad_net
-          hom(:,1,100,sr) = sums(:,100)            ! rad_lw_in
-          hom(:,1,101,sr) = sums(:,101)            ! rad_lw_out
-          hom(:,1,102,sr) = sums(:,102)            ! rad_sw_in
-          hom(:,1,103,sr) = sums(:,103)            ! rad_sw_out
-
-          IF ( radiation_scheme == 'rrtmg' )  THEN
-             hom(:,1,104,sr) = sums(:,104)            ! rad_lw_cs_hr
-             hom(:,1,105,sr) = sums(:,105)            ! rad_lw_hr
-             hom(:,1,106,sr) = sums(:,106)            ! rad_sw_cs_hr
-             hom(:,1,107,sr) = sums(:,107)            ! rad_sw_hr
-
-             hom(:,1,108,sr) = sums(:,108)            ! rrtm_aldif
-             hom(:,1,109,sr) = sums(:,109)            ! rrtm_aldir
-             hom(:,1,110,sr) = sums(:,110)            ! rrtm_asdif
-             hom(:,1,111,sr) = sums(:,111)            ! rrtm_asdir
-          ENDIF
        ENDIF
 
        hom(:,1,112,sr) = sums(:,112)            !: L
@@ -2209,42 +1573,7 @@
        ENDIF
 
 !
-!--    Collect land surface model timeseries
-       IF ( land_surface )  THEN
-          ts_value(dots_soil  ,sr) = hom(nzb,1,93,sr)           ! ghf
-          ts_value(dots_soil+1,sr) = hom(nzb,1,94,sr)           ! qsws_liq
-          ts_value(dots_soil+2,sr) = hom(nzb,1,95,sr)           ! qsws_soil
-          ts_value(dots_soil+3,sr) = hom(nzb,1,96,sr)           ! qsws_veg
-          ts_value(dots_soil+4,sr) = hom(nzb,1,97,sr)           ! r_a
-          ts_value(dots_soil+5,sr) = hom(nzb,1,98,sr)           ! r_s
-       ENDIF
 !
-!--    Collect radiation model timeseries
-       IF ( radiation )  THEN
-          ts_value(dots_rad,sr)   = hom(nzb,1,99,sr)           ! rad_net
-          ts_value(dots_rad+1,sr) = hom(nzb,1,100,sr)          ! rad_lw_in
-          ts_value(dots_rad+2,sr) = hom(nzb,1,101,sr)          ! rad_lw_out
-          ts_value(dots_rad+3,sr) = hom(nzb,1,102,sr)          ! rad_sw_in
-          ts_value(dots_rad+4,sr) = hom(nzb,1,103,sr)          ! rad_sw_out
-
-          IF ( radiation_scheme == 'rrtmg' )  THEN
-             ts_value(dots_rad+5,sr) = hom(nzb,1,108,sr)          ! rrtm_aldif
-             ts_value(dots_rad+6,sr) = hom(nzb,1,109,sr)          ! rrtm_aldir
-             ts_value(dots_rad+7,sr) = hom(nzb,1,110,sr)          ! rrtm_asdif
-             ts_value(dots_rad+8,sr) = hom(nzb,1,111,sr)          ! rrtm_asdir
-          ENDIF
-
-       ENDIF
-!
-!--    Calculate additional statistics provided by the gust module
-       IF ( gust_module_enabled )  THEN
-          CALL gust_statistics( 'time_series', sr, 0, dots_max )
-       ENDIF
-
-!
-!--    Calculate additional statistics provided by the user interface
-       CALL user_statistics( 'time_series', sr, 0 )
-
     ENDDO    ! loop of the subregions
 
 !

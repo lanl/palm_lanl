@@ -426,17 +426,6 @@ flush(9)
              ENDDO
           ENDIF
 
-          IF ( humidity )  THEN
-             DO  j = nys, nyn
-                DO  k = nzb+1, nzt+1
-                   q(k,j,nxlg:nxl-1) = force%q_left(0,k,j) + ddt_lsf   *       &
-                                                                  t_ref   *    &
-                       ( force%q_left(1,k,j) - force%q_left(0,k,j) )
- 
-                ENDDO
-             ENDDO
-          ENDIF
-
        ENDIF
 
        IF ( force_bound_r )  THEN
@@ -474,17 +463,6 @@ flush(9)
                    pt(k,j,nxr+1:nxrg) = force%pt_right(0,k,j) + ddt_lsf *      &
                                                                   t_ref   *    &
                      ( force%pt_right(1,k,j) - force%pt_right(0,k,j) )
- 
-                ENDDO
-             ENDDO
-          ENDIF
-
-          IF ( humidity )  THEN
-             DO  j = nys, nyn
-                DO  k = nzb+1, nzt+1
-                   q(k,j,nxr+1:nxrg) = force%q_right(0,k,j) + ddt_lsf   *      &
-                                                                  t_ref   *    &
-                       ( force%q_right(1,k,j) - force%q_right(0,k,j) )
  
                 ENDDO
              ENDDO
@@ -532,17 +510,6 @@ flush(9)
              ENDDO
           ENDIF
 
-          IF ( humidity )  THEN
-             DO  i = nxl, nxr
-                DO  k = nzb+1, nzt+1
-                   q(k,nysg:nys-1,i) = force%q_south(0,k,i) + ddt_lsf   *      &
-                                                                  t_ref   *    &
-                       ( force%q_south(1,k,i) - force%q_south(0,k,i) )
- 
-                ENDDO
-             ENDDO
-          ENDIF
-
        ENDIF
 
        IF ( force_bound_n )  THEN
@@ -580,17 +547,6 @@ flush(9)
                    pt(k,nyn+1:nyng,i) = force%pt_north(0,k,i) + ddt_lsf *      &
                                                                   t_ref   *    &
                      ( force%pt_north(1,k,i) - force%pt_north(0,k,i) )
- 
-                ENDDO
-             ENDDO
-          ENDIF
-
-          IF ( humidity )  THEN
-             DO  i = nxl, nxr
-                DO  k = nzb+1, nzt+1
-                   q(k,nyn+1:nyng,i) = force%q_north(0,k,i) + ddt_lsf   *      &
-                                                                  t_ref   *    &
-                       ( force%q_north(1,k,i) - force%q_north(0,k,i) )
  
                 ENDDO
              ENDDO
@@ -639,23 +595,11 @@ flush(9)
           ENDDO
        ENDIF
 
-       IF ( humidity )  THEN
-          DO  i = nxl, nxr
-             DO  j = nys, nyn
-                q(nzt+1,j,i) = force%q_top(0,j,i) + ddt_lsf * t_ref *          &
-                        ( force%q_top(1,j,i) - force%q_top(0,j,i) )
-             ENDDO
-          ENDDO
-       ENDIF
-!
-!--    At the edges( left-south, left-north, right-south and right-north) set 
-!--    data on ghost points. 
        IF ( force_bound_l  .AND.  force_bound_s )  THEN
           DO  i = 1, nbgp
              u(:,nys-i,nxlg:nxl)   = u(:,nys,nxlg:nxl)
              w(:,nys-i,nxlg:nxl-1) = w(:,nys,nxlg:nxl-1)
              IF ( .NOT. neutral )  pt(:,nys-i,nxlg:nxl-1) = pt(:,nys,nxlg:nxl-1)
-             IF ( humidity )       q(:,nys-i,nxlg:nxl-1)  = q(:,nys,nxlg:nxl-1)
           ENDDO
           DO  i = 1, nbgp+1
              v(:,nysv-i,nxlg:nxl-1) = v(:,nysv,nxlg:nxl-1)
@@ -667,7 +611,6 @@ flush(9)
              v(:,nyn+i,nxlg:nxl-1) = v(:,nyn,nxlg:nxl-1)
              w(:,nyn+i,nxlg:nxl-1) = w(:,nyn,nxlg:nxl-1)
              IF ( .NOT. neutral )  pt(:,nyn+i,nxlg:nxl-1) = pt(:,nyn,nxlg:nxl-1)
-             IF ( humidity )       q(:,nyn+i,nxlg:nxl-1)  = q(:,nyn,nxlg:nxl-1)
           ENDDO
        ENDIF
        IF ( force_bound_r  .AND.  force_bound_s )  THEN
@@ -675,7 +618,6 @@ flush(9)
              u(:,nys-i,nxr+1:nxrg) = u(:,nys,nxr+1:nxrg)
              w(:,nys-i,nxr+1:nxrg) = w(:,nys,nxr+1:nxrg)
              IF ( .NOT. neutral )  pt(:,nys-i,nxr+1:nxrg) = pt(:,nys,nxr+1:nxrg)
-             IF ( humidity )       q(:,nys-i,nxr+1:nxrg)  = q(:,nys,nxr+1:nxrg)
           ENDDO
           DO  i = 1, nbgp+1
              v(:,nysv-i,nxr+1:nxrg) = v(:,nysv,nxr+1:nxrg)
@@ -687,7 +629,6 @@ flush(9)
              v(:,nyn+i,nxr+1:nxrg) = v(:,nyn,nxr+1:nxrg)
              w(:,nyn+i,nxr+1:nxrg) = w(:,nyn,nxr+1:nxrg)
              IF ( .NOT. neutral )  pt(:,nyn+i,nxr+1:nxrg) = pt(:,nyn,nxr+1:nxrg)
-             IF ( humidity )       q(:,nyn+i,nxr+1:nxrg)  = q(:,nyn,nxr+1:nxrg)
           ENDDO
        ENDIF
 !
@@ -712,7 +653,6 @@ flush(9)
        CALL exchange_horiz( v, nbgp )
        CALL exchange_horiz( w, nbgp )
        IF ( .NOT. neutral )  CALL exchange_horiz( pt, nbgp )
-       IF ( humidity      )  CALL exchange_horiz( q,  nbgp )
 
 !
 !--    Set surface pressure. Please note, time-dependent surface
@@ -1056,35 +996,30 @@ flush(9)
              ALLOCATE( force%u_left(0:1,nzb+1:nzt+1,nys:nyn)  )
              ALLOCATE( force%v_left(0:1,nzb+1:nzt+1,nysv:nyn) )
              ALLOCATE( force%w_left(0:1,nzb+1:nzt,nys:nyn)    )
-             IF ( humidity )      ALLOCATE( force%q_left(0:1,nzb+1:nzt+1,nys:nyn)  )
              IF ( .NOT. neutral ) ALLOCATE( force%pt_left(0:1,nzb+1:nzt+1,nys:nyn) )
           ENDIF
           IF ( force_bound_r )  THEN
              ALLOCATE( force%u_right(0:1,nzb+1:nzt+1,nys:nyn)  )
              ALLOCATE( force%v_right(0:1,nzb+1:nzt+1,nysv:nyn) )
              ALLOCATE( force%w_right(0:1,nzb+1:nzt,nys:nyn)    )
-             IF ( humidity )      ALLOCATE( force%q_right(0:1,nzb+1:nzt+1,nys:nyn)  )
              IF ( .NOT. neutral ) ALLOCATE( force%pt_right(0:1,nzb+1:nzt+1,nys:nyn) )
           ENDIF
           IF ( force_bound_n )  THEN
              ALLOCATE( force%u_north(0:1,nzb+1:nzt+1,nxlu:nxr) )
              ALLOCATE( force%v_north(0:1,nzb+1:nzt+1,nxl:nxr)  )
              ALLOCATE( force%w_north(0:1,nzb+1:nzt,nxl:nxr)    )
-             IF ( humidity )      ALLOCATE( force%q_north(0:1,nzb+1:nzt+1,nxl:nxr)  )
              IF ( .NOT. neutral ) ALLOCATE( force%pt_north(0:1,nzb+1:nzt+1,nxl:nxr) )
           ENDIF
           IF ( force_bound_s )  THEN
              ALLOCATE( force%u_south(0:1,nzb+1:nzt+1,nxlu:nxr) )
              ALLOCATE( force%v_south(0:1,nzb+1:nzt+1,nxl:nxr)  )
              ALLOCATE( force%w_south(0:1,nzb+1:nzt,nxl:nxr)    )
-             IF ( humidity )      ALLOCATE( force%q_south(0:1,nzb+1:nzt+1,nxl:nxr)  )
              IF ( .NOT. neutral ) ALLOCATE( force%pt_south(0:1,nzb+1:nzt+1,nxl:nxr) )
           ENDIF
           
           ALLOCATE( force%u_top(0:1,nys:nyn,nxlu:nxr) )
           ALLOCATE( force%v_top(0:1,nysv:nyn,nxl:nxr) )
           ALLOCATE( force%w_top(0:1,nys:nyn,nxl:nxr)  )
-          IF ( humidity )      ALLOCATE( force%q_top(0:1,nys:nyn,nxl:nxr)  )
           IF ( .NOT. neutral ) ALLOCATE( force%pt_top(0:1,nys:nyn,nxl:nxr) )
 
 !
@@ -1116,10 +1051,6 @@ flush(9)
                       CALL netcdf_data_input_interpolate( force%pt_left(t,:,:),&
                                                           zu(1:nzt+1),         &
                                                           force%zu_atmos )
-                   IF ( humidity )                                             &
-                      CALL netcdf_data_input_interpolate( force%q_left(t,:,:), &
-                                                          zu(1:nzt+1),         &
-                                                          force%zu_atmos )
                 ENDIF
                 IF ( force_bound_r )  THEN
                    CALL netcdf_data_input_interpolate( force%u_right(t,:,:),   &
@@ -1134,10 +1065,6 @@ flush(9)
                    IF ( .NOT. neutral )                                        &
                       CALL netcdf_data_input_interpolate( force%pt_right(t,:,:),&
                                                           zu(1:nzt+1),          &
-                                                          force%zu_atmos )
-                   IF ( humidity )                                             &
-                      CALL netcdf_data_input_interpolate( force%q_right(t,:,:),&
-                                                          zu(1:nzt+1),         &
                                                           force%zu_atmos )
                 ENDIF
                 IF ( force_bound_n )  THEN
@@ -1154,10 +1081,6 @@ flush(9)
                       CALL netcdf_data_input_interpolate( force%pt_north(t,:,:),&
                                                           zu(1:nzt+1),          &
                                                           force%zu_atmos )
-                   IF ( humidity )                                             &
-                      CALL netcdf_data_input_interpolate( force%q_north(t,:,:),&
-                                                          zu(1:nzt+1),         &
-                                                          force%zu_atmos )
                 ENDIF
                 IF ( force_bound_s )  THEN
                    CALL netcdf_data_input_interpolate( force%u_south(t,:,:),   &
@@ -1173,10 +1096,6 @@ flush(9)
                       CALL netcdf_data_input_interpolate( force%pt_south(t,:,:),&
                                                           zu(1:nzt+1),          &
                                                           force%zu_atmos )
-                   IF ( humidity )                                             &
-                      CALL netcdf_data_input_interpolate( force%q_south(t,:,:),&
-                                                          zu(1:nzt+1),         &
-                                                          force%zu_atmos )
                 ENDIF
              ENDDO
           ENDIF
@@ -1187,7 +1106,6 @@ flush(9)
           CALL exchange_horiz( v, nbgp )
           CALL exchange_horiz( w, nbgp )
           IF ( .NOT. neutral )  CALL exchange_horiz( pt, nbgp )
-          IF ( humidity      )  CALL exchange_horiz( q,  nbgp )
 !
 !--       At lateral boundaries, set also initial boundary conditions
           IF ( force_bound_l )  THEN
@@ -1195,28 +1113,24 @@ flush(9)
              v(:,:,nxl-1) = v(:,:,nxl)
              w(:,:,nxl-1) = w(:,:,nxl)
              IF ( .NOT. neutral )  pt(:,:,nxl-1) = pt(:,:,nxl)
-             IF ( humidity      )  q(:,:,nxl-1)  = q(:,:,nxl)
           ENDIF
           IF ( force_bound_r )  THEN
              u(:,:,nxr+1) = u(:,:,nxr)
              v(:,:,nxr+1) = v(:,:,nxr)
              w(:,:,nxr+1) = w(:,:,nxr)
              IF ( .NOT. neutral )  pt(:,:,nxr+1) = pt(:,:,nxr)
-             IF ( humidity      )  q(:,:,nxr+1)  = q(:,:,nxr)
           ENDIF
           IF ( force_bound_s )  THEN
              u(:,nys-1,:) = u(:,nys,:)
              v(:,nys,:)   = v(:,nysv,:)
              w(:,nys-1,:) = w(:,nys,:)
              IF ( .NOT. neutral )  pt(:,nys-1,:) = pt(:,nys,:)
-             IF ( humidity      )  q(:,nys-1,:)  = q(:,nys,:)
           ENDIF
           IF ( force_bound_n )  THEN
              u(:,nyn+1,:) = u(:,nyn,:)
              v(:,nyn+1,:) = v(:,nyn,:)
              w(:,nyn+1,:) = w(:,nyn,:)
              IF ( .NOT. neutral )  pt(:,nyn+1,:) = pt(:,nyn,:)
-             IF ( humidity      )  q(:,nyn+1,:)  = q(:,nyn,:)
           ENDIF
 
 !
@@ -1493,10 +1407,6 @@ flush(9)
             TRIM( initializing_actions ) /= 'read_restart_data' )  THEN
              surface_heatflux = shf_surf(1)
        ENDIF
-       IF ( humidity  .AND.  constant_waterflux  .AND.                         &
-            TRIM( initializing_actions ) /= 'read_restart_data' )  THEN
-             surface_waterflux = qsws_surf(1)
-       ENDIF
 
        surface_pressure = p_surf(nt) + fac * ( p_surf(nt+1) - p_surf(nt) )
 
@@ -1535,11 +1445,6 @@ flush(9)
        ug     = ug_vert(:,nt) + fac * ( ug_vert(:,nt+1) - ug_vert(:,nt) )
        vg     = vg_vert(:,nt) + fac * ( vg_vert(:,nt+1) - vg_vert(:,nt) )
 
-       IF ( large_scale_subsidence )  THEN
-          w_subs = wsubs_vert(:,nt)                                            &
-                   + fac * ( wsubs_vert(:,nt+1) - wsubs_vert(:,nt) )
-       ENDIF
-
     END SUBROUTINE ls_forcing_vert
 
 
@@ -1575,73 +1480,16 @@ flush(9)
 
        fac = ( time-time_vert(nt) ) / ( time_vert(nt+1)-time_vert(nt) )
 
-!
-!--    Add horizontal large scale advection tendencies of pt and q 
-       SELECT CASE ( prog_var )
-
-          CASE ( 'pt' )
-
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb+1, nzt
-                      tend(k,j,i) = tend(k,j,i) + td_lsa_lpt(k,nt) + fac *     &
-                                    ( td_lsa_lpt(k,nt+1) - td_lsa_lpt(k,nt) ) *&
-                                        MERGE( 1.0_wp, 0.0_wp,                 &
-                                               BTEST( wall_flags_0(k,j,i), 0 ) )
-                   ENDDO
-                ENDDO
+       DO  i = nxl, nxr
+          DO  j = nys, nyn
+             DO  k = nzb+1, nzt
+                tend(k,j,i) = tend(k,j,i) + td_lsa_lpt(k,nt) + fac *     &
+                              ( td_lsa_lpt(k,nt+1) - td_lsa_lpt(k,nt) ) *&
+                                  MERGE( 1.0_wp, 0.0_wp,                 &
+                                         BTEST( wall_flags_0(k,j,i), 0 ) )
              ENDDO
-
-          CASE ( 'q' )
-
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb+1, nzt
-                      tend(k,j,i) = tend(k,j,i) + td_lsa_q(k,nt) + fac *       &
-                                    ( td_lsa_q(k,nt+1) - td_lsa_q(k,nt) ) *    &
-                                        MERGE( 1.0_wp, 0.0_wp,                 &
-                                               BTEST( wall_flags_0(k,j,i), 0 ) )
-                   ENDDO
-                ENDDO
-             ENDDO
-
-       END SELECT
-
-!
-!--    Subsidence of pt and q with prescribed subsidence tendencies
-       IF ( large_scale_subsidence .AND. use_subsidence_tendencies )  THEN
-
-          SELECT CASE ( prog_var )
-
-             CASE ( 'pt' )
-
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb+1, nzt
-                         tend(k,j,i) = tend(k,j,i) + td_sub_lpt(k,nt) + fac *  &
-                                     ( td_sub_lpt(k,nt+1) - td_sub_lpt(k,nt) )*&
-                                        MERGE( 1.0_wp, 0.0_wp,                 &
-                                               BTEST( wall_flags_0(k,j,i), 0 ) )
-                      ENDDO
-                   ENDDO
-                ENDDO
-  
-             CASE ( 'q' )
-
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb+1, nzt
-                         tend(k,j,i) = tend(k,j,i) + td_sub_q(k,nt) + fac *    &
-                                       ( td_sub_q(k,nt+1) - td_sub_q(k,nt) ) * &
-                                        MERGE( 1.0_wp, 0.0_wp,                 &
-                                               BTEST( wall_flags_0(k,j,i), 0 ) )
-                      ENDDO
-                   ENDDO
-                ENDDO
-
-          END SELECT
-
-       ENDIF
+          ENDDO
+       ENDDO
 
     END SUBROUTINE ls_advec
 
@@ -1677,57 +1525,13 @@ flush(9)
 
        fac = ( time-time_vert(nt) ) / ( time_vert(nt+1)-time_vert(nt) )
 
-!
-!--    Add horizontal large scale advection tendencies of pt and q 
-       SELECT CASE ( prog_var )
 
-          CASE ( 'pt' )
-
-             DO  k = nzb+1, nzt
-                tend(k,j,i) = tend(k,j,i) + td_lsa_lpt(k,nt)                   &
-                             + fac * ( td_lsa_lpt(k,nt+1) - td_lsa_lpt(k,nt) )*&
-                                        MERGE( 1.0_wp, 0.0_wp,                 &
-                                               BTEST( wall_flags_0(k,j,i), 0 ) )
-             ENDDO
-
-          CASE ( 'q' )
-
-             DO  k = nzb+1, nzt
-                tend(k,j,i) = tend(k,j,i) + td_lsa_q(k,nt)                     &
-                              + fac * ( td_lsa_q(k,nt+1) - td_lsa_q(k,nt) ) *  &
-                                        MERGE( 1.0_wp, 0.0_wp,                 &
-                                               BTEST( wall_flags_0(k,j,i), 0 ) )
-             ENDDO
-
-       END SELECT
-
-!
-!--    Subsidence of pt and q with prescribed profiles
-       IF ( large_scale_subsidence .AND. use_subsidence_tendencies )  THEN
-
-          SELECT CASE ( prog_var )
-
-             CASE ( 'pt' )
-
-                DO  k = nzb+1, nzt
-                   tend(k,j,i) = tend(k,j,i) + td_sub_lpt(k,nt) + fac *        &
-                                 ( td_sub_lpt(k,nt+1) - td_sub_lpt(k,nt) ) *   &
-                                        MERGE( 1.0_wp, 0.0_wp,                 &
-                                               BTEST( wall_flags_0(k,j,i), 0 ) )
-                ENDDO
-  
-             CASE ( 'q' )
-
-                DO  k = nzb+1, nzt
-                   tend(k,j,i) = tend(k,j,i) + td_sub_q(k,nt) + fac *          &
-                                 ( td_sub_q(k,nt+1) - td_sub_q(k,nt) ) *       &
-                                        MERGE( 1.0_wp, 0.0_wp,                 &
-                                               BTEST( wall_flags_0(k,j,i), 0 ) )
-                ENDDO
-
-          END SELECT
-
-       ENDIF
+       DO  k = nzb+1, nzt
+          tend(k,j,i) = tend(k,j,i) + td_lsa_lpt(k,nt)                   &
+                       + fac * ( td_lsa_lpt(k,nt+1) - td_lsa_lpt(k,nt) )*&
+                                  MERGE( 1.0_wp, 0.0_wp,                 &
+                                         BTEST( wall_flags_0(k,j,i), 0 ) )
+       ENDDO
 
     END SUBROUTINE ls_advec_ij
 
@@ -1873,9 +1677,6 @@ flush(9)
           pt_init = ptnudge(:,1)
           u_init  = unudge(:,1)
           v_init  = vnudge(:,1)
-          IF ( humidity  )  THEN ! is passive_scalar correct???
-             q_init = qnudge(:,1)
-          ENDIF
 
           WRITE( message_string, * ) 'Initial profiles of u, v, pt and q ',    &
                                      'from NUDGING_DATA are used.'
@@ -2023,29 +1824,6 @@ flush(9)
                 ENDDO
             ENDDO
 
-          CASE ( 'q' )
-
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-
-                   DO  k = nzb+1, nzt
-
-                      tmp_tend = - ( hom(k,1,41,0) - ( qnudge(k,nt) * dtp +    &
-                                     qnudge(k,nt+1) * dtm ) ) / tmp_tnudge(k)
-
-                      tend(k,j,i) = tend(k,j,i) + tmp_tend *                   &
-                                        MERGE( 1.0_wp, 0.0_wp,                 &
-                                               BTEST( wall_flags_0(k,j,i), 0 ) )
-
-                      sums_ls_l(k,5) = sums_ls_l(k,5) + tmp_tend *             &
-                                     weight_substep(intermediate_timestep_count)
-                   ENDDO
-                  
-                   sums_ls_l(nzt+1,5) = sums_ls_l(nzt,5)
-
-                ENDDO
-            ENDDO
-
           CASE DEFAULT
              message_string = 'unknown prognostic variable "' // prog_var // '"'
              CALL message( 'nudge', 'PA0367', 1, 2, 0, 6, 0 )
@@ -2143,24 +1921,6 @@ flush(9)
 
              sums_ls_l(nzt+1,4) = sums_ls_l(nzt,4)
 
-
-          CASE ( 'q' )
-
-             DO  k = nzb+1, nzt
-
-                tmp_tend = - ( hom(k,1,41,0) - ( qnudge(k,nt) * dtp +          &
-                               qnudge(k,nt+1) * dtm ) ) / tmp_tnudge(k)
-
-                tend(k,j,i) = tend(k,j,i) + tmp_tend *                         &
-                                        MERGE( 1.0_wp, 0.0_wp,                 &
-                                               BTEST( wall_flags_0(k,j,i), 0 ) )
-
-                sums_ls_l(k,5) = sums_ls_l(k,5) + tmp_tend                     &
-                                 * weight_substep(intermediate_timestep_count)
-             ENDDO
-
-             sums_ls_l(nzt+1,5) = sums_ls_l(nzt,5)
-
           CASE DEFAULT
              message_string = 'unknown prognostic variable "' // prog_var // '"'
              CALL message( 'nudge', 'PA0367', 1, 2, 0, 6, 0 )
@@ -2200,7 +1960,6 @@ flush(9)
        fac = ( time-time_vert(nt) ) / ( time_vert(nt+1)-time_vert(nt) )
 
        pt_init = ptnudge(:,nt) + fac * ( ptnudge(:,nt+1) - ptnudge(:,nt) )
-       q_init  = qnudge(:,nt) + fac * ( qnudge(:,nt+1) - qnudge(:,nt) )
        u_init  = unudge(:,nt) + fac * ( unudge(:,nt+1) - unudge(:,nt) )
        v_init  = vnudge(:,nt) + fac * ( vnudge(:,nt+1) - vnudge(:,nt) )
 

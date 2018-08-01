@@ -229,12 +229,6 @@
 
     USE arrays_3d
 
-    USE chemistry_model_mod,                                                   &
-        ONLY:  chem_init
-
-    USE chem_photolysis_mod,                                                   &
-        ONLY:  photolysis_init
-
     USE control_parameters,                                                    &
         ONLY:  air_chemistry,                                                  &
                cloud_physics, constant_diffusion, coupling_char, coupling_mode,&
@@ -260,18 +254,7 @@
 
     USE kinds
 
-    USE particle_attributes,                                                   &
-        ONLY:  particle_advection
-
     USE pegrid
-
-    USE pmc_particle_interface,                                                &
-        ONLY: pmcp_g_alloc_win
-
-    USE pmc_interface,                                                         &
-        ONLY:  cpl_id, nested_run, pmci_child_initialize, pmci_init,           &
-               pmci_modelconfiguration, pmci_parent_initialize,                &
-               pmci_ensure_nest_mass_conservation
 
     USE write_restart_data_mod,                                                &
         ONLY:  wrd_global, wrd_local
@@ -296,33 +279,23 @@
 !-- it will be defined in init_pegrid but is used before in cpu_log.
     CALL MPI_INIT( ierr )
 
+    comm_palm = MPI_COMM_WORLD
 !
 !-- Initialize the coupling for nested-domain runs
 !-- comm_palm is the communicator which includes all PEs (MPI processes)
 !-- available for this (nested) model. If it is not a nested run, comm_palm
 !-- is returned as MPI_COMM_WORLD
-    CALL cpu_log( log_point_s(70), 'pmci_init', 'start' )
-    CALL pmci_init( comm_palm )
-    CALL cpu_log( log_point_s(70), 'pmci_init', 'stop' )
     comm2d = comm_palm
 !
 !-- Get the (preliminary) number of MPI processes and the local PE-id (in case
 !-- of a further communicator splitting in init_coupling, these numbers will
 !-- be changed in init_pegrid).
-    IF ( nested_run )  THEN
-
-       CALL MPI_COMM_SIZE( comm_palm, numprocs, ierr )
-       CALL MPI_COMM_RANK( comm_palm, myid, ierr )
-
-    ELSE
-
        CALL MPI_COMM_SIZE( MPI_COMM_WORLD, numprocs, ierr )
        CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
 !
 !--    Initialize PE topology in case of coupled atmosphere-ocean runs (comm_palm
 !--    will be splitted in init_coupling)
-       CALL init_coupling
-    ENDIF
+    call init_coupling
 #endif
 
 !
@@ -334,44 +307,20 @@
     CALL cpu_log( log_point(1), 'total', 'start' )
     CALL cpu_log( log_point(2), 'initialisation', 'start' )
 
-!
 !-- Open a file for debug output
     WRITE (myid_char,'(''_'',I6.6)')  myid
     OPEN( 9, FILE='DEBUG'//TRIM( coupling_char )//myid_char, FORM='FORMATTED' )
 
-!
-!-- Initialize dvrp logging. Also, one PE maybe split from the global
-!-- communicator for doing the dvrp output. In that case, the number of
 !-- PEs available for PALM is reduced by one and communicator comm_palm
 !-- is changed respectively.
 #if defined( __parallel )
     CALL MPI_COMM_RANK( comm_palm, myid, ierr )
 !
-!-- TEST OUTPUT (TO BE REMOVED)
-    WRITE(9,*) '*** coupling_mode = "', TRIM( coupling_mode ), '"'
-    FLUSH( 9 )
-    IF ( TRIM( coupling_mode ) /= 'uncoupled' )  THEN
-       PRINT*, '*** PE', myid, ' Global target PE:', target_id, &
-               TRIM( coupling_mode )
-    ENDIF
 #endif
-
-    CALL init_dvrp_logging
 
 !
 !-- Read control parameters from NAMELIST files and read environment-variables
     CALL parin
-
-!
-!-- Check for the user's interface version
-    IF ( user_interface_current_revision /= user_interface_required_revision )  &
-    THEN
-       message_string = 'current user-interface revision "' //                  &
-                        TRIM( user_interface_current_revision ) // '" does ' // &
-                        'not match the required revision ' //                   &
-                        TRIM( user_interface_required_revision )
-        CALL message( 'palm', 'PA0169', 1, 2, 0, 6, 0 )
-    ENDIF
 
 !
 !-- Determine processor topology and local array indices
@@ -391,19 +340,13 @@
 !-- Read global attributes if available.  
     CALL netcdf_data_input_init 
 !
+
+    print *, 'hi3'
+
 !-- Read surface classification data, e.g. vegetation and soil types, water 
 !-- surfaces, etc., if available. Some of these data is required before 
 !-- check parameters is invoked.     
     CALL netcdf_data_input_surface_data
-!
-!-- Initialize chemistry (called before check_parameters due to dependencies)
-!-- --> Needs to be moved!! What is the dependency about?
-! IF (  TRIM( initializing_actions ) /= 'read_restart_data' )  THEN
-    IF ( air_chemistry )  THEN
-       CALL chem_init
-       CALL photolysis_init   ! probably also required for restart
-    ENDIF
-! END IF
 !
 !-- Check control parameters and deduce further quantities
     CALL check_parameters
@@ -413,58 +356,10 @@
     CALL init_3d_model
 
 !
-!-- Coupling protocol setup for nested-domain runs
-    IF ( nested_run )  THEN
-       CALL pmci_modelconfiguration
-!
-!--    Receive and interpolate initial data on children.
-!--    Child initialization must be made first if the model is both child and
-!--    parent if necessary
-       IF ( TRIM( initializing_actions ) /= 'read_restart_data' )  THEN
-          CALL pmci_child_initialize
-!
-!--       Send initial condition data from parent to children
-          CALL pmci_parent_initialize
-!
-!--    Exchange_horiz is needed after the nest initialization
-          IF ( nest_domain )  THEN
-             CALL exchange_horiz( u, nbgp )
-             CALL exchange_horiz( v, nbgp )
-             CALL exchange_horiz( w, nbgp )
-             IF ( .NOT. neutral )  THEN
-                CALL exchange_horiz( pt, nbgp )
-             ENDIF
-             IF ( .NOT. constant_diffusion )  CALL exchange_horiz( e, nbgp )
-             IF ( humidity )  THEN
-                CALL exchange_horiz( q, nbgp )
-                IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
-                  CALL exchange_horiz( qc, nbgp )
-                  CALL exchange_horiz( nc, nbgp )
-                ENDIF
-                IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
-                   CALL exchange_horiz( qr, nbgp ) 
-                   CALL exchange_horiz( nr, nbgp )
-                ENDIF
-             ENDIF
-             IF ( passive_scalar )  CALL exchange_horiz( s, nbgp )
-          ENDIF
-       ENDIF
-
-       CALL pmcp_g_alloc_win                    ! Must be called after pmci_child_initialize and pmci_parent_initialize
-    ENDIF
-
-!
 !-- Output of program header
     IF ( myid == 0 )  CALL header
 
     CALL cpu_log( log_point(2), 'initialisation', 'stop' )
-
-!
-!-- Integration of the non-atmospheric equations (land surface model, urban
-!-- surface model)
-    IF ( spinup )  THEN
-       CALL time_integration_spinup
-    ENDIF
 
 !
 !-- Set start time in format hh:mm:ss
@@ -486,7 +381,6 @@
 !-- Integration of the model equations using timestep-scheme
     CALL time_integration
 
-!
 !-- If required, write binary data for restart runs
     IF ( write_binary )  THEN
 
@@ -521,26 +415,12 @@
        CALL cpu_log( log_point(22), 'wrd_local', 'stop' )
 
 !
-!--    If required, write particle data in own restart files
-       IF ( particle_advection )  CALL lpm_write_restart_file
-       
     ENDIF
 
 !
 !-- If required, repeat output of header including the required CPU-time
     IF ( myid == 0 )  CALL header
 !
-!-- If required, final  user-defined actions, and
-!-- last actions on the open files and close files. Unit 14 was opened
-!-- in wrd_local but it is closed here, to allow writing on this
-!-- unit in routine user_last_actions.
-    CALL cpu_log( log_point(4), 'last actions', 'start' )
-          
-    CALL user_last_actions
-    CALL close_file( 0 )
-    CALL close_dvrp
-
-    CALL cpu_log( log_point(4), 'last actions', 'stop' )
 
 !
 !-- Write run number to file (used by mrun to create unified cycle numbers for

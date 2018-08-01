@@ -155,14 +155,8 @@
 
     USE pegrid
 
-    USE plant_canopy_model_mod,                                                &
-        ONLY:  pcm_tendency
-
     USE statistics,                                                            &
         ONLY:  hom, hom_sum, statistic_regions
-
-    USE user_actions_mod,                                                      &
-        ONLY:  user_actions
 
 
     IMPLICIT NONE
@@ -332,7 +326,7 @@
  SUBROUTINE tcm_check_parameters
 
     USE control_parameters,                                                    &
-        ONLY:  message_string, nest_domain, neutral, turbulent_inflow,         &
+        ONLY:  message_string, neutral, turbulent_inflow,         &
                turbulent_outflow
 
     IMPLICIT NONE
@@ -1012,15 +1006,6 @@
 !------------------------------------------------------------------------------!
  SUBROUTINE tcm_init_arrays
 
-    USE microphysics_mod,                                                      &
-        ONLY:  collision_turbulence
-
-    USE particle_attributes,                                                   &
-        ONLY:  use_sgs_for_particles, wang_kernel
-
-    USE pmc_interface,                                                         &
-        ONLY:  nested_run
-
     IMPLICIT NONE
 
     ALLOCATE( kh(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
@@ -1066,20 +1051,15 @@
 !-- Please note, if it is a nested run, arrays need to be allocated even if
 !-- they do not necessarily need to be transferred, which is attributed to 
 !-- the design of the model coupler which allocates memory for each variable. 
-    IF ( rans_mode  .OR.  use_sgs_for_particles  .OR.  wang_kernel  .OR.       &
-         collision_turbulence  .OR.  nested_run )  THEN
+    IF ( rans_mode ) THEN 
 #if defined( __nopointer )
        ALLOCATE( diss(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-       IF ( rans_tke_e )  THEN
-          ALLOCATE( diss_p(nzb:nzt+1,nysg:nyng,nxlg:nxrg)  )
-          ALLOCATE( tdiss_m(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-       ENDIF
+       ALLOCATE( diss_p(nzb:nzt+1,nysg:nyng,nxlg:nxrg)  )
+       ALLOCATE( tdiss_m(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
 #else
        ALLOCATE( diss_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-       IF ( rans_tke_e  .OR.  nested_run )  THEN
-          ALLOCATE( diss_2(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-          ALLOCATE( diss_3(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-       ENDIF
+       ALLOCATE( diss_2(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
+       ALLOCATE( diss_3(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
 #endif
     ENDIF
 
@@ -1088,12 +1068,9 @@
 !-- Initial assignment of pointers
     e  => e_1;   e_p  => e_2;   te_m  => e_3
 
-    IF ( rans_mode  .OR.  use_sgs_for_particles  .OR.     &
-         wang_kernel  .OR.  collision_turbulence  .OR.  nested_run )  THEN
+    IF ( rans_mode ) THEN 
        diss => diss_1
-       IF ( rans_tke_e  .OR.  nested_run )  THEN
        diss_p => diss_2; tdiss_m => diss_3
-       ENDIF
     ENDIF
 #endif
 
@@ -1108,10 +1085,7 @@
  SUBROUTINE tcm_init
 
     USE control_parameters,                                                    &
-        ONLY:  complex_terrain, dissipation_1d, topography
-
-    USE model_1d_mod,                                                          &
-        ONLY:  diss1d, e1d, kh1d, km1d, l1d
+        ONLY:  complex_terrain, topography
 
     USE surface_mod,                                                           &
         ONLY:  get_topography_top_index_ji
@@ -1131,43 +1105,8 @@
 
 !
 !-- Actions for initial runs
-    IF ( TRIM( initializing_actions ) /= 'read_restart_data'  .AND.            &
-         TRIM( initializing_actions ) /= 'cyclic_fill' )  THEN
 
-       IF ( INDEX( initializing_actions, 'set_1d-model_profiles' ) /= 0 )  THEN
-!
-!--       Transfer initial profiles to the arrays of the 3D model
-          DO  i = nxlg, nxrg
-             DO  j = nysg, nyng
-                e(:,j,i)  = e1d
-                kh(:,j,i) = kh1d
-                km(:,j,i) = km1d
-             ENDDO
-          ENDDO
-
-          IF ( constant_diffusion )  THEN
-             e = 0.0_wp
-          ENDIF
-
-          IF ( rans_tke_e )  THEN
-             IF ( dissipation_1d == 'prognostic' )  THEN    !> @query Why must this be checked?
-                DO  i = nxlg, nxrg                          !>   Should 'diss' not always
-                   DO  j = nysg, nyng                       !>   be prognostic in case rans_tke_e?
-                      diss(:,j,i) = diss1d
-                   ENDDO
-                ENDDO
-             ELSE
-                DO  i = nxlg, nxrg
-                   DO  j = nysg, nyng
-                      DO  k = nzb+1, nzt
-                         diss(k,j,i) = c_0**4 * e(k,j,i)**2 / km1d(k)
-                      ENDDO
-                   ENDDO
-                ENDDO
-             ENDIF
-          ENDIF
-
-       ELSEIF ( INDEX(initializing_actions, 'set_constant_profiles') /= 0 .OR. &
+       IF ( INDEX(initializing_actions, 'set_constant_profiles') /= 0 .OR. &
                 INDEX( initializing_actions, 'inifor' ) /= 0 )  THEN
 
           IF ( constant_diffusion )  THEN
@@ -1225,7 +1164,7 @@
           diss_p = diss
        ENDIF
 
-    ELSEIF ( TRIM( initializing_actions ) == 'read_restart_data'  .OR.         &
+    IF ( TRIM( initializing_actions ) == 'read_restart_data'  .OR.         &
              TRIM( initializing_actions ) == 'cyclic_fill' )                   &
     THEN
 
@@ -2180,9 +2119,6 @@
 
 !
 !--    Additional sink term for flows through plant canopies
-       IF ( plant_canopy )  CALL pcm_tendency( 6 )
-
-       CALL user_actions( 'e-tendency' )
 
 !
 !--    Prognostic equation for TKE.
@@ -2306,9 +2242,6 @@
 
 !
 !--    Additional sink term for flows through plant canopies
-!        IF ( plant_canopy )  CALL pcm_tendency( ? )                            !> @query what to do with this?
-
-!        CALL user_actions( 'diss-tendency' )                                   !> @todo not yet implemented
 
 !
 !--    Prognostic equation for TKE dissipation.
@@ -2464,10 +2397,6 @@
 
 !
 !--    Additional sink term for flows through plant canopies
-       IF ( plant_canopy )  CALL pcm_tendency( i, j, 6 )
-
-       CALL user_actions( i, j, 'e-tendency' )
-
 !
 !--    Prognostic equation for TKE.
 !--    Eliminate negative TKE values, which can occur due to numerical
@@ -2583,11 +2512,6 @@
        dum_dif = tend(:,j,i) - dum_adv - dum_pro                                !> @todo remove later
 
 !
-!--    Additional sink term for flows through plant canopies
-!        IF ( plant_canopy )  CALL pcm_tendency( i, j, ? )                      !> @todo not yet implemented
-
-!        CALL user_actions( i, j, 'diss-tendency' )                             !> @todo not yet implemented
-
 !
 !--    Prognostic equation for TKE dissipation
 !--    Eliminate negative dissipation values, which can occur due to
@@ -4189,12 +4113,6 @@
     USE grid_variables,                                                        &
         ONLY:  ddx2, ddy2
 
-    USE microphysics_mod,                                                      &
-        ONLY:  collision_turbulence
-
-    USE particle_attributes,                                                   &
-        ONLY:  use_sgs_for_particles, wang_kernel
-
     USE surface_mod,                                                           &
        ONLY :  bc_h
 
@@ -4272,42 +4190,7 @@
        ENDDO
 
 !
-!--    Store dissipation if needed for calculating the sgs particle
-!--    velocities
-       IF ( .NOT. rans_tke_e .AND. ( use_sgs_for_particles  .OR.               &
-            wang_kernel  .OR.  collision_turbulence  ) )  THEN
-          DO  j = nys, nyn
-             DO  k = nzb+1, nzt
-                diss(k,j,i) = dissipation(k,j) * MERGE( 1.0_wp, 0.0_wp,        &
-                                               BTEST( wall_flags_0(k,j,i), 0 ) )
-             ENDDO
-          ENDDO
-       ENDIF
-
     ENDDO
-
-!
-!-- Neumann boundary condition for dissipation diss(nzb,:,:) = diss(nzb+1,:,:)
-    IF ( .NOT. rans_tke_e .AND. ( use_sgs_for_particles  .OR.                  &
-         wang_kernel  .OR.  collision_turbulence  ) )  THEN
-!
-!--    Upward facing surfaces
-       DO  m = 1, bc_h(0)%ns
-          i = bc_h(0)%i(m)            
-          j = bc_h(0)%j(m)
-          k = bc_h(0)%k(m)
-          diss(k-1,j,i) = diss(k,j,i)
-       ENDDO
-!
-!--    Downward facing surfaces
-       DO  m = 1, bc_h(1)%ns
-          i = bc_h(1)%i(m)            
-          j = bc_h(1)%j(m)
-          k = bc_h(1)%k(m)
-          diss(k+1,j,i) = diss(k,j,i)
-       ENDDO
-
-    ENDIF
 
  END SUBROUTINE diffusion_e
 
@@ -4326,12 +4209,6 @@
     USE grid_variables,                                                        &
         ONLY:  ddx2, ddy2
         
-    USE microphysics_mod,                                                      &
-        ONLY:  collision_turbulence
-
-    USE particle_attributes,                                                   &
-        ONLY:  use_sgs_for_particles, wang_kernel
-
     USE surface_mod,                                                           &
        ONLY :  bc_h
 
@@ -4412,33 +4289,6 @@
     ENDDO
 
 !
-!-- Store dissipation if needed for calculating the sgs particle velocities
-    IF ( .NOT. rans_tke_e .AND.  ( use_sgs_for_particles  .OR.  wang_kernel    &
-          .OR.  collision_turbulence ) )  THEN
-       DO  k = nzb+1, nzt
-          diss(k,j,i) = dissipation(k) * MERGE( 1.0_wp, 0.0_wp,                &
-                                               BTEST( wall_flags_0(k,j,i), 0 ) )
-       ENDDO
-!
-!--    Neumann boundary condition for dissipation diss(nzb,:,:) = diss(nzb+1,:,:)
-!--    For each surface type determine start and end index (in case of elevated
-!--    topography several up/downward facing surfaces may exist.
-       surf_s = bc_h(0)%start_index(j,i)   
-       surf_e = bc_h(0)%end_index(j,i)   
-       DO  m = surf_s, surf_e
-          k             = bc_h(0)%k(m)
-          diss(k-1,j,i) = diss(k,j,i)
-       ENDDO
-!
-!--    Downward facing surfaces
-       surf_s = bc_h(1)%start_index(j,i)   
-       surf_e = bc_h(1)%end_index(j,i)   
-       DO  m = surf_s, surf_e
-          k             = bc_h(1)%k(m)
-          diss(k+1,j,i) = diss(k,j,i)
-       ENDDO
-    ENDIF
-
  END SUBROUTINE diffusion_e_ij
 
 

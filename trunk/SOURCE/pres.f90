@@ -181,9 +181,6 @@
     USE kinds
 
     USE pegrid
-    
-    USE pmc_interface,                                                         &
-        ONLY:  nesting_mode 
 
     USE poisfft_mod,                                                           &
         ONLY:  poisfft
@@ -365,55 +362,6 @@
           ENDDO
        ENDDO
 
-    ENDIF
-
-!
-!-- Remove mean vertical velocity in case that Neumann conditions are
-!-- used both at bottom and top boundary, and if not a nested domain in a 
-!-- normal nesting run. In case of vertical nesting, this must be done.
-!-- Therefore an auxiliary logical variable nest_domain_nvn is used here, and 
-!-- nvn stands for non-vertical nesting. 
-!-- This cannot be done before the first initial time step because ngp_2dh_outer
-!-- is not yet known then.
-    nest_domain_nvn = nest_domain
-    IF ( nest_domain .AND. nesting_mode == 'vertical' )  THEN
-       nest_domain_nvn = .FALSE.
-    ENDIF
-
-    IF ( ibc_p_b == 1  .AND.  ibc_p_t == 1  .AND.                               &
-         .NOT. nest_domain_nvn  .AND. intermediate_timestep_count /= 0 )        &
-    THEN
-       w_l = 0.0_wp;  w_l_l = 0.0_wp
-       DO  i = nxl, nxr
-          DO  j = nys, nyn
-             DO  k = nzb+1, nzt
-                w_l_l(k) = w_l_l(k) + w(k,j,i)                                 &
-                                     * MERGE( 1.0_wp, 0.0_wp,                  &
-                                              BTEST( wall_flags_0(k,j,i), 3 )  &
-                                            )
-             ENDDO
-          ENDDO
-       ENDDO
-#if defined( __parallel )   
-       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-       CALL MPI_ALLREDUCE( w_l_l(1), w_l(1), nzt, MPI_REAL, MPI_SUM, &
-                           comm2d, ierr )
-#else
-       w_l = w_l_l
-#endif
-       DO  k = 1, nzt
-          w_l(k) = w_l(k) / ngp_2dh_outer(k,0)
-       ENDDO
-       DO  i = nxlg, nxrg
-          DO  j = nysg, nyng
-             DO  k = nzb+1, nzt
-                w(k,j,i) = w(k,j,i) - w_l(k)                                   &
-                                     * MERGE( 1.0_wp, 0.0_wp,                  &
-                                              BTEST( wall_flags_0(k,j,i), 3 )  &
-                                            )
-             ENDDO
-          ENDDO
-       ENDDO
     ENDIF
 
 !

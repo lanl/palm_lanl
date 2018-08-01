@@ -655,30 +655,15 @@
 
 
     USE arrays_3d
-    USE chemistry_model_mod,                                                   &
-        ONLY:  chem_boundary_conds, chem_check_data_output,                    &
-               chem_check_data_output_pr, chem_species                 
-    USE chem_modules
-    USE cloud_parameters
     USE constants
     USE control_parameters
-    USE dvrp_variables
     USE grid_variables
-    USE gust_mod,                                                              &
-        ONLY: gust_check_data_output, gust_check_data_output_pr,               &
-              gust_check_parameters, gust_module_enabled
     USE indices
-    USE land_surface_model_mod,                                                &
-        ONLY: lsm_check_data_output, lsm_check_data_output_pr,                 &
-              lsm_check_parameters
 
     USE lsf_nudging_mod,                                                       &
         ONLY:  lsf_nudging_check_parameters, lsf_nudging_check_data_output_pr
 
     USE kinds
-
-    USE model_1d_mod,                                                          &
-        ONLY:  damp_level_1d, damp_level_ind_1d
 
     USE netcdf_data_input_mod,                                                 &
         ONLY:  init_model, input_pids_static, netcdf_data_input_check_dynamic, &
@@ -689,37 +674,16 @@
                netcdf_data_format_string, dots_unit, heatflux_output_unit,     &
                waterflux_output_unit, momentumflux_output_unit
 
-    USE particle_attributes
     USE pegrid
-    USE plant_canopy_model_mod,                                                &
-        ONLY:  pcm_check_data_output, pcm_check_parameters
-
-    USE pmc_interface,                                                         &
-        ONLY:  cpl_id, nested_run
 
     USE profil_parameter
-    USE radiation_model_mod,                                                   &
-        ONLY:  radiation, radiation_check_data_output,                         &
-               radiation_check_data_output_pr, radiation_check_parameters
     USE spectra_mod,                                                           &
         ONLY:  calculate_spectra, spectra_check_parameters
     USE statistics
-    USE subsidence_mod
     USE statistics
-    USE synthetic_turbulence_generator_mod,                                    &
-        ONLY:  stg_check_parameters
     USE transpose_indices
     USE turbulence_closure_mod,                                                &
         ONLY:  tcm_check_data_output, tcm_check_parameters
-    USE urban_surface_mod,                                                     &
-        ONLY:  usm_check_data_output, usm_check_parameters
-    USE uv_exposure_model_mod,                                                 &
-        ONLY:  uvem_check_data_output
-    USE wind_turbine_model_mod,                                                &
-        ONLY:  wtm_check_parameters
-    USE vertical_nesting_mod,                                                  &
-        ONLY:  vnested, vnest_check_parameters
-
 
     IMPLICIT NONE
 
@@ -1000,11 +964,7 @@
     ELSE
        ensemble_string = ''
     ENDIF
-    IF ( nested_run )  THEN
-       WRITE( nest_string, '(2X,A,I2.2)' )  'nest-id: ', cpl_id
-    ELSE
        nest_string = ''
-    ENDIF
 
     WRITE ( run_description_header,                                            &
             '(A,2X,A,2X,A,A,A,I2.2,A,A,A,2X,A,A,2X,A,1X,A)' )                  &
@@ -1047,12 +1007,6 @@
        ENDIF
        IF ( galilei_transformation )  THEN
           WRITE( action, '(A)' )  'galilei_transformation = .TRUE.'
-       ENDIF
-       IF ( cloud_physics )  THEN
-          WRITE( action, '(A)' )  'cloud_physics = .TRUE.'
-       ENDIF
-       IF ( cloud_droplets )  THEN
-          WRITE( action, '(A)' )  'cloud_droplets = .TRUE.'
        ENDIF
        IF ( .NOT. constant_flux_layer )  THEN
           WRITE( action, '(A)' )  'constant_flux_layer = .FALSE.'
@@ -1140,10 +1094,6 @@
 !
 !-- When the land- or urban-surface model is used, the flux output must be 
 !-- dynamic.
-    IF ( land_surface  .OR.  urban_surface )  THEN
-       flux_output_mode = 'dynamic'
-    ENDIF
-
 !
 !-- set the flux output units according to flux_output_mode
     IF ( TRIM( flux_output_mode ) == 'kinematic' ) THEN
@@ -1176,54 +1126,6 @@
 
     ENDIF
 !
-!-- Check cloud scheme
-    IF ( cloud_scheme == 'saturation_adjust' )  THEN
-       microphysics_sat_adjust = .TRUE.
-       microphysics_seifert    = .FALSE.
-       microphysics_kessler    = .FALSE.
-       precipitation           = .FALSE.
-    ELSEIF ( cloud_scheme == 'seifert_beheng' )  THEN
-       microphysics_sat_adjust = .FALSE.
-       microphysics_seifert    = .TRUE.
-       microphysics_kessler    = .FALSE.
-       microphysics_morrison  = .FALSE.
-       precipitation           = .TRUE.
-    ELSEIF ( cloud_scheme == 'kessler' )  THEN
-       microphysics_sat_adjust = .FALSE.
-       microphysics_seifert    = .FALSE.
-       microphysics_kessler    = .TRUE.
-       microphysics_morrison   = .FALSE.
-       precipitation           = .TRUE.
-    ELSEIF ( cloud_scheme == 'morrison' )  THEN
-       microphysics_sat_adjust = .FALSE.
-       microphysics_seifert    = .TRUE.
-       microphysics_kessler    = .FALSE.
-       microphysics_morrison   = .TRUE.
-       precipitation           = .TRUE.
-    ELSE
-       message_string = 'unknown cloud microphysics scheme cloud_scheme ="' // &
-                        TRIM( cloud_scheme ) // '"'
-       CALL message( 'check_parameters', 'PA0357', 1, 2, 0, 6, 0 )
-    ENDIF
-!
-!-- Check aerosol
-    IF ( aerosol_bulk == 'nacl' )  THEN
-       aerosol_nacl   = .TRUE.
-       aerosol_c3h4o4 = .FALSE.
-       aerosol_nh4no3 = .FALSE.
-    ELSEIF ( aerosol_bulk == 'c3h4o4' )  THEN
-       aerosol_nacl   = .FALSE.
-       aerosol_c3h4o4 = .TRUE.
-       aerosol_nh4no3 = .FALSE.
-    ELSEIF ( aerosol_bulk == 'nh4no3' )  THEN
-       aerosol_nacl   = .FALSE.
-       aerosol_c3h4o4 = .FALSE.
-       aerosol_nh4no3 = .TRUE.
-    ELSE
-       message_string = 'unknown aerosol = "' // TRIM( aerosol_bulk ) // '"'
-       CALL message( 'check_parameters', 'PA0469', 1, 2, 0, 6, 0 )
-    ENDIF
-
 !
 !-- Check whether there are any illegal values
 !-- Pressure solver:
@@ -1295,17 +1197,6 @@
        CALL message( 'check_parameters', 'PA0026', 1, 2, 0, 6, 0 )
     ENDIF
 
-    IF ( use_sgs_for_particles  .AND.  .NOT. cloud_droplets  .AND.             &
-         .NOT. use_upstream_for_tke  .AND.                                     &
-         scalar_advec /= 'ws-scheme'                                           &
-       )  THEN
-       use_upstream_for_tke = .TRUE.
-       message_string = 'use_upstream_for_tke is set to .TRUE. because ' //    &
-                        'use_sgs_for_particles = .TRUE. '          //          &
-                        'and scalar_advec /= ws-scheme'
-       CALL message( 'check_parameters', 'PA0025', 0, 1, 0, 6, 0 )
-    ENDIF
-
 !
 !-- Set LOGICAL switches to enhance performance
     IF ( momentum_advec == 'ws-scheme' )  ws_scheme_mom = .TRUE.
@@ -1340,34 +1231,6 @@
        CALL message( 'check_parameters', 'PA0029', 1, 2, 0, 6, 0 )
     ENDIF
 !
-!-- Check for proper settings for microphysics
-    IF ( cloud_physics  .AND.  cloud_droplets )  THEN
-       message_string = 'cloud_physics = .TRUE. is not allowed with ' //       &
-                        'cloud_droplets = .TRUE.'
-       CALL message( 'check_parameters', 'PA0442', 1, 2, 0, 6, 0 )
-    ENDIF
-
-!
-!-- Collision kernels:
-    SELECT CASE ( TRIM( collision_kernel ) )
-
-       CASE ( 'hall', 'hall_fast' )
-          hall_kernel = .TRUE.
-
-       CASE ( 'wang', 'wang_fast' )
-          wang_kernel = .TRUE.
-
-       CASE ( 'none' )
-
-
-       CASE DEFAULT
-          message_string = 'unknown collision kernel: collision_kernel = "' // &
-                           TRIM( collision_kernel ) // '"'
-          CALL message( 'check_parameters', 'PA0350', 1, 2, 0, 6, 0 )
-
-    END SELECT
-    IF ( collision_kernel(6:9) == 'fast' )  use_kernel_tables = .TRUE.
-
 !
 !-- Initializing actions must have been set by the user
     IF ( TRIM( initializing_actions ) == '' )  THEN
@@ -1428,63 +1291,9 @@
        CALL message( 'check_parameters', 'PA0033', 1, 2, 0, 6, 0 )
     ENDIF
 !
-!-- In case of spinup and nested run, spinup end time must be identical 
-!-- in order to have synchronously running simulations. 
-    IF ( nested_run )  THEN
-#if defined( __parallel )
-       CALL MPI_ALLREDUCE( spinup_time, spinup_time_max, 1, MPI_REAL,          &
-                           MPI_MAX, MPI_COMM_WORLD, ierr )
-       CALL MPI_ALLREDUCE( dt_spinup,   dt_spinup_max,   1, MPI_REAL,          &
-                           MPI_MAX, MPI_COMM_WORLD, ierr )
-       IF ( spinup_time /= spinup_time_max  .OR.  dt_spinup /= dt_spinup_max ) &
-       THEN
-          message_string = 'In case of nesting, spinup_time and ' //           &
-                           'dt_spinup must be identical in all parent ' //     &
-                           'and child domains.'
-          CALL message( 'check_parameters', 'PA0489', 3, 2, 0, 6, 0 )
-       ENDIF
-#endif
-    ENDIF
-
-    IF ( cloud_physics  .AND.  .NOT.  humidity )  THEN
-       WRITE( message_string, * ) 'cloud_physics = ', cloud_physics, ' is ',   &
-              'not allowed with humidity = ', humidity
-       CALL message( 'check_parameters', 'PA0034', 1, 2, 0, 6, 0 )
-    ENDIF
-
-    IF ( humidity  .AND.  sloping_surface )  THEN
-       message_string = 'humidity = .TRUE. and sloping_surface = .TRUE. ' //   &
-                        'are not allowed simultaneously'
-       CALL message( 'check_parameters', 'PA0036', 1, 2, 0, 6, 0 )
-    ENDIF
-
-!
-!-- Check for synthetic turbulence generator settings
-    CALL stg_check_parameters
-!
-!-- When plant canopy model is used, peform addtional checks
-    IF ( plant_canopy )  CALL pcm_check_parameters
-
 !
 !-- Additional checks for spectra
     IF ( calculate_spectra )  CALL spectra_check_parameters
-!
-!-- When land surface model is used, perform additional checks
-    IF ( land_surface )  CALL lsm_check_parameters
-
-!
-!-- When urban surface model is used, perform additional checks
-    IF ( urban_surface )  CALL usm_check_parameters
-
-!
-!-- If wind turbine model is used, perform additional checks
-    IF ( wind_turbine )  CALL wtm_check_parameters
-!
-!-- When radiation model is used, peform addtional checks
-    IF ( radiation )  CALL radiation_check_parameters
-!
-!-- When gust module is used, perform additional checks
-    IF ( gust_module_enabled )  CALL gust_check_parameters
 !
 !-- When large-scale forcing or nudging is used, peform addtional checks
     IF ( large_scale_forcing  .OR.  nudging )  CALL lsf_nudging_check_parameters
@@ -1497,14 +1306,8 @@
 !
 !--    Initial profiles for 1D and 3D model, respectively (u,v further below)
        pt_init = pt_surface
-       IF ( humidity       )  q_init  = q_surface
        IF ( ocean          )  sa_init = sa_surface
        IF ( passive_scalar )  s_init  = s_surface
-       IF ( air_chemistry )  THEN
-         DO lsp = 1, nvar
-            chem_species(lsp)%conc_pr_init = cs_surface(lsp)      
-         ENDDO
-       ENDIF
 !
 !--
 !--    If required, compute initial profile of the geostrophic wind
@@ -1699,31 +1502,12 @@
                                        pt_surface, bc_pt_t_val )
        ENDIF
 !
-!--    Compute initial humidity profile using the given humidity gradients
-       IF ( humidity )  THEN
-          CALL init_vertical_profiles( q_vertical_gradient_level_ind,          &
-                                       q_vertical_gradient_level,              &
-                                       q_vertical_gradient, q_init,            &
-                                       q_surface, bc_q_t_val )
-       ENDIF
-!
 !--    Compute initial scalar profile using the given scalar gradients
        IF ( passive_scalar )  THEN
           CALL init_vertical_profiles( s_vertical_gradient_level_ind,          &
                                        s_vertical_gradient_level,              &
                                        s_vertical_gradient, s_init,            &
                                        s_surface, bc_s_t_val )
-       ENDIF
-!
-!--    Compute initial chemistry profile using the given chemical species gradients
-       IF ( air_chemistry )  THEN                                                          
-         DO lsp = 1, nvar
-          CALL init_vertical_profiles( cs_vertical_gradient_level_ind(lsp,:),  &
-                                       cs_vertical_gradient_level(lsp,:),      &
-                                       cs_vertical_gradient(lsp,:),            &
-                                       chem_species(lsp)%conc_pr_init,         &
-                                       cs_surface(lsp), bc_cs_t_val(lsp) )
-         ENDDO
        ENDIF
 !
 !
@@ -1737,45 +1521,6 @@
        ENDIF
 
 
-    ENDIF
-
-!
-!-- Check if the control parameter use_subsidence_tendencies is used correctly
-    IF ( use_subsidence_tendencies  .AND.  .NOT.  large_scale_subsidence )  THEN
-       message_string = 'The usage of use_subsidence_tendencies ' //           &
-                            'requires large_scale_subsidence = .T..'
-       CALL message( 'check_parameters', 'PA0396', 1, 2, 0, 6, 0 )
-    ELSEIF ( use_subsidence_tendencies  .AND.  .NOT. large_scale_forcing )  THEN
-       message_string = 'The usage of use_subsidence_tendencies ' //           &
-                            'requires large_scale_forcing = .T..'
-       CALL message( 'check_parameters', 'PA0397', 1, 2, 0, 6, 0 )
-    ENDIF
-
-!
-!-- Initialize large scale subsidence if required
-    If ( large_scale_subsidence )  THEN
-       IF ( subs_vertical_gradient_level(1) /= -9999999.9_wp  .AND.            &
-                                     .NOT.  large_scale_forcing )  THEN
-          CALL init_w_subsidence
-       ENDIF
-!
-!--    In case large_scale_forcing is used, profiles for subsidence velocity
-!--    are read in from file LSF_DATA
-
-       IF ( subs_vertical_gradient_level(1) == -9999999.9_wp  .AND.            &
-            .NOT.  large_scale_forcing )  THEN
-          message_string = 'There is no default large scale vertical ' //      &
-                           'velocity profile set. Specify the subsidence ' //  &
-                           'velocity profile via subs_vertical_gradient ' //   &
-                           'and subs_vertical_gradient_level.'
-          CALL message( 'check_parameters', 'PA0380', 1, 2, 0, 6, 0 )
-       ENDIF
-    ELSE
-        IF ( subs_vertical_gradient_level(1) /= -9999999.9_wp )  THEN
-           message_string = 'Enable usage of large scale subsidence by ' //    &
-                            'setting large_scale_subsidence = .T..'
-          CALL message( 'check_parameters', 'PA0381', 1, 2, 0, 6, 0 )
-        ENDIF
     ENDIF
 
 !
@@ -2128,37 +1873,6 @@
     ENDIF
 
 !
-!-- Set boundary conditions for total water content
-    IF ( humidity )  THEN
-
-       IF ( ANY( wall_humidityflux /= 0.0_wp )  .AND.                        &
-            surface_waterflux == 9999999.9_wp )  THEN
-          message_string = 'wall_humidityflux additionally requires ' //     &
-                           'setting of surface_waterflux'
-          CALL message( 'check_parameters', 'PA0444', 1, 2, 0, 6, 0 )
-       ENDIF
-
-       CALL set_bc_scalars( 'q', bc_q_b, bc_q_t, ibc_q_b, ibc_q_t,           &
-                            'PA0071', 'PA0072' )
-
-       IF ( surface_waterflux == 9999999.9_wp  )  THEN
-          constant_waterflux = .FALSE.
-          IF ( large_scale_forcing .OR. land_surface )  THEN
-             IF ( ibc_q_b == 0 )  THEN
-                constant_waterflux = .FALSE.
-             ELSEIF ( ibc_q_b == 1 )  THEN
-                constant_waterflux = .TRUE.
-             ENDIF
-          ENDIF
-       ELSE
-          constant_waterflux = .TRUE.
-       ENDIF
-
-       CALL check_bc_scalars( 'q', bc_q_b, ibc_q_b, 'PA0073', 'PA0074',        &
-                              constant_waterflux, q_surface_initial_change )
-
-    ENDIF
-
     IF ( passive_scalar )  THEN
 
        IF ( ANY( wall_scalarflux /= 0.0_wp )  .AND.                            &
@@ -2189,10 +1903,6 @@
           CALL message( 'check_parameters', 'PA0441', 1, 2, 0, 6, 0 )
        ENDIF
     ENDIF
-
-!
-!-- Boundary conditions for chemical species
-    IF ( air_chemistry )  CALL chem_boundary_conds( 'init' )
 
 !
 !-- Boundary conditions for horizontal components of wind speed
@@ -2379,21 +2089,6 @@
                 dt_averaging_input_pr, ' must be <= averaging_interval_pr = ', &
                 averaging_interval_pr
        CALL message( 'check_parameters', 'PA0089', 1, 2, 0, 6, 0 )
-    ENDIF
-
-!
-!-- Set the default value for the integration interval of precipitation amount
-    IF ( microphysics_seifert  .OR.  microphysics_kessler )  THEN
-       IF ( precipitation_amount_interval == 9999999.9_wp )  THEN
-          precipitation_amount_interval = dt_do2d_xy
-       ELSE
-          IF ( precipitation_amount_interval > dt_do2d_xy )  THEN
-             WRITE( message_string, * )  'precipitation_amount_interval = ',   &
-                 precipitation_amount_interval, ' must not be larger than ',   &
-                 'dt_do2d_xy = ', dt_do2d_xy
-             CALL message( 'check_parameters', 'PA0090', 1, 2, 0, 6, 0 )
-          ENDIF
-       ENDIF
     ENDIF
 
 !
@@ -3176,34 +2871,11 @@
 
           CASE DEFAULT
 
-             CALL lsm_check_data_output_pr( data_output_pr(i), i, unit,        &
-                                            dopr_unit(i) )
-
              IF ( unit == 'illegal' )  THEN
                 CALL lsf_nudging_check_data_output_pr( data_output_pr(i), i,   &
                                                     unit, dopr_unit(i) )
              ENDIF
 
-             IF ( unit == 'illegal' )  THEN
-                CALL radiation_check_data_output_pr( data_output_pr(i), i,     &
-                                                     unit, dopr_unit(i) )
-             ENDIF
-!
-!--          Block of gust module profile outputs
-             IF ( unit == 'illegal'  .AND.  gust_module_enabled  )  THEN
-                   CALL gust_check_data_output_pr( data_output_pr(i), i, unit, &
-                                                   dopr_unit(i) )
-             ENDIF
-
-             IF ( unit == 'illegal' )  THEN                                        
-                CALL chem_check_data_output_pr( data_output_pr(i), i,          &
-                                                unit, dopr_unit(i) )
-             ENDIF 
-
-             IF ( unit == 'illegal' )  THEN
-                unit = ''
-                CALL user_check_data_output_pr( data_output_pr(i), i, unit )
-             ENDIF
 
              IF ( unit == 'illegal' )  THEN
                 IF ( data_output_pr_user(1) /= ' ' )  THEN
@@ -3314,28 +2986,6 @@
                 CALL message( 'check_parameters', 'PA0359', 1, 2, 0, 6, 0 )
              ENDIF
              unit = '1/m3'
-
-          CASE ( 'pc', 'pr' )
-             IF (  .NOT.  particle_advection )  THEN
-                message_string = 'output of "' // TRIM( var ) // '" requir' // &
-                   'es a "particle_parameters"-NAMELIST in the parameter ' //  &
-                   'file (PARIN)'
-                CALL message( 'check_parameters', 'PA0104', 1, 2, 0, 6, 0 )
-             ENDIF
-             IF ( TRIM( var ) == 'pc' )  unit = 'number'
-             IF ( TRIM( var ) == 'pr' )  unit = 'm'
-
-          CASE ( 'prr' )
-             IF (  .NOT.  cloud_physics )  THEN
-                message_string = 'output of "' // TRIM( var ) // '" requi' //  &
-                         'res cloud_physics = .TRUE.'
-                CALL message( 'check_parameters', 'PA0108', 1, 2, 0, 6, 0 )
-             ELSEIF ( microphysics_sat_adjust )  THEN
-                message_string = 'output of "' // TRIM( var ) // '" is ' //    &
-                         'not available for cloud_scheme = saturation_adjust'
-                CALL message( 'check_parameters', 'PA0423', 1, 2, 0, 6, 0 )
-             ENDIF
-             unit = 'kg/kg m/s'
 
           CASE ( 'q', 'vpt' )
              IF (  .NOT.  humidity )  THEN
@@ -3522,61 +3172,10 @@
              IF ( TRIM( var ) == 'z0*'    )  unit = 'm'
              IF ( TRIM( var ) == 'z0h*'   )  unit = 'm'
 !
-!--          Output of surface latent and sensible heat flux will be in W/m2 
-!--          in case of natural- and urban-type surfaces, even if 
-!--          flux_output_mode is set to kinematic units.
-             IF ( land_surface  .OR.  urban_surface )  THEN
-                IF ( TRIM( var ) == 'shf*'   )  unit = 'W/m2'
-                IF ( TRIM( var ) == 'qsws*'  )  unit = 'W/m2'
-             ENDIF
-
           CASE DEFAULT
 
              CALL tcm_check_data_output ( var, unit, i, ilen, k )
 
-             IF ( unit == 'illegal' )  THEN
-                CALL lsm_check_data_output ( var, unit, i, ilen, k )
-             ENDIF
-
-             IF ( unit == 'illegal' )  THEN
-                CALL radiation_check_data_output( var, unit, i, ilen, k )
-             ENDIF
-
-!
-!--          Block of gust module outputs
-             IF ( unit == 'illegal'  .AND.  gust_module_enabled  )  THEN
-                CALL gust_check_data_output ( var, unit )
-             ENDIF
-
-!
-!--          Block of chemistry model outputs
-             IF ( unit == 'illegal'  .AND.  air_chemistry                      &
-                                     .AND.  var(1:3) == 'kc_' )  THEN
-                CALL chem_check_data_output( var, unit, i, ilen, k )
-             ENDIF
-
-!
-!--          Block of urban surface model outputs
-             IF ( unit == 'illegal' .AND. urban_surface .AND. var(1:4) == 'usm_' ) THEN
-                 CALL usm_check_data_output( var, unit )
-             ENDIF
-
-!
-!--          Block of plant canopy model outputs
-             IF ( unit == 'illegal' .AND. plant_canopy .AND. var(1:4) == 'pcm_' ) THEN
-                 CALL pcm_check_data_output( var, unit )
-             ENDIF
-
-!
-!--          Block of uv exposure model outputs
-             IF ( unit == 'illegal' .AND. uv_exposure .AND. var(1:5) == 'uvem_' )  THEN
-                CALL uvem_check_data_output( var, unit, i, ilen, k )
-             ENDIF
-
-             IF ( unit == 'illegal' )  THEN
-                unit = ''
-                CALL user_check_data_output( var, unit )
-             ENDIF
 
              IF ( unit == 'illegal' )  THEN
                 IF ( data_output_user(1) /= ' ' )  THEN
@@ -4027,108 +3626,6 @@
     ENDIF
 
 !
-!-- A turbulent inflow requires Dirichlet conditions at the respective inflow
-!-- boundary (so far, a turbulent inflow is realized from the left side only)
-    IF ( turbulent_inflow  .AND.  bc_lr /= 'dirichlet/radiation' )  THEN
-       message_string = 'turbulent_inflow = .T. requires a Dirichlet ' //      &
-                        'condition at the inflow boundary'
-       CALL message( 'check_parameters', 'PA0133', 1, 2, 0, 6, 0 )
-    ENDIF
-
-!
-!-- Turbulent inflow requires that 3d arrays have been cyclically filled with
-!-- data from prerun in the first main run
-    IF ( turbulent_inflow  .AND.  initializing_actions /= 'cyclic_fill'  .AND. &
-         initializing_actions /= 'read_restart_data' )  THEN
-       message_string = 'turbulent_inflow = .T. requires ' //                  &
-                        'initializing_actions = ''cyclic_fill'' or ' //        &
-                        'initializing_actions = ''read_restart_data'' '
-       CALL message( 'check_parameters', 'PA0055', 1, 2, 0, 6, 0 )
-    ENDIF
-
-!
-!-- In case of turbulent inflow calculate the index of the recycling plane
-    IF ( turbulent_inflow )  THEN
-       IF ( recycling_width <= dx  .OR.  recycling_width >= nx * dx )  THEN
-          WRITE( message_string, * )  'illegal value for recycling_width: ',   &
-                                      recycling_width
-          CALL message( 'check_parameters', 'PA0134', 1, 2, 0, 6, 0 )
-       ENDIF
-!
-!--    Calculate the index
-       recycling_plane = recycling_width / dx
-!
-!--    Because the y-shift is done with a distance of INT( npey / 2 ) no shift
-!--    is possible if there is only one PE in y direction.
-       IF ( recycling_yshift .AND. pdims(2) < 2 )  THEN
-          WRITE( message_string, * )  'recycling_yshift = .T. requires more',  &
-                                      ' than one processor in y direction'
-          CALL message( 'check_parameters', 'PA0421', 1, 2, 0, 6, 0 )
-       ENDIF
-    ENDIF
-
-
-    IF ( turbulent_outflow )  THEN
-!
-!--    Turbulent outflow requires Dirichlet conditions at the respective inflow
-!--    boundary (so far, a turbulent outflow is realized at the right side only)
-       IF ( bc_lr /= 'dirichlet/radiation' )  THEN
-          message_string = 'turbulent_outflow = .T. requires ' //              &
-                           'bc_lr = "dirichlet/radiation"'
-          CALL message( 'check_parameters', 'PA0038', 1, 2, 0, 6, 0 )
-       ENDIF
-!
-!--    The ouflow-source plane must lay inside the model domain
-       IF ( outflow_source_plane < dx  .OR.  &
-            outflow_source_plane > nx * dx )  THEN
-          WRITE( message_string, * )  'illegal value for outflow_source'//     &
-                                      '_plane: ', outflow_source_plane
-          CALL message( 'check_parameters', 'PA0145', 1, 2, 0, 6, 0 )
-       ENDIF
-    ENDIF
-
-!
-!-- Determine damping level index for 1D model
-    IF ( INDEX( initializing_actions, 'set_1d-model_profiles' ) /= 0 )  THEN
-       IF ( damp_level_1d == -1.0_wp )  THEN
-          damp_level_1d     = zu(nzt+1)
-          damp_level_ind_1d = nzt + 1
-       ELSEIF ( damp_level_1d < 0.0_wp  .OR.  damp_level_1d > zu(nzt+1) )  THEN
-          WRITE( message_string, * )  'damp_level_1d = ', damp_level_1d,       &
-                 ' must be >= 0.0 and <= ', zu(nzt+1), '(zu(nzt+1))'
-          CALL message( 'check_parameters', 'PA0136', 1, 2, 0, 6, 0 )
-       ELSE
-          DO  k = 1, nzt+1
-             IF ( damp_level_1d <= zu(k) )  THEN
-                damp_level_ind_1d = k
-                EXIT
-             ENDIF
-          ENDDO
-       ENDIF
-    ENDIF
-
-!
-!-- Check some other 1d-model parameters
-    IF ( TRIM( mixing_length_1d ) /= 'as_in_3d_model'  .AND.                   &
-         TRIM( mixing_length_1d ) /= 'blackadar' )  THEN
-       message_string = 'mixing_length_1d = "' // TRIM( mixing_length_1d ) //  &
-                        '" is unknown'
-       CALL message( 'check_parameters', 'PA0137', 1, 2, 0, 6, 0 )
-    ENDIF
-    IF ( TRIM( dissipation_1d ) /= 'as_in_3d_model'  .AND.                     &
-         TRIM( dissipation_1d ) /= 'detering'  .AND.                           &
-         TRIM( dissipation_1d ) /= 'prognostic' )  THEN
-       message_string = 'dissipation_1d = "' // TRIM( dissipation_1d ) //      &
-                        '" is unknown'
-       CALL message( 'check_parameters', 'PA0138', 1, 2, 0, 6, 0 )
-    ENDIF
-    IF ( TRIM( mixing_length_1d ) /= 'as_in_3d_model'  .AND.                   &
-         TRIM( dissipation_1d ) == 'as_in_3d_model' )  THEN
-       message_string = 'dissipation_1d = "' // TRIM( dissipation_1d ) //      &
-                        '" requires mixing_length_1d = "as_in_3d_model"'
-       CALL message( 'check_parameters', 'PA0485', 1, 2, 0, 6, 0 )
-    ENDIF
-
 !
 !-- Set time for the next user defined restart (time_restart is the
 !-- internal parameter for steering restart events)
@@ -4194,36 +3691,6 @@
        CALL message( 'check_parameters', 'PA0157', 1, 2, 0, 6, 0 )
     ENDIF
 
-!
-!-- Check particle attributes
-    IF ( particle_color /= 'none' )  THEN
-       IF ( particle_color /= 'absuv'  .AND.  particle_color /= 'pt*'  .AND.   &
-            particle_color /= 'z' )  THEN
-          message_string = 'illegal value for parameter particle_color: ' //   &
-                           TRIM( particle_color)
-          CALL message( 'check_parameters', 'PA0313', 1, 2, 0, 6, 0 )
-       ELSE
-          IF ( color_interval(2) <= color_interval(1) )  THEN
-             message_string = 'color_interval(2) <= color_interval(1)'
-             CALL message( 'check_parameters', 'PA0315', 1, 2, 0, 6, 0 )
-          ENDIF
-       ENDIF
-    ENDIF
-
-    IF ( particle_dvrpsize /= 'none' )  THEN
-       IF ( particle_dvrpsize /= 'absw' )  THEN
-          message_string = 'illegal value for parameter particle_dvrpsize:' // &
-                           ' ' // TRIM( particle_dvrpsize)
-          CALL message( 'check_parameters', 'PA0314', 1, 2, 0, 6, 0 )
-       ELSE
-          IF ( dvrpsize_interval(2) <= dvrpsize_interval(1) )  THEN
-             message_string = 'dvrpsize_interval(2) <= dvrpsize_interval(1)'
-             CALL message( 'check_parameters', 'PA0316', 1, 2, 0, 6, 0 )
-          ENDIF
-       ENDIF
-    ENDIF
-
-!
 !-- Prevent empty time records in volume, cross-section and masked data in case
 !-- of non-parallel netcdf-output in restart runs
     IF ( netcdf_data_format < 5 )  THEN
@@ -4256,10 +3723,6 @@
     ENDIF
 
 !
-!-- Vertical nesting: check fine and coarse grid compatibility for data exchange
-    IF ( vnested )  CALL vnest_check_parameters
-
-!
 !-- Check if topography is read from file in case of complex terrain simulations
     IF ( complex_terrain  .AND.  TRIM( topography ) /= 'read_from_file' )  THEN
        message_string = 'complex_terrain requires topography' //               &
@@ -4279,9 +3742,6 @@
 
     CALL location_message( 'finished', .TRUE. )
 !
-!-- Check &userpar parameters
-    CALL user_check_parameters
-
  CONTAINS
 
 !------------------------------------------------------------------------------!

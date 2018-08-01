@@ -355,12 +355,6 @@
     USE calc_mean_profile_mod,                                                 &
         ONLY:  calc_mean_profile
 
-    USE chemistry_model_mod,                                                   &
-        ONLY:  chem_emissions, chem_species
-
-    USE chem_modules,                                                          &
-        ONLY:  nspec 
-
     USE control_parameters,                                                    &
         ONLY:  advected_distance_x, advected_distance_y, air_chemistry,        &
                average_count_3d, averaging_interval, averaging_interval_pr,    &
@@ -400,25 +394,12 @@
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point, log_point_s
 
-    USE flight_mod,                                                            &
-        ONLY:  flight_measurement
-
-    USE gust_mod,                                                              &
-        ONLY:  gust_actions, gust_module_enabled
-
     USE indices,                                                               &
         ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, nyn, nyng, nys, nysg, nzb, nzt
-
-    USE interaction_droplets_ptq_mod,                                          &
-        ONLY:  interaction_droplets_ptq
 
     USE interfaces
 
     USE kinds
-
-    USE land_surface_model_mod,                                                &
-        ONLY:  lsm_boundary_condition, lsm_energy_balance, lsm_soil_model,     &
-               skip_time_do_lsm
 
     USE lsf_nudging_mod,                                                       &
         ONLY:  calc_tnudge, ls_forcing_surf, ls_forcing_vert, nudge_ref,       &
@@ -427,29 +408,13 @@
     USE netcdf_data_input_mod,                                                 &
         ONLY:  force, netcdf_data_input_lsf
 
-    USE microphysics_mod,                                                      &
-        ONLY: collision_turbulence
-
-    USE particle_attributes,                                                   &
-        ONLY:  particle_advection, particle_advection_start,                   &
-               use_sgs_for_particles, wang_kernel
-
     USE pegrid
-
-    USE pmc_interface,                                                         &
-        ONLY:  nested_run, nesting_mode, pmci_boundary_conds, pmci_datatrans,  &
-               pmci_ensure_nest_mass_conservation, pmci_synchronize
 
     USE progress_bar,                                                          &
         ONLY:  finish_progress_bar, output_progress_bar
 
     USE prognostic_equations_mod,                                              &
         ONLY:  prognostic_equations_cache, prognostic_equations_vector
-
-    USE radiation_model_mod,                                                   &
-        ONLY: dt_radiation, force_radiation_call, radiation, radiation_control,&
-              radiation_interaction, radiation_interactions,                   &
-              skip_time_do_radiation, time_radiation
 
     USE spectra_mod,                                                           &
         ONLY: average_count_sp, averaging_interval_sp, calc_spectra, dt_dosp,  &
@@ -463,37 +428,10 @@
         ONLY:  surface_layer_fluxes
 
     USE surface_mod,                                                           &
-        ONLY:  surf_def_h, surf_lsm_h, surf_usm_h
+        ONLY:  surf_def_h
 
     USE turbulence_closure_mod,                                                &
         ONLY:  tcm_diffusivities, production_e_init
-
-    USE urban_surface_mod,                                                     &
-        ONLY:  usm_boundary_condition, usm_material_heat_model,                &
-               usm_material_model,                                             &
-               usm_surface_energy_balance, usm_green_heat_model,               &
-               usm_temperature_near_surface
-
-    USE synthetic_turbulence_generator_mod,                                    &
-        ONLY:  stg_main, use_syn_turb_gen
-
-    USE user_actions_mod,                                                      &
-        ONLY:  user_actions
-
-    USE uv_exposure_model_mod,                                                 &
-        ONLY:  uvem_calc_exposure
-
-    USE wind_turbine_model_mod,                                                &
-        ONLY:  wtm_forces
-
-    USE lpm_mod,                                                               &
-        ONLY:  lpm
-
-    USE vertical_nesting_mod,                                                  &
-        ONLY:  vnested, vnest_anterpolate, vnest_anterpolate_e,                &
-               vnest_boundary_conds, vnest_boundary_conds_khkm,                & 
-               vnest_deallocate, vnest_init, vnest_init_fine,                  &
-               vnest_start_time
 
     IMPLICIT NONE
 
@@ -510,44 +448,12 @@
 !-- At beginning determine the first time step
     CALL timestep
 !
-!-- Synchronize the timestep in case of nested run.
-    IF ( nested_run )  THEN
-!
-!--    Synchronization by unifying the time step.
-!--    Global minimum of all time-steps is used for all.
-       CALL pmci_synchronize
-    ENDIF
-
-!
 !-- Determine and print out the run control quantities before the first time
 !-- step of this run. For the initial run, some statistics (e.g. divergence)
 !-- need to be determined first --> CALL flow_statistics at the beginning of
 !-- run_control
     CALL run_control
 !
-!-- Data exchange between coupled models in case that a call has been omitted 
-!-- at the end of the previous run of a job chain.
-    IF ( coupling_mode /= 'uncoupled'  .AND.  run_coupled .AND. .NOT. vnested)  THEN
-!
-!--    In case of model termination initiated by the local model the coupler 
-!--    must not be called because this would again cause an MPI hang. 
-       DO WHILE ( time_coupling >= dt_coupling  .AND.  terminate_coupled == 0 )
-          CALL surface_coupler
-          time_coupling = time_coupling - dt_coupling
-       ENDDO
-       IF (time_coupling == 0.0_wp  .AND.                                      &
-           time_since_reference_point < dt_coupling )                          &
-       THEN
-          time_coupling = time_since_reference_point
-       ENDIF
-    ENDIF
-
-#if defined( __dvrp_graphics )
-!
-!-- Time measurement with dvrp software  
-    CALL DVRP_LOG_EVENT( 2, current_timestep_number )
-#endif
-
     CALL location_message( 'starting timestep-sequence', .TRUE. )
 !
 !-- Start of the time loop
@@ -556,17 +462,6 @@
 
        CALL cpu_log( log_point_s(10), 'timesteps', 'start' )
 !
-!--    Vertical nesting: initialize fine grid
-       IF ( vnested ) THEN
-          IF ( .NOT. vnest_init  .AND.  simulated_time >= vnest_start_time )  THEN
-             CALL cpu_log( log_point(80), 'vnest_init', 'start' )
-             CALL vnest_init_fine
-             vnest_init = .TRUE.
-             CALL cpu_log( log_point(80), 'vnest_init', 'stop' )
-          ENDIF
-       ENDIF
-!
-!--    Determine ug, vg and w_subs in dependence on data from external file 
 !--    LSF_DATA
        IF ( large_scale_forcing .AND. lsf_vert )  THEN
            CALL ls_forcing_vert ( simulated_time )
@@ -592,29 +487,6 @@
              CALL netcdf_data_input_lsf
        ENDIF
 
-!
-!--    Execute the gust module actions
-       IF ( gust_module_enabled )  THEN
-          CALL gust_actions( 'before_timestep' )
-       ENDIF
-
-!
-!--    Execute the user-defined actions
-       CALL user_actions( 'before_timestep' )
-
-!
-!--    Calculate forces by wind turbines
-       IF ( wind_turbine )  THEN
-
-          CALL cpu_log( log_point(55), 'wind_turbine', 'start' )
-
-          CALL wtm_forces
-
-          CALL cpu_log( log_point(55), 'wind_turbine', 'stop' )
-
-       ENDIF       
-       
-!
 !--    Start of intermediate step loop
        intermediate_timestep_count = 0
        DO  WHILE ( intermediate_timestep_count < &
@@ -640,14 +512,8 @@
                 CALL calc_mean_profile( pt, 4 )
                 ref_state(:)  = hom(:,1,4,0) ! this is used in the buoyancy term
              ENDIF
-             IF ( ocean )  THEN
-                CALL calc_mean_profile( rho_ocean, 64 )
-                ref_state(:)  = hom(:,1,64,0)
-             ENDIF
-             IF ( humidity )  THEN
-                CALL calc_mean_profile( vpt, 44 )
-                ref_state(:)  = hom(:,1,44,0)
-             ENDIF
+             CALL calc_mean_profile( rho_ocean, 64 )
+             ref_state(:)  = hom(:,1,64,0)
 !
 !--          Assure that ref_state does not become zero at any level
 !--          ( might be the case if a vertical level is completely occupied 
@@ -655,6 +521,7 @@
              ref_state = MERGE( MAXVAL(ref_state), ref_state,                  &
                                 ref_state == 0.0_wp )
           ENDIF
+
 
           IF ( .NOT. constant_diffusion )  CALL production_e_init
           IF ( ( ws_scheme_mom .OR. ws_scheme_sca )  .AND.  &
@@ -683,27 +550,6 @@
           ENDIF
 
 !
-!--       Particle transport/physics with the Lagrangian particle model
-!--       (only once during intermediate steps, because it uses an Euler-step)
-!--       ### particle model should be moved before prognostic_equations, in order
-!--       to regard droplet interactions directly
-          IF ( particle_advection  .AND.                         &
-               simulated_time >= particle_advection_start  .AND. &
-               intermediate_timestep_count == 1 )  THEN
-             CALL lpm
-             first_call_lpm = .FALSE.
-          ENDIF
-
-!
-!--       Interaction of droplets with temperature and mixing ratio.
-!--       Droplet condensation and evaporation is calculated within
-!--       advec_particles.
-          IF ( cloud_droplets  .AND.  &
-               intermediate_timestep_count == intermediate_timestep_count_max )&
-          THEN
-             CALL interaction_droplets_ptq
-          ENDIF
-
 !
 !--       Exchange of ghost points (lateral boundary conditions)
           CALL cpu_log( log_point(26), 'exchange-horiz-progn', 'start' )
@@ -713,45 +559,16 @@
           CALL exchange_horiz( w_p, nbgp )
           CALL exchange_horiz( pt_p, nbgp )
           IF ( .NOT. constant_diffusion )  CALL exchange_horiz( e_p, nbgp )
-          IF ( rans_tke_e  .OR.  wang_kernel  .OR.  collision_turbulence       &
-               .OR.  use_sgs_for_particles )  THEN
-             IF ( rans_tke_e )  THEN
+          IF ( rans_tke_e ) THEN 
                 CALL exchange_horiz( diss_p, nbgp )
-             ELSE
-                CALL exchange_horiz( diss, nbgp )
-             ENDIF
           ENDIF
-          IF ( ocean )  THEN
-             CALL exchange_horiz( sa_p, nbgp )
-             CALL exchange_horiz( rho_ocean, nbgp )
-             CALL exchange_horiz( prho, nbgp )
-             CALL exchange_horiz( alpha_T, nbgp )
-             CALL exchange_horiz( beta_S, nbgp )
-             call exchange_horiz( solar3d, nbgp )
-          ENDIF
-          IF ( humidity )  THEN
-             CALL exchange_horiz( q_p, nbgp )
-             IF ( cloud_physics .AND. microphysics_morrison )  THEN
-                CALL exchange_horiz( qc_p, nbgp )
-                CALL exchange_horiz( nc_p, nbgp )
-             ENDIF
-             IF ( cloud_physics .AND. microphysics_seifert )  THEN
-                CALL exchange_horiz( qr_p, nbgp )
-                CALL exchange_horiz( nr_p, nbgp )
-             ENDIF
-          ENDIF
-          IF ( cloud_droplets )  THEN
-             CALL exchange_horiz( ql, nbgp )
-             CALL exchange_horiz( ql_c, nbgp )
-             CALL exchange_horiz( ql_v, nbgp )
-             CALL exchange_horiz( ql_vp, nbgp )
-          ENDIF
+          CALL exchange_horiz( sa_p, nbgp )
+          CALL exchange_horiz( rho_ocean, nbgp )
+          CALL exchange_horiz( prho, nbgp )
+          CALL exchange_horiz( alpha_T, nbgp )
+          CALL exchange_horiz( beta_S, nbgp )
+          call exchange_horiz( solar3d, nbgp )
           IF ( passive_scalar )  CALL exchange_horiz( s_p, nbgp )
-          IF ( air_chemistry )  THEN
-             DO  n = 1, nspec     
-                CALL exchange_horiz( chem_species(n)%conc_p, nbgp ) 
-             ENDDO
-          ENDIF
 
           CALL cpu_log( log_point(26), 'exchange-horiz-progn', 'stop' )
 
@@ -762,82 +579,6 @@
 !
 !--       Swap the time levels in preparation for the next time step.
           CALL swap_timelevel
-
-!
-!--       Vertical nesting: Interpolate fine grid data to the coarse grid
-          IF ( vnest_init ) THEN
-             CALL cpu_log( log_point(81), 'vnest_anterpolate', 'start' )
-             CALL vnest_anterpolate
-             CALL cpu_log( log_point(81), 'vnest_anterpolate', 'stop' )
-          ENDIF
-
-          IF ( nested_run )  THEN
-
-             CALL cpu_log( log_point(60), 'nesting', 'start' )
-!
-!--          Domain nesting. The data transfer subroutines pmci_parent_datatrans
-!--          and pmci_child_datatrans are called inside the wrapper
-!--          subroutine pmci_datatrans according to the control parameters
-!--          nesting_mode and nesting_datatransfer_mode.
-!--          TO_DO: why is nesting_mode given as a parameter here?
-             CALL pmci_datatrans( nesting_mode )
-
-             IF ( TRIM( nesting_mode ) == 'two-way' .OR.                       &
-                  nesting_mode == 'vertical' )  THEN
-!
-!--             Exchange_horiz is needed for all parent-domains after the
-!--             anterpolation
-                CALL exchange_horiz( u, nbgp )
-                CALL exchange_horiz( v, nbgp )
-                CALL exchange_horiz( w, nbgp )
-                IF ( .NOT. neutral )  CALL exchange_horiz( pt, nbgp )
-
-                IF ( humidity )  THEN
-
-                   CALL exchange_horiz( q, nbgp )
-
-                   IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
-                       CALL exchange_horiz( qc, nbgp )
-                       CALL exchange_horiz( nc, nbgp )
-                   ENDIF
-                   IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
-                       CALL exchange_horiz( qr, nbgp )
-                       CALL exchange_horiz( nr, nbgp )
-                   ENDIF
-
-                ENDIF
-
-                IF ( passive_scalar )  CALL exchange_horiz( s, nbgp )
-                IF ( .NOT. constant_diffusion )  CALL exchange_horiz( e, nbgp )
-
-                IF ( .NOT. constant_diffusion  .AND.  rans_mode  .AND.         &
-                                                      rans_tke_e )             &
-                   CALL exchange_horiz( diss, nbgp )
-
-                IF ( air_chemistry )  THEN
-                   DO  n = 1, nspec     
-                      CALL exchange_horiz( chem_species(n)%conc, nbgp ) 
-                   ENDDO
-                ENDIF
-
-             ENDIF
-!
-!--          Set boundary conditions again after interpolation and anterpolation.
-             CALL pmci_boundary_conds
-!
-!--          Correct the w top-BC in nest domains to ensure mass conservation.
-!--          This action must never be done for the root domain. Vertical 
-!--          nesting implies mass conservation.
-!--          Commented out April 18, 2018 as seemingly unnecessary. 
-!--          Will later be completely removed.
-!--             IF ( nest_domain )  THEN
-!--                CALL pmci_ensure_nest_mass_conservation
-!--             ENDIF
-
-             CALL cpu_log( log_point(60), 'nesting', 'stop' )
-
-          ENDIF
-
 !
 !--       Temperature offset must be imposed at cyclic boundaries in x-direction
 !--       when a sloping surface is used
@@ -847,18 +588,6 @@
              IF ( nxr == nx )  pt(:,:,nxr+1:nxrg) = pt(:,:,nxr+1:nxrg) + &
                                                     pt_slope_offset
           ENDIF
-
-!
-!--       Impose a turbulent inflow using the recycling method
-          IF ( turbulent_inflow )  CALL  inflow_turbulence
-
-!
-!--       Impose a turbulent inflow using synthetic generated turbulence
-          IF ( use_syn_turb_gen )  CALL  stg_main
-
-!
-!--       Set values at outflow boundary using the special outflow condition
-          IF ( turbulent_outflow )  CALL  outflow_turbulence
 
 !
 !--       Impose a random perturbation on the horizontal velocity field
@@ -905,41 +634,9 @@
           IF ( intermediate_timestep_count == 1  .OR. &
                 call_psolver_at_all_substeps )  THEN
 
-             IF (  vnest_init ) THEN
-!
-!--             Compute pressure in the CG, interpolate top boundary conditions
-!--             to the FG and then compute pressure in the FG
-                IF ( coupling_mode == 'vnested_crse' )  CALL pres
-
-                CALL cpu_log( log_point(82), 'vnest_bc', 'start' )
-                CALL vnest_boundary_conds
-                CALL cpu_log( log_point(82), 'vnest_bc', 'stop' )
- 
-                IF ( coupling_mode == 'vnested_fine' )  CALL pres
-
-!--             Anterpolate TKE, satisfy Germano Identity
-                CALL cpu_log( log_point(83), 'vnest_anter_e', 'start' )
-                CALL vnest_anterpolate_e
-                CALL cpu_log( log_point(83), 'vnest_anter_e', 'stop' )
-
-             ELSE
-
                 CALL pres
 
-             ENDIF
-
           ENDIF
-
-!
-!--       If required, compute liquid water content
-          IF ( cloud_physics )  THEN
-             CALL calc_liquid_water_content
-          ENDIF
-!
-!--       If required, compute virtual potential temperature 
-          IF ( humidity )  THEN 
-             CALL compute_vpt 
-          ENDIF 
 
 !
 !--       Compute the diffusion quantities
@@ -964,135 +661,14 @@
                 CALL cpu_log( log_point(19), 'surface_layer_fluxes', 'stop' )
              ENDIF
 !
-!--          If required, solve the energy balance for the surface and run soil 
-!--          model. Call for horizontal as well as vertical surfaces
-             IF ( land_surface .AND. time_since_reference_point >= skip_time_do_lsm)  THEN
-
-                CALL cpu_log( log_point(54), 'land_surface', 'start' )
-!
-!--             Call for horizontal upward-facing surfaces
-                CALL lsm_energy_balance( .TRUE., -1 )
-                CALL lsm_soil_model( .TRUE., -1, .TRUE. )
-!
-!--             Call for northward-facing surfaces
-                CALL lsm_energy_balance( .FALSE., 0 )
-                CALL lsm_soil_model( .FALSE., 0, .TRUE. )
-!
-!--             Call for southward-facing surfaces
-                CALL lsm_energy_balance( .FALSE., 1 )
-                CALL lsm_soil_model( .FALSE., 1, .TRUE. )
-!
-!--             Call for eastward-facing surfaces
-                CALL lsm_energy_balance( .FALSE., 2 )
-                CALL lsm_soil_model( .FALSE., 2, .TRUE. )
-!
-!--             Call for westward-facing surfaces
-                CALL lsm_energy_balance( .FALSE., 3 )
-                CALL lsm_soil_model( .FALSE., 3, .TRUE. )
-!
-!--             At the end, set boundary conditons for potential temperature
-!--             and humidity after running the land-surface model. This 
-!--             might be important for the nesting, where arrays are transfered.
-                CALL lsm_boundary_condition
-
-                CALL cpu_log( log_point(54), 'land_surface', 'stop' )
-             ENDIF
-!
-!--          If required, solve the energy balance for urban surfaces and run 
-!--          the material heat model
-             IF (urban_surface) THEN
-                CALL cpu_log( log_point(74), 'urban_surface', 'start' )
-                CALL usm_surface_energy_balance
-                IF ( usm_material_model )  THEN
-                   CALL usm_green_heat_model
-                   CALL usm_material_heat_model
-                ENDIF
-
-                CALL usm_temperature_near_surface
-!
-!--             At the end, set boundary conditons for potential temperature
-!--             and humidity after running the urban-surface model. This 
-!--             might be important for the nesting, where arrays are transfered.
-                CALL usm_boundary_condition
-
-                CALL cpu_log( log_point(74), 'urban_surface', 'stop' )
-             ENDIF
-!
 !--          Compute the diffusion coefficients
              CALL cpu_log( log_point(17), 'diffusivities', 'start' )
-             IF ( .NOT. humidity ) THEN
-                IF ( ocean )  THEN
-                   CALL tcm_diffusivities( prho, prho_reference )
-                ELSE
-                   CALL tcm_diffusivities( pt, pt_reference )
-                ENDIF
-             ELSE
-                CALL tcm_diffusivities( vpt, pt_reference )
-             ENDIF
+             CALL tcm_diffusivities( prho, prho_reference )
              CALL cpu_log( log_point(17), 'diffusivities', 'stop' )
 !
-!--          Vertical nesting: set fine grid eddy viscosity top boundary condition
-             IF ( vnest_init )  CALL vnest_boundary_conds_khkm
-
-          ENDIF
-
-!
-!--       If required, calculate radiative fluxes and heating rates
-          IF ( radiation .AND. intermediate_timestep_count                     &
-               == intermediate_timestep_count_max .AND. time_since_reference_point >    &
-               skip_time_do_radiation )  THEN
-
-               time_radiation = time_radiation + dt_3d
-
-             IF ( time_radiation >= dt_radiation .OR. force_radiation_call )   &
-             THEN
-
-                CALL cpu_log( log_point(50), 'radiation', 'start' )
-
-                IF ( .NOT. force_radiation_call )  THEN
-                   time_radiation = time_radiation - dt_radiation
-                ENDIF
-
-!
-!--             Adjust the current_ time to the time step of the radiation model.
-!--             Needed since radiation is pre-calculated and stored only on apparent 
-!--             solar positions
-                it = FLOOR(time_since_reference_point/dt_radiation)
-                tsrp_org = time_since_reference_point
-                time_since_reference_point = REAL(it,wp) * dt_radiation
-
-                CALL radiation_control
-
-                CALL cpu_log( log_point(50), 'radiation', 'stop' )
-
-                IF ( urban_surface  .OR.  land_surface  .AND.                  &
-                     radiation_interactions )  THEN
-                   CALL cpu_log( log_point(75), 'radiation_interaction', 'start' )
-                   CALL radiation_interaction
-                   CALL cpu_log( log_point(75), 'radiation_interaction', 'stop' )
-                ENDIF
-    
-!
-!--             Return the current time to its original value
-                time_since_reference_point = tsrp_org
-
-             ENDIF
           ENDIF
 
        ENDDO   ! Intermediate step loop
-!
-!--    If required, consider chemical emissions
-!--    (todo (FK): Implement hourly call of emissions, using time_utc from
-!--                data_and_time_mod.f90;
-!--                move the CALL to appropriate location)
-       IF ( air_chemistry ) THEN
-          CALL chem_emissions
-       ENDIF
-!
-!--    If required, do UV exposure calculations
-       IF ( uv_exposure )  THEN
-          CALL uvem_calc_exposure
-       ENDIF
 !
 !--    Increase simulation time and output times
        nr_timesteps_this_run      = nr_timesteps_this_run + 1
@@ -1124,47 +700,15 @@
              time_domask(mid)= time_domask(mid) + dt_3d
           ENDIF
        ENDDO
-       time_dvrp          = time_dvrp        + dt_3d
        IF ( simulated_time >= skip_time_dosp )  THEN
           time_dosp       = time_dosp        + dt_3d
        ENDIF
        time_dots          = time_dots        + dt_3d
-       IF ( .NOT. first_call_lpm )  THEN
-          time_dopts      = time_dopts       + dt_3d
-       ENDIF
        IF ( simulated_time >= skip_time_dopr )  THEN
           time_dopr       = time_dopr        + dt_3d
        ENDIF
        time_dopr_listing          = time_dopr_listing        + dt_3d
        time_run_control   = time_run_control + dt_3d
-
-!
-!--    Data exchange between coupled models
-       IF ( coupling_mode /= 'uncoupled'  .AND.  run_coupled                   &
-                                          .AND. .NOT. vnested )  THEN
-          time_coupling = time_coupling + dt_3d
-
-!
-!--       In case of model termination initiated by the local model 
-!--       (terminate_coupled > 0), the coupler must be skipped because it would 
-!--       cause an MPI intercomminucation hang.
-!--       If necessary, the coupler will be called at the beginning of the 
-!--       next restart run.
-          DO WHILE ( time_coupling >= dt_coupling .AND. terminate_coupled == 0 )
-             CALL surface_coupler
-             time_coupling = time_coupling - dt_coupling
-          ENDDO
-       ENDIF
-
-!
-!--    Execute the gust module actions
-       IF ( gust_module_enabled )  THEN
-          CALL gust_actions( 'after_integration' )
-       ENDIF
-
-!
-!--    Execute user-defined actions
-       CALL user_actions( 'after_integration' )
 
 !
 !--    If Galilei transformation is used, determine the distance that the
@@ -1230,13 +774,6 @@
              time_dosp_av = MOD( time_dosp_av, &
                                  MAX( dt_averaging_input_pr, dt_3d ) )
           ENDIF
-       ENDIF
-
-!
-!--    Call flight module and output data
-       IF ( virtual_flight )  THEN
-          CALL flight_measurement
-          CALL data_output_flight
        ENDIF
 
 !
@@ -1318,62 +855,19 @@
        ENDIF
 
 !
-!--    Output of particle time series
-       IF ( particle_advection )  THEN
-          IF ( time_dopts >= dt_dopts  .OR. &
-               ( simulated_time >= particle_advection_start  .AND. &
-                 first_call_lpm ) )  THEN
-             CALL data_output_ptseries
-             time_dopts = MOD( time_dopts, MAX( dt_dopts, dt_3d ) )
-          ENDIF
-       ENDIF
-
 !
-!--    Output of dvrp-graphics (isosurface, particles, slicer)
-#if defined( __dvrp_graphics )
-       CALL DVRP_LOG_EVENT( -2, current_timestep_number-1 )
-#endif
-       IF ( time_dvrp >= dt_dvrp )  THEN
-          CALL data_output_dvrp
-          time_dvrp = MOD( time_dvrp, MAX( dt_dvrp, dt_3d ) )
-       ENDIF
-#if defined( __dvrp_graphics )
-       CALL DVRP_LOG_EVENT( 2, current_timestep_number )
-#endif
 
 !
 !--    If required, set the heat flux for the next time step at a random value
        IF ( constant_heatflux  .AND.  random_heatflux )  THEN
           IF ( surf_def_h(0)%ns >= 1 )  CALL disturb_heatflux( surf_def_h(0) )
-          IF ( surf_lsm_h%ns    >= 1 )  CALL disturb_heatflux( surf_lsm_h    )
-          IF ( surf_usm_h%ns    >= 1 )  CALL disturb_heatflux( surf_usm_h    )
        ENDIF
-
-!
-!--    Execute the gust module actions
-       IF ( gust_module_enabled )  THEN
-          CALL gust_actions( 'after_timestep' )
-       ENDIF
-
-!
-!--    Execute user-defined actions
-       CALL user_actions( 'after_timestep' )
-
 !
 !--    Determine size of next time step. Save timestep dt_3d because it is
 !--    newly calculated in routine timestep, but required further below for
 !--    steering the run control output interval
        dt_3d_old = dt_3d
        CALL timestep
-
-!
-!--    Synchronize the timestep in case of nested run.
-       IF ( nested_run )  THEN
-!
-!--       Synchronize by unifying the time step.
-!--       Global minimum of all time-steps is used for all.
-          CALL pmci_synchronize
-       ENDIF
 
 !
 !--    Computation and output of run control parameters.
@@ -1397,14 +891,7 @@
 
     ENDDO   ! time loop
 
-!-- Vertical nesting: Deallocate variables initialized for vertical nesting    
-    IF ( vnest_init )  CALL vnest_deallocate
-
     IF ( myid == 0 )  CALL finish_progress_bar
-
-#if defined( __dvrp_graphics )
-    CALL DVRP_LOG_EVENT( -2, current_timestep_number )
-#endif
 
     CALL location_message( 'finished time-stepping', .TRUE. )
 

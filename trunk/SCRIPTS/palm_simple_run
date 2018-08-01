@@ -265,7 +265,6 @@ cat  >  ${execution_dir}/ENVPAR  <<  EOF
          batch_job = .TRUE.,
          write_binary = .TRUE.,
          maximum_cpu_time_allowed = ${cpumax}.,
-         local_dvrserver_running = .FALSE.,
 /
 EOF
 

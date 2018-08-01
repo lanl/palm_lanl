@@ -380,78 +380,28 @@
     USE date_and_time_mod,                                                     &
         ONLY:  day_of_year_init, time_utc_init
 
-    USE dvrp_variables,                                                        &
-        ONLY:  use_seperate_pe_for_dvrp_output
-        
-    USE flight_mod,                                                            &
-        ONLY:  flight_header
-        
     USE grid_variables,                                                        &
         ONLY:  dx, dy
 
-    USE gust_mod,                                                              &
-        ONLY: gust_header, gust_module_enabled
-        
     USE indices,                                                               &
         ONLY:  mg_loc_ind, nnx, nny, nnz, nx, ny, nxl_mg, nxr_mg, nyn_mg,      &
                nys_mg, nzt, nzt_mg
         
     USE kinds
  
-    USE land_surface_model_mod,                                                &
-        ONLY: lsm_header
-
     USE lsf_nudging_mod,                                                       &
         ONLY:  lsf_nudging_header
-
-    USE microphysics_mod,                                                      &
-        ONLY:  cloud_water_sedimentation, collision_turbulence,                &
-               c_sedimentation, limiter_sedimentation, nc_const,               &
-               ventilation_effect
-
-    USE model_1d_mod,                                                          &
-        ONLY:  damp_level_ind_1d, dt_pr_1d, dt_run_control_1d, end_time_1d
 
     USE netcdf_interface,                                                      &
         ONLY:  netcdf_data_format, netcdf_data_format_string, netcdf_deflate
 
-    USE particle_attributes,                                                   &
-        ONLY:  bc_par_b, bc_par_lr, bc_par_ns, bc_par_t, collision_kernel,     &
-               curvature_solution_effects,                                     &
-               density_ratio, dissipation_classes, dt_min_part, dt_prel,       &
-               dt_write_particle_data, end_time_prel,                          &
-               number_of_particle_groups, particle_advection,                  &
-               particle_advection_start,                                       &
-               particles_per_point, pdx, pdy, pdz,  psb, psl, psn, psr, pss,   &
-               pst, radius, radius_classes, random_start_position,             &
-               seed_follows_topography,                                        &
-               total_number_of_particles, use_sgs_for_particles,               &
-               vertical_particle_advection, write_particle_statistics
-        
     USE pegrid
 
-    USE plant_canopy_model_mod,                                                &
-        ONLY:  pcm_header
-
-#if defined( __parallel )
-    USE pmc_handle_communicator,                                               &
-        ONLY:  pmc_get_model_info
-#endif
-
-    USE pmc_interface,                                                         &
-        ONLY:  nested_run, nesting_datatransfer_mode, nesting_mode
-
-    USE radiation_model_mod,                                                   &
-        ONLY:  radiation, radiation_header
-    
     USE spectra_mod,                                                           &
         ONLY:  calculate_spectra, spectra_header
 
     USE surface_mod,                                                           &
         ONLY:  surf_def_h, get_topography_top_index_ji
-
-    USE synthetic_turbulence_generator_mod,                                    &
-        ONLY:  stg_header
 
     USE turbulence_closure_mod,                                                &
         ONLY:  rans_const_c, rans_const_sigma
@@ -555,8 +505,6 @@
        run_classification = 'run with cyclic fill of 3D - prerun data'
     ELSEIF ( INDEX( initializing_actions, 'set_constant_profiles' ) /= 0 )  THEN
        run_classification = 'run without 1D - prerun'
-    ELSEIF ( INDEX( initializing_actions, 'set_1d-model_profiles' ) /= 0 )  THEN
-       run_classification = 'run with 1D - prerun'
     ELSEIF ( INDEX( initializing_actions, 'inifor' ) /= 0 )  THEN
        run_classification = 'run initialized with COSMO data'
     ELSEIF ( INDEX( initializing_actions, 'by_user' ) /=0 )  THEN
@@ -569,7 +517,6 @@
        message_string = ' unknown action(s): ' // TRIM( initializing_actions )
        CALL message( 'header', 'PA0191', 0, 0, 0, 6, 0 )
     ENDIF
-    IF ( nested_run )  run_classification = 'nested ' // run_classification
     IF ( ocean )  THEN
        run_classification = 'ocean - ' // run_classification
     ELSE
@@ -618,39 +565,11 @@
     ELSEIF ( pdims(1) == 1 )  THEN
        WRITE ( io, 107 )  'y'
     ENDIF
-    IF ( use_seperate_pe_for_dvrp_output )  WRITE ( io, 105 )
     IF ( numprocs /= maximum_parallel_io_streams )  THEN
        WRITE ( io, 108 )  maximum_parallel_io_streams
     ENDIF
 #endif
 
-!
-!-- Nesting informations
-    IF ( nested_run )  THEN
-
-#if defined( __parallel )
-       WRITE ( io, 600 )  TRIM( nesting_mode ),                                &
-                          TRIM( nesting_datatransfer_mode )
-       CALL pmc_get_model_info( ncpl = ncpl, cpl_id = my_cpl_id )
-
-       DO  n = 1, ncpl
-          CALL pmc_get_model_info( request_for_cpl_id = n, cpl_name = cpl_name,&
-                                   cpl_parent_id = cpl_parent_id,              &
-                                   lower_left_x = lower_left_coord_x,          &
-                                   lower_left_y = lower_left_coord_y,          &
-                                   npe_total = npe_total )
-          IF ( n == my_cpl_id )  THEN
-             char1 = '*'
-          ELSE
-             char1 = ' '
-          ENDIF
-          WRITE ( io, 601 )  TRIM( char1 ), n, cpl_parent_id, npe_total,       &
-                             lower_left_coord_x, lower_left_coord_y,           &
-                             TRIM( cpl_name )
-       ENDDO
-#endif
-
-    ENDIF
     WRITE ( io, 99 )
 
 !
@@ -734,13 +653,6 @@
        ENDIF
     ENDIF
     IF ( neutral )  WRITE ( io, 131 )  pt_surface
-    IF ( humidity )  THEN
-       IF ( .NOT. cloud_physics )  THEN
-          WRITE ( io, 129 )
-       ELSE
-          WRITE ( io, 130 )
-       ENDIF
-    ENDIF
     IF ( passive_scalar )  WRITE ( io, 134 )
     IF ( conserve_volume_flow )  THEN
        WRITE ( io, 150 )  conserve_volume_flow_mode
@@ -879,45 +791,6 @@
     IF ( large_scale_forcing )  CALL lsf_nudging_header( io )
 
 !
-!-- Profile for the large scale vertial velocity
-!-- Building output strings, starting with surface value
-    IF ( large_scale_subsidence )  THEN
-       temperatures = '   0.0'
-       gradients = '------'
-       slices = '     0'
-       coordinates = '   0.0'
-       i = 1
-       DO  WHILE ( subs_vertical_gradient_level_i(i) /= -9999 )
-
-          WRITE (coor_chr,'(E10.2,7X)')  &
-                                w_subs(subs_vertical_gradient_level_i(i))
-          temperatures = TRIM( temperatures ) // ' ' // TRIM( coor_chr )
-
-          WRITE (coor_chr,'(E10.2,7X)')  subs_vertical_gradient(i)
-          gradients = TRIM( gradients ) // ' ' // TRIM( coor_chr )
-
-          WRITE (coor_chr,'(I10,7X)')  subs_vertical_gradient_level_i(i)
-          slices = TRIM( slices ) // ' ' // TRIM( coor_chr )
-
-          WRITE (coor_chr,'(F10.2,7X)')  subs_vertical_gradient_level(i)
-          coordinates = TRIM( coordinates ) // ' '  // TRIM( coor_chr )
-
-          IF ( i == 10 )  THEN
-             EXIT
-          ELSE
-             i = i + 1
-          ENDIF
-
-       ENDDO
-
- 
-       IF ( .NOT. large_scale_forcing )  THEN
-          WRITE ( io, 426 )  TRIM( coordinates ), TRIM( temperatures ), &
-                             TRIM( gradients ), TRIM( slices )
-       ENDIF
-
-
-    ENDIF
 
 !-- Profile of the geostrophic wind (component ug)
 !-- Building output strings
@@ -1098,17 +971,6 @@
        ENDIF
     ENDIF
 
-    IF ( syn_turb_gen )  CALL stg_header ( io )
-
-    IF ( plant_canopy )  CALL pcm_header ( io )
-
-    IF ( land_surface )  CALL lsm_header ( io )
-
-    IF ( radiation )  CALL radiation_header ( io )
-
-    IF ( gust_module_enabled )  CALL gust_header ( io )
-
-!
 !-- Boundary conditions
     IF ( ibc_p_b == 0 )  THEN
        r_lower = 'p(0)     = 0      |'
@@ -1135,11 +997,7 @@
     ENDIF
 
     IF ( ibc_pt_b == 0 )  THEN
-       IF ( land_surface )  THEN
-          r_lower = TRIM( r_lower ) // ' pt(0)     = from soil model'
-       ELSE
           r_lower = TRIM( r_lower ) // ' pt(0)     = pt_surface'
-       ENDIF
     ELSEIF ( ibc_pt_b == 1 )  THEN
        r_lower = TRIM( r_lower ) // ' pt(0)     = pt(1)'
     ELSEIF ( ibc_pt_b == 2 )  THEN
@@ -1178,25 +1036,6 @@
        WRITE ( io, 301 ) 'sa', r_lower, r_upper
     ENDIF
 
-    IF ( humidity )  THEN
-       IF ( ibc_q_b == 0 )  THEN
-          IF ( land_surface )  THEN
-             r_lower = 'q(0)     = from soil model'
-          ELSE
-             r_lower = 'q(0)     = q_surface'
-          ENDIF
-
-       ELSE
-          r_lower = 'q(0)      = q(1)'
-       ENDIF
-       IF ( ibc_q_t == 0 )  THEN
-          r_upper =  'q(nzt+1) = q_top'
-       ELSE
-          r_upper =  'q(nzt+1) = q(nzt) + dq/dz'
-       ENDIF
-       WRITE ( io, 301 ) 'q', r_lower, r_upper
-    ENDIF
-
     IF ( passive_scalar )  THEN
        IF ( ibc_s_b == 0 )  THEN
           r_lower = 's(0)      = s_surface'
@@ -1222,13 +1061,6 @@
              WRITE ( io, 306 )  surface_heatflux
           ENDIF
           IF ( random_heatflux )  WRITE ( io, 307 )
-       ENDIF
-       IF ( humidity  .AND.  constant_waterflux )  THEN
-          IF ( large_scale_forcing .AND. lsf_surf )  THEN
-             WRITE ( io, 311 ) surf_def_h(0)%qsws(1)
-          ELSE
-             WRITE ( io, 311 ) surface_waterflux
-          ENDIF
        ENDIF
        IF ( passive_scalar  .AND.  constant_scalarflux )  THEN
           WRITE ( io, 313 ) surface_scalarflux
@@ -1257,32 +1089,12 @@
                           z0h_factor*roughness_length, kappa,                  &
                           zeta_min, zeta_max
        IF ( .NOT. constant_heatflux )  WRITE ( io, 308 )
-       IF ( humidity  .AND.  .NOT. constant_waterflux )  THEN
-          WRITE ( io, 312 )
-       ENDIF
        IF ( passive_scalar  .AND.  .NOT. constant_scalarflux )  THEN
           WRITE ( io, 314 )
        ENDIF
     ELSE
        IF ( INDEX(initializing_actions, 'set_1d-model_profiles') /= 0 )  THEN
           WRITE ( io, 310 )  zeta_min, zeta_max
-       ENDIF
-    ENDIF
-
-    WRITE ( io, 317 )  bc_lr, bc_ns
-    IF ( .NOT. bc_lr_cyc  .OR.  .NOT. bc_ns_cyc )  THEN
-       WRITE ( io, 318 )  use_cmax, pt_damping_width, pt_damping_factor       
-       IF ( turbulent_inflow )  THEN
-          IF ( .NOT. recycling_yshift ) THEN
-             WRITE ( io, 319 )  recycling_width, recycling_plane, &
-                                inflow_damping_height, inflow_damping_width
-          ELSE
-             WRITE ( io, 322 )  recycling_width, recycling_plane, &
-                                inflow_damping_height, inflow_damping_width
-          END IF
-       ENDIF
-       IF ( turbulent_outflow )  THEN
-          WRITE ( io, 323 )  outflow_source_plane, INT(outflow_source_plane/dx)
        ENDIF
     ENDIF
 
@@ -1330,42 +1142,6 @@
        WRITE ( io, 428 ) 
     ENDIF
 
-!
-!-- Initial humidity profile
-!-- Building output strings, starting with surface humidity
-    IF ( humidity )  THEN
-       WRITE ( temperatures, '(E8.1)' )  q_surface
-       gradients = '--------'
-       slices = '       0'
-       coordinates = '     0.0'
-       i = 1
-       DO  WHILE ( q_vertical_gradient_level_ind(i) /= -9999 )
-          
-          WRITE (coor_chr,'(E8.1,4X)')  q_init(q_vertical_gradient_level_ind(i))
-          temperatures = TRIM( temperatures ) // '  ' // TRIM( coor_chr )
-
-          WRITE (coor_chr,'(E8.1,4X)')  q_vertical_gradient(i)
-          gradients = TRIM( gradients ) // '  ' // TRIM( coor_chr )
-          
-          WRITE (coor_chr,'(I8,4X)')  q_vertical_gradient_level_ind(i)
-          slices = TRIM( slices ) // '  ' // TRIM( coor_chr )
-          
-          WRITE (coor_chr,'(F8.1,4X)')  q_vertical_gradient_level(i)
-          coordinates = TRIM( coordinates ) // '  '  // TRIM( coor_chr )
-
-          IF ( i == 10 )  THEN
-             EXIT
-          ELSE
-             i = i + 1
-          ENDIF
-
-       ENDDO
-
-       IF ( .NOT. nudging )  THEN
-          WRITE ( io, 421 )  TRIM( coordinates ), TRIM( temperatures ),        &
-                             TRIM( gradients ), TRIM( slices )
-       ENDIF
-    ENDIF
 !
 !-- Initial scalar profile
 !-- Building output strings, starting with surface humidity
@@ -1818,51 +1594,6 @@
        WRITE ( io, 341 )  dt_dots
     ENDIF
 
-#if defined( __dvrp_graphics )
-!
-!-- Dvrp-output
-    IF ( dt_dvrp /= 9999999.9_wp )  THEN
-       WRITE ( io, 360 )  dt_dvrp, TRIM( dvrp_output ), TRIM( dvrp_host ), &
-                          TRIM( dvrp_username ), TRIM( dvrp_directory )
-       i = 1
-       l = 0
-       m = 0
-       DO WHILE ( mode_dvrp(i) /= ' ' )
-          IF ( mode_dvrp(i)(1:10) == 'isosurface' )  THEN
-             READ ( mode_dvrp(i), '(10X,I2)' )  j
-             l = l + 1
-             IF ( do3d(0,j) /= ' ' )  THEN
-                WRITE ( io, 361 )  TRIM( do3d(0,j) ), threshold(l), &
-                                   isosurface_color(:,l)
-             ENDIF
-          ELSEIF ( mode_dvrp(i)(1:6) == 'slicer' )  THEN
-             READ ( mode_dvrp(i), '(6X,I2)' )  j
-             m = m + 1
-             IF ( do2d(0,j) /= ' ' )  THEN
-                WRITE ( io, 362 )  TRIM( do2d(0,j) ), &
-                                   slicer_range_limits_dvrp(:,m)
-             ENDIF
-          ENDIF
-          i = i + 1
-       ENDDO
-
-       WRITE ( io, 365 )  groundplate_color, superelevation_x, &
-                          superelevation_y, superelevation, clip_dvrp_l, &
-                          clip_dvrp_r, clip_dvrp_s, clip_dvrp_n
-
-       IF ( TRIM( topography ) /= 'flat' )  THEN
-          WRITE ( io, 366 )  topography_color
-          IF ( cluster_size > 1 )  THEN
-             WRITE ( io, 367 )  cluster_size
-          ENDIF
-       ENDIF
-
-    ENDIF
-#endif
-!
-!-- Output of virtual flight information
-    IF ( virtual_flight )  CALL flight_header( io )
-
 !
 !-- Output of spectra related quantities
     IF ( calculate_spectra )  CALL spectra_header( io )
@@ -1891,47 +1622,6 @@
           WRITE ( io, 413 )  prho_reference
        ELSE
           WRITE ( io, 414 )  pt_reference
-       ENDIF
-    ENDIF
-
-!
-!-- Cloud physics parameters
-    IF ( cloud_physics )  THEN
-       WRITE ( io, 415 )
-       WRITE ( io, 416 ) surface_pressure, r_d, rho_surface, cp, l_v
-       IF ( microphysics_seifert )  THEN
-          WRITE ( io, 510 ) 1.0E-6_wp * nc_const
-          WRITE ( io, 511 ) c_sedimentation
-       ENDIF
-    ENDIF
-
-!
-!-- Cloud physcis parameters / quantities / numerical methods
-    WRITE ( io, 430 )
-    IF ( humidity .AND. .NOT. cloud_physics .AND. .NOT. cloud_droplets)  THEN
-       WRITE ( io, 431 )
-    ELSEIF ( humidity  .AND.  cloud_physics )  THEN
-       WRITE ( io, 432 )
-       IF ( cloud_top_radiation )  WRITE ( io, 132 )
-       IF ( microphysics_kessler )  THEN
-          WRITE ( io, 133 )
-       ELSEIF ( microphysics_seifert )  THEN
-          IF ( cloud_water_sedimentation )  WRITE ( io, 506 )
-          WRITE ( io, 505 )
-          IF ( collision_turbulence )  WRITE ( io, 507 )
-          IF ( ventilation_effect )  WRITE ( io, 508 )
-          IF ( limiter_sedimentation )  WRITE ( io, 509 )
-       ENDIF
-    ELSEIF ( humidity  .AND.  cloud_droplets )  THEN
-       WRITE ( io, 433 )
-       IF ( curvature_solution_effects )  WRITE ( io, 434 )
-       IF ( collision_kernel /= 'none' )  THEN
-          WRITE ( io, 435 )  TRIM( collision_kernel )
-          IF ( collision_kernel(6:9) == 'fast' )  THEN
-             WRITE ( io, 436 )  radius_classes, dissipation_classes
-          ENDIF
-       ELSE
-          WRITE ( io, 437 )
        ENDIF
     ENDIF
 
@@ -1971,76 +1661,11 @@
     IF ( pt_surface_initial_change /= 0.0_wp )  THEN
        WRITE ( io, 475 )  pt_surface_initial_change
     ENDIF
-    IF ( humidity  .AND.  q_surface_initial_change /= 0.0_wp )  THEN
-       WRITE ( io, 476 )  q_surface_initial_change       
-    ENDIF
     IF ( passive_scalar  .AND.  q_surface_initial_change /= 0.0_wp )  THEN
        WRITE ( io, 477 )  q_surface_initial_change       
     ENDIF
 
-    IF ( particle_advection )  THEN
 !
-!--    Particle attributes
-       WRITE ( io, 480 )  particle_advection_start, dt_prel, bc_par_lr, &
-                          bc_par_ns, bc_par_b, bc_par_t, particle_maximum_age, &
-                          end_time_prel
-       IF ( use_sgs_for_particles )  WRITE ( io, 488 )  dt_min_part
-       IF ( random_start_position )  WRITE ( io, 481 )
-       IF ( seed_follows_topography )  WRITE ( io, 496 )
-       IF ( particles_per_point > 1 )  WRITE ( io, 489 )  particles_per_point
-       WRITE ( io, 495 )  total_number_of_particles
-       IF ( dt_write_particle_data /= 9999999.9_wp )  THEN
-          WRITE ( io, 485 )  dt_write_particle_data
-          IF ( netcdf_data_format > 1 )  THEN
-             output_format = 'netcdf (64 bit offset) and binary'
-          ELSE
-             output_format = 'netcdf and binary'
-          ENDIF
-          IF ( netcdf_deflate == 0 )  THEN
-             WRITE ( io, 344 )  output_format
-          ELSE
-             WRITE ( io, 354 )  TRIM( output_format ), netcdf_deflate
-          ENDIF
-       ENDIF
-       IF ( dt_dopts /= 9999999.9_wp )  WRITE ( io, 494 )  dt_dopts
-       IF ( write_particle_statistics )  WRITE ( io, 486 )
-
-       WRITE ( io, 487 )  number_of_particle_groups
-
-       DO  i = 1, number_of_particle_groups
-          IF ( i == 1  .AND.  density_ratio(i) == 9999999.9_wp )  THEN
-             WRITE ( io, 490 )  i, 0.0_wp
-             WRITE ( io, 492 )
-          ELSE
-             WRITE ( io, 490 )  i, radius(i)
-             IF ( density_ratio(i) /= 0.0_wp )  THEN
-                WRITE ( io, 491 )  density_ratio(i)
-             ELSE
-                WRITE ( io, 492 )
-             ENDIF
-          ENDIF
-          WRITE ( io, 493 )  psl(i), psr(i), pss(i), psn(i), psb(i), pst(i), &
-                             pdx(i), pdy(i), pdz(i)
-          IF ( .NOT. vertical_particle_advection(i) )  WRITE ( io, 482 )
-       ENDDO
-
-    ENDIF
-
-
-!
-!-- Parameters of 1D-model
-    IF ( INDEX( initializing_actions, 'set_1d-model_profiles' ) /= 0 )  THEN
-       WRITE ( io, 500 )  end_time_1d, dt_run_control_1d, dt_pr_1d, &
-                          mixing_length_1d, dissipation_1d
-       IF ( damp_level_ind_1d /= nzt+1 )  THEN
-          WRITE ( io, 502 )  zu(damp_level_ind_1d), damp_level_ind_1d
-       ENDIF
-    ENDIF
-
-!
-!-- User-defined information
-    CALL user_header( io )
-
     WRITE ( io, 99 )
 
 !
@@ -2290,25 +1915,6 @@
 352 FORMAT  (/'       Number of output time levels allowed: ',I3 /)
 353 FORMAT  (/'       Number of output time levels allowed: unlimited' /)
 354 FORMAT ('       Output format: ',A, '   compressed with level: ',I1/)
-#if defined( __dvrp_graphics )
-360 FORMAT ('    Plot-Sequence with dvrp-software:'/ &
-            '       Output every      ',F7.1,' s'/ &
-            '       Output mode:      ',A/ &
-            '       Host / User:      ',A,' / ',A/ &
-            '       Directory:        ',A// &
-            '       The sequence contains:')
-361 FORMAT (/'       Isosurface of "',A,'"    Threshold value: ', E12.3/ &
-            '          Isosurface color: (',F4.2,',',F4.2,',',F4.2,') (R,G,B)')
-362 FORMAT (/'       Slicer plane ',A/ &
-            '       Slicer limits: [',F6.2,',',F6.2,']')
-365 FORMAT (/'       Groundplate color: (',F4.2,',',F4.2,',',F4.2,') (R,G,B)'/ &
-            '       Superelevation along (x,y,z): (',F4.1,',',F4.1,',',F4.1, &
-                     ')'/ &
-            '       Clipping limits: from x = ',F9.1,' m to x = ',F9.1,' m'/ &
-            '                        from y = ',F9.1,' m to y = ',F9.1,' m')
-366 FORMAT (/'       Topography color: (',F4.2,',',F4.2,',',F4.2,') (R,G,B)')
-367 FORMAT ('       Polygon reduction for topography: cluster_size = ', I1)
-#endif
 400 FORMAT (//' Physical quantities:'/ &
               ' -------------------'/)
 410 FORMAT ('    Geograph. latitude  :   latitude  = ',F4.1,' degr'/   &
@@ -2425,46 +2031,6 @@
                  'respectively, if the'/ &
             '    value is negative) by ',E8.1,' kg/m**3 at the beginning of', &
                  ' the 3D-simulation'/)
-480 FORMAT ('    Particles:'/ &
-            '    ---------'// &
-            '       Particle advection is active (switched on at t = ', F7.1, &
-                    ' s)'/ &
-            '       Start of new particle generations every  ',F6.1,' s'/ &
-            '       Boundary conditions: left/right: ', A, ' north/south: ', A/&
-            '                            bottom:     ', A, ' top:         ', A/&
-            '       Maximum particle age:                 ',F9.1,' s'/ &
-            '       Advection stopped at t = ',F9.1,' s'/)
-481 FORMAT ('       Particles have random start positions'/)
-482 FORMAT ('          Particles are advected only horizontally'/)
-485 FORMAT ('       Particle data are written on file every ', F9.1, ' s')
-486 FORMAT ('       Particle statistics are written on file'/)
-487 FORMAT ('       Number of particle groups: ',I2/)
-488 FORMAT ('       SGS velocity components are used for particle advection'/ &
-            '          minimum timestep for advection:', F8.5/)
-489 FORMAT ('       Number of particles simultaneously released at each ', &
-                    'point: ', I5/)
-490 FORMAT ('       Particle group ',I2,':'/ &
-            '          Particle radius: ',E10.3, 'm')
-491 FORMAT ('          Particle inertia is activated'/ &
-            '             density_ratio (rho_fluid/rho_particle) =',F6.3/)
-492 FORMAT ('          Particles are advected only passively (no inertia)'/)
-493 FORMAT ('          Boundaries of particle source: x:',F8.1,' - ',F8.1,' m'/&
-            '                                         y:',F8.1,' - ',F8.1,' m'/&
-            '                                         z:',F8.1,' - ',F8.1,' m'/&
-            '          Particle distances:  dx = ',F8.1,' m  dy = ',F8.1, &
-                       ' m  dz = ',F8.1,' m'/)
-494 FORMAT ('       Output of particle time series in NetCDF format every ', &
-                    F8.2,' s'/)
-495 FORMAT ('       Number of particles in total domain: ',I10/)
-496 FORMAT ('       Initial vertical particle positions are interpreted ', &
-                    'as relative to the given topography')
-500 FORMAT (//' 1D-Model parameters:'/                           &
-              ' -------------------'//                           &
-            '    Simulation time:                   ',F8.1,' s'/ &
-            '    Run-controll output every:         ',F8.1,' s'/ &
-            '    Vertical profile output every:     ',F8.1,' s'/ &
-            '    Mixing length calculation:         ',A/         &
-            '    Dissipation calculation:           ',A/)
 502 FORMAT ('    Damping layer starts from ',F7.1,' m (GP ',I4,')'/)
 503 FORMAT (' --> Momentum advection via Wicker-Skamarock-Scheme 5th order')
 504 FORMAT (' --> Scalar advection via Wicker-Skamarock-Scheme 5th order')

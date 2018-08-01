@@ -341,8 +341,6 @@
     CALL netcdf_data_input_init 
 !
 
-    print *, 'hi3'
-
 !-- Read surface classification data, e.g. vegetation and soil types, water 
 !-- surfaces, etc., if available. Some of these data is required before 
 !-- check parameters is invoked.     

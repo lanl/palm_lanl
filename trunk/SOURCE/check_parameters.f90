@@ -4384,10 +4384,10 @@
           vertical_gradient_level_ind(1) = nzt+1
           DO  k = nzt, 0, -1
              IF ( i < 11 )  THEN
-                IF ( vertical_gradient_level(i) > zu(k)  .AND.            &
+                IF ( vertical_gradient_level(i) >= zu(k)  .AND.            &
                      vertical_gradient_level(i) <= 0.0_wp )  THEN
                    gradient = vertical_gradient(i) / 100.0_wp
-                   vertical_gradient_level_ind(i) = k + 1
+                   vertical_gradient_level_ind(i) = k + 1  
                    i = i + 1
                 ENDIF
              ENDIF

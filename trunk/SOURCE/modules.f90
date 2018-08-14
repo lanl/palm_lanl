@@ -1333,6 +1333,13 @@
     LOGICAL ::  neutral = .FALSE.                                !< namelist parameter
     LOGICAL ::  nudging = .FALSE.                                !< namelist parameter
     LOGICAL ::  ocean = .FALSE.                                  !< namelist parameter
+    LOGICAL ::  linear_eqnOfState = .FALSE.                      !< namelist parmaeter for linear equation of state in ocean
+    REAL(wp) :: rho_ref = 1000.0_wp                              !< reference density for linear eos
+    LOGICAL ::  fixed_alpha = .TRUE.                             !< use fixed thermal and haline expansion coefficients
+    REAL(wp) :: alpha_const = 2.0E-4                             !< fixed alpha_T value
+    REAL(wp) :: beta_const = 8.0E-4                              !< fixed beta_S value
+    REAL(wp) :: pt_ref = 15.0_wp                                 !< potential temperature reference falue
+    REAL(wp) :: sa_ref = 35.0_wp                                 !< salinity reerence value for fixed linear density equation
     LOGICAL ::  idealized_diurnal = .FALSE.                      !< flag for diurnal cycle
     REAL(wp) :: ideal_solar_division = 0.67_wp                   !< value for breakdown of double exponential
     REAL(wp) :: ideal_solar_efolding1 = 1.0_wp/1.0_wp            !< efolding depth for IR in solar (m^-1)

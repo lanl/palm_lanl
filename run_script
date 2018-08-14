@@ -4,8 +4,9 @@
 #PBS  -j oe
 #PBS  -m ae
 #PBS -A cli127
-#PBS -l nodes=16
-#PBS -q debug
+#PBS -l nodes=32
+#PBS -q debug 
+#PBS -l walltime=00:10:00
 
 cd $PBS_O_WORKDIR
 export PATH="/ccs/home/vanroek/palm/current_version/trunk/SCRIPTS:${PATH}"
@@ -14,4 +15,4 @@ source $MODULESHOME/init/bash # May already be included if using modules
 
 rm -f PALM*
 
-palm_simple_run -b ifort.titan -w "/lustre/atlas1/cli127/proj-shared/vanroek/palm/jobs/diurnal" -c aprun -s test_oceanml -n 16 -p 256 -t 1
+palm_simple_run -b ifort.titan.nc4 -w "/lustre/atlas1/cli127/proj-shared/vanroek/palm/jobs/diurnal" -c aprun -s test_oceanml -n 32 -p 1024 -t 1 -r -T 600 

@@ -6,7 +6,9 @@
 #PBS -A cli127
 #PBS -l nodes=32
 #PBS -q debug 
-#PBS -l walltime=00:10:00
+#PBS -l walltime=00:60:00
+
+#TODO: if threads, need a way to pass to PALM
 
 cd $PBS_O_WORKDIR
 export PATH="/ccs/home/vanroek/palm/current_version/trunk/SCRIPTS:${PATH}"
@@ -15,4 +17,20 @@ source $MODULESHOME/init/bash # May already be included if using modules
 
 rm -f PALM*
 
-palm_simple_run -b ifort.titan.nc4 -w "/lustre/atlas1/cli127/proj-shared/vanroek/palm/jobs/diurnal" -c aprun -s test_oceanml -n 32 -p 1024 -t 1 -r -T 600 
+#Calculate Walltime in seconds from PBS commands for palm run command
+WTIME=$(qstat -f $PBS_JOBID | sed -rn 's/.*Resource_List.walltime = (.*)/\1/p')
+hr=${WTIME:0:2}
+min=${WTIME:3:2}
+sec=${WTIME:6:2}
+WTIME=$((hr*3600+min*60+sec))
+echo "WTIME (seconds) = $WTIME"
+
+#Calculate number of PES and num tasks per node for palm as well
+NP=$(wc -l $PBS_NODEFILE | awk '{print $1}')
+echo "Total CPU count = $NP"
+NNODES=`cat $PBS_NODEFILE | uniq -c | wc -l`
+NN=$((NP/NNODES))
+echo "n_tasks_per_node= $NN"
+
+#Run PALM
+palm_simple_run -b ifort.titan.nc4 -w "/lustre/atlas1/cli127/proj-shared/vanroek/palm/jobs/diurnal" -c aprun -s test_oceanml -n $NN -p $NP -t 1 -T $WTIME 

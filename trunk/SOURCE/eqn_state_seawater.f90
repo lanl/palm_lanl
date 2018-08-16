@@ -137,6 +137,10 @@
        USE surface_mod,                                                        &
           ONLY :  bc_h
 
+       USE control_parameters,                                                 &
+          ONLY :  linear_eqnOfState, alpha_const, beta_const, fixed_alpha,     &
+              rho_ref, pt_ref, sa_ref
+
        IMPLICIT NONE
 
        INTEGER(iwp) ::  i       !< running index x direction
@@ -234,6 +238,15 @@
                 beta_S(k,j,i) = (dpnomdS2*pden - pnom*dpdendS2) / (pden*pden)
                 rho_ocean(k,j,i) = pnom / pden 
 
+                if (linear_eqnOfState) THEN
+                  if (fixed_alpha) THEN
+                    rho_ocean(k,j,i) = rho_ref*(1.0 - fixed_alpha*(pt1 - pt_ref) + &
+                        beta_const*(sa1 - sa_ref))
+                  ELSE
+                    rho_ocean(k,j,i) = rho_ref*(1.0 - alpha_T(k,j,i)*(pt1 - pt_ref) + &
+                        beta_S(k,j,i)*(sa1 - sa_ref))
+                  ENDIF
+                ENDIF
              ENDDO
 !
 !--          Neumann conditions are assumed at top boundary

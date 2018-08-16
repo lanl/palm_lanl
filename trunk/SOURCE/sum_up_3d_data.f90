@@ -187,7 +187,7 @@
     USE arrays_3d,                                                             &
         ONLY:  dzw, e, heatflux_output_conversion, nc, nr, p, prr, pt,         &
                q, qc, ql, ql_c, ql_v, qr, rho_ocean, s, sa, u, v, vpt, w,      &
-               waterflux_output_conversion, alpha_T, beta_S
+               waterflux_output_conversion, alpha_T, beta_S, solar3d
 
     USE averaging,                                                             &
         ONLY:  diss_av, e_av, ghf_av, kh_av, km_av, lpt_av, lwp_av, nc_av,     &
@@ -196,7 +196,7 @@
                ql_c_av, ql_v_av, ql_vp_av, qr_av, qsws_av, qv_av, r_a_av,      &
                rho_ocean_av, s_av, sa_av, shf_av, ssws_av, ts_av, tsurf_av,    &
                u_av, us_av, v_av, vpt_av, w_av, z0_av, z0h_av, z0q_av,         &
-               alpha_T_av, beta_S_av, shf_sol_av
+               alpha_T_av, beta_S_av, shf_sol_av, solar3d_av
 
     USE chemistry_model_mod,                                                   &
         ONLY:  chem_3d_data_averaging, chem_integrate, chem_species, nspec                                   
@@ -410,6 +410,12 @@
                    ALLOCATE( r_a_av(nysg:nyng,nxlg:nxrg) )
                 ENDIF
                 r_a_av = 0.0_wp
+
+            CASE ( 'solar3d' )
+                IF ( .NOT. ALLOCATED( solar3d_av ) )  THEN
+                   ALLOCATE( solar3d_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
+                ENDIF
+                solar3d_av = 0.0_wp
 
              CASE ( 'rho_ocean' )
                 IF ( .NOT. ALLOCATED( rho_ocean_av ) )  THEN
@@ -915,6 +921,18 @@
                                 surf_usm_h%r_a_window(m) )
                 ENDDO
              ENDIF
+
+          CASE ( 'solar3d' )
+             IF ( ALLOCATED( solar3d_av ) ) THEN 
+                DO  i = nxlg, nxrg
+                   DO  j = nysg, nyng
+                      DO  k = nzb, nzt+1
+                         solar3d_av(k,j,i) = solar3d_av(k,j,i) + solar3d(k,j,i)
+                      ENDDO
+                   ENDDO
+                ENDDO
+             ENDIF  
+
 
           CASE ( 'rho_ocean' )
              IF ( ALLOCATED( rho_ocean_av ) ) THEN 

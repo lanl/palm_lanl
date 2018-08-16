@@ -530,6 +530,8 @@
              mg_switch_to_pe0_level, mixing_length_1d, momentum_advec,         &
              most_method, na_init, nc_const, netcdf_precision, neutral, ngsrb, &
              nsor, nsor_ini, nudging, nx, ny, nz, ocean, idealized_diurnal,    &
+             linear_eqnOfState, rho_ref, fixed_alpha, alpha_const,             &
+             beta_const, pt_ref, sa_ref,                                       & 
              omega, omega_sor,     &
              outflow_source_plane, passive_scalar,                             &
              prandtl_number, precipitation, psolver, pt_damping_factor,        &
@@ -602,6 +604,8 @@
              mg_switch_to_pe0_level, mixing_length_1d, momentum_advec,         &
              most_method, na_init, nc_const, netcdf_precision, neutral, ngsrb, &
              nsor, nsor_ini, nudging, nx, ny, nz, ocean, idealized_diurnal,    &
+             linear_eqnOfState, rho_ref, fixed_alpha, alpha_const,             &
+             beta_const, pt_ref, sa_ref,                                       &
              omega, omega_sor,     &
              outflow_source_plane, passive_scalar,                             &
              prandtl_number, precipitation, psolver, pt_damping_factor,        &

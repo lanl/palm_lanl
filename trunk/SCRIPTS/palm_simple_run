@@ -112,13 +112,14 @@ print_help() {
    echo "   -t <openmp-threads>      Number of OpenMP threads"
    echo "   -d <base-directory>      SCRIPTS directory, defaults to ~/palm/current_version/trunk/SCRIPTS"
    echo "   -w <working-directory>   working dirctory, defaults to SCRIPTS/../../"
+   echo "   -T <cpu-run-time>        run time for restart writes"
    echo ""
    echo ""
 }
 
 
    # Read shellscript options
-while  getopts  :b:w:d:c:n:p:s:t:h:r  option
+while  getopts  hrb:w:d:c:n:p:s:t:T:  option
 do
   case  $option  in
       (b)   build_config=$OPTARG;;
@@ -129,6 +130,7 @@ do
       (t)   openmp_threads=$OPTARG;;
       (d)   SCRIPT_LOCATION=$OPTARG;; 
       (w)   work_dir=$OPTARG;;
+      (T)   cpumax=$OPTARG;;
       (r)   restart_run=true;;
       (h)   print_help
             exit 0;;
@@ -169,7 +171,6 @@ then
 fi
 
 build_dir=${working_dir}/BUILD_${build_config}
-echo $build_dir
 if [[ ! -d ${build_dir} ]]
 then
    echo "+++ ERROR: No build for configuration ${build_config} exists! "
@@ -207,8 +208,12 @@ execution_dir=${working_dir}/RUN_${suffix}
 
 if [[ "$restart_run" = true ]] 
 then
+   if [[ -d ${execution_dir}/BININ ]]
+   then
+     rm -rf ${execution_dir}/BININ
+   fi
    mv ${execution_dir}/BINOUT ${execution_dir}/BININ
-   cp restart_oceanml_p3d ${work_dir}/test_oceanml_p3d
+   sed -i "s/initializing_actions=.*/initializing_actions='read_restart_data'/g" ${working_dir}/${test_case}_p3d
 else
    if [[ ! -d ${execution_dir} ]]
    then
@@ -217,6 +222,7 @@ else
       rm -r ${execution_dir}
       mkdir -p ${execution_dir}
    fi
+   sed -i "s/initializing_actions=.*/initializing_actions='set_constant_profiles'/g" ${working_dir}/${test_case}_p3d
 fi
 echo "*** PALM running in directory ${execution_dir}"
 

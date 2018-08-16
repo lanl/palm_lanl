@@ -473,6 +473,17 @@
                 ENDDO
              ENDIF
 
+          CASE ( 'solar3d' )
+             IF ( ALLOCATED( solar3d_av ) ) THEN
+                DO  i = nxlg, nxrg
+                   DO  j = nysg, nyng
+                      DO  k = nzb, nzt+1
+                         solar3d_av(k,j,i) = solar3d_av(k,j,i) / REAL( average_count_3d, KIND=wp )
+                      ENDDO
+                   ENDDO
+                ENDDO
+          ENDIF
+
 
           CASE ( 's' )
              IF ( ALLOCATED( s_av ) ) THEN

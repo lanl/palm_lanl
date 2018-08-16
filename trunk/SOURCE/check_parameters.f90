@@ -2936,7 +2936,19 @@
                    data_output_pr(i)     = data_output_pr(i)(2:)
                 ENDIF
              ENDIF
-          CASE ( 'alpha_T' )
+           CASE ( 'solar3d' )
+             IF (  .NOT.  ocean ) THEN
+                message_string = 'data_output_pr = ' //                        &
+                                 TRIM( data_output_pr(i) ) // ' is not imp' // &
+                                 'lemented for ocean = .FALSE.'
+                CALL message( 'check_parameters', 'PA0091', 1, 2, 0, 6, 0 )
+             ELSE
+                dopr_index(i) = 150
+                dopr_unit(i)  = '^oC^{-1}/s'
+                hom(:,2,150,:) = SPREAD( zu, 2, statistic_regions+1 )
+             ENDIF
+
+           CASE ( 'alpha_T' )
              IF (  .NOT.  ocean ) THEN
                 message_string = 'data_output_pr = ' //                        &
                                  TRIM( data_output_pr(i) ) // ' is not imp' // &
@@ -3379,6 +3391,15 @@
                 CALL message( 'check_parameters', 'PA0108', 1, 2, 0, 6, 0 )
              ENDIF
              unit = 'kg/kg'
+
+          CASE ( 'solar3d' )
+             IF (  .NOT.  ocean )  THEN
+                message_string = 'output of "' // TRIM( var ) // '" requi' //  &
+                                 'res ocean = .TRUE.'
+                CALL message( 'check_parameters', 'PA0109', 1, 2, 0, 6, 0 )
+             ENDIF
+             unit = '^oC s^{-1}'
+
 
           CASE ( 'rho_ocean' )
              IF (  .NOT.  ocean )  THEN
@@ -4363,10 +4384,10 @@
           vertical_gradient_level_ind(1) = nzt+1
           DO  k = nzt, 0, -1
              IF ( i < 11 )  THEN
-                IF ( vertical_gradient_level(i) > zu(k)  .AND.            &
+                IF ( vertical_gradient_level(i) >= zu(k)  .AND.            &
                      vertical_gradient_level(i) <= 0.0_wp )  THEN
                    gradient = vertical_gradient(i) / 100.0_wp
-                   vertical_gradient_level_ind(i) = k + 1
+                   vertical_gradient_level_ind(i) = k + 1  
                    i = i + 1
                 ENDIF
              ENDIF

@@ -828,6 +828,7 @@
                  rho_ocean(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                     &
                  alpha_T(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                       &
                  beta_S(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                        &
+                 solar3d(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                       &
                  sa(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                            &
                  sa_p(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                          &
                  tsa_m(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
@@ -836,6 +837,7 @@
                  rho_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                         &
                  alpha_T(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                       &
                  beta_S(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                        &
+                 solar3d(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                       &
                  sa_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                          &
                  sa_2(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                          &
                  sa_3(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
@@ -2442,9 +2444,7 @@
        CALL location_message( 'finished', .TRUE. )
 
 !
-!--    Find all discretized apparent solar positions for radiation interaction.
-!--    This must be done after radiation_init.
-       IF ( radiation_interactions )  CALL radiation_presimulate_solar_pos
+!--    Find all discretized apparent solar_pos
 
 !
 !--    If required, read or calculate and write out the SVF 

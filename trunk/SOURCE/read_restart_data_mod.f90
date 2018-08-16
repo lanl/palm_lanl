@@ -1679,6 +1679,15 @@
                       tmp_2d_seq_random(:,nysf:nynf,nxlf:nxrf)
                    DEALLOCATE( tmp_2d_id_random, tmp_2d_seq_random )
 
+                CASE ( 'solar3d_av' )
+                   IF ( .NOT. ALLOCATED( solar3d_av ) )  THEN
+                      ALLOCATE( solar3d_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
+                   ENDIF
+                   IF ( k == 1 )  READ ( 13 )  tmp_3d
+                   solar3d_av(:,nysc-nbgp:nync+nbgp,nxlc-nbgp:nxrc+nbgp) =   &
+                      tmp_3d(:,nysf-nbgp:nynf+nbgp,nxlf-nbgp:nxrf+nbgp)
+
+
                 CASE ( 'rho_ocean_av' )
                    IF ( .NOT. ALLOCATED( rho_ocean_av ) )  THEN
                       ALLOCATE( rho_ocean_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )

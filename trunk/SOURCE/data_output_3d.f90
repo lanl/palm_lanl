@@ -202,7 +202,7 @@
 
     USE arrays_3d,                                                             &
         ONLY:  e, nc, nr, p, pt, prr, q, qc, ql, ql_c, ql_v, qr, rho_ocean, s, &
-               sa, tend, u, v, vpt, w, alpha_T, beta_S
+               sa, tend, u, v, vpt, w, alpha_T, beta_S, solar3d
         
     USE averaging
         
@@ -671,6 +671,18 @@
                 ENDIF
                 to_be_resorted => qv_av
              ENDIF
+
+           CASE ( 'solar3d' )
+             IF ( av == 0 )  THEN
+                to_be_resorted => solar3d
+             ELSE
+                IF ( .NOT. ALLOCATED( solar3d_av ) ) THEN
+                   ALLOCATE( solar3d_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
+                   u_av = REAL( fill_value, KIND = wp )
+                ENDIF
+                to_be_resorted => solar3d_av
+             ENDIF
+
 
           CASE ( 'rho_ocean' )
              IF ( av == 0 )  THEN

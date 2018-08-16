@@ -790,6 +790,7 @@
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  rho_ocean  !< density of ocean
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  alpha_T    !< drhodT
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  beta_S     !< drhodS
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  solar3d    !< 3d solar tendency
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  s          !< passive scalar
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  s_p        !< prognostic value of passive scalar
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  sa         !< ocean salinity
@@ -886,6 +887,7 @@
     REAL(wp), DIMENSION(:,:,:), POINTER, CONTIGUOUS ::  rho_ocean  !< pointer: density of ocean
     REAL(wp), DIMENSION(:,:,:), POINTER, CONTIGUOUS ::  alpha_T    !< pointer: thermal expansion coefficent
     REAL(wp), DIMENSION(:,:,:), POINTER, CONTIGUOUS ::  beta_S     !< pointer: haline contraction coefficient
+    REAL(wp), DIMENSION(:,:,:), POINTER, CONTIGUOUS ::  solar3d    !< pointer: 3d solar tendency
     REAL(wp), DIMENSION(:,:,:), POINTER, CONTIGUOUS ::  s          !< pointer: passive scalar
     REAL(wp), DIMENSION(:,:,:), POINTER, CONTIGUOUS ::  s_p        !< pointer: prognostic value of passive scalar
     REAL(wp), DIMENSION(:,:,:), POINTER, CONTIGUOUS ::  sa         !< pointer: ocean salinity
@@ -983,6 +985,7 @@
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  rho_ocean_av  !< avg. ocean density
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  alpha_T_av       !< avg. thermal expansion coefficient
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  beta_S_av        !< avg. haline contraction coefficient
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  solar3d_av    !< avg. 3d solar tendency
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  s_av          !< avg. passive scalar
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  sa_av         !< avg. salinity
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  u_av          !< avg. horizontal velocity component u 
@@ -1330,7 +1333,17 @@
     LOGICAL ::  neutral = .FALSE.                                !< namelist parameter
     LOGICAL ::  nudging = .FALSE.                                !< namelist parameter
     LOGICAL ::  ocean = .FALSE.                                  !< namelist parameter
+    LOGICAL ::  linear_eqnOfState = .FALSE.                      !< namelist parmaeter for linear equation of state in ocean
+    REAL(wp) :: rho_ref = 1000.0_wp                              !< reference density for linear eos
+    LOGICAL ::  fixed_alpha = .TRUE.                             !< use fixed thermal and haline expansion coefficients
+    REAL(wp) :: alpha_const = 2.0E-4                             !< fixed alpha_T value
+    REAL(wp) :: beta_const = 8.0E-4                              !< fixed beta_S value
+    REAL(wp) :: pt_ref = 15.0_wp                                 !< potential temperature reference falue
+    REAL(wp) :: sa_ref = 35.0_wp                                 !< salinity reerence value for fixed linear density equation
     LOGICAL ::  idealized_diurnal = .FALSE.                      !< flag for diurnal cycle
+    REAL(wp) :: ideal_solar_division = 0.67_wp                   !< value for breakdown of double exponential
+    REAL(wp) :: ideal_solar_efolding1 = 1.0_wp/1.0_wp            !< efolding depth for IR in solar (m^-1)
+    REAL(wp) :: ideal_solar_efolding2 = 1.0_wp/17.0_wp           !< efolding depth for blue in solar (m^-1)
     LOGICAL ::  outflow_l = .FALSE.                              !< left domain boundary has non-cyclic outflow?
     LOGICAL ::  outflow_n = .FALSE.                              !< north domain boundary has non-cyclic outflow?
     LOGICAL ::  outflow_r = .FALSE.                              !< right domain boundary has non-cyclic outflow?

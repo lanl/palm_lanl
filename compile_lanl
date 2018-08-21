@@ -2,7 +2,7 @@
 
 use_hdf5="True"
 repo_path=$PWD
-build_path="/path/to/case/directory"
+build_path="/lustre/scratch3/turquoise/qingli/palm/jobs/diurnal/"
 
 export PATH="$repo_path/trunk/SCRIPTS:$PATH"
 module purge

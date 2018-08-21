@@ -6,12 +6,12 @@
 #SBATCH  --output=PALM_TEST.%j
 #SBATCH  --exclusive
 #SBATCH --qos=interactive
-#SBATCH --time=01:00:20
+#SBATCH --time=01:00:00
 #SBATCH -A w17_mpasles
 
 use_hdf5="True"
 repo_path=$PWD
-exec_path="/path/to/case/directory"
+exec_path="/lustre/scratch3/turquoise/qingli/palm/jobs/diurnal"
 
 cd $SLURM_SUBMIT_DIR
 export PATH="$repo_path/trunk/SCRIPTS:${PATH}"
@@ -35,7 +35,7 @@ if [[ $use_hdf5 == "True" ]]; then
     module load openmpi/2.1.2
     module load hdf5/1.10.2
     module load netcdf/4.6.1_hdf5
-    palm_simple_run -b ifort.grizzly_hdf5 -w $exec_path -c mpirun -s test_oceanml -n $NN -p $NTASKS -t 1 -T $WTIME 
+    palm_simple_run -b ifort.grizzly_hdf5 -w $exec_path -c mpirun -s test_oceanml -n $NN -p $NTASKS -t 1 -T $WTIME
 else
     module load intel/17.0.1
     module load openmpi/1.10.5

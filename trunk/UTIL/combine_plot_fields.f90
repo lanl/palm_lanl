@@ -306,6 +306,7 @@
              ENDIF
           ENDIF
 
+
           IF ( netcdf_output  .AND. .NOT. netcdf_parallel  .AND.  danz /= 0 ) &
           THEN
 #if defined( __netcdf )
@@ -822,6 +823,7 @@
           ENDDO
 
        ENDIF
+
 
 999    IF ( danz /= 0  .AND.  .NOT. netcdf_parallel )  THEN
 !

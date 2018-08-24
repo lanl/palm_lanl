@@ -46,15 +46,17 @@ OBJS2 =  compare_palm_logs.o
 CC = cc
 CFLAGS = -O
 
-F90 = ftn 
-F90_SER = ftn 
+F90 = mpif90
+F90_SER = mpif90
 COPT = -cpp -DMPI_REAL=MPI_DOUBLE_PRECISION -DMPI_2REAL=MPI_2DOUBLE_PRECISION -D__netcdf
 F90FLAGS = -check all -r8 -convert little_endian
 LDFLAGS  = -check all -r8 -convert little_endian
 
-PKG_CONFIG      := PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1 pkg-config
-NETCDF_F90FLAGS != $(PKG_CONFIG) --cflags netcdf-fortran
-NETCDF_LDFLAGS  != $(PKG_CONFIG) --libs netcdf-fortran
+#PKG_CONFIG      := PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1 pkg-config
+#NETCDF_F90FLAGS != $(PKG_CONFIG) --cflags netcdf-fortran
+#NETCDF_LDFLAGS  != $(PKG_CONFIG) --libs netcdf-fortran
+NETCDF_F90FLAGS = $(shell nc-config --fflags)
+NETCDF_LDFLAGS  = $(shell nc-config --flibs) 
 F90FLAGS        += $(NETCDF_F90FLAGS)
 LDFLAGS         += $(NETCDF_LDFLAGS)
 

@@ -532,7 +532,7 @@
              nsor, nsor_ini, nudging, nx, ny, nz, ocean, idealized_diurnal,    &
              linear_eqnOfState, rho_ref, fixed_alpha, alpha_const,             &
              beta_const, pt_ref, sa_ref,                                       & 
-             omega, omega_sor,     &
+             omega, omega_sor, wb_solar,     &
              outflow_source_plane, passive_scalar,                             &
              prandtl_number, precipitation, psolver, pt_damping_factor,        &
              pt_damping_width, pt_reference, pt_surface,                       &
@@ -606,7 +606,7 @@
              nsor, nsor_ini, nudging, nx, ny, nz, ocean, idealized_diurnal,    &
              linear_eqnOfState, rho_ref, fixed_alpha, alpha_const,             &
              beta_const, pt_ref, sa_ref,                                       &
-             omega, omega_sor,     &
+             omega, omega_sor, wb_solar,    &
              outflow_source_plane, passive_scalar,                             &
              prandtl_number, precipitation, psolver, pt_damping_factor,        &
              pt_damping_width, pt_reference, pt_surface,                       &

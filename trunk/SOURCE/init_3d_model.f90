@@ -835,15 +835,18 @@
 #else
        ALLOCATE( prho_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                        &
                  rho_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                         &
-                 alpha_T(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                       &
-                 beta_S(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                        &
-                 solar3d(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                       &
+                 alpha_T_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                       &
+                 beta_S_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                        &
+                 solar3d_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                       &
                  sa_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                          &
                  sa_2(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                          &
                  sa_3(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
        prho => prho_1
        rho_ocean  => rho_1  ! routines calc_mean_profile and diffusion_e require
                       ! density to be apointer
+       alpha_T => alpha_T_1
+       beta_S => beta_S_1
+       solar3d => solar3d_1
 #endif
     ENDIF
 
@@ -889,6 +892,7 @@
        rho_air_zw(nzt+1)  = rho_air_zw(nzt)                                    &
                             + 2.0_wp * ( rho_air(nzt+1) - rho_air_zw(nzt)  )
     ENDIF
+    rho_air(:) = 1.0_wp
 !
 !-- compute the inverse density array in order to avoid expencive divisions
     drho_air    = 1.0_wp / rho_air

@@ -703,6 +703,12 @@
                 sums_l(k,33,tn) = sums_l(k,33,tn) + &
                                   ( pt(k,j,i)-hom(k,1,4,sr) )**2 * rmask(j,i,sr)&
                                                                  * flag
+                IF (ocean) then
+
+                    sums_l(k,153,tn) = sums_l(k,153,tn) + &
+                                  ( sa(k,j,i)-hom(k,1,23,sr) )**2 * rmask(j,i,sr)&
+                                                                 * flag
+                ENDIF
 
                 IF ( humidity )  THEN
                    sums_l(k,70,tn) = sums_l(k,70,tn) + &
@@ -1345,6 +1351,14 @@
                 sums_l(k,36,tn) = sums_l(k,36,tn) + pts**2 * w(k,j,i) *        &
                                                     rmask(j,i,sr) * flag
 
+                IF ( ocean ) THEN
+                  pts = 0.5_wp * ( sa(k,j,i) - hom(k,1,23,sr) +                &
+                                   sa(k+1,j,i) - hom(k+1,1,23,sr) )
+                  sums_l(k,154,tn) = sums_l(k,154,tn) + pts * w(k,j,i)**2 *    &
+                                                    rmask(j,i,sr) * flag
+                  sums_l(k,155,tn) = sums_l(k,155,tn) + pts**2 * w(k,j,i) *    &
+                                                    rmask(j,i,sr) * flag
+                endif
 !
 !--             Salinity flux and density (density does not belong to here,
 !--             but so far there is no other suitable place to calculate)
@@ -1367,7 +1381,6 @@
                                                        rmask(j,i,sr) * flag
                 ENDIF
 
-!
 !--             Buoyancy flux, water flux, humidity flux, liquid water
 !--             content, rain drop concentration and rain water content
                 IF ( humidity )  THEN
@@ -1452,7 +1465,8 @@
           ENDDO
        ENDDO
        !$OMP END PARALLEL
-!
+
+       !
 !--    Treat land-surface quantities according to new wall model structure. 
        IF ( land_surface )  THEN
           tn = 0
@@ -1833,6 +1847,7 @@
        ENDIF
 #endif
 
+    
 !
 !--    Final values are obtained by division by the total number of grid points 
 !--    used for summation. After that store profiles.
@@ -1845,6 +1860,7 @@
           sums(k,12:22)         = sums(k,12:22)         / ngp_2dh(sr)
           sums(k,30:32)         = sums(k,30:32)         / ngp_2dh(sr)
           sums(k,35:39)         = sums(k,35:39)         / ngp_2dh(sr)
+          sums(k,154:155)       = sums(k,154:155)       / ngp_2dh(sr)
           sums(k,45:53)         = sums(k,45:53)         / ngp_2dh(sr)
           sums(k,55:63)         = sums(k,55:63)         / ngp_2dh(sr)
           sums(k,81:88)         = sums(k,81:88)         / ngp_2dh(sr)
@@ -1855,6 +1871,7 @@
              sums(k,8:11)          = sums(k,8:11)          / ngp_2dh_s_inner(k,sr)
              sums(k,23:29)         = sums(k,23:29)         / ngp_2dh_s_inner(k,sr)
              sums(k,33:34)         = sums(k,33:34)         / ngp_2dh_s_inner(k,sr)
+             sums(k,153)           = sums(k,153)           / ngp_2dh_s_inner(k,sr)
              sums(k,40)            = sums(k,40)            / ngp_2dh_s_inner(k,sr)
              sums(k,54)            = sums(k,54)            / ngp_2dh_s_inner(k,sr)
              sums(k,64)            = sums(k,64)            / ngp_2dh_s_inner(k,sr)
@@ -1928,9 +1945,12 @@
        hom(:,1,31,sr) = sums(:,31)     ! v*2
        hom(:,1,32,sr) = sums(:,32)     ! w*2
        hom(:,1,33,sr) = sums(:,33)     ! pt*2
+       hom(:,1,153,sr) = sums(:,153)   ! sa*2
        hom(:,1,34,sr) = sums(:,34)     ! e*
        hom(:,1,35,sr) = sums(:,35)     ! w*2pt*
        hom(:,1,36,sr) = sums(:,36)     ! w*pt*2
+       hom(:,1,154,sr) = sums(:,154)   ! w*2sa*
+       hom(:,1,155,sr) = sums(:,155)   ! w*sa*2
        hom(:,1,37,sr) = sums(:,37)     ! w*e*
        hom(:,1,38,sr) = sums(:,38)     ! w*3
        hom(:,1,39,sr) = sums(:,38) / ( abs( sums(:,32) ) + 1E-20_wp )**1.5_wp   ! Sw

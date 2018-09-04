@@ -332,9 +332,9 @@ if [[ "$run_coupled_model" = true ]]
 then
    (( iia = $cores_atmos / $openmp_threads ))
    (( iio = $cores_ocean / $openmp_threads ))
-   echo "coupled_run $iia $iio"  >  ${execution_dir}/runfile_atmos
+   echo "coupled_run $iia $iio"  >  ${execution_dir}/runfile
 else
-   echo "no_coupling"  >  ${execution_dir}/runfile_atmos
+   echo "no_coupling"  >  ${execution_dir}/runfile
 fi
 
 

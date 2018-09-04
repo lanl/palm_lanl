@@ -12,8 +12,10 @@
 use_hdf5="True"
 do_coupled="True"
 do_restart="True"
-atm_cores=32  # number of cores for atmosphere, only used when do_coupled = True
-ocn_cores=32  # number pf cores for ocean, only used when do_coupled = True
+# number of cores for atmosphere and ocean, respectively, only used when do_coupled = True
+# atm_cores + ocn_cores should be equal to $SLURM_NTASKS
+atm_cores=32
+ocn_cores=32
 test_case="test_coupled"
 run_config="mpirun"
 openmp_threads=1
@@ -61,10 +63,4 @@ if [[ $do_coupled == "True" ]]; then
     palm_simple_run $palm_options -Y "$atm_cores $ocn_cores"
 else
     palm_simple_run $palm_options
-
 fi
-
-# echo $palm_options
-# echo "$palm_options"
-# exit
-# palm_simple_run $(eval echo $palm_options)

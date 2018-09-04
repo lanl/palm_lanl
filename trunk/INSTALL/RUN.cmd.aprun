@@ -8,4 +8,4 @@
 # ${openmp_threads} is the number of OpenMP threads (option -t)
 
 export OMP_NUM_THREADS=${openmp_threads}
-aprun -n ${mpi_ranks}  ./palm  < runfile_atmos
+aprun -n ${mpi_ranks}  ./palm  < runfile

@@ -9,3 +9,4 @@
 
 export OMP_NUM_THREADS=${openmp_threads}
 mpirun -n ${mpi_ranks}  ./palm  < runfile
+./combine_plot_fields.x

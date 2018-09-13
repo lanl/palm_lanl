@@ -255,10 +255,10 @@ else
       rm -r ${execution_dir}
       mkdir -p ${execution_dir}
    fi
-   sed -i "s/initializing_actions=.*/initializing_actions='set_constant_profiles'/g" ${working_dir}/${test_case}_p3d
+   sed -i "s/initializing_actions *=.*/initializing_actions = 'set_constant_profiles'/g" ${working_dir}/${test_case}_p3d
    if [[ "$run_coupled_model" = true ]]
    then
-      sed -i "s/initializing_actions=.*/initializing_actions='set_constant_profiles'/g" ${working_dir}/${test_case}_o_p3d
+      sed -i "s/initializing_actions *=.*/initializing_actions = 'set_constant_profiles'/g" ${working_dir}/${test_case}_o_p3d
    fi
 fi
 echo "*** PALM running in directory ${execution_dir}"
@@ -273,6 +273,17 @@ then
    exit 1
 else
    cp  ${build_dir}/palm  ${execution_dir}/palm
+fi
+
+# Check if combine_plot_fields.x has been installed and copy executable into the run
+# directory
+if [[ ! -f ${build_dir}/combine_plot_fields.x ]]
+then
+   echo "+++ ERROR: combine_plot_fields.x executable does not exist."
+   echo "           Please run \"palm_simple_install\"."
+   exit 1
+else
+   cp  ${build_dir}/combine_plot_fields.x  ${execution_dir}/combine_plot_fields.x
 fi
 
 

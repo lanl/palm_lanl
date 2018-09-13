@@ -11,7 +11,7 @@
 
 use_hdf5="True"
 do_coupled="True"
-do_restart="True"
+do_restart="False"
 # number of cores for atmosphere and ocean, respectively, only used when do_coupled = True
 # atm_cores + ocn_cores should be equal to $SLURM_NTASKS
 atm_cores=32
@@ -32,7 +32,7 @@ NTASKS=$SLURM_NTASKS
 nnodes=$SLURM_JOB_NUM_NODES
 NN=$((NTASKS/nnodes))
 
-echo "PROCS = $NP"
+echo "PROCS = $NN"
 
 timestring=`squeue -h -j $SLURM_JOBID -o "%l"`
 WTIME=`echo $timestring | sed -E 's/(.*):(.+):(.+)/\1*3600+\2*60+\3/;s/(.+):(.+)/\1*60+\2/' | bc`

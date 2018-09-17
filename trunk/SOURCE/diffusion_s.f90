@@ -129,14 +129,16 @@
                                s_flux_lsm_v_north, s_flux_lsm_v_south,         &
                                s_flux_lsm_v_east,  s_flux_lsm_v_west,          &
                                s_flux_usm_v_north, s_flux_usm_v_south,         &
-                               s_flux_usm_v_east,  s_flux_usm_v_west )
+                               s_flux_usm_v_east,  s_flux_usm_v_west,          &
+                               s_flux_solar_t)
 
        USE arrays_3d,                                                          &
-           ONLY:  dzw, ddzu, ddzw, kh, tend, drho_air, rho_air_zw
+           ONLY:  dzw, ddzu, ddzw, kh, tend, drho_air, rho_air_zw, solar3d
        
        USE control_parameters,                                                 & 
-           ONLY: use_surface_fluxes, use_top_fluxes
-       
+           ONLY: use_surface_fluxes, use_top_fluxes, ideal_solar_division,     &
+                 ideal_solar_efolding1, ideal_solar_efolding2
+ 
        USE grid_variables,                                                     &
            ONLY:  ddx, ddx2, ddy, ddy2
        
@@ -159,7 +161,10 @@
        INTEGER(iwp) ::  surf_e        !< End index of surface elements at (j,i)-gridpoint
        INTEGER(iwp) ::  surf_s        !< Start index of surface elements at (j,i)-gridpoint
 
-       REAL(wp) ::  flag              !< flag to mask topography grid points
+       REAL(wp) ::  zval              !< depth_variable for solar penetration
+       REAL(wp) ::  flux1             !< solar flux temp variable
+       REAL(wp) ::  flux2             !< solar flux temp variable
+       REAL(wp) ::  flag
        REAL(wp) ::  mask_bottom       !< flag to mask vertical upward-facing surface     
        REAL(wp) ::  mask_east         !< flag to mask vertical surface east of the grid point 
        REAL(wp) ::  mask_north        !< flag to mask vertical surface north of the grid point
@@ -190,6 +195,8 @@
 #else
        REAL(wp), DIMENSION(:,:,:), POINTER ::  s  !< 
 #endif
+
+       REAL(wp), DIMENSION(1:surf_def_h(2)%ns),INTENT(IN),OPTIONAL :: s_flux_solar_t  !<solar flux at sfc
 
        DO  i = nxl, nxr
           DO  j = nys,nyn
@@ -408,7 +415,27 @@
 
                 ENDDO
 
-             ENDIF
+              ENDIF
+                !LPV adding solar forcing with depth
+                IF ( PRESENT(s_flux_solar_t )) THEN
+                  m = surf_def_h(2)%start_index(j,i)
+
+                  zval = 0.0_wp
+                  DO k = nzt,nzb+1,-1
+                      flux1 = (1.0_wp - ideal_solar_division)*exp(ideal_solar_efolding2*zval) + &
+                                ideal_solar_division*exp(ideal_solar_efolding1*zval)
+                      zval = zval - dzw(k)
+                      flux2 = (1.0_wp - ideal_solar_division)*exp(ideal_solar_efolding2*zval) + &
+                      ideal_solar_division*exp(ideal_solar_efolding1*zval)
+
+                      tend(k,j,i) = tend(k,j,i) - s_flux_solar_t(m)*(flux1 - flux2) / dzw(k)
+                    
+                      solar3d(k,j,i) = -s_flux_solar_t(m)*(flux1 - flux2) / dzw(k)
+                  ENDDO
+
+                ENDIF
+ 
+
 !
 !--          Vertical diffusion at the last computational gridpoint along z-direction
              IF ( use_top_fluxes )  THEN
@@ -442,7 +469,7 @@
                                s_flux_lsm_v_east,  s_flux_lsm_v_west,          &
                                s_flux_usm_v_north, s_flux_usm_v_south,         &
                                s_flux_usm_v_east,  s_flux_usm_v_west,          &
-                               s_flux_solar_t)       
+                               s_flux_solar_t)
 
        USE arrays_3d,                                                          &
            ONLY:  dzw, ddzu, ddzw, kh, tend, drho_air, rho_air_zw, solar3d

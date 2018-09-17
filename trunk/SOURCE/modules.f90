@@ -847,6 +847,9 @@
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  qr_2    !< pointer for swapping of timelevels for respective quantity
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  qr_3    !< pointer for swapping of timelevels for respective quantity
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  rho_1   !< pointer for swapping of timelevels for respective quantity
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  solar3d_1
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  alpha_T_1
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  beta_S_1
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  s_1     !< pointer for swapping of timelevels for respective quantity
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  s_2     !< pointer for swapping of timelevels for respective quantity
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  s_3     !< pointer for swapping of timelevels for respective quantity
@@ -1344,6 +1347,7 @@
     REAL(wp) :: ideal_solar_division = 0.67_wp                   !< value for breakdown of double exponential
     REAL(wp) :: ideal_solar_efolding1 = 1.0_wp/1.0_wp            !< efolding depth for IR in solar (m^-1)
     REAL(wp) :: ideal_solar_efolding2 = 1.0_wp/17.0_wp           !< efolding depth for blue in solar (m^-1)
+    REAL(wp) :: wb_solar = 0.0_wp
     LOGICAL ::  outflow_l = .FALSE.                              !< left domain boundary has non-cyclic outflow?
     LOGICAL ::  outflow_n = .FALSE.                              !< north domain boundary has non-cyclic outflow?
     LOGICAL ::  outflow_r = .FALSE.                              !< right domain boundary has non-cyclic outflow?

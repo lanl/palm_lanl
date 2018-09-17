@@ -235,7 +235,7 @@
 
                 alpha_T(k,j,i) = -1.0/rho_ocean(k,j,i)*((dpnomdT2*pden -         &
                                     pnom*dpdendT2) / (pden*pden))
-                beta_S(k,j,i) = (dpnomdS2*pden - pnom*dpdendS2) / (pden*pden)
+                beta_S(k,j,i) = 1.0/rho_ocean(k,j,i)*(dpnomdS2*pden - pnom*dpdendS2) / (pden*pden)
                 rho_ocean(k,j,i) = pnom / pden 
 
                 if (linear_eqnOfState) THEN

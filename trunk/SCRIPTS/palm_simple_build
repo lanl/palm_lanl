@@ -18,19 +18,19 @@
 #
 # Current revisions:
 # -----------------
-# 
-# 
+#
+#
 # Former revisions:
 # -----------------
 # $Id: palm_simple_build 2875 2018-03-13 11:00:25Z knoop $
 # added file update functionality
-# 
+#
 # 2868 2018-03-09 13:25:09Z hellstea
 # Bugfix: adjusted name of build_dir
-# 
+#
 # 2852 2018-03-05 14:43:22Z knoop
 # Refactoring of the palm_simple_ build and run scripts
-# 
+#
 # 2718 2018-01-02 08:49:38Z maronga
 # Corrected "Former revisions" section
 #
@@ -117,7 +117,7 @@ do
   case  $option  in
       (b)   build_config=$OPTARG;;
       (s)   SCRIPT_LOCATION=$OPTARG;;
-      (w)   work_dir=$OPTARG;;   
+      (w)   work_dir=$OPTARG;;
       (x)   clean="true";;
       (h)   print_help
             exit 0;;
@@ -164,14 +164,20 @@ fi
 cp -r ${trunk_dir}/SOURCE/Makefile  ${build_dir}/Makefile_in
 cp -r ${build_config_file}          ${build_dir}/MAKE.inc
 cp -r ${trunk_dir}/SOURCE/*.f90     ${build_dir}
+cp -r ${trunk_dir}/UTIL/Makefile_utilities          ${build_dir}/Makefile_utilities_in
+cp -r ${trunk_dir}/UTIL/combine_plot_fields.f90     ${build_dir}
+cp -r ${trunk_dir}/UTIL/compare_palm_logs.f90       ${build_dir}
 
 
 # Replace comment in makefile by include statement
 sed  's/#to_be_replaced_by_include/include MAKE.inc/g'  ${build_dir}/Makefile_in  >  ${build_dir}/Makefile
 rm  ${build_dir}/Makefile_in
+sed  's/#to_be_replaced_by_include/include MAKE.inc/g'  ${build_dir}/Makefile_utilities_in  >  ${build_dir}/Makefile_utilities
+rm  ${build_dir}/Makefile_utilities_in
 
 cd ${build_dir}
 make -j $(get_number_of_cpu_cores)
+make -j $(get_number_of_cpu_cores) -f Makefile_utilities
 cd ../
 
 

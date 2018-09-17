@@ -350,7 +350,7 @@
         ONLY:  diss, diss_p, dzu, e, e_p, nc, nc_p, nr, nr_p, prho, pt, pt_p, pt_init, &
                q_init, q, qc, qc_p, ql, ql_c, ql_v, ql_vp, qr, qr_p, q_p,      &
                ref_state, rho_ocean, s, s_p, sa_p, tend, u, u_p, v, vpt,       &
-               v_p, w, w_p, alpha_T, beta_S, solar3d
+               v_p, w, w_p, alpha_T, beta_S, solar3d, sa
 
     USE calc_mean_profile_mod,                                                 &
         ONLY:  calc_mean_profile
@@ -869,22 +869,24 @@
                intermediate_timestep_count == 1 ) )                            &
           THEN
              time_disturb = time_disturb + dt_3d
-             IF ( time_disturb >= dt_disturb )  THEN
-                IF ( disturbance_energy_limit /= 0.0_wp  .AND.                 &
-                     hom(nzb+5,1,pr_palm,0) < disturbance_energy_limit )  THEN
-                   CALL disturb_field( 'u', tend, u )
-                   CALL disturb_field( 'v', tend, v )
-                ELSEIF ( ( .NOT. bc_lr_cyc  .OR.  .NOT. bc_ns_cyc )            &
-                     .AND. .NOT. nest_domain  .AND.  .NOT.  forcing )  THEN
+             IF ( time_disturb <= dt_disturb ) then !.or.  disturbance_energy_limit /= 0.0_wp  .AND.                 &
+          !           hom(nzb+5,1,pr_palm,0) < disturbance_energy_limit )  THEN
+                  CALL disturb_field( 'u', tend, u )
+                  CALL disturb_field( 'v', tend, v )
+                  call disturb_field('pt', tend, pt )
+          !        call disturb_field('sa', tend, sa )
+
+ !            ELSEIF ( ( .NOT. bc_lr_cyc  .OR.  .NOT. bc_ns_cyc )            &
+ !                    .AND. .NOT. nest_domain  .AND.  .NOT.  forcing )  THEN
 !
 !--                Runs with a non-cyclic lateral wall need perturbations
 !--                near the inflow throughout the whole simulation
-                   dist_range = 1
-                   CALL disturb_field( 'u', tend, u )
-                   CALL disturb_field( 'v', tend, v )
-                   dist_range = 0
-                ENDIF
-                time_disturb = time_disturb - dt_disturb
+ !                  dist_range = 1
+ !                  CALL disturb_field( 'u', tend, u )
+ !                  CALL disturb_field( 'v', tend, v )
+ !                  dist_range = 0
+ !               ENDIF
+ !               time_disturb = time_disturb - dt_disturb
              ENDIF
           ENDIF
 

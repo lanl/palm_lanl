@@ -18,16 +18,16 @@
 #
 # Current revisions:
 # -----------------
-# 
-# 
+#
+#
 # Former revisions:
 # -----------------
 # $Id: palm_simple_run 2875 2018-03-13 11:00:25Z knoop $
 # made RUN dirs unique with timestamp again
-# 
+#
 # 2850 2018-03-05 14:24:40Z knoop
 # Refactoring of the palm_simple_ build and run scripts
-# 
+#
 # 2718 2018-01-02 08:49:38Z maronga
 # Corrected "Former revisions" section
 #
@@ -96,11 +96,14 @@ SCRIPT_LOCATION=$dir/trunk/SCRIPTS
 work_dir=unknown
 restart_run=false
 remote_dir=true #assumes everything in work_dir
+run_coupled_model=false
 
 print_help() {
    echo "Usage: palm_simple_run -b <build-config> -c <run-config> -s <test-case>"
    echo "                       [-n <mpi-ranks-per-node>] [-p <mpi-ranks>]"
    echo "                       [-t <openmp-threads>] [-d <base-directory>]"
+   echo "                       [-w <working-directory>] [-T <cpu-run-time>]"
+   echo "                       [-r] [-Y \"<#1> <#2>\"]"
    echo ""
    echo "List of allowed option:"
    echo ""
@@ -113,13 +116,15 @@ print_help() {
    echo "   -d <base-directory>      SCRIPTS directory, defaults to ~/palm/current_version/trunk/SCRIPTS"
    echo "   -w <working-directory>   working dirctory, defaults to SCRIPTS/../../"
    echo "   -T <cpu-run-time>        run time for restart writes"
+   echo "   -r                       restart run"
+   echo "   -Y \"<#1> <#2>\"           Number of MPI ranks for atmosphere and ocean in the coupled run"
    echo ""
    echo ""
 }
 
 
    # Read shellscript options
-while  getopts  hrb:w:d:c:n:p:s:t:T:  option
+while  getopts  hrb:w:d:c:n:p:s:t:T:Y:  option
 do
   case  $option  in
       (b)   build_config=$OPTARG;;
@@ -128,10 +133,11 @@ do
       (p)   mpi_ranks=$OPTARG;;
       (s)   test_case=$OPTARG;;
       (t)   openmp_threads=$OPTARG;;
-      (d)   SCRIPT_LOCATION=$OPTARG;; 
+      (d)   SCRIPT_LOCATION=$OPTARG;;
       (w)   work_dir=$OPTARG;;
       (T)   cpumax=$OPTARG;;
       (r)   restart_run=true;;
+      (Y)   run_coupled_model=true; coupled_dist=$OPTARG;;
       (h)   print_help
             exit 0;;
       (\?)  echo "Unknown option -$OPTARG"
@@ -195,6 +201,24 @@ then
    exit 1
 fi
 
+
+    # Evaluate model coupling features (option -Y)
+if [[ "$run_coupled_model" = true ]]
+then
+   cores_atmos=`echo $coupled_dist | cut -d" " -s -f1`
+   cores_ocean=`echo $coupled_dist | cut -d" " -s -f2`
+   if (( $cores_ocean + $cores_atmos != $mpi_ranks ))
+   then
+      printf "\n  +++ number of processors does not fit to specification by \"-Y\"."
+      printf "\n      PEs (total)     : $mpi_ranks"
+      printf "\n      PEs (atmosphere): $cores_atmos"
+      printf "\n      PEs (ocean)     : $cores_ocean"
+      print_help
+      exit 1
+   fi
+fi
+
+
    # Find out the global svn revision number
 global_revision=$(svnversion ${trunk_dir}  2>/dev/null)
 global_revision="Rev: $global_revision"
@@ -206,14 +230,23 @@ timedate="$(date +%F_%H:%M:%S)"
 suffix=${build_config}_${run_config}_${test_case}
 execution_dir=${working_dir}/RUN_${suffix}
 
-if [[ "$restart_run" = true ]] 
+if [[ "$restart_run" = true ]]
 then
    if [[ -d ${execution_dir}/BININ ]]
    then
      rm -rf ${execution_dir}/BININ
    fi
    mv ${execution_dir}/BINOUT ${execution_dir}/BININ
-   sed -i "s/initializing_actions=.*/initializing_actions='read_restart_data'/g" ${working_dir}/${test_case}_p3d
+   sed -i "s/initializing_actions *=.*/initializing_actions = 'read_restart_data'/g" ${working_dir}/${test_case}_p3d
+   if [[ -d ${execution_dir}/BININ_O ]]
+   then
+     rm -rf ${execution_dir}/BININ_O
+   fi
+   if [[ "$run_coupled_model" = true ]]
+   then
+      mv ${execution_dir}/BINOUT_O ${execution_dir}/BININ_O
+      sed -i "s/initializing_actions *=.*/initializing_actions = 'read_restart_data'/g" ${working_dir}/${test_case}_o_p3d
+   fi
 else
    if [[ ! -d ${execution_dir} ]]
    then
@@ -222,7 +255,11 @@ else
       rm -r ${execution_dir}
       mkdir -p ${execution_dir}
    fi
-   sed -i "s/initializing_actions=.*/initializing_actions='set_constant_profiles'/g" ${working_dir}/${test_case}_p3d
+   sed -i "s/initializing_actions *=.*/initializing_actions = 'set_constant_profiles'/g" ${working_dir}/${test_case}_p3d
+   if [[ "$run_coupled_model" = true ]]
+   then
+      sed -i "s/initializing_actions *=.*/initializing_actions = 'set_constant_profiles'/g" ${working_dir}/${test_case}_o_p3d
+   fi
 fi
 echo "*** PALM running in directory ${execution_dir}"
 
@@ -236,6 +273,17 @@ then
    exit 1
 else
    cp  ${build_dir}/palm  ${execution_dir}/palm
+fi
+
+# Check if combine_plot_fields.x has been installed and copy executable into the run
+# directory
+if [[ ! -f ${build_dir}/combine_plot_fields.x ]]
+then
+   echo "+++ ERROR: combine_plot_fields.x executable does not exist."
+   echo "           Please run \"palm_simple_install\"."
+   exit 1
+else
+   cp  ${build_dir}/combine_plot_fields.x  ${execution_dir}/combine_plot_fields.x
 fi
 
 
@@ -259,6 +307,20 @@ else
 fi
 
 
+# The second parameter file for the coupled run
+if [[ "$run_coupled_model" = true ]]
+then
+   test_config_file_ocn=${working_dir}/${test_case}_o_p3d
+   if [[ ! -f $test_config_file_ocn ]]
+   then
+      echo "+++ ERROR: parameter file"
+      echo "           \"$test_config_file_ocn\""
+      echo "           does not exist."
+      exit 1
+   else
+      cp  $test_config_file_ocn  ${execution_dir}/PARIN_O
+   fi
+fi
 
 
 # Create NAMELIST file containing environment values needed by palm
@@ -277,7 +339,14 @@ EOF
 
 
 # Coupled runs cannot be carried out with this simple run script
-echo "no_coupling"  >  ${execution_dir}/runfile_atmos
+if [[ "$run_coupled_model" = true ]]
+then
+   (( iia = $cores_atmos / $openmp_threads ))
+   (( iio = $cores_ocean / $openmp_threads ))
+   echo "coupled_run $iia $iio"  >  ${execution_dir}/runfile
+else
+   echo "no_coupling"  >  ${execution_dir}/runfile
+fi
 
 
 # Generate hostfile (if neccessary)

@@ -135,6 +135,9 @@
     ALLOCATE( dist2(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
     dist1 = 0.0_wp
     dist2 = 0.0_wp
+!    disturbance_level_ind_b = nzt - 12 
+!    disturbance_level_ind_t = nzt
+
 
 !
 !-- Create the random perturbation and store it on temporary array
@@ -196,6 +199,7 @@
 !-- filter operation.
 !-- Loop has been splitted to make runs reproducible on HLRN systems using
 !-- compiler option -O3
+
      DO  i = nxl, nxr
         DO  j = nys, nyn
           DO  k = disturbance_level_ind_b-1, disturbance_level_ind_t+1

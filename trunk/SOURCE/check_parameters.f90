@@ -2598,6 +2598,12 @@
              dopr_unit(i)  = 'K2'
              hom(:,2,33,:) = SPREAD( zu, 2, statistic_regions+1 )
 
+
+          CASE ( 'sa*2' )
+             dopr_index(i) = 153
+             dopr_unit(i)  = 'PSU^2'
+             hom(:,2,153,:) = SPREAD( zu, 2, statistic_regions+1 )
+
           CASE ( 'e*' )
              dopr_index(i) = 34
              dopr_unit(i)  = 'm2/s2'
@@ -2612,6 +2618,16 @@
              dopr_index(i) = 36
              dopr_unit(i)  = 'K2 m/s'
              hom(:,2,36,:) = SPREAD( zw, 2, statistic_regions+1 )
+          CASE ( 'w*2sa*' )
+             dopr_index(i) = 154
+             dopr_unit(i)  = 'PSU m2/s2'
+             hom(:,2,154,:) = SPREAD( zw, 2, statistic_regions+1 )
+
+          CASE ( 'w*sa*2' )
+             dopr_index(i) = 155
+             dopr_unit(i)  = 'sa2 m/s'
+             hom(:,2,155,:) = SPREAD( zw, 2, statistic_regions+1 )
+
 
           CASE ( 'w*e*' )
              dopr_index(i) = 37
@@ -2943,9 +2959,9 @@
                                  'lemented for ocean = .FALSE.'
                 CALL message( 'check_parameters', 'PA0091', 1, 2, 0, 6, 0 )
              ELSE
-                dopr_index(i) = 150
+                dopr_index(i) = 152
                 dopr_unit(i)  = '^oC^{-1}/s'
-                hom(:,2,150,:) = SPREAD( zu, 2, statistic_regions+1 )
+                hom(:,2,152,:) = SPREAD( zu, 2, statistic_regions+1 )
              ENDIF
 
            CASE ( 'alpha_T' )

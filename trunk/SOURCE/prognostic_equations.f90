@@ -309,7 +309,7 @@
                scalar_advec, scalar_advec, simulated_time, sloping_surface,    &
                timestep_scheme, tsc, use_subsidence_tendencies,                &
                use_upstream_for_tke, wind_turbine, ws_scheme_mom,              & 
-               ws_scheme_sca, urban_surface, land_surface
+               ws_scheme_sca, urban_surface, land_surface, wb_solar
 
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point, log_point_s
@@ -529,11 +529,12 @@
                                      surf_def_h(2)%sasws(m)*beta_S(k,j,i))
                  tod = simulated_time / 86400.0_wp
                  arg1 = cos(2.0_wp*pi*(tod - 0.5_wp))
-                 surf_def_h(2)%shf_sol(m) = wb_sfc/(g*alpha_T(k,j,i))*pi*max(arg1,0.0_wp)
+                 surf_def_h(2)%shf_sol(m) = wb_solar*max(arg1,0.0_wp)
              ENDIF
        enddo
     enddo
     !$OMP DO
+
     DO  i = nxl, nxr
 
 !
@@ -1379,8 +1380,10 @@
     INTEGER(iwp) ::  j     !<
     INTEGER(iwp) ::  k     !<
     INTEGER(iwp) ::  lsp   !< running index for chemical species
+    INTEGER(iwp) ::  m
 
     REAL(wp)     ::  sbt  !<
+    REAL(WP)      ::  wb_sfc, tod,arg1,factor      !< surface buoyancy forcing -- only matters for ocean
 
 
 !
@@ -1684,16 +1687,40 @@
           ENDIF
        ENDIF
 
+       k = nzt
+       DO i = nxl, nxr
+          DO j = nys,nyn
+                 IF (idealized_diurnal) THEN
+                    m = surf_def_h(2)%start_index(j,i)
+                    wb_sfc = g*(surf_def_h(2)%shf(m)*alpha_T(k,j,i) -        &
+                                     surf_def_h(2)%sasws(m)*beta_S(k,j,i))
+                    tod = simulated_time / 86400.0_wp
+                    arg1 = cos(2.0_wp*pi*(tod - 0.75_wp))
+                    surf_def_h(2)%shf_sol(m) = wb_solar*max(arg1,0.0_wp) 
+                ENDIF
+          enddo
+       enddo
+
+       if (simulated_time < 86400.) then
+        factor = -(1.0_wp + simulated_time / 43200.0)
+       else
+         factor = 1.0_wp
+       endif
+
+       print *, 'maxmin = ',maxval(surf_def_h(2)%shf_sol),minval(surf_def_h(2)%shf_sol)
+       factor = 1.0_wp
+
        CALL diffusion_s( pt,                                                   &
                          surf_def_h(0)%shf, surf_def_h(1)%shf,                 &
-                         surf_def_h(2)%shf,                                    &
+                         surf_def_h(2)%shf*factor,                                    &
                          surf_lsm_h%shf,    surf_usm_h%shf,                    &
                          surf_def_v(0)%shf, surf_def_v(1)%shf,                 &
                          surf_def_v(2)%shf, surf_def_v(3)%shf,                 &
                          surf_lsm_v(0)%shf, surf_lsm_v(1)%shf,                 &
                          surf_lsm_v(2)%shf, surf_lsm_v(3)%shf,                 &
                          surf_usm_v(0)%shf, surf_usm_v(1)%shf,                 &
-                         surf_usm_v(2)%shf, surf_usm_v(3)%shf )
+                         surf_usm_v(2)%shf, surf_usm_v(3)%shf,                 &
+                         surf_def_h(2)%shf_sol )
 !
 !--    If required compute heating/cooling due to long wave radiation processes
        IF ( cloud_top_radiation )  THEN

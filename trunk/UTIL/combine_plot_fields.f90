@@ -20,26 +20,26 @@
 !
 ! Current revisions:
 ! -----------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: combine_plot_fields.f90 2718 2018-01-02 08:49:38Z maronga $
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 !
 ! 2669 2017-12-06 16:03:27Z raasch
 ! data of 3d-nest runs are completely processed now
-! 
+!
 ! 2523 2017-10-05 14:42:47Z kanani
 ! Increased LEN for CHARACTER variable var_name, equal to the value in PALM
-! 
+!
 ! 2512 2017-10-04 08:26:59Z raasch
 ! PALM output does not contain ghost layer data any more
 ! avs- and iso2d-related parts removed, handling of compressed data removed
-! 
+!
 ! 2365 2017-08-21 14:59:59Z kanani
 ! Vertical grid nesting implemented (SadiqHuq)
 !
@@ -50,7 +50,7 @@
 !
 ! 1551 2015-03-03 14:18:16Z maronga
 ! Adjustments for data output of soil model quantities
-! 
+!
 ! 1468 2014-09-24 14:06:57Z maronga
 ! Adapted for use on up to 6-digit processor cores (not tested)
 !
@@ -138,7 +138,7 @@
     INTEGER(iwp), DIMENSION(0:1,1000) ::  id_var, levels
 
     LOGICAL  ::  found, nest3d, netcdf_output, netcdf_parallel, netcdf_0,      &
-                 netcdf_1, vnest
+                 netcdf_1, vnest, coupled
 
     REAL(wp) ::  cpu_start_time, cpu_end_time, dx, simulated_time
     REAL(wp),  DIMENSION(:,:), ALLOCATABLE   ::  pf, pf_tmp
@@ -152,10 +152,10 @@
 
 !
 !-- Find out if a coupled or nested run has been carried out
-    INQUIRE( FILE='COUPLING_PORT_OPENED', EXIST=found )
+    INQUIRE( FILE='COUPLING_PORT_OPENED', EXIST=coupled )
     INQUIRE( FILE='VNESTING_PORT_OPENED', EXIST=vnest )
     INQUIRE( FILE='3DNESTING', EXIST=nest3d )
-    IF ( found )  THEN
+    IF ( coupled )  THEN
        models = 2
        PRINT*, '    coupled run'
     ELSEIF ( vnest )  THEN
@@ -187,7 +187,7 @@
     DO model = 1, models
 !
 !--    Set the model string used to identify the filenames
-       IF ( found  .OR.  vnest )  THEN
+       IF ( coupled  .OR.  vnest )  THEN
           PRINT*, ''
           IF ( model == 2 )  THEN
              IF ( vnest )  THEN
@@ -219,7 +219,7 @@
        ENDIF
 !
 !--    2D-arrays for ISO2D
-!--    Main loop for the three different cross-sections, starting with 
+!--    Main loop for the three different cross-sections, starting with
 !--    xy-section
        modus = 'XY'
        PRINT*, ''
@@ -290,7 +290,7 @@
                           '(NetCDF4-format) - merging not neccessary'
              ELSE
                 PRINT*, '    NetCDF output enabled'
-             ENDIF 
+             ENDIF
           ENDIF
 #else
           IF ( netcdf_output )  THEN
@@ -491,7 +491,7 @@
                          IF ( nc_stat /= NF90_NOERR )  THEN
                             CALL handle_netcdf_error( 8 )
                          ENDIF
-                  
+
                       CASE ( 'XZ' )
                          nc_stat = NF90_PUT_VAR( id_set(av),                   &
                                            id_var(av,current_var(av)),         &
@@ -748,7 +748,7 @@
 !--          Loop over all files
              DO  id = 0, danz-1
 !
-!--             File from PE0 contains at the beginning the index bounds 
+!--             File from PE0 contains at the beginning the index bounds
 !--             of PALM's total domain.
 !--             Allocate the array for storing the total domain data
                 IF ( id == 0  .AND.  fanz(0) == 0  .AND.  fanz(1) == 0 )  THEN

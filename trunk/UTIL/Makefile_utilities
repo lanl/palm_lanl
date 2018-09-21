@@ -17,13 +17,13 @@
 #
 # Current revisions:
 # -----------------
-# 
-# 
+#
+#
 # Former revisions:
 # -----------------
 # $Id: Makefile_utilities 2718 2018-01-02 08:49:38Z maronga $
 # Corrected "Former revisions" section
-# 
+#
 # 2696 2017-12-14 17:12:51Z kanani
 # Change in file header (GPL part)
 #
@@ -61,6 +61,9 @@ F90_SER =
 COPT =
 F90FLAGS =
 LDFLAGS =
+
+# The following line is needed for palm_simple_install, don't remove it!
+#to_be_replaced_by_include
 
 .SUFFIXES: $(SUFFIXES) .f90
 

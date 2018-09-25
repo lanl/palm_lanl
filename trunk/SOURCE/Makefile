@@ -19,60 +19,60 @@
 #
 # Current revisions:
 # ------------------
-# 
-# 
+#
+#
 # Former revisions:
 # -----------------
 # $Id: Makefile 3083 2018-06-19 14:03:12Z gronemeier $
 # add turbulence_closure_mod to parin
-# 
+#
 # 2963 2018-04-12 14:47:44Z suehring
-# Introduce index for vegetation/wall, pavement/green-wall and water/window 
+# Introduce index for vegetation/wall, pavement/green-wall and water/window
 # surfaces, for clearer access of surface fraction, albedo, emissivity, etc. .
-# 
+#
 # 2955 2018-04-09 15:14:01Z suehring
 # Add log-points to measure CPU time of NetCDF data input.
-# 
+#
 # 2938 2018-03-27 15:52:42Z suehring
 # No initialization of child domains via dynamic input file, except for soil
 # moisture and temperature
 # Apply turbulence generator at non-cyclic lateral boundary in nesting case
-# 
+#
 # 2936 2018-03-27 14:49:27Z suehring
 # Added dependencies for parent and child synchronization
-# 
+#
 # 2921 2018-03-22 15:05:23Z Giersch
 # date_and_time_mod dependency has been added to read/write_restart_data_mod
-# 
+#
 # 2918 2018-03-21 15:52:14Z gronemeier
-# read/write_3d_binary and read/write_var_list has been removed, 
+# read/write_3d_binary and read/write_var_list has been removed,
 # read/write_restart_data_mod, wrd_write_string and
-# user_read/write_restart_data_mod has been added, dependencies with respect to 
+# user_read/write_restart_data_mod has been added, dependencies with respect to
 # the aforementioned routines have been added/removed
 #
 # 2847 2018-03-02 21:45:58Z suehring
 # Changed format and enforced sorting
-# 
+#
 # 2817 2018-02-19 16:32:21Z knoop
 # Preliminary gust module interface implemented
-# 
+#
 # 2802 2018-02-14 16:21:39Z thiele
 # Changed lpm from subroutine to module.
 # Introduce particle transfer in nested models.
-# 
+#
 # 2773 2018-01-30 14:12:54Z suehring
 # Nesting of chemical species
-# 
+#
 # 2718 2018-01-02 08:49:38Z maronga
 # Corrected "Former revisions" section
-# 
+#
 # 2697 2017-12-14 17:57:20Z kanani
 # Bugfix, missing dependencies
-# 
+#
 # 2696 2017-12-14 17:12:51Z kanani
 # Change in file header (GPL part)
 # Implementation of uv exposure model (FK)
-# Bugfix, removed loop dependcy for vertical_nesting_mod and 
+# Bugfix, removed loop dependcy for vertical_nesting_mod and
 # turbulence_closure_mod, added depencies for vertical_nesting_mod (TG)
 # implemented turbulence_closure_mod (TG)
 # Additional dependencies for chemistry module (FK)
@@ -80,99 +80,99 @@
 # Implementation of chemistry module (FK)
 # For LSM, add dependency on calc_mean_profile (??)
 # poismg_noopt modularized and renamed into poismg_noopt_mod
-# add dependencies for netcdf_data_input_mod, calc_mean_profile, 
+# add dependencies for netcdf_data_input_mod, calc_mean_profile,
 # radiation_module_mod, land_surface_model_mod (MS)
-# 
+#
 # 2608 2017-11-13 14:04:26Z schwenkel
-# Added diagnostic_quantities_mod 
-# 
+# Added diagnostic_quantities_mod
+#
 # 2600 2017-11-01 14:11:20Z raasch
 # comment line concerning bound checks removed
-# 
+#
 # 2599 2017-11-01 13:18:45Z hellstea
 # virtual_flight_mod, synthetic_turbulence_generator_mod and
 # wind_turbine_model_mod were added to read_var_list
 #
 # 2563 2017-10-19 15:36:10Z Giersch
 # wind_turbine_model_mod and synthetic_turbulence_generator_mod were added to
-# write_var_list and virtual_flight_mod was deleted from read_var_list 
+# write_var_list and virtual_flight_mod was deleted from read_var_list
 #
 # 2544 2017-10-13 18:09:32Z maronga
-# Added date_and_time_mod 
-# 
+# Added date_and_time_mod
+#
 # 2371 2017-08-24 13:01:17Z kanani
 # Corrected dependencies for vertical_nesting_mod
-# 
+#
 # 2370 2017-08-23 06:11:43Z raasch
 # dependency bugfix for synthetic_turbulence_generator
-# 
+#
 # 2365 2017-08-21 14:59:59Z kanani
 # Added dependencies for vertical_nesting_mod
-# 
+#
 # 2339 2017-08-07 13:55:26Z gronemeier
 # corrected timestamp in header
-# 
+#
 # 2338 2017-08-07 12:15:38Z gronemeier
 # Modularize 1D model
-# 
+#
 # 2320 2017-07-21 12:47:43Z suehring
 # -ls_forcing nudging
 # +large_scale_forcing_nudging
-# 
+#
 # 2318 2017-07-20 17:27:44Z suehring
 # Add further dependencies on surface_mod
-# 
+#
 # 2317 2017-07-20 17:27:19Z suehring
 # Added time_integration_spinup
-# 
+#
 # 2269 2017-06-09 11:57:32Z suehring
 # Add dependency in read_3d_binary
-# 
+#
 # 2263 2017-06-08 14:59:01Z schwenkel
 # Implemented splitting and merging algorithm
-# 
+#
 # 2259 2017-06-08 09:09:11Z gronemeier
 # Implemented synthetic turbulence generator
 #
 # 2256 2017-06-07 13:58:08Z suehring
 # Remove ring dependency in init_pegrid
-# 
+#
 # 2238 2017-05-31 16:49:16Z suehring
 # Bugfix, further missing dependency on surface_mod
-# 
+#
 # 2237 2017-05-31 10:34:53Z suehring
-# Bugfix, add dependencies on surface_mod for surface_coupler, 
-# plant_canopy_model_mod and ls_forcing_mod 
-# 
+# Bugfix, add dependencies on surface_mod for surface_coupler,
+# plant_canopy_model_mod and ls_forcing_mod
+#
 # 2233 2017-05-30 18:08:54Z suehring
 #
 # 2232 2017-05-30 17:47:52Z suehring
 # +dependencies for surface_mod
 # -wall_fluxes
-# 
+#
 # 2130 2017-01-24 16:25:39Z raasch
 # dependency for timestep updated
 #
 # 2118 2017-01-17 16:38:49Z raasch
 # -cuda_fft_interfaces_mod
-# 
+#
 # 2050 2016-11-08 15:00:55Z gronemeier
 # Implement turbulent outflow method
-# 
+#
 # 2007 2016-08-24 15:47:17Z kanani
 # urban surface module added,
 # cleaned up some lines (compiler flags/options), which were accidentally
 # added in rev1938
-# 
+#
 # 1998 2016-08-20 18:45:34Z knoop
 # Bugfix: added netcdf_interface to dependency list for user_init_land_surface
 #
 # 1986 2016-08-10 14:07:17Z gronemeier
 # POSIX-calls module added
-# 
+#
 # 1972 2016-07-26 07:52:02Z maronga
 # Removed some dependencies due to further modularization of land surface model
-# 
+#
 # 1957 2016-07-07 10:43:48Z suehring
 # flight module added
 #
@@ -180,11 +180,11 @@
 # Bugfix dependency init_grid on advec_ws
 #
 # 1938 2016-06-13 15:26:05Z hellstea
-# Some dependency errors corrected 
-# 
+# Some dependency errors corrected
+#
 # 1934 2016-06-13 09:46:57Z hellstea
 # poismg renamed poismg_noopt, poismg_fast_mod renamed poismg_mod
-# 
+#
 # 1914 2016-05-26 14:44:07Z witha
 # Added wind_turbine_model_mod
 #
@@ -195,7 +195,7 @@
 # dependencies for package_parin corrected
 #
 # 1850 2016-04-08 13:29:27Z maronga
-# Adapted for modularization of microphysics 
+# Adapted for modularization of microphysics
 # Several files renamed --> _mod
 # Bugfix for previous commit
 #
@@ -210,18 +210,18 @@
 #
 # 1833 2016-04-07 14:23:03Z raasch
 # spectrum renamed spectra_mod, depencies for spectra changed
-# 
+#
 # 1826 2016-04-07 12:01:39Z maronga
 # Renamed radiation_model to radiation_model_mod.
 # Renamed plant_canopy_model to plant_canopy_model_mod.
-# 
+#
 # 1822 2016-04-07 07:49:42Z hoffmann
 # Tails removed. lpm_release_set removed. calc_precipitation, impact_of_latent_heat
-# removed. 
+# removed.
 #
 # 1817 2016-04-06 15:44:20Z maronga
 # Renamed land_surface_model to land_surface_model_mod.
-# 
+#
 # 1808 2016-04-05 19:44:00Z raasch
 # -local_flush, -local_getenv
 #
@@ -247,53 +247,53 @@
 # several updates of dependencies
 #
 # 1762 2016-02-25 12:31:13Z hellstea
-# +pmc_interface, +pmc routines 
+# +pmc_interface, +pmc routines
 #
 # 1747 2016-02-08 12:25:53Z raasch
 # dependencies for routine palm updated
 #
 # 1691 2015-10-26 16:17:44Z maronga
-# Replaced prandtl_fluxes with surface_layer_fluxes. Added radiation_model to 
+# Replaced prandtl_fluxes with surface_layer_fluxes. Added radiation_model to
 # prognostic_equations
-# 
+#
 # 1585 2015-04-30 07:05:52Z maronga
 # Added user_init_radiation.f90
-# 
+#
 # 1575 2015-03-27 09:56:27Z raasch
 # +poismg_fast
 #
 # 1551 2015-03-03 14:18:16Z maronga
 # Bugfix: further adjustments for the land surface model and radiation model
-# 
+#
 # 1517 2015-01-07 19:12:25Z hoffmann
 # advec_s_bc added to prognostic_equations
 #
 # 1500 2014-12-03 17:42:41Z maronga
 # Bugfix: missing adjustments for land surface model and radiation model
-# 
+#
 # 1496 2014-12-02 17:25:50Z maronga
-# Added land surface model and radiation model files: land_surface_model, 
+# Added land surface model and radiation model files: land_surface_model,
 # radiation_model, user_init_land_surface
-# 
+#
 # 1484 2014-10-21 10:53:05Z kanani
 # plant_canopy_model-dependency added for check_parameters, header, init_3d_model,
 # package_parin, read_var_list, user_init_plant_canopy, write_var_list
-# 
+#
 # 1444 2014-08-02 20:10:32Z letzel
 # bugfix: cpulog added to lpm_advec
-# 
+#
 # 1404 2014-05-14 09:01:39Z keck
 # bugfix: dependencies added for progress_bar
 #
 # 1402 2014-05-09 14:25:13Z raasch
 # progress_bar added
-# 
+#
 # 1400 2014-05-09 14:03:54Z knoop
 # Added new module random_generator_parallel
-# 
+#
 # 1380 2014-04-28 12:40:45Z heinze
 # bugfix: mod_particle_attributes  added to check_open
-# nudging added to time_integration 
+# nudging added to time_integration
 #
 # 1374 2014-04-25 12:55:07Z raasch
 # bugfix: missing dependency added for check_open
@@ -301,15 +301,15 @@
 # 1365 2014-04-22 15:03:56Z boeske
 # Added new module calc_mean_profile, previously in module buoyancy,
 # removed buoyancy dependency from nudging
-# 
+#
 # 1363 2014-04-17 12:28:49Z keck
 # bugfix: cpulog added to lpm_pack_arrays
 #
 # 1361 2014-04-16 15:17:48Z hoffmann
 # cpulog added to microphysics
-# 
+#
 # 1359 2014-04-11 17:15:14Z hoffmann
-# mod_particle_attributes added, lpm_sort_arrays removed, 
+# mod_particle_attributes added, lpm_sort_arrays removed,
 # lpm_extend_particle_array removed
 #
 # 1336 2014-03-25 15:07:20Z raasch
@@ -565,6 +565,7 @@ SOURCES = \
 	singleton_mod.f90 \
 	sor.f90 \
 	spectra_mod.f90 \
+	stokes_force_mod.f90 \
 	subsidence_mod.f90 \
 	sum_up_3d_data.f90 \
 	surface_coupler.f90 \
@@ -1340,6 +1341,7 @@ prognostic_equations.o: \
 	modules.o \
 	plant_canopy_model_mod.o \
 	radiation_model_mod.o \
+	stokes_force_mod.o \
 	subsidence_mod.o \
 	surface_mod.o \
 	surface_mod.o \
@@ -1404,6 +1406,9 @@ sor.o: \
 spectra_mod.o: \
 	cpulog_mod.o \
 	fft_xy_mod.o \
+	mod_kinds.o \
+	modules.o
+stokes_force_mod.o: \
 	mod_kinds.o \
 	modules.o
 subsidence_mod.o: \

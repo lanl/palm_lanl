@@ -512,7 +512,7 @@
 !--    Update perturbation pressure
        DO  i = nxl-1, nxr+1
           DO  j = nys-1, nyn+1
-             DO  k = nzb+1, nzt
+             DO  k = nzb, nzt+1
 !
 !--             Predetermine flag to mask topography
                 flag = MERGE( 1.0_wp, 0.0_wp,                                  &

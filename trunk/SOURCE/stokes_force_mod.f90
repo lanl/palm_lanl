@@ -34,12 +34,14 @@
 !> the momentum equations (Stokes-vortex force and Stokes-Coriolis force)
 !> the tracer equations (Stokes-advection), and
 !> the TKE equation (Stokes production)
+!> Computation of the Stokes pressure heat to correct perturbation pressure
 !------------------------------------------------------------------------------!
  MODULE stokes_force_mod
 
 
     PRIVATE
-    PUBLIC stokes_force_uvw, stokes_force_s, stokes_production_e
+    PUBLIC stokes_force_uvw, stokes_force_s, stokes_production_e,              &
+           stokes_pressure_head
 
     INTERFACE stokes_force_uvw
        MODULE PROCEDURE stokes_force_uvw
@@ -425,6 +427,7 @@
 
     END SUBROUTINE stokes_production_e
 
+
 !------------------------------------------------------------------------------!
 ! Description:
 ! ------------
@@ -477,5 +480,52 @@
        ENDDO
 
     END SUBROUTINE stokes_production_e_ij
+
+
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Update perturbation pressure to account for the Stokes pressure head
+!------------------------------------------------------------------------------!
+    SUBROUTINE stokes_pressure_head
+
+       USE arrays_3d,                                                          &
+           ONLY:  p, u, v, u_stk, v_stk, rho_air
+
+       USE indices,                                                            &
+           ONLY:  nxl, nxr, nyn, nys, nzb, nzt, wall_flags_0
+
+       USE kinds
+
+       IMPLICIT NONE
+
+       INTEGER(iwp) ::  i          !< running index x direction
+       INTEGER(iwp) ::  j          !< running index y direction
+       INTEGER(iwp) ::  k          !< running index z direction
+
+       REAL(wp)     ::  flag       !< flag to mask topography
+
+! TODO: Check if the stokes pressure head is correctly scaled by rho_air,
+!       as rho_air is used in pres.f90 to calculate p
+!       <20180926, Qing Li> !
+!
+!--    Update perturbation pressure
+       DO  i = nxl-1, nxr+1
+          DO  j = nys-1, nyn+1
+             DO  k = nzb+1, nzt
+!
+!--             Predetermine flag to mask topography
+                flag = MERGE( 1.0_wp, 0.0_wp,                                  &
+                           BTEST( wall_flags_0(k,j,i), 0 ) )
+                p(k,j,i) = p(k,j,i) - 0.5_wp * rho_air(k) *                    &
+                           ( ( u(k,j,i) + u(k,j,i+1) ) * u_stk(k) +            &
+                             ( v(k,j,i) + v(k,j+1,i) ) * v_stk(k) +            &
+                             u_stk(k)**2 + v_stk(k)**2                         &
+                           ) * flag
+             ENDDO
+          ENDDO
+       ENDDO
+
+    END SUBROUTINE stokes_pressure_head
 
  END MODULE stokes_force_mod

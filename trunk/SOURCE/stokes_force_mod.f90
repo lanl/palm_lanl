@@ -30,15 +30,16 @@
 !
 ! Description:
 ! ------------
-!> Computation of all Stokes force terms in the momentum equations
-!> (Stokes-vortex force and Stokes-Coriolis force) and tracer euqations
-!> (Stokes-advection)
+!> Computation of Stokes force terms in
+!> the momentum equations (Stokes-vortex force and Stokes-Coriolis force)
+!> the tracer equations (Stokes-advection), and
+!> the TKE equation (Stokes production)
 !------------------------------------------------------------------------------!
  MODULE stokes_force_mod
 
 
     PRIVATE
-    PUBLIC stokes_force_uvw, stokes_force_s
+    PUBLIC stokes_force_uvw, stokes_force_s, stokes_production_e
 
     INTERFACE stokes_force_uvw
        MODULE PROCEDURE stokes_force_uvw
@@ -49,6 +50,11 @@
        MODULE PROCEDURE stokes_force_s
        MODULE PROCEDURE stokes_force_s_ij
     END INTERFACE stokes_force_s
+
+    INTERFACE stokes_production_e
+       MODULE PROCEDURE stokes_production_e
+       MODULE PROCEDURE stokes_production_e_ij
+    END INTERFACE stokes_production_e
 
  CONTAINS
 
@@ -360,5 +366,116 @@
        ENDDO
 
     END SUBROUTINE stokes_force_s_ij
+
+
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Stokes production term in TKE equations
+!> Call for all grid points
+!------------------------------------------------------------------------------!
+    SUBROUTINE stokes_production_e
+
+       USE arrays_3d,                                                          &
+           ONLY:  tend, u, v, w, u_stk, v_stk, dd2zu, km
+
+       USE grid_variables,                                                     &
+           ONLY:  ddx, ddy
+
+       USE indices,                                                            &
+           ONLY:  nxl, nxr, nyn, nys, nzb, nzt, wall_flags_0
+
+       USE kinds
+
+       IMPLICIT NONE
+
+       INTEGER(iwp) ::  i          !< running index x direction
+       INTEGER(iwp) ::  j          !< running index y direction
+       INTEGER(iwp) ::  k          !< running index z direction
+
+       REAL(wp)     ::  flag       !< flag to mask topography
+       REAL(wp)     ::  dudz, dvdz, dwdx, dwdy
+
+!--    Compute Stokes-advection term for the tracer equation
+       DO  i = nxl, nxr
+          DO  j = nys, nyn
+             DO  k = nzb+1, nzt
+!
+!--             Predetermine flag to mask topography
+                flag = MERGE( 1.0_wp, 0.0_wp,                                  &
+                              BTEST( wall_flags_0(k,j,i), 29 ) )
+!
+!--             Stokes-production term
+                dudz = 0.5_wp  * ( u(k+1,j,i) + u(k+1,j,i+1) -                 &
+                                   u(k-1,j,i) - u(k-1,j,i+1) ) * dd2zu(k)
+                dwdx = 0.25_wp * ( w(k,j,i+1) + w(k-1,j,i+1) -                 &
+                                   w(k,j,i-1) - w(k-1,j,i-1) ) * ddx
+                dvdz = 0.5_wp  * ( v(k+1,j,i) + v(k+1,j+1,i) -                 &
+                                   v(k-1,j,i) - v(k-1,j+1,i) ) * dd2zu(k)
+                dwdy = 0.25_wp * ( w(k,j+1,i) + w(k-1,j+1,i) -                 &
+                                   w(k,j-1,i) - w(k-1,j-1,i) ) * ddy
+                tend(k,j,i) = tend(k,j,i) + km(k,j,i) * (                      &
+                              ( u_stk(k+1) - u_stk(k-1) ) * dd2zu(k) *         &
+                              ( dudz + dwdx ) +                                &
+                              ( v_stk(k+1) - v_stk(k-1) ) * dd2zu(k) *         &
+                              ( dvdz + dwdy )           ) * flag
+             ENDDO
+          ENDDO
+       ENDDO
+
+    END SUBROUTINE stokes_production_e
+
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Stokes production term in TKE equations
+!> Call for grid point i,j
+!------------------------------------------------------------------------------!
+    SUBROUTINE stokes_production_e_ij( i, j )
+
+       USE arrays_3d,                                                          &
+           ONLY:  tend, u, v, w, u_stk, v_stk, dd2zu, km
+
+       USE grid_variables,                                                     &
+           ONLY:  ddx, ddy
+
+       USE indices,                                                            &
+           ONLY:  nxl, nxr, nyn, nys, nzb, nzt, wall_flags_0
+
+       USE kinds
+
+       IMPLICIT NONE
+
+       INTEGER(iwp) ::  i          !< running index x direction
+       INTEGER(iwp) ::  j          !< running index y direction
+       INTEGER(iwp) ::  k          !< running index z direction
+
+       REAL(wp)     ::  flag       !< flag to mask topography
+       REAL(wp)     ::  dudz, dvdz, dwdx, dwdy
+
+!--    Compute Stokes-advection term for the tracer equation
+       DO  k = nzb+1, nzt
+!
+!--       Predetermine flag to mask topography
+          flag = MERGE( 1.0_wp, 0.0_wp,                                  &
+                        BTEST( wall_flags_0(k,j,i), 29 ) )
+!
+!--       Stokes-production term
+          dudz = 0.5_wp  * ( u(k+1,j,i) + u(k+1,j,i+1) -                 &
+                             u(k-1,j,i) - u(k-1,j,i+1) ) * dd2zu(k)
+          dwdx = 0.25_wp * ( w(k,j,i+1) + w(k-1,j,i+1) -                 &
+                             w(k,j,i-1) - w(k-1,j,i-1) ) * ddx
+          dvdz = 0.5_wp  * ( v(k+1,j,i) + v(k+1,j+1,i) -                 &
+                             v(k-1,j,i) - v(k-1,j+1,i) ) * dd2zu(k)
+          dwdy = 0.25_wp * ( w(k,j+1,i) + w(k-1,j+1,i) -                 &
+                             w(k,j-1,i) - w(k-1,j-1,i) ) * ddy
+          tend(k,j,i) = tend(k,j,i) + km(k,j,i) * (                      &
+                        ( u_stk(k+1) - u_stk(k-1) ) * dd2zu(k) *            &
+                        ( dudz + dwdx ) +                                &
+                        ( v_stk(k+1) - v_stk(k-1) ) * dd2zu(k) *            &
+                        ( dvdz + dwdy )           ) * flag
+       ENDDO
+
+    END SUBROUTINE stokes_production_e_ij
 
  END MODULE stokes_force_mod

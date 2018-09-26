@@ -565,6 +565,7 @@ SOURCES = \
 	singleton_mod.f90 \
 	sor.f90 \
 	spectra_mod.f90 \
+	stokes_drift_mod.f90 \
 	stokes_force_mod.f90 \
 	subsidence_mod.f90 \
 	sum_up_3d_data.f90 \
@@ -998,7 +999,8 @@ init_masks.o: \
 init_ocean.o: \
 	eqn_state_seawater.o \
 	mod_kinds.o \
-	modules.o
+	modules.o \
+	stokes_drift_mod.o
 init_pegrid.o: \
 	mod_kinds.o \
 	modules.o \
@@ -1406,6 +1408,9 @@ sor.o: \
 spectra_mod.o: \
 	cpulog_mod.o \
 	fft_xy_mod.o \
+	mod_kinds.o \
+	modules.o
+stokes_drift_mod.o: \
 	mod_kinds.o \
 	modules.o
 stokes_force_mod.o: \

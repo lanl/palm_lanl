@@ -19,19 +19,19 @@
 !
 ! Current revisions:
 ! -----------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! ------------------
 ! $Id: init_ocean.f90 2846 2018-03-01 08:48:47Z raasch $
 ! FORTRAN bugfix for r2845
-! 
+!
 ! 2845 2018-03-01 08:32:34Z raasch
 ! bugfix: set kinematic viscosity for sea water
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 !
@@ -46,13 +46,13 @@
 !
 ! 2031 2016-10-21 15:11:58Z knoop
 ! renamed variable rho_init to rho_ocean_init
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1353 2014-04-08 15:21:23Z heinze
 ! REAL constants provided with KIND-attribute
 !
@@ -81,14 +81,15 @@
 !> Initialization of quantities needed for the ocean version
 !------------------------------------------------------------------------------!
  SUBROUTINE init_ocean
- 
+
 
     USE arrays_3d,                                                             &
         ONLY:  dzu, hyp, pt_init, ref_state, sa_init, zu, zw
 
     USE control_parameters,                                                    &
         ONLY:  g, molecular_viscosity, prho_reference, rho_surface,            &
-               rho_reference, surface_pressure, use_single_reference_value
+               rho_reference, surface_pressure, use_single_reference_value,    &
+               stokes_force
 
     USE eqn_state_seawater_mod,                                                &
         ONLY:  eqn_state_seawater, eqn_state_seawater_func
@@ -102,6 +103,9 @@
 
     USE statistics,                                                            &
         ONLY:  hom, statistic_regions
+
+    USE stokes_drift_mod,                                                      &
+        ONLY:  init_stokes_drift
 
     IMPLICIT NONE
 
@@ -199,5 +203,10 @@
        ref_state(:) = rho_ocean_init(:)
     ENDIF
 
+!
+!-- Initialize Stokes drift, if required
+    IF ( stokes_force ) THEN
+       CALL init_stokes_drift
+    ENDIF
 
  END SUBROUTINE init_ocean

@@ -1250,6 +1250,7 @@
     INTEGER(iwp) ::  ug_vertical_gradient_level_ind(10) = -9999  !< grid index values of ug_vertical_gradient_level(s)
     INTEGER(iwp) ::  vg_vertical_gradient_level_ind(10) = -9999  !< grid index values of vg_vertical_gradient_level(s)
     INTEGER(iwp) ::  subs_vertical_gradient_level_i(10) = -9999  !< grid index values of subs_vertical_gradient_level(s)
+    INTEGER(iwp) ::  stokes_drift_method = 0                     !< method to compute Stokes drift
 
     INTEGER(iwp), DIMENSION(0:1) ::  ntdim_2d_xy  !< number of output intervals for 2d data (xy)
     INTEGER(iwp), DIMENSION(0:1) ::  ntdim_2d_xz  !< number of output intervals for 2d data (xz)
@@ -1600,6 +1601,12 @@
     REAL(wp) ::  wall_scalarflux(0:5) = 0.0_wp                     !< namelist parameter
     REAL(wp) ::  subs_vertical_gradient(10) = 0.0_wp               !< namelist parameter
     REAL(wp) ::  subs_vertical_gradient_level(10) = -9999999.9_wp  !< namelist parameter
+    REAL(wp) ::  u0_stk = 0.0_wp                                   !< surface Stokes drift in m/s, x-component
+    REAL(wp) ::  v0_stk = 0.0_wp                                   !< surface Stokes drift in m/s, y-component
+    REAL(wp) ::  d_stk = 5.0_wp                                    !< Stokes drift exponential decay depth scale in m
+    REAL(wp) ::  wind_speed = 0.0_wp                               !< 10-meter wind speed used to compute empirical wave spectra (m/s)
+    REAL(wp) ::  wind_dir = 0.0_wp                                 !< wind direction used to compute empirical wave spectra, degree counter-clockwise from x-direction
+    REAL(wp) ::  wave_age = 1.2_wp                                 !< wave age c_p/(U_{10}\cos\theta) used to compute empirical wave spectra
 
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  dp_smooth_factor  !< smoothing factor for external pressure gradient forcing
 

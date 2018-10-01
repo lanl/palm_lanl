@@ -518,7 +518,8 @@
              dp_external, dp_level_b, dp_smooth, dpdxy, dry_aerosol_radius,    &
              dt, dt_pr_1d, dt_run_control_1d, dt_spinup, dx, dy, dz, dz_max,   &
              dz_stretch_factor, dz_stretch_level, dz_stretch_level_start,      &
-             dz_stretch_level_end, end_time_1d, ensemble_member_nr, e_init,    &
+             dz_stretch_level_end, d_stk,                                      &
+             end_time_1d, ensemble_member_nr, e_init,                          &
              e_min, fft_method, flux_input_mode, flux_output_mode, forcing,    &
              galilei_transformation, humidity,                                 &
              inflow_damping_height, inflow_damping_width,                      &
@@ -548,7 +549,8 @@
              sa_vertical_gradient, sa_vertical_gradient_level, scalar_advec,   &
              scalar_rayleigh_damping, sigma_bulk,                              &
              spinup_time, spinup_pt_amplitude, spinup_pt_mean,                 &
-             statistic_regions, stokes_force, subs_vertical_gradient,          &
+             statistic_regions, stokes_force, stokes_drift_method,             &
+             subs_vertical_gradient,                                           &
              subs_vertical_gradient_level, surface_heatflux, surface_pressure, &
              surface_scalarflux, surface_waterflux,                            &
              s_surface, s_surface_initial_change, s_vertical_gradient,         &
@@ -559,13 +561,17 @@
              tunnel_height, tunnel_length, tunnel_width_x, tunnel_width_y,     &
              tunnel_wall_depth, turbulence_closure,                            &
              turbulent_inflow, turbulent_outflow,                              &
+             u0_stk,                                                           &
              use_subsidence_tendencies, ug_surface, ug_vertical_gradient,      &
              ug_vertical_gradient_level, use_surface_fluxes, use_cmax,         &
              use_top_fluxes, use_ug_for_galilei_tr, use_upstream_for_tke,      &
-             uv_heights, u_bulk, u_profile, vg_surface, vg_vertical_gradient,  &
+             uv_heights, u_bulk, u_profile,                                    &
+             v0_stk, vg_surface, vg_vertical_gradient,                         &
              vg_vertical_gradient_level, v_bulk, v_profile, ventilation_effect,&
              wall_adjustment, wall_heatflux, wall_humidityflux,                &
-             wall_salinityflux, wall_scalarflux, y_shift, zeta_max, zeta_min,  &
+             wall_salinityflux, wall_scalarflux,                               &
+             wave_age, wind_dir, wind_speed,                                   &
+             y_shift, zeta_max, zeta_min,                                      &
              z0h_factor
 
     NAMELIST /initialization_parameters/  aerosol_bulk, alpha_surface,         &
@@ -592,7 +598,8 @@
              dp_external, dp_level_b, dp_smooth, dpdxy, dry_aerosol_radius,    &
              dt, dt_pr_1d, dt_run_control_1d, dt_spinup, dx, dy, dz, dz_max,   &
              dz_stretch_factor, dz_stretch_level, dz_stretch_level_start,      &
-             dz_stretch_level_end, end_time_1d, ensemble_member_nr, e_init,    &
+             dz_stretch_level_end, d_stk,                                      &
+             end_time_1d, ensemble_member_nr, e_init,                          &
              e_min, fft_method, flux_input_mode, flux_output_mode, forcing,    &
              galilei_transformation, humidity,                                 &
              inflow_damping_height, inflow_damping_width,                      &
@@ -622,7 +629,8 @@
              sa_vertical_gradient, sa_vertical_gradient_level, scalar_advec,   &
              scalar_rayleigh_damping, sigma_bulk,                              &
              spinup_time, spinup_pt_amplitude, spinup_pt_mean,                 &
-             statistic_regions, stokes_force, subs_vertical_gradient,          &
+             statistic_regions, stokes_force, stokes_drift_method,             &
+             subs_vertical_gradient,                                           &
              subs_vertical_gradient_level, surface_heatflux, surface_pressure, &
              surface_scalarflux, surface_waterflux,                            &
              s_surface, s_surface_initial_change, s_vertical_gradient,         &
@@ -633,13 +641,17 @@
              tunnel_height, tunnel_length, tunnel_width_x, tunnel_width_y,     &
              tunnel_wall_depth, turbulence_closure,                            &
              turbulent_inflow, turbulent_outflow,                              &
+             u0_stk,                                                           &
              use_subsidence_tendencies, ug_surface, ug_vertical_gradient,      &
              ug_vertical_gradient_level, use_surface_fluxes, use_cmax,         &
              use_top_fluxes, use_ug_for_galilei_tr, use_upstream_for_tke,      &
-             uv_heights, u_bulk, u_profile, vg_surface, vg_vertical_gradient,  &
+             uv_heights, u_bulk, u_profile,                                    &
+             v0_stk,  vg_surface, vg_vertical_gradient,                        &
              vg_vertical_gradient_level, v_bulk, v_profile, ventilation_effect,&
              wall_adjustment, wall_heatflux, wall_humidityflux,                &
-             wall_salinityflux, wall_scalarflux, y_shift, zeta_max, zeta_min,  &
+             wall_salinityflux, wall_scalarflux,                               &
+             wave_age, wind_dir, wind_speed,                                   &
+             y_shift, zeta_max, zeta_min,                                      &
              z0h_factor
 
     NAMELIST /d3par/  averaging_interval, averaging_interval_pr,               &

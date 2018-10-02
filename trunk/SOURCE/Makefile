@@ -1489,6 +1489,7 @@ time_integration.o: \
 	progress_bar_mod.o \
 	radiation_model_mod.o \
 	spectra_mod.o \
+	stokes_force_mod.o \
 	surface_layer_fluxes_mod.o \
 	surface_mod.o \
 	synthetic_turbulence_generator_mod.o \
@@ -1540,6 +1541,7 @@ turbulence_closure_mod.o: \
 	modules.o \
 	plant_canopy_model_mod.o \
 	pmc_interface_mod.o \
+	stokes_drift_mod.o \
 	surface_mod.o \
 	user_actions.o
 urban_surface_mod.o: \

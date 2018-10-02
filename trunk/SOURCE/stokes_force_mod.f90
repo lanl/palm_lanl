@@ -510,8 +510,8 @@
 !       <20180926, Qing Li> !
 !
 !--    Update perturbation pressure
-       DO  i = nxl-1, nxr+1
-          DO  j = nys-1, nyn+1
+       DO  i = nxl, nxr
+          DO  j = nys, nyn
              DO  k = nzb, nzt+1
 !
 !--             Predetermine flag to mask topography

@@ -1089,13 +1089,9 @@
 !
 !--    Update perturbation pressure to account for the Stokes pressure
 !--    head, if required
-! TODO: segmentation fault occurred after this subroutine stokes_pressure_head <20180926, Qing Li> !
-       ! IF ( ocean .AND. stokes_force ) THEN
-
-       !    CALL location_message( 'starting stokes_pressure_head', .TRUE. )
-       !    CALL stokes_pressure_head
-       !    CALL location_message( 'finished stokes_pressure_head', .TRUE. )
-       ! ENDIF
+       IF ( ocean .AND. stokes_force ) THEN
+          CALL stokes_pressure_head
+       ENDIF
 
 !
 !--    If required, consider chemical emissions

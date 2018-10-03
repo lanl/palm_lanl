@@ -280,7 +280,7 @@
                momentumflux_output_conversion, nc, nr, p, prho, prr, pt, q,    &
                qc, ql, qr, rho_air, rho_air_zw, rho_ocean, s,                  &
                sa, u, ug, v, vg, vpt, w, w_subs, waterflux_output_conversion,  &
-               zw, alpha_T, beta_S, solar3d
+               zw, alpha_T, beta_S, solar3d, u_stk, v_stk
 
     USE cloud_parameters,                                                      &
         ONLY:   l_d_cp, pt_d_t
@@ -291,7 +291,8 @@
                 large_scale_forcing, large_scale_subsidence, max_pr_user,      &
                 message_string, neutral, microphysics_morrison,                &
                 microphysics_seifert, ocean, passive_scalar, simulated_time,   &
-                simulated_time_at_begin, use_subsidence_tendencies,            &
+                simulated_time_at_begin, stokes_force,                         &
+                use_subsidence_tendencies,            &
                 use_surface_fluxes, use_top_fluxes, ws_scheme_mom,             &
                 ws_scheme_sca, idealized_diurnal
 
@@ -1995,6 +1996,10 @@
        hom(:,1,78,sr) = ug             ! ug
        hom(:,1,79,sr) = vg             ! vg
        hom(:,1,80,sr) = w_subs         ! w_subs
+       IF ( ocean .AND. stokes_force ) THEN
+          hom(:,1,161,sr) = u_stk
+          hom(:,1,162,sr) = v_stk
+       ENDIF
 
        IF ( large_scale_forcing )  THEN
           hom(:,1,81,sr) = sums_ls_l(:,0)          ! td_lsa_lpt

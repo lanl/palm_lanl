@@ -704,6 +704,8 @@
     USE spectra_mod,                                                           &
         ONLY:  calculate_spectra, spectra_check_parameters
     USE statistics
+    USE stokes_drift_mod,                                                      &
+        ONLY: stokes_drift_check_parameters
     USE subsidence_mod
     USE statistics
     USE synthetic_turbulence_generator_mod,                                    &
@@ -1461,6 +1463,11 @@
 !
 !-- Check for synthetic turbulence generator settings
     CALL stg_check_parameters
+
+!
+!-- Check for Stokes drift settings if Stokes forcing in ocean mode is used
+    IF ( ocean .AND. stokes_force ) CALL stokes_drift_check_parameters
+
 !
 !-- When plant canopy model is used, peform addtional checks
     IF ( plant_canopy )  CALL pcm_check_parameters

@@ -50,13 +50,12 @@
 
    IMPLICIT NONE
 
-   INTEGER(iwp), PARAMETER :: NOTHING = 0       !< No Stokes drift
    INTEGER(iwp), PARAMETER :: FROMUSDELTA = 1   !< Stokes drift from surface value and decay depth
    INTEGER(iwp), PARAMETER :: FROMSPECDHH85 = 2 !< Stokes drift from DHH85 spectrum
 
    PRIVATE
    ! PUBLIC stokes_drift_check_parameters, init_stokes_dirft
-   PUBLIC init_stokes_drift
+   PUBLIC init_stokes_drift, stokes_drift_check_parameters
 
  CONTAINS
 
@@ -66,8 +65,54 @@
 ! ------------
 !>
 !------------------------------------------------------------------------------!
-   ! SUBROUTINE stokes_drfit_check_parameters
-   ! END SUBROUTINE stokes_drift_check_parameters
+   SUBROUTINE stokes_drift_check_parameters
+
+      USE control_parameters,                                                  &
+         ONLY: stokes_drift_method, u0_stk, v0_stk, d_stk,                     &
+               wind_speed, wind_dir, wave_age
+
+      IMPLICIT NONE
+!
+!--   Check Stokes drift method
+      SELECT CASE ( stokes_drift_method )
+      CASE ( -9999 )
+         WRITE( message_string, * )  'stokes_drift_method ',                   &
+               'is not set but required if stokes_force == .TRUE.'
+         CALL message( 'stokes_drift_check_parameters', 'PA0603', 1, 2, 0, 6, 0)
+      CASE ( 1 )
+         IF ( u0_stk == -9999999.9_wp .OR. v0_stk == -9999999.9_wp .OR.        &
+              d_stk == -9999999.9_wp ) THEN
+            WRITE( message_string, * )  'either u0_stk, v0_skt, or d_stk ',    &
+               'is not set but required if stokes_drift_method == 1'
+            CALL message( 'stokes_drift_check_parameters',                     &
+                          'PA0603', 1, 2, 0, 6, 0)
+         ELSEIF ( d_stk < 0.0_wp ) THEN
+            WRITE( message_string, * )  'd_stk = ',                            &
+                   d_stk, ' must be > 0 (m)'
+            CALL message( 'stokes_drift_check_parameters',                     &
+                          'PA0603', 1, 2, 0, 6, 0)
+         ENDIF
+      CASE ( 2 )
+         IF ( wind_speed == -9999999.9_wp .OR.                                 &
+              wind_dir == -9999999.9_wp .OR.                                   &
+              wave_age == -9999999.9_wp ) THEN
+            WRITE( message_string, * )  'either wind_speed, wind_dir, or ',    &
+               'wave_age is not set but required if stokes_drift_method == 2'
+            CALL message( 'stokes_drift_check_parameters',                     &
+                          'PA0603', 1, 2, 0, 6, 0)
+         ELSEIF ( wave_age < 0.2_wp .OR. wave_age > 1.2_wp ) THEN
+            WRITE( message_string, * )  'wave_age = ',                         &
+                   wave_age, ' must be between 0.2 and 1.2'
+            CALL message( 'stokes_drift_check_parameters',                     &
+                          'PA0603', 1, 2, 0, 6, 0)
+         ENDIF
+      CASE DEFAULT
+         WRITE( message_string, * )  'invalid stokes_drift_mehtod = ',         &
+                stokes_drift_method, ', must be 1, or 2'
+         CALL message( 'stokes_drift_check_parameters', 'PA0603', 1, 2, 0, 6, 0)
+      END SELECT
+
+   END SUBROUTINE stokes_drift_check_parameters
 
 
 !------------------------------------------------------------------------------!
@@ -87,22 +132,20 @@
 
       u_stk = 0.0_wp
       v_stk = 0.0_wp
-
-      ! compute Stokes drift
+!
+!--   Compute Stokes drift
       SELECT CASE ( stokes_drift_method )
-      CASE ( NOTHING )
-         u_stk = 0.0_wp
-         v_stk = 0.0_wp
       CASE ( FROMUSDELTA )
          CALL stokes_drift_usdelta
       CASE ( FROMSPECDHH85 )
          CALL stokes_drift_spec_dhh85
       CASE DEFAULT
-         WRITE( message_string, * ) ' unknown method for Stokes drift: ', stokes_drift_method
+         WRITE( message_string, * )  'invalid stokes_drift_mehtod = ',         &
+                stokes_drift_method, ', must be 1, or 2'
          CALL message( 'init_stokes_drift', 'PA0602', 1, 2, 0, 6, 0 )
       END SELECT
-
-      ! update initial condition for u and v
+!
+!--   Update initial condition for u and v
       DO  i = nxlg, nxrg
          DO  j = nysg, nyng
             DO  k = nzb, nzt
@@ -130,8 +173,8 @@
 
       INTEGER(iwp) ::  k
       REAL(wp)     ::  kdz, dd_stk, tmp
-
-!     Stokes drift averaged over the grid cell
+!
+!--   Stokes drift averaged over the grid cell
       dd_stk = 1.0_wp / d_stk
       DO  k = nzt, nzb+1, -1
          kdz = 0.5 * dzu(k) * dd_stk
@@ -164,17 +207,20 @@
 
       IMPLICIT NONE
 
+!
+!--   Frequency range
       REAL(wp), PARAMETER     :: min_omega = 0.1_wp, max_omega = 10.0_wp
       INTEGER(iwp), PARAMETER :: nomega = 1000
 
       INTEGER(iwp) :: i, k
       REAL(wp)     :: d2r, xcomp, ycomp, domega, sd_omega, tmp
-
-      ! wind direction
+!
+!--   Wind direction
       d2r = pi / 180.0_wp
       xcomp = COS( wind_dir * d2r )
       ycomp = SIN( wind_dir * d2r )
-      ! integral over frequency
+!
+!--   Integral over frequency
       domega = ( max_omega - min_omega ) / REAL(nomega, KIND=wp)
       DO  k = nzt, nzb+1, -1
          tmp = 0.0_wp
@@ -211,8 +257,8 @@
       REAL(wp)  :: dhh_omega_p, dhh_alpha, dhh_sigma, dhh_gamma1, dhh_gamma2
       REAL(wp)  :: wave_spec, sd_filter, kdz, iwa
       REAL(wp)  :: stokes_drift_kernel_dhh85
-
-      ! DHH 85 spectrum
+!
+!--   DHH 85 spectrum
       iwa = 1.0_wp / wave_age !< inverse wave age
       dhh_omega_p = g * iwa / wind_speed !< peak frequency
       dhh_alpha  = 0.006_wp * iwa**(0.55_wp)
@@ -227,7 +273,8 @@
       wave_spec  = dhh_alpha * g**2 / (dhh_omega_p * sd_omega**4 ) *           &
                    EXP( -( dhh_omega_p / sd_omega )**4 ) *                     &
                    dhh_gamma1**dhh_gamma2
-      ! Stokes drift integral kernel
+!
+!--   Stokes drift integral kernel
       kdz = sd_omega**2 * sd_dz / g
       IF ( kdz .LT. 10.0_wp ) THEN
          sd_filter = SINH(kdz) / kdz

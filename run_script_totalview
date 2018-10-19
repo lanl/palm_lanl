@@ -2,16 +2,10 @@
 
 hname=$(hostname | cut -c 1-2)
 
-if [ "$hname" = "gr" ]
-then
-   use_hdf5="True"
-elif [ "$hname" = "ba" ]
-then
-   use_hdf5="False"
-fi
+use_hdf5="True"
 
 repo_path=$PWD
-exec_path="/lustre/scratch3/turquoise/cbegeman/palm/jobs/test_slope_ngpearly"
+exec_path="/path/to/run/directory"
 
 cd $SLURM_SUBMIT_DIR
 export PATH="$repo_path/trunk/SCRIPTS:${PATH}"
@@ -34,11 +28,17 @@ if [[ $use_hdf5 == "True" ]]; then
     module load hdf5/1.10.2
     module load netcdf/4.6.1_hdf5
     module load totalview
+    if [ ! -d $exec_path"/BUILD_ifort.grizzly_hdf5" ]; then
+    	palm_simple_build -b ifort.grizzly_hdf5 -w $exec_path
+    fi
     palm_simple_run -b ifort.grizzly_hdf5 -w $exec_path -c mpirun.totalview -s test_oceanml -n $NN -p $NTASKS -t 1 -T $WTIME 
 else
     module load intel/17.0.1
     module load openmpi/1.10.5
     module load netcdf/4.4.1
+    if [ ! -d $exec_path"/BUILD_ifort.grizzly" ]; then
+	palm_simple_build -b ifort.grizzly -w $exec_path
+    fi
     palm_simple_run -b ifort.grizzly -w $exec_path -c mpirun -s test_oceanml -n $NN -p $NTASKS -t 1 -T $WTIME
 fi
 

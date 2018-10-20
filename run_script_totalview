@@ -1,0 +1,44 @@
+#!/bin/bash
+
+hname=$(hostname | cut -c 1-2)
+
+use_hdf5="True"
+
+repo_path=$PWD
+exec_path="/path/to/run/directory"
+
+cd $SLURM_SUBMIT_DIR
+export PATH="$repo_path/trunk/SCRIPTS:${PATH}"
+module use -a /usr/projects/climate/SHARED_CLIMATE/modulefiles/all
+module purge
+
+#get ntasks and nprocs from SLURM variables
+NTASKS=$SLURM_NTASKS
+nnodes=$SLURM_JOB_NUM_NODES
+NN=$((NTASKS/nnodes))
+
+timestring=`squeue -h -j $SLURM_JOBID -o "%l"`
+WTIME=`echo $timestring | sed -E 's/(.*):(.+):(.+)/\1*3600+\2*60+\3/;s/(.+):(.+)/\1*60+\2/' | bc`
+
+echo "WTITME = $WTIME"
+
+if [[ $use_hdf5 == "True" ]]; then
+    module load intel/18.0.2
+    module load openmpi/2.1.2
+    module load hdf5/1.10.2
+    module load netcdf/4.6.1_hdf5
+    module load totalview
+    if [ ! -d $exec_path"/BUILD_ifort.grizzly_hdf5" ]; then
+    	palm_simple_build -b ifort.grizzly_hdf5 -w $exec_path
+    fi
+    palm_simple_run -b ifort.grizzly_hdf5 -w $exec_path -c mpirun.totalview -s test_oceanml -n $NN -p $NTASKS -t 1 -T $WTIME 
+else
+    module load intel/17.0.1
+    module load openmpi/1.10.5
+    module load netcdf/4.4.1
+    if [ ! -d $exec_path"/BUILD_ifort.grizzly" ]; then
+	palm_simple_build -b ifort.grizzly -w $exec_path
+    fi
+    palm_simple_run -b ifort.grizzly -w $exec_path -c mpirun -s test_oceanml -n $NN -p $NTASKS -t 1 -T $WTIME
+fi
+

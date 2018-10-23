@@ -1170,12 +1170,12 @@
 
     IF ( ocean )  THEN
        IF ( ibc_sa_b == 0 ) THEN
-          r_lower = 'sa(0)    = from initial profile'
+          r_lower = 'sa(0)    = sa_surface'
        ELSE
           r_lower = 'sa(0)    = sa(1)'
        ENDIF
        IF ( ibc_sa_t == 0 )  THEN
-          r_upper =  'sa(nzt+1) = sa_surface'
+          r_upper =  'sa(nzt+1) = sa_top'
        ELSE
           r_upper =  'sa(nzt+1) = sa(nzt)'
        ENDIF

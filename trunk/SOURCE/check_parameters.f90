@@ -2105,23 +2105,48 @@
           CALL message( 'check_parameters', 'PA0068', 1, 2, 0, 6, 0 )
        ENDIF
 
-       IF ( top_salinityflux == 9999999.9_wp )  constant_top_salinityflux = .FALSE.
+       IF ( bc_sa_b == 'dirichlet' )  THEN
+          ibc_sa_b = 0
+          CALL location_message('ib_sa_b assigned for dirichlet conditions',.TRUE.) !CB
+       ELSEIF ( bc_sa_b == 'neumann' )  THEN
+          ibc_sa_b = 1
+          CALL location_message('ib_sa_b assigned for neumann conditions',.TRUE.) !CB
+       ELSE
+          message_string = 'unknown boundary condition: bc_sa_b = "' //        &
+                           TRIM( bc_sa_b ) // '"'
+          CALL message( 'check_parameters', 'PA0068', 1, 2, 0, 6, 0 )
+       ENDIF
+
        IF ( ibc_sa_t == 1  .AND.  top_salinityflux == 9999999.9_wp )  THEN
           message_string = 'boundary condition: bc_sa_t = "' //                &
                            TRIM( bc_sa_t ) // '" requires to set ' //          &
                            'top_salinityflux'
           CALL message( 'check_parameters', 'PA0069', 1, 2, 0, 6, 0 )
        ENDIF
-
+       IF ( ibc_sa_b == 1  .AND.  bottom_salinityflux == 9999999.9_wp )  THEN
+          message_string = 'boundary condition: bc_sa_b = "' //                &
+                           TRIM( bc_sa_b ) // '" requires to set ' //          &
+                           'bottom_salinityflux'
+          CALL message( 'check_parameters', 'PA0069', 1, 2, 0, 6, 0 )
+       ENDIF
 !
 !--    A fixed salinity at the top implies Dirichlet boundary condition for
 !--    salinity. In this case specification of a constant salinity flux is
 !--    forbidden.
+       IF ( top_salinityflux == 9999999.9_wp )  constant_top_salinityflux = .FALSE.
        IF ( ibc_sa_t == 0  .AND.  constant_top_salinityflux  .AND.             &
             top_salinityflux /= 0.0_wp )  THEN
           message_string = 'boundary condition: bc_sa_t = "' //                &
                            TRIM( bc_sa_t ) // '" is not allowed with ' //      &
                            'top_salinityflux /= 0.0'
+          CALL message( 'check_parameters', 'PA0070', 1, 2, 0, 6, 0 )
+       ENDIF
+       IF ( bottom_salinityflux == 9999999.9_wp )  constant_bottom_salinityflux = .FALSE.
+       IF ( ibc_sa_b == 0  .AND.  constant_bottom_salinityflux  .AND.             &
+            bottom_salinityflux /= 0.0_wp )  THEN
+          message_string = 'boundary condition: bc_sa_b = "' //                &
+                           TRIM( bc_sa_t ) // '" is not allowed with ' //      &
+                           'bottom_salinityflux /= 0.0'
           CALL message( 'check_parameters', 'PA0070', 1, 2, 0, 6, 0 )
        ENDIF
 

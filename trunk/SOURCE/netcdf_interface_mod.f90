@@ -2459,6 +2459,7 @@
           var_list_old = ' '
           nc_stat = NF90_GET_ATT( id_set_xy(av), NF90_GLOBAL, 'VAR_LIST', &
                                   var_list_old )
+!--       ERROR in nc_stat
           CALL netcdf_handle_error( 'netcdf_define_header', 129 )
 
           var_list = ';'
@@ -2482,7 +2483,7 @@
                               '&but this file cannot be extended due to' //  &
                               ' variable mismatch.' //                       &
                               '&New file is created instead.'
-             CALL message( 'define_netcdf_header', 'PA0249', 0, 1, 0, 6, 0 )
+f             CALL message( 'define_netcdf_header', 'PA0249', 0, 1, 0, 6, 0 )
              extend = .FALSE.
              RETURN
           ENDIF

@@ -2483,7 +2483,7 @@
                               '&but this file cannot be extended due to' //  &
                               ' variable mismatch.' //                       &
                               '&New file is created instead.'
-f             CALL message( 'define_netcdf_header', 'PA0249', 0, 1, 0, 6, 0 )
+             CALL message( 'define_netcdf_header', 'PA0249', 0, 1, 0, 6, 0 )
              extend = .FALSE.
              RETURN
           ENDIF

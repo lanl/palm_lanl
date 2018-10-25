@@ -20,6 +20,8 @@
 ! Current revisions:
 ! -----------------
 ! 
+! 2018-10-25 cbegeman
+! Add checks for dirichlet bottom boundary conditions for salinity
 ! 
 ! Former revisions:
 ! -----------------

@@ -20,6 +20,8 @@
 ! Current revisions:
 ! -----------------
 ! 
+! 2018-10-25 cbegeman
+! Treatment of dirichlet bottom boundary conditions for salinity
 ! 
 ! Former revisions:
 ! -----------------
@@ -194,8 +196,8 @@
                constant_diffusion, cloud_physics, coupling_mode, dt_3d,        &
                force_bound_l, force_bound_s, forcing, humidity,                &
                ibc_pt_b, ibc_pt_t, ibc_q_b, ibc_q_t, ibc_s_b, ibc_s_t,         &
-               ibc_sa_t, ibc_uv_b, ibc_uv_t, inflow_l, inflow_n, inflow_r,     &
-               inflow_s, intermediate_timestep_count,                          &
+               ibc_sa_b, ibc_sa_t, ibc_uv_b, ibc_uv_t, inflow_l, inflow_n,     &
+               inflow_r, inflow_s, intermediate_timestep_count,                &
                microphysics_morrison, microphysics_seifert, nest_domain,       &
                nest_bound_l, nest_bound_n, nest_bound_r, nest_bound_s, nudging,&
                ocean, outflow_l, outflow_n, outflow_r, outflow_s,              &
@@ -378,22 +380,40 @@
 !
 !-- Boundary conditions for salinity
     IF ( ocean )  THEN
+
+!-- Bottom boundary: Dirichlet condition.
+       IF ( ibc_sa_b == 0 )  THEN
+          DO  l = 0, 1
 !
-!--    Bottom boundary: Neumann condition because salinity flux is always
-!--    given.
-       DO  l = 0, 1
-!
-!--       Set kb, for upward-facing surfaces value at topography top (k-1) is set,
-!--       for downward-facing surfaces at topography bottom (k+1). 
-          kb = MERGE( -1, 1, l == 0 )
-          !$OMP PARALLEL DO PRIVATE( i, j, k )
-          DO  m = 1, bc_h(l)%ns
-             i = bc_h(l)%i(m)            
-             j = bc_h(l)%j(m)
-             k = bc_h(l)%k(m)
-             sa_p(k+kb,j,i) = sa_p(k,j,i)
+!--          Set kb, for upward-facing surfaces value at topography top (k-1) is set,
+!--          for downward-facing surfaces at topography bottom (k+1). 
+             kb = MERGE( -1, 1, l == 0 )
+             !$OMP PARALLEL DO PRIVATE( i, j, k )
+             DO  m = 1, bc_h(l)%ns
+                i = bc_h(l)%i(m)            
+                j = bc_h(l)%j(m)
+                k = bc_h(l)%k(m)
+                sa_p(k+kb,j,i) = sa(k+kb,j,i)
+             ENDDO
           ENDDO
-       ENDDO
+
+!
+!--    Bottom boundary: Neumann condition.
+       ELSEIF ( ibc_sa_b == 1 )  THEN
+          DO  l = 0, 1
+!
+!--          Set kb, for upward-facing surfaces value at topography top (k-1) is set,
+!--          for downward-facing surfaces at topography bottom (k+1). 
+             kb = MERGE( -1, 1, l == 0 )
+             !$OMP PARALLEL DO PRIVATE( i, j, k )
+             DO  m = 1, bc_h(l)%ns
+                i = bc_h(l)%i(m)            
+                j = bc_h(l)%j(m)
+                k = bc_h(l)%k(m)
+                sa_p(k+kb,j,i) = sa_p(k,j,i)
+             ENDDO
+          ENDDO
+       ENDIF
 !
 !--    Top boundary: Dirichlet or Neumann
        IF ( ibc_sa_t == 0 )  THEN

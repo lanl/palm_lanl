@@ -20,6 +20,8 @@
 ! Current revisions:
 ! -----------------
 ! 
+! 2018-10-25 cbegeman
+! Add dirichlet bottom boundary conditions for salinity
 ! 
 ! Former revisions:
 ! -----------------
@@ -1169,9 +1171,13 @@
     ENDIF
 
     IF ( ocean )  THEN
-       r_lower = 'sa(0)    = sa(1)'
+       IF ( ibc_sa_b == 0 ) THEN
+          r_lower = 'sa(0)    = sa_surface'
+       ELSE
+          r_lower = 'sa(0)    = sa(1)'
+       ENDIF
        IF ( ibc_sa_t == 0 )  THEN
-          r_upper =  'sa(nzt+1) = sa_surface'
+          r_upper =  'sa(nzt+1) = sa_top'
        ELSE
           r_upper =  'sa(nzt+1) = sa(nzt)'
        ENDIF

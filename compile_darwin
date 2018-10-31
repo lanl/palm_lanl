@@ -1,0 +1,11 @@
+#!/bin/bash
+
+repo_path=$PWD
+build_path="/home/qingli/work/palm/run/"
+
+export PATH="$repo_path/trunk/SCRIPTS:$PATH"
+module purge
+module load pgi/18.7
+module load openmpi/3.1.2-pgi_18.7
+module load netcdf/4.6.1-pgi_18.7
+palm_simple_build -b pgi.darwin -w $build_path

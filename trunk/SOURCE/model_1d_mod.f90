@@ -19,8 +19,8 @@
 !
 ! Current revisions:
 ! -----------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: model_1d_mod.f90 3083 2018-06-19 14:03:12Z gronemeier $
@@ -39,44 +39,44 @@
 !   - calculate l_grid within init_1d_model and save it as l1d_init
 !   - calculate l1d according to DE85 if dissipation is a prognostic value
 !   - made annotations doxygen-readable
-! 
+!
 ! 3049 2018-05-29 13:52:36Z Giersch
 ! Error messages revised
-! 
+!
 ! 3045 2018-05-28 07:55:41Z Giersch
 ! Error message revised
-! 
+!
 ! 2965 2018-04-13 07:37:25Z scharf
 ! adjusted format string for 1D run control output
-! 
+!
 ! 2918 2018-03-21 15:52:14Z gronemeier
 ! - rename l_black into l1d_init
 ! - calculate l_grid within init_1d_model and save it as l1d_init
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 ! implement TKE-e closure
 ! modification of dissipation production according to Detering and Etling
 ! reduced factor for timestep criterion to 0.125 and first dt to 1s (TG)
-! 
+!
 ! 2339 2017-08-07 13:55:26Z gronemeier
 ! corrected timestamp in header
-! 
+!
 ! 2338 2017-08-07 12:15:38Z gronemeier
 ! renamed init_1d_model to model_1d_mod and and formatted it as a module;
 ! reformatted output of profiles
-! 
+!
 ! 2337 2017-08-07 08:59:53Z gronemeier
 ! revised calculation of mixing length
 ! removed rounding of time step
 ! corrected calculation of virtual potential temperature
-! 
+!
 ! 2334 2017-08-04 11:57:04Z gronemeier
 ! set c_m = 0.4 according to Detering and Etling (1985)
-! 
+!
 ! 2299 2017-06-29 10:14:38Z maronga
 ! Removed german text
 !
@@ -87,7 +87,7 @@
 !
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1960 2016-07-12 16:34:24Z suehring
 ! Remove passive_scalar from IF-statements, as 1D-scalar profile is effectively
 ! not used.
@@ -106,15 +106,15 @@
 !
 ! 1691 2015-10-26 16:17:44Z maronga
 ! Renamed prandtl_layer to constant_flux_layer. rif is replaced by ol and zeta.
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1353 2014-04-08 15:21:23Z heinze
-! REAL constants provided with KIND-attribute 
-! 
+! REAL constants provided with KIND-attribute
+!
 ! 1346 2014-03-27 13:18:20Z heinze
-! Bugfix: REAL constants provided with KIND-attribute especially in call of 
+! Bugfix: REAL constants provided with KIND-attribute especially in call of
 ! intrinsic function like MAX, MIN, SIGN
 !
 ! 1322 2014-03-20 16:38:49Z raasch
@@ -122,12 +122,12 @@
 !
 ! 1320 2014-03-20 08:40:49Z raasch
 ! ONLY-attribute added to USE-statements,
-! kind-parameters added to all INTEGER and REAL declaration statements, 
-! kinds are defined in new module kinds, 
+! kind-parameters added to all INTEGER and REAL declaration statements,
+! kinds are defined in new module kinds,
 ! revision history before 2012 removed,
 ! comment fields (!:) to be used for variable explanations added to
-! all variable declaration statements 
-! 
+! all variable declaration statements
+!
 ! 1036 2012-10-22 13:43:42Z raasch
 ! code put under GPL (PALM 3.9)
 !
@@ -151,7 +151,7 @@
 ! Description:
 ! ------------
 !> 1D-model to initialize the 3D-arrays.
-!> The temperature profile is set as steady and a corresponding steady solution 
+!> The temperature profile is set as steady and a corresponding steady solution
 !> of the wind profile is being computed.
 !> All subroutines required can be found within this file.
 !>
@@ -166,7 +166,7 @@
     USE arrays_3d,                                                             &
         ONLY:  dd2zu, ddzu, ddzw, dzu, dzw, pt_init, q_init, ug, u_init,       &
                vg, v_init, zu
-    
+
     USE control_parameters,                                                    &
         ONLY:  constant_diffusion, constant_flux_layer, dissipation_1d, f, g,  &
                humidity, ibc_e_b, intermediate_timestep_count,                 &
@@ -177,12 +177,12 @@
 
     USE indices,                                                               &
         ONLY:  nzb, nzb_diff, nzt
-    
+
     USE kinds
 
     USE pegrid,                                                                &
         ONLY:  myid
-        
+
 
     IMPLICIT NONE
 
@@ -193,7 +193,8 @@
     LOGICAL ::  stop_dt_1d = .FALSE.             !< termination flag, used in case of too small timestep (1d-model)
 
     REAL(wp) ::  alpha_buoyancy                !< model constant according to Koblitz (2013)
-    REAL(wp) ::  c_0 = 0.03_wp**0.25_wp        !< model constant according to Koblitz (2013)
+    ! REAL(wp) ::  c_0 = 0.03_wp**0.25_wp        !< model constant according to Koblitz (2013)
+    REAL(wp) ::  c_0 = sqrt(sqrt(0.03_wp))     !< model constant according to Koblitz (2013)
     REAL(wp) ::  c_1 = 1.52_wp                 !< model constant according to Koblitz (2013)
     REAL(wp) ::  c_2 = 1.83_wp                 !< model constant according to Koblitz (2013)
     REAL(wp) ::  c_3                           !< model constant
@@ -288,7 +289,7 @@
     CONTAINS
 
  SUBROUTINE init_1d_model
- 
+
     USE grid_variables,                                                        &
         ONLY:  dx, dy
 
@@ -384,7 +385,7 @@
     usws1d = 0.0_wp
     vsws1d = 0.0_wp
     z01d  = roughness_length
-    z0h1d = z0h_factor * z01d 
+    z0h1d = z0h_factor * z01d
     IF ( humidity )  qs1d = 0.0_wp
 
 !
@@ -419,7 +420,7 @@
 ! ------------
 !> Runge-Kutta time differencing scheme for the 1D-model.
 !------------------------------------------------------------------------------!
- 
+
  SUBROUTINE time_integration_1d
 
     IMPLICIT NONE
@@ -461,7 +462,7 @@
           CALL timestep_scheme_steering
 
 !
-!--       Compute all tendency terms. If a constant-flux layer is simulated, 
+!--       Compute all tendency terms. If a constant-flux layer is simulated,
 !--       k starts at nzb+2.
           DO  k = nzb_diff, nzt
 
@@ -549,8 +550,8 @@
 
 !
 !--       Tendency terms at the top of the constant-flux layer.
-!--       Finite differences of the momentum fluxes are computed using half the 
-!--       normal grid length (2.0*ddzw(k)) for the sake of enhanced accuracy 
+!--       Finite differences of the momentum fluxes are computed using half the
+!--       normal grid length (2.0*ddzw(k)) for the sake of enhanced accuracy
           IF ( constant_flux_layer )  THEN
 
              k = nzb+1
@@ -685,7 +686,7 @@
 
 !
 !--       Boundary conditions for the prognostic variables.
-!--       At the top boundary (nzt+1) u, v, e, and diss keep their initial 
+!--       At the top boundary (nzt+1) u, v, e, and diss keep their initial
 !--       values (ug(nzt+1), vg(nzt+1), 0, 0).
 !--       At the bottom boundary, Dirichlet condition is used for u and v (0)
 !--       and Neumann condition for e and diss (e(nzb)=e(nzb+1)).
@@ -738,7 +739,7 @@
              !>   2018-04-23, gronemeier
 !
 !--          Compute the Richardson-flux numbers,
-!--          first at the top of the constant-flux layer using u* of the 
+!--          first at the top of the constant-flux layer using u* of the
 !--          previous time step (+1E-30, if u* = 0), then in the remaining area.
 !--          There the rif-numbers of the previous time step are used.
 
@@ -818,7 +819,7 @@
                 vsws1d  = - v1d(nzb+1) / uv_total * us1d**2
 
 !
-!--             Boundary condition for the turbulent kinetic energy and 
+!--             Boundary condition for the turbulent kinetic energy and
 !--             dissipation rate at the top of the constant-flux layer.
 !--             Additional Neumann condition de/dz = 0 at nzb is set to ensure
 !--             compatibility with the 3D model.
@@ -834,7 +835,7 @@
 
                 IF ( humidity ) THEN
 !
-!--                Compute q* 
+!--                Compute q*
                    IF ( rif1d(nzb+1) >= 0.0_wp )  THEN
 !
 !--                   Stable stratification
@@ -978,7 +979,7 @@
 ! ------------
 !> Compute and print out quantities for run control of the 1D model.
 !------------------------------------------------------------------------------!
- 
+
  SUBROUTINE run_control_1d
 
 
@@ -988,7 +989,7 @@
     IMPLICIT NONE
 
     INTEGER(iwp) ::  k     !< loop index
-    
+
     REAL(wp) ::  alpha     !< angle of wind vector at top of constant-flux layer
     REAL(wp) ::  energy    !< kinetic energy
     REAL(wp) ::  umax      !< maximum of u
@@ -1052,7 +1053,7 @@
 ! ------------
 !> Compute the time step w.r.t. the diffusion criterion
 !------------------------------------------------------------------------------!
- 
+
  SUBROUTINE timestep_1d
 
     IMPLICIT NONE
@@ -1092,7 +1093,7 @@
        WRITE( message_string, * ) 'timestep has exceeded the lower limit&',    &
                                   'dt_1d = ',dt_1d,' s   simulation stopped!'
        CALL message( 'timestep_1d', 'PA0192', 1, 2, 0, 6, 0 )
-       
+
     ENDIF
 
  END SUBROUTINE timestep_1d
@@ -1104,7 +1105,7 @@
 ! ------------
 !> List output of profiles from the 1D-model
 !------------------------------------------------------------------------------!
- 
+
  SUBROUTINE print_1d_model
 
     IMPLICIT NONE

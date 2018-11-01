@@ -20,6 +20,8 @@
 ! Current revisions:
 ! -----------------
 ! 
+! 2018-11-01 cbegeman
+! Read coupling parameters from runfile rather than the standard input
 ! 
 ! Former revisions:
 ! ------------------
@@ -72,7 +74,7 @@
  
 
     USE control_parameters,                                                    &
-        ONLY:  coupling_char, coupling_mode
+        ONLY:  coupling_char, coupling_mode, message_string
         
     USE kinds
     
@@ -90,22 +92,14 @@
     INTEGER(iwp), DIMENSION(:) ::  bc_data(0:3) = 0  !<
 
 !
-!-- Get information about the coupling mode from the environment variable
-!-- which has been set by the mpiexec command.
-!-- This method is currently not used because the mpiexec command is not
-!-- available on some machines
-!    CALL GET_ENVIRONMENT_VARIABLE( 'coupling_mode', coupling_mode, i )
-!    IF ( i == 0 )  coupling_mode = 'uncoupled'
-!    IF ( coupling_mode == 'ocean_to_atmosphere' )  coupling_char = '_O'
-
-!
-!-- Get information about the coupling mode from standard input (PE0 only) and
+!-- Get information about the coupling mode from runfile and
 !-- distribute it to the other PEs. Distribute PEs to 2 new communicators.
 !-- ATTENTION: numprocs will be reset according to the new communicators
 #if defined ( __parallel )
 
     IF ( myid == 0 )  THEN
-       READ (*,*,ERR=10,END=10)  coupling_mode, bc_data(1), bc_data(2)
+       CALL check_open( 50 )
+       READ( 50,*,ERR=10,END=10 ) coupling_mode, bc_data(1), bc_data(2)
 10     CONTINUE
        IF ( TRIM( coupling_mode ) == 'coupled_run' )  THEN
           i = 1

@@ -74,11 +74,11 @@
  
 
     USE control_parameters,                                                    &
-        ONLY:  coupling_char, coupling_mode, message_string
+        ONLY:  coupling_char, coupling_mode
         
     USE kinds
     
-    USE pegrid
+    USE pegridmessage
 
     USE vertical_nesting_mod
 

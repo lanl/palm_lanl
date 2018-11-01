@@ -3319,15 +3319,15 @@
 !--       Make sure that section_nn is defined
           IF ( (data_output(i)(ilen-2:ilen) == '_xy') .AND. ( (section_xy(i) == -9999) ) ) THEN
              message_string = 'to output _xy variables, section_xy must be defined'
-             CALL message( 'check_parameters', 'PA0102', 1, 2, 0, 6, 0 )
+             CALL message( 'check_parameters', 'PA0561', 1, 2, 0, 6, 0 )
           ENDIF
           IF ( (data_output(i)(ilen-2:ilen) == '_xz') .AND. ( (section_xz(i) == -9999) ) ) THEN
              message_string = 'to output _xz variables, section_xz must be defined'
-             CALL message( 'check_parameters', 'PA0102', 1, 2, 0, 6, 0 )
+             CALL message( 'check_parameters', 'PA0561', 1, 2, 0, 6, 0 )
           ENDIF
           IF ( (data_output(i)(ilen-2:ilen) == '_yz') .AND. ( (section_yz(i) == -9999) ) ) THEN
              message_string = 'to output _yz variables, section_yz must be defined'
-             CALL message( 'check_parameters', 'PA0102', 1, 2, 0, 6, 0 )
+             CALL message( 'check_parameters', 'PA0561', 1, 2, 0, 6, 0 )
           ENDIF
 
        ENDIF

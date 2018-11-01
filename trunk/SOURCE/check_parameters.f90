@@ -19,6 +19,9 @@
 !
 ! Current revisions:
 ! -----------------
+!
+! 2018-10-31 cbegeman
+! Add checks for profile output
 ! 
 ! 2018-10-25 cbegeman
 ! Add checks for dirichlet bottom boundary conditions for salinity
@@ -3312,6 +3315,21 @@
              k = 1                                             ! 2d data
              var = data_output(i)(1:ilen-3)
           ENDIF
+
+!--       Make sure that section_nn is defined
+          IF ( (data_output(i)(ilen-2:ilen) == '_xy') .AND. ( (section_xy(i) == -9999) ) ) THEN
+             message_string = 'to output _xy variables, the depth of at least one xy_section must be specified via the namelist parameter section_xy'
+             CALL message( 'check_parameters', 'PA0561', 1, 2, 0, 6, 0 )
+          ENDIF
+          IF ( (data_output(i)(ilen-2:ilen) == '_xz') .AND. ( (section_xz(i) == -9999) ) ) THEN
+             message_string = 'to output _xz variables, the depth of at least one xz_section must be specified via the namelist parameter section_xz'
+             CALL message( 'check_parameters', 'PA0561', 1, 2, 0, 6, 0 )
+          ENDIF
+          IF ( (data_output(i)(ilen-2:ilen) == '_yz') .AND. ( (section_yz(i) == -9999) ) ) THEN
+             message_string = 'to output _yz variables, the depth of at least one yz_section must be specified via the namelist parameter section_yz'
+             CALL message( 'check_parameters', 'PA0561', 1, 2, 0, 6, 0 )
+          ENDIF
+
        ENDIF
 
 !

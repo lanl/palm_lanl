@@ -20,6 +20,8 @@
 ! Current revisions:
 ! -----------------
 ! 
+! 2018-10-25 cbegeman
+! Add dirichlet bottom boundary conditions for salinity
 ! 
 ! Former revisions:
 ! -----------------
@@ -307,6 +309,8 @@
                 READ ( 13 )  bc_s_b
              CASE ( 'bc_s_t' )
                 READ ( 13 )  bc_s_t
+             CASE ( 'bc_sa_b' )
+                READ ( 13 )  bc_sa_b
              CASE ( 'bc_sa_t' )
                 READ ( 13 )  bc_sa_t
              CASE ( 'bc_uv_b' )

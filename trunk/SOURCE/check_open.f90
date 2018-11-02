@@ -20,6 +20,8 @@
 ! Current revisions:
 ! -----------------
 ! 
+! 2018-11-01 cbegeman
+! Add file_id for runfile which specifies coupling parameters
 ! 
 ! Former revisions:
 ! -----------------
@@ -470,6 +472,10 @@ SUBROUTINE check_open( file_id )
              WRITE ( 30 )  0, nx, 0, ny, 0, nz_do3d
 #endif
           ENDIF
+
+       CASE ( 50 )
+
+          OPEN ( 50, FILE='runfile')
 
        CASE ( 80 )
 

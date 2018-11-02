@@ -602,6 +602,7 @@
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  ngp_2dh_outer_l    !<
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  ngp_2dh_s_inner_l  !<
 
+    REAL(wp)     ::  bubble_dr !< distance from the center of the bubble
     REAL(wp)     ::  t_surface !< air temperature at the surface
 
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  p_hydrostatic !< hydrostatic pressure
@@ -1479,6 +1480,20 @@
 !--       Initialize surface variables, e.g. friction velocity, momentum 
 !--       fluxes, etc. 
           CALL init_surfaces
+
+!--       Initialize bubble initial condition
+          IF ( bubble_radius /= 9999999.9_wp .AND. bubble_radius /= 0 ) THEN
+             DO k = nzb, nzt
+                DO j = nys, nyn
+                   DO i = nxl, nzr
+                      bubble_dr = ( ( dx*i - bubble_center_x ) ^ 2.0_wp +         &
+                           ( dy*j - bubble_center_y ) ^ 2.0_wp +                  &
+                           ( zu(k) - bubble_center_z ) ^ 2.0_wp ) ^ 0.5_wp
+                      sa(k,j,i) = min(0,bubble_pt*cos(pi*bubble_dr/bubble_radius))
+                   ENDDO
+                ENDDO
+             ENDDO
+          ENDIF
 
           CALL location_message( 'finished', .TRUE. )
 

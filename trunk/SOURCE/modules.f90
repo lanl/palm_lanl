@@ -1276,6 +1276,7 @@
     LOGICAL ::  bc_ns_cyc = .TRUE.                               !< north-south boundary condition cyclic?
     LOGICAL ::  bc_ns_dirrad = .FALSE.                           !< north-south boundary condition dirichlet/radiation?
     LOGICAL ::  bc_ns_raddir = .FALSE.                           !< north-south boundary condition radiation/dirichlet?
+    LOGICAL ::  bubble_initial_condition = .FALSE.               !< namelist parameter
     LOGICAL ::  calc_soil_moisture_during_spinup = .FALSE.       !< namelist parameter
     LOGICAL ::  call_microphysics_at_all_substeps = .FALSE.      !< namelist parameter
     LOGICAL ::  call_psolver_at_all_substeps = .TRUE.            !< namelist parameter
@@ -1416,6 +1417,12 @@
     REAL(wp) ::  bc_q_t_val                                    !< vertical gradient of humidity near domain top
     REAL(wp) ::  bc_s_t_val                                    !< vertical gradient of passive scalar near domain top
     REAL(wp) ::  bottom_salinityflux = 0.0_wp                  !< namelist parameter
+    REAL(wp) ::  bubble_center_x = 9999999.9_wp                !< namelist parameter
+    REAL(wp) ::  bubble_center_y = 9999999.9_wp                !< namelist parameter
+    REAL(wp) ::  bubble_center_z = 9999999.9_wp                !< namelist parameter
+    REAL(wp) ::  bubble_radius = 9999999.9_wp                  !< namelist parameter
+    REAL(wp) ::  bubble_pt = 9999999.9_wp                      !< namelist parameter
+    REAL(wp) ::  bubble_sa = 9999999.9_wp                      !< namelist parameter
     REAL(wp) ::  building_height = 50.0_wp                     !< namelist parameter
     REAL(wp) ::  building_length_x = 50.0_wp                   !< namelist parameter
     REAL(wp) ::  building_length_y = 50.0_wp                   !< namelist parameter

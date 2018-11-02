@@ -20,6 +20,9 @@
 ! Current revisions:
 ! -----------------
 ! 
+! 2018-11-01 cbegeman
+! Add checks for bubble initial conditions
+! 
 ! 2018-10-25 cbegeman
 ! Add checks for dirichlet bottom boundary conditions for salinity
 ! 
@@ -1907,6 +1910,58 @@
 !-- In case of using a prandtl-layer, calculated (or prescribed) surface
 !-- fluxes have to be used in the diffusion-terms
     IF ( constant_flux_layer )  use_surface_fluxes = .TRUE.
+
+!-- Check initial conditions for bubble case
+    IF ( bubble_initial_condition ) THEN
+       IF ( bubble_radius == 9999999.9_wp ) THEN
+          message_string = 'bubble_initial_condition is true, so '//           &
+                           'bubble_radius must be specified in namelist'
+          CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
+       ELSEIF ( bubble_radius == 0 ) THEN
+          message_string = 'bubble_radius is zero, so bubble will not be '     &
+                           'initialized'
+          CALL message( message_string, 'PA0562', 0, 2, 0, 6, 0 )
+       ELSEIF ( bubble_radius < 0 ) THEN
+          message_string = 'bubble_radius is negative. please specify a non-'  &
+                           'negative bubble_radius'
+          CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
+       ENDIF
+       IF ( bubble_center_x == 9999999.9_wp ) THEN
+          message_string = 'bubble_initial_condition is true, so '//             &
+                           'bubble_center_x must be specified in namelist'
+          CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
+       ELSEIF ( bubble_center_x > xmax .OR. bubble_center_x < xmin ) THEN
+          message_string = 'bubble_center_x is outside the domain'
+          CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
+       ENDIF
+       IF ( bubble_center_x == 9999999.9_wp ) THEN
+          message_string = 'bubble_initial_condition is true, so '//             &
+                           'bubble_center_x must be specified in namelist'
+          CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
+       ELSEIF ( bubble_center_y > ymax .OR. bubble_center_y < ymin ) THEN
+          message_string = 'bubble_center_y is outside the domain'
+          CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
+       ENDIF
+       IF ( bubble_center_z == 9999999.9_wp ) THEN
+          message_string = 'bubble_initial_condition is true, so '//             &
+                           'bubble_center_z must be specified in namelist'
+          CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
+       ELSEIF ( bubble_center_z > zmax .OR. bubble_center_z < zmin ) THEN
+          message_string = 'bubble_center_z is outside the domain'
+          CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
+       ENDIF
+       IF ( bubble_pt == 9999999.9_wp ) THEN
+          message_string = 'bubble_initial_condition is true, so '//             &
+                           'bubble_pt must be specified in namelist'
+          CALL message( 'check_parameters', 'PA0562', 1, 2, 0, 6, 0 )
+       ENDIF
+       IF ( bubble_sa == 9999999.9_wp .AND. ocean ) THEN
+          message_string = 'bubble_initial_condition is true and it is an '//  &
+                           'ocean case, so bubble_sa must be specified'//      &
+                           ' in namelist'
+          CALL message( 'check_parameters', 'PA0562', 1, 2, 0, 6, 0 )
+       ENDIF
+    ENDIF
 
 !
 !-- Check boundary conditions and set internal variables:

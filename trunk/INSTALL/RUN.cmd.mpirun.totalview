@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # The content of this file is included in the palm_simple_run
 # Please adjust execution parameters as required for your system.
-# PALM needs to be called as: ./palm  < runfile_atmos
+# PALM needs to be called as: ./palm
 # The following environment variables can be used:
 # ${mpi_ranks} is the total number of mpi ranks (option -p)
 # ${mpi_ranks_per_node} is the total number of mpi ranks per node (option -n)
 # ${openmp_threads} is the number of OpenMP threads (option -t)
-# Modified: Carolyn Begeman. Version to be used with totalview.
+# Modified: 2018-11-02 cbegeman. Version to be used with totalview.
 
 export OMP_NUM_THREADS=${openmp_threads}
 echo "       MPI ranks in RUN.cmd: $mpi_ranks"
 
-totalview mpirun -a -n ${mpi_ranks} ./palm  < runfile_atmos
+totalview mpirun -a -n ${mpi_ranks} ./palm

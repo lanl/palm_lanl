@@ -78,7 +78,7 @@
         
     USE kinds
     
-    USE pegridmessage
+    USE pegrid
 
     USE vertical_nesting_mod
 

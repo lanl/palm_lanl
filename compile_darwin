@@ -1,7 +1,7 @@
 #!/bin/bash
 
 repo_path=$PWD
-build_path="/home/qingli/work/palm/run/"
+build_path="/path/to/build/directory/"
 
 export PATH="$repo_path/trunk/SCRIPTS:$PATH"
 module purge

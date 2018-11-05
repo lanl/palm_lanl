@@ -20,6 +20,8 @@
 ! Current revisions:
 ! ------------------
 !
+! 2018-10-25 cbegeman
+! Add dirichlet bottom boundary conditions for salinity
 !
 ! Former revisions:
 ! -----------------
@@ -1111,6 +1113,7 @@
     CHARACTER (LEN=20)   ::  bc_s_b = 'dirichlet'                         !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_s_t = 'initial_gradient'                  !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_sa_t = 'neumann'                          !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_sa_b = 'neumann'                          !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_uv_b = 'dirichlet'                        !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_uv_t = 'dirichlet'                        !< namelist parameter
     CHARACTER (LEN=20)   ::  aerosol_bulk = 'nacl'                        !< namelist parameter
@@ -1183,6 +1186,7 @@
     INTEGER(iwp) ::  ibc_s_b                           !< integer flag for bc_s_b
     INTEGER(iwp) ::  ibc_s_t                           !< integer flag for bc_s_t
     INTEGER(iwp) ::  ibc_sa_t                          !< integer flag for bc_sa_t
+    INTEGER(iwp) ::  ibc_sa_b                          !< integer flag for bc_sa_b
     INTEGER(iwp) ::  ibc_uv_b                          !< integer flag for bc_uv_b
     INTEGER(iwp) ::  ibc_uv_t                          !< integer flag for bc_uv_t
     INTEGER(iwp) ::  inflow_disturbance_begin = -1     !< namelist parameter
@@ -1290,6 +1294,7 @@
     LOGICAL ::  constant_top_heatflux = .TRUE.                   !< heat flux at domain top constant?
     LOGICAL ::  constant_top_momentumflux = .FALSE.              !< momentum flux at domain topconstant?
     LOGICAL ::  constant_top_salinityflux = .TRUE.               !< salinity flux at ocean domain top?
+    LOGICAL ::  constant_bottom_salinityflux = .TRUE.            !< salinity flux at ocean domain bottom?
     LOGICAL ::  constant_top_scalarflux = .TRUE.                 !< passive-scalar flux at domain top constant?
     LOGICAL ::  constant_scalarflux = .TRUE.                     !< passive-scalar flux at surfaces constant?
     LOGICAL ::  constant_waterflux = .TRUE.                      !< water flux at all surfaces constant?

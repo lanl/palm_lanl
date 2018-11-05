@@ -94,13 +94,14 @@ get_number_of_cpu_cores() {
 }
 
 print_help() {
-   echo "Usage: palm_simple_run -b <build-config> -s <script-directory> -w <working-directory> [-x]"
+   echo "Usage: palm_simple_build -b <build-config> -s <script-directory> -w <working-directory> [-D] [-x]"
    echo ""
    echo "List of allowed option:"
    echo ""
    echo "   -b <build-config>   Suffix of any MAKE.inc.<build-config> file in the trunk/INSTALL dir."
    echo "   -s <script-directory> SCRIPTS directory, defaults to ~/palm/current_version/trunk/SCRIPTS"
    echo "   -w <working-directory> directory where model will be built defaults to SCRIPTS/../../"
+   echo "   -D                  Compile in debug mode"
    echo "   -x                  Clean the build directory from last build attempts"
    echo ""
 }
@@ -108,17 +109,19 @@ print_help() {
 build_config=unknown
 location=`pwd`
 SCRIPT_LOCATION=$location/trunk/SCRIPTS
-clean="false"
+clean=false
 work_dir=unknown
+debug_mode=false
 
 # Read shellscript options
-while  getopts  :b:s:w:xh  option
+while  getopts  hDxb:s:w:  option
 do
   case  $option  in
       (b)   build_config=$OPTARG;;
       (s)   SCRIPT_LOCATION=$OPTARG;;
       (w)   work_dir=$OPTARG;;
-      (x)   clean="true";;
+      (D)   debug_mode=true;;
+      (x)   clean=true;;
       (h)   print_help
             exit 0;;
       (\?)  echo "Unknown option -$OPTARG"
@@ -153,7 +156,7 @@ fi
 if [[ ! -d ${build_dir} ]]; then
    mkdir -p ${build_dir}
 else
-   if [[ ${clean} == "true" ]]; then
+   if [[ "$clean" == true ]]; then
       echo "Cleaning the build directory..."
       rm -rf ${build_dir}/*
    fi
@@ -176,7 +179,13 @@ sed  's/#to_be_replaced_by_include/include MAKE.inc/g'  ${build_dir}/Makefile_ut
 rm  ${build_dir}/Makefile_utilities_in
 
 cd ${build_dir}
-make -j $(get_number_of_cpu_cores)
+if [[ "$debug_mode" == true ]]; then
+   echo "Compiling in debug mode"
+   make -j $(get_number_of_cpu_cores) -d
+else
+   echo "Not compiling in debug mode"
+   make -j $(get_number_of_cpu_cores)
+fi
 make -j $(get_number_of_cpu_cores) -f Makefile_utilities
 cd ../
 

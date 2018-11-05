@@ -1424,7 +1424,7 @@
     INTEGER(iwp) ::  m
 
     REAL(wp)     ::  sbt  !<
-    REAL(WP)      ::  wb_sfc, tod,arg1,factor      !< surface buoyancy forcing -- only matters for ocean
+    REAL(WP)      ::  wb_sfc, tod,arg1      !< surface buoyancy forcing -- only matters for ocean
 
 
 !
@@ -1759,15 +1759,6 @@
                 ENDIF
           enddo
        enddo
-
-       if (simulated_time < 86400.) then
-         factor = -(1.0_wp + simulated_time / 43200.0)
-       else
-         factor = 1.0_wp
-       endif
-
-       print *, 'maxmin = ',maxval(surf_def_h(2)%shf_sol),minval(surf_def_h(2)%shf_sol)
-       factor = 1.0_wp
 
        CALL diffusion_s( pt,                                                   &
                          surf_def_h(0)%shf, surf_def_h(1)%shf,                 &

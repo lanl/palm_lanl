@@ -2,7 +2,13 @@
 
 use_hdf5="True"
 repo_path=$PWD
-build_path="/lustre/scratch3/turquoise/qingli/palm/jobs/diurnal/"
+build_path="/path/to/build/directory/"
+compile_debug="False"
+build_flags=""
+
+if [[ $compile_debug == "True" ]]; then
+    build_flags="-D"
+fi
 
 export PATH="$repo_path/trunk/SCRIPTS:$PATH"
 module purge
@@ -12,10 +18,10 @@ if [[ $use_hdf5 == "True" ]]; then
     module load openmpi/2.1.2
     module load hdf5/1.10.2
     module load netcdf/4.6.1_hdf5
-    palm_simple_build -b ifort.grizzly_hdf5 -w $build_path
+    palm_simple_build -b ifort.grizzly_hdf5 -w $build_path $build_flags
 else
     module load intel/17.0.1
     module load openmpi/1.10.5
     module load netcdf/4.4.1
-    palm_simple_build -b ifort.grizzly -w $build_path
+    palm_simple_build -b ifort.grizzly -w $build_path $build_flags
 fi

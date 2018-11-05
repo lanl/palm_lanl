@@ -20,6 +20,11 @@
 ! Current revisions:
 ! -----------------
 !
+! 2018-10-31 cbegeman
+! Add checks for profile output
+!
+! 2018-10-25 cbegeman
+! Add checks for dirichlet bottom boundary conditions for salinity
 !
 ! Former revisions:
 ! -----------------
@@ -2112,23 +2117,48 @@
           CALL message( 'check_parameters', 'PA0068', 1, 2, 0, 6, 0 )
        ENDIF
 
-       IF ( top_salinityflux == 9999999.9_wp )  constant_top_salinityflux = .FALSE.
+       IF ( bc_sa_b == 'dirichlet' )  THEN
+          ibc_sa_b = 0
+          CALL location_message('ib_sa_b assigned for dirichlet conditions',.TRUE.) !CB
+       ELSEIF ( bc_sa_b == 'neumann' )  THEN
+          ibc_sa_b = 1
+          CALL location_message('ib_sa_b assigned for neumann conditions',.TRUE.) !CB
+       ELSE
+          message_string = 'unknown boundary condition: bc_sa_b = "' //        &
+                           TRIM( bc_sa_b ) // '"'
+          CALL message( 'check_parameters', 'PA0068', 1, 2, 0, 6, 0 )
+       ENDIF
+
        IF ( ibc_sa_t == 1  .AND.  top_salinityflux == 9999999.9_wp )  THEN
           message_string = 'boundary condition: bc_sa_t = "' //                &
                            TRIM( bc_sa_t ) // '" requires to set ' //          &
                            'top_salinityflux'
           CALL message( 'check_parameters', 'PA0069', 1, 2, 0, 6, 0 )
        ENDIF
-
+       IF ( ibc_sa_b == 1  .AND.  bottom_salinityflux == 9999999.9_wp )  THEN
+          message_string = 'boundary condition: bc_sa_b = "' //                &
+                           TRIM( bc_sa_b ) // '" requires to set ' //          &
+                           'bottom_salinityflux'
+          CALL message( 'check_parameters', 'PA0069', 1, 2, 0, 6, 0 )
+       ENDIF
 !
 !--    A fixed salinity at the top implies Dirichlet boundary condition for
 !--    salinity. In this case specification of a constant salinity flux is
 !--    forbidden.
+       IF ( top_salinityflux == 9999999.9_wp )  constant_top_salinityflux = .FALSE.
        IF ( ibc_sa_t == 0  .AND.  constant_top_salinityflux  .AND.             &
             top_salinityflux /= 0.0_wp )  THEN
           message_string = 'boundary condition: bc_sa_t = "' //                &
                            TRIM( bc_sa_t ) // '" is not allowed with ' //      &
                            'top_salinityflux /= 0.0'
+          CALL message( 'check_parameters', 'PA0070', 1, 2, 0, 6, 0 )
+       ENDIF
+       IF ( bottom_salinityflux == 9999999.9_wp )  constant_bottom_salinityflux = .FALSE.
+       IF ( ibc_sa_b == 0  .AND.  constant_bottom_salinityflux  .AND.             &
+            bottom_salinityflux /= 0.0_wp )  THEN
+          message_string = 'boundary condition: bc_sa_b = "' //                &
+                           TRIM( bc_sa_t ) // '" is not allowed with ' //      &
+                           'bottom_salinityflux /= 0.0'
           CALL message( 'check_parameters', 'PA0070', 1, 2, 0, 6, 0 )
        ENDIF
 
@@ -3326,6 +3356,21 @@
              k = 1                                             ! 2d data
              var = data_output(i)(1:ilen-3)
           ENDIF
+
+!--       Make sure that section_nn is defined
+          IF ( (data_output(i)(ilen-2:ilen) == '_xy') .AND. ( (section_xy(i) == -9999) ) ) THEN
+             message_string = 'to output _xy variables, the depth of at least one xy_section must be specified via the namelist parameter section_xy'
+             CALL message( 'check_parameters', 'PA0561', 1, 2, 0, 6, 0 )
+          ENDIF
+          IF ( (data_output(i)(ilen-2:ilen) == '_xz') .AND. ( (section_xz(i) == -9999) ) ) THEN
+             message_string = 'to output _xz variables, the depth of at least one xz_section must be specified via the namelist parameter section_xz'
+             CALL message( 'check_parameters', 'PA0561', 1, 2, 0, 6, 0 )
+          ENDIF
+          IF ( (data_output(i)(ilen-2:ilen) == '_yz') .AND. ( (section_yz(i) == -9999) ) ) THEN
+             message_string = 'to output _yz variables, the depth of at least one yz_section must be specified via the namelist parameter section_yz'
+             CALL message( 'check_parameters', 'PA0561', 1, 2, 0, 6, 0 )
+          ENDIF
+
        ENDIF
 
 !

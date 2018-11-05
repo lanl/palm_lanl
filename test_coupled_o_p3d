@@ -48,6 +48,7 @@
         dt_data_output = 3600.0,
         dt_dopr = 3600.0,
         dt_data_output_av = 3600.,
+        section_xy = 32,
 
         data_output = 'shf*_xy', 'e', 'pt', 'sa', 'u', 'v', 'w', 'rho_ocean', 'alpha_T',
 

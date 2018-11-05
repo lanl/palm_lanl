@@ -1762,7 +1762,7 @@
 
        CALL diffusion_s( pt,                                                   &
                          surf_def_h(0)%shf, surf_def_h(1)%shf,                 &
-                         surf_def_h(2)%shf*factor,                                    &
+                         surf_def_h(2)%shf,                                    &
                          surf_lsm_h%shf,    surf_usm_h%shf,                    &
                          surf_def_v(0)%shf, surf_def_v(1)%shf,                 &
                          surf_def_v(2)%shf, surf_def_v(3)%shf,                 &

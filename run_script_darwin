@@ -10,7 +10,7 @@ test_case="test_oceanml"
 run_config="mpirun"
 openmp_threads=1
 repo_path=$PWD
-exec_path="/home/qingli/work/palm/run/"
+exec_path="/path/to/build/directory"
 
 repo_path=$PWD
 cd $SLURM_SUBMIT_DIR

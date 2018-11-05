@@ -8,5 +8,5 @@
 # ${openmp_threads} is the number of OpenMP threads (option -t)
 
 export OMP_NUM_THREADS=${openmp_threads}
-mpirun -n ${mpi_ranks}  ./palm
+mpirun -n ${mpi_ranks} ./palm
 ./combine_plot_fields.x

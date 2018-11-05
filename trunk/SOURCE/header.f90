@@ -567,6 +567,10 @@
        run_classification = 'run additionally initialized by a Rankine-vortex'
     ELSEIF ( INDEX( initializing_actions, 'initialize_ptanom' ) /=0 )  THEN
        run_classification = 'run additionally initialized by temperature anomaly'
+    ELSEIF ( INDEX( initializing_actions, 'initialize_2D_bubble' ) /=0 )  THEN
+       run_classification = 'run additionally initialized by 2D bubble'
+    ELSEIF ( INDEX( initializing_actions, 'initialize_3D_bubble' ) /=0 )  THEN
+       run_classification = 'run additionally initialized by 3D bubble'
     ELSE
        message_string = ' unknown action(s): ' // TRIM( initializing_actions )
        CALL message( 'header', 'PA0191', 0, 0, 0, 6, 0 )

@@ -602,7 +602,6 @@
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  ngp_2dh_outer_l    !<
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  ngp_2dh_s_inner_l  !<
 
-    REAL(wp)     ::  bubble_dr !< distance from the center of the bubble
     REAL(wp)     ::  t_surface !< air temperature at the surface
 
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  p_hydrostatic !< hydrostatic pressure
@@ -1481,22 +1480,6 @@
 !--       fluxes, etc. 
           CALL init_surfaces
 
-!--       Initialize bubble initial condition
-          IF ( bubble_radius /= 9999999.9_wp .AND. bubble_radius /= 0 ) THEN
-             DO k = nzb, nzt
-                DO j = nys, nyn
-                   DO i = nxl, nzr
-                      bubble_dr = ( ( dx*i - bubble_center_x ) ^ 2.0_wp +         &
-                           ( dy*j - bubble_center_y ) ^ 2.0_wp +                  &
-                           ( zu(k) - bubble_center_z ) ^ 2.0_wp ) ^ 0.5_wp
-                      sa(k,j,i) = min(0,bubble_pt*cos(pi*bubble_dr/bubble_radius))
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
-
-          CALL location_message( 'finished', .TRUE. )
-
        ELSEIF ( INDEX(initializing_actions, 'by_user') /= 0 )                  &
        THEN
 
@@ -1624,6 +1607,7 @@
 !
 !--    Impose vortex with vertical axis on the initial velocity profile
        IF ( INDEX( initializing_actions, 'initialize_vortex' ) /= 0 )  THEN
+          CALL location_message('initializing vortex',.TRUE.)
           CALL init_rankine
        ENDIF
 
@@ -1631,7 +1615,9 @@
 !--    Impose temperature anomaly (advection test only) or warm air bubble 
 !--    close to surface
        IF ( INDEX( initializing_actions, 'initialize_ptanom' ) /= 0  .OR.  &
-            INDEX( initializing_actions, 'initialize_bubble' ) /= 0  )  THEN
+            INDEX( initializing_actions, 'initialize_2D_bubble' ) /= 0  .OR. &
+            INDEX( initializing_actions, 'initialize_3D_bubble' ) /= 0 .OR. &
+            bubble_initial_condition )  THEN
           CALL init_pt_anomaly
        ENDIF
        

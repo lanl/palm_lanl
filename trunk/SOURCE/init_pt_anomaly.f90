@@ -72,7 +72,10 @@
  
 
     USE arrays_3d,                                                             &
-        ONLY:  pt, zu
+        ONLY:  pt, sa, zu
+
+    USE constants,                                                             &
+        ONLY:  pi
 
     USE control_parameters    
         
@@ -94,10 +97,11 @@
     INTEGER(iwp) ::  kc !< center index along z
     
     REAL(wp)     ::  amount                               !< amount of temperature perturbation
-    REAL(wp)     ::  bubble_center_y                      !< center of bubble in y
-    REAL(wp)     ::  bubble_center_z = 170.0              !< center of bubble in z
+!    REAL(wp)     ::  bubble_center_y                      !< center of bubble in y
+!    REAL(wp)     ::  bubble_center_z = 170.0              !< center of bubble in z
     REAL(wp)     ::  bubble_sigma_y = 300.0               !< width of bubble in y
     REAL(wp)     ::  bubble_sigma_z = 150.0               !< width of bubble in z
+    REAL(wp)     ::  bubble_dr                            !< distance from the center of the bubble
     REAL(wp)     ::  initial_temperature_difference = 0.4 !< temperature perturbation for bubble in K
     REAL(wp)     ::  radius                               !< radius of pt anomaly
     REAL(wp)     ::  rc                                   !< radius of pt anomaly
@@ -139,7 +143,9 @@
 !
 !-- Initialize warm air bubble close to surface and homogenous elegonated 
 !-- along x-Axis
-    ELSEIF ( INDEX( initializing_actions, 'initialize_bubble' ) /= 0 )  THEN
+    ELSEIF ( INDEX( initializing_actions, 'initialize_2D_bubble' ) /= 0 )  THEN
+
+       CALL location_message('initializing 2D bubble',.TRUE.)
 !
 !--    Calculate y-center of model domain
        bubble_center_y = ( ny + 1.0 ) * dy / 2.0
@@ -158,6 +164,36 @@
              ENDDO
           ENDDO
        ENDDO
+
+    ELSEIF ( INDEX( initializing_actions, 'initialize_3D_bubble' ) /= 0 .OR.    &
+             bubble_initial_condition )  THEN
+
+       IF ( bubble_radius /= 9999999.9_wp .AND. bubble_radius /= 0 ) THEN
+
+          CALL location_message('initializing 3D bubble',.TRUE.)
+
+          DO k = nzb, nzt
+             DO j = nys, nyn
+                DO i = nxl, nxr
+
+                   bubble_dr = ( ( dx*i - bubble_center_x )**2.0_wp +         &
+                           ( dy*j - bubble_center_y )**2.0_wp +               &
+                           ( zu(k) - bubble_center_z )**2.0_wp )**0.5_wp
+
+                   WRITE(message_string,*) 'dvar(',k,',',j,',',i,',',') = ampl*cos(pi*',bubble_dr/bubble_radius,')'
+                   CALL location_message(message_string,.TRUE.)
+
+                   pt(k,j,i) = pt(k,j,i) + min(0.0_wp,bubble_pt*cos(pi*bubble_dr/bubble_radius))
+
+                   IF ( ocean ) THEN                                           
+                      sa(k,j,i) = sa(k,j,i) + min(0.0_wp,bubble_sa*cos(pi*bubble_dr/bubble_radius))
+                   ENDIF
+
+                ENDDO
+             ENDDO
+          ENDDO
+       ENDIF
+
     ENDIF
 
 !

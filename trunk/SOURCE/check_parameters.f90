@@ -1391,7 +1391,7 @@
 
              CASE ( 'set_constant_profiles', 'set_1d-model_profiles',          &
                     'by_user', 'initialize_vortex', 'initialize_ptanom',       &
-                    'initialize_bubble', 'inifor' )
+                    'initialize_2D_bubble', 'initialize_3D_bubble', 'inifor' )
                 action = action(position+1:)
 
              CASE DEFAULT
@@ -1912,52 +1912,59 @@
     IF ( constant_flux_layer )  use_surface_fluxes = .TRUE.
 
 !-- Check initial conditions for bubble case
-    IF ( bubble_initial_condition ) THEN
+    IF ( INDEX( initializing_actions, 'initialize_2D_bubble' ) /= 0 .OR. bubble_initial_condition) THEN
+       IF ( bubble_center_z == 9999999.9_wp ) THEN
+          message_string = 'initializing_actions includes initialize_2D_bubble,'//&
+                           ' so bubble_center_z must be specified in namelist'
+          CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
+       ENDIF
+    ENDIF
+    IF ( INDEX( initializing_actions, 'initialize_3D_bubble' ) /= 0 .OR. bubble_initial_condition) THEN
        IF ( bubble_radius == 9999999.9_wp ) THEN
-          message_string = 'bubble_initial_condition is true, so '//           &
+          message_string = 'initializing_actions includes initialize_3D_bubble, so '// &
                            'bubble_radius must be specified in namelist'
           CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
        ELSEIF ( bubble_radius == 0 ) THEN
-          message_string = 'bubble_radius is zero, so bubble will not be '     &
+          message_string = 'bubble_radius is zero, so bubble will not be '//     &
                            'initialized'
           CALL message( message_string, 'PA0562', 0, 2, 0, 6, 0 )
        ELSEIF ( bubble_radius < 0 ) THEN
-          message_string = 'bubble_radius is negative. please specify a non-'  &
+          message_string = 'bubble_radius is negative. please specify a non-'//  &
                            'negative bubble_radius'
           CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
        ENDIF
        IF ( bubble_center_x == 9999999.9_wp ) THEN
-          message_string = 'bubble_initial_condition is true, so '//             &
+          message_string = 'initializing_actions includes initialize_3D_bubble, so '// &
                            'bubble_center_x must be specified in namelist'
           CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
-       ELSEIF ( bubble_center_x > xmax .OR. bubble_center_x < xmin ) THEN
-          message_string = 'bubble_center_x is outside the domain'
+       ELSEIF ( bubble_center_x > nx*dx .OR. bubble_center_x < 0.0_wp ) THEN
+          WRITE(message_string,*) 'bubble_center_x is outside the domain, x>',nx*dx
           CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
        ENDIF
        IF ( bubble_center_x == 9999999.9_wp ) THEN
-          message_string = 'bubble_initial_condition is true, so '//             &
+          message_string = 'initializing_actions includes initialize_3D_bubble, so '// &
                            'bubble_center_x must be specified in namelist'
           CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
-       ELSEIF ( bubble_center_y > ymax .OR. bubble_center_y < ymin ) THEN
+       ELSEIF ( bubble_center_y > ny*dy .OR. bubble_center_y < 0.0_wp ) THEN
           message_string = 'bubble_center_y is outside the domain'
           CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
        ENDIF
        IF ( bubble_center_z == 9999999.9_wp ) THEN
-          message_string = 'bubble_initial_condition is true, so '//             &
+          message_string = 'initializing_actions includes initialize_3D_bubble, so '// &
                            'bubble_center_z must be specified in namelist'
           CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
-       ELSEIF ( bubble_center_z > zmax .OR. bubble_center_z < zmin ) THEN
+       ELSEIF ( bubble_center_z > zu(nzt) .OR. bubble_center_z < zu(nzb) ) THEN
           message_string = 'bubble_center_z is outside the domain'
           CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
        ENDIF
        IF ( bubble_pt == 9999999.9_wp ) THEN
-          message_string = 'bubble_initial_condition is true, so '//             &
+          message_string = 'initializing_actions includes initialize_3D_bubble, so '// &
                            'bubble_pt must be specified in namelist'
           CALL message( 'check_parameters', 'PA0562', 1, 2, 0, 6, 0 )
        ENDIF
        IF ( bubble_sa == 9999999.9_wp .AND. ocean ) THEN
-          message_string = 'bubble_initial_condition is true and it is an '//  &
-                           'ocean case, so bubble_sa must be specified'//      &
+          message_string = 'initializing_actions includes initialize_3D_bubble '//  &
+                           'and it is an ocean case, so bubble_sa must be specified'// &
                            ' in namelist'
           CALL message( 'check_parameters', 'PA0562', 1, 2, 0, 6, 0 )
        ENDIF

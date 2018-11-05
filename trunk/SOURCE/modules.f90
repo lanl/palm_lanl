@@ -929,20 +929,13 @@
 
     REAL(wp), DIMENSION(:,:,:,:), ALLOCATABLE ::  tri    !<  array to hold the tridiagonal matrix for solution of the Poisson equation in Fourier space (4th dimension for threads)
 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  rho_air      !< air density profile on the uv grid
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  rho_air_zw   !< air density profile on the w grid
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  drho_air     !< inverse air density profile on the uv grid
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  drho_air_zw  !< inverse air density profile on the w grid
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  rho_ref_uv      !< air density profile on the uv grid
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  rho_ref_zw   !< air density profile on the w grid
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  drho_ref_uv     !< inverse air density profile on the uv grid
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  drho_ref_zw  !< inverse air density profile on the w grid
 
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  rho_air_mg     !< air density profiles on the uv grid for multigrid
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  rho_air_zw_mg  !< air density profiles on the w grid for multigrid
-
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  heatflux_input_conversion       !< conversion factor array for heatflux input
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  waterflux_input_conversion      !< conversion factor array for waterflux input
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  momentumflux_input_conversion   !< conversion factor array for momentumflux input
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  heatflux_output_conversion      !< conversion factor array for heatflux output
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  waterflux_output_conversion     !< conversion factor array for waterflux output
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  momentumflux_output_conversion  !< conversion factor array for momentumflux output
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  rho_ref_mg     !< air density profiles on the uv grid for multigrid
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  rho_ref_zw_mg  !< air density profiles on the w grid for multigrid
 
     SAVE
 
@@ -1058,7 +1051,7 @@
     REAL(wp) ::  adv_sca_1            !< 1/2 - constant used in 5th-order advection scheme for scalar advection (1st-order part)
     REAL(wp) ::  adv_sca_3            !< 1/12 - constant used in 5th-order advection scheme for scalar advection (3rd-order part)
     REAL(wp) ::  adv_sca_5            !< 1/60 - constant used in 5th-order advection scheme for scalar advection (5th-order part)
-
+    REAL(wp) ::  cpw = 4218.0_wp      !< heat capacity of water at constant pressure
     SAVE
 
  END MODULE constants
@@ -1517,6 +1510,7 @@
     REAL(wp) ::  restart_time = 9999999.9_wp                   !< namelist parameter
     REAL(wp) ::  rho_reference                                 !< reference state of density
     REAL(wp) ::  rho_surface                                   !< surface value of density
+    REAL(wp) ::  rho_init_surface                              !< initial surface value of density defined by EOS
     REAL(wp) ::  roughness_length = 0.1_wp                     !< namelist parameter
     REAL(wp) ::  sa_surface = 35.0_wp                          !< namelist parameter
     REAL(wp) ::  simulated_time = 0.0_wp                       !< elapsed simulated time

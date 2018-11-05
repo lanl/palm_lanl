@@ -520,7 +520,7 @@
     SUBROUTINE stokes_pressure_head
 
        USE arrays_3d,                                                          &
-           ONLY:  p, u, v, u_stk, v_stk, rho_air
+           ONLY:  p, u, v, u_stk, v_stk, rho_ref_uv
 
        USE indices,                                                            &
            ONLY:  nxl, nxr, nyn, nys, nzb, nzt, wall_flags_0
@@ -535,8 +535,8 @@
 
        REAL(wp)     ::  flag       !< flag to mask topography
 
-! TODO: Check if the stokes pressure head is correctly scaled by rho_air,
-!       as rho_air is used in pres.f90 to calculate p
+! TODO: Check if the stokes pressure head is correctly scaled by rho_ref_uv,
+!       as rho_ref_uv is used in pres.f90 to calculate p
 !       <20180926, Qing Li> !
 !
 !--    Update perturbation pressure
@@ -547,7 +547,7 @@
 !--             Predetermine flag to mask topography
                 flag = MERGE( 1.0_wp, 0.0_wp,                                  &
                            BTEST( wall_flags_0(k,j,i), 0 ) )
-                p(k,j,i) = p(k,j,i) - 0.5_wp * rho_air(k) *                    &
+                p(k,j,i) = p(k,j,i) - 0.5_wp * rho_ref_uv(k) *                    &
                            ( ( u(k,j,i) + u(k,j,i+1) ) * u_stk(k) +            &
                              ( v(k,j,i) + v(k,j+1,i) ) * v_stk(k) +            &
                              u_stk(k)**2 + v_stk(k)**2                         &

@@ -98,10 +98,13 @@
  
 
     USE arrays_3d,                                                             &
-        ONLY:  pt, rho_ocean, sa, total_2d_a, total_2d_o, u, v
+        ONLY:  pt, rho_ocean, sa, total_2d_a, total_2d_o, u, v, rho_ref_uv
 
     USE cloud_parameters,                                                      &
         ONLY:  cp, l_v
+
+    USE constants,                                                             &
+        ONLY:  cpw
 
     USE control_parameters,                                                    &
         ONLY:  coupling_mode, coupling_mode_remote, coupling_topology,         &
@@ -114,7 +117,7 @@
 
     USE indices,                                                               &
         ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, nx_a, nx_o, ny, nyn, nyng, nys, &
-               nysg, ny_a, ny_o, nzt
+               nysg, ny_a, ny_o, nzt, nzb
 
     USE kinds
 
@@ -129,9 +132,10 @@
     INTEGER(iwp) ::  j                                    !< index variable y-direction 
     INTEGER(iwp) ::  m                                    !< running index for surface elements
 
-    REAL(wp)    ::  cpw = 4218.0_wp                       !< heat capacity of water at constant pressure
     REAL(wp)    ::  time_since_reference_point_rem        !< 
     REAL(wp)    ::  total_2d(-nbgp:ny+nbgp,-nbgp:nx+nbgp) !< 
+    REAL(wp)    ::  rho_air_ref                           !< reference air density on surface
+    REAL(wp)    ::  rho_ocean_ref                         !< reference ocean density on surface
 
     REAL(wp), DIMENSION(nysg:nyng,nxlg:nxrg) ::  surface_flux !< dummy array for surface fluxes on 2D grid
 
@@ -349,6 +353,32 @@
 
        ENDIF
 
+!--    Receive rho_ref_uv(nzt) from the ocean
+       IF ( myid == 0 )  THEN
+          CALL MPI_RECV( rho_ocean_ref, 1, MPI_REAL, &
+                            target_id, 19, comm_inter, status, ierr )
+       ENDIF
+
+!--    Send rho_ref_uv(nzb) to the ocean
+       CALL MPI_SEND( rho_ref_uv(nzb), 1, MPI_REAL, target_id, &
+                      20, comm_inter, ierr )
+
+       CALL MPI_BARRIER( comm2d, ierr )
+       CALL MPI_BCAST( rho_ocean_ref, 1, MPI_REAL, 0, comm2d, &
+                          ierr )
+
+!
+!--    Conversions of fluxes received from ocean
+
+       DO  m = 1, surf_def_h(0)%ns
+
+          surf_def_h(2)%shf(m) = surf_def_h(2)%shf(m) * rho_ref_uv(nzb) / rho_ocean_ref
+          surf_def_h(2)%ssws(m) = surf_def_h(2)%ssws(m) * rho_ref_uv(nzb) / rho_ocean_ref
+          surf_def_h(2)%usws(m) = surf_def_h(2)%usws(m) * rho_ref_uv(nzb) / rho_ocean_ref
+          surf_def_h(2)%vsws(m) = surf_def_h(2)%vsws(m) * rho_ref_uv(nzb) / rho_ocean_ref
+
+       ENDDO
+
     ELSEIF ( coupling_mode == 'ocean_to_atmosphere' )  THEN
 
 !
@@ -464,46 +494,51 @@
         
        ENDIF
 
+!--    Send rho_ref_uv(nzt) to the atmosphere
+       CALL MPI_SEND( rho_ref_uv(nzt), 1, MPI_REAL, target_id, &
+                      19, comm2d, ierr )
+
+!--    Receive rho_ref_uv(nzb) from the atmosphere
+       IF ( myid == 0 )  THEN
+          CALL MPI_RECV( rho_air_ref, 1, MPI_REAL, &
+                            target_id, 20, comm2d, status, ierr )
+       ENDIF
+       CALL MPI_BARRIER( comm2d, ierr )
+       CALL MPI_BCAST( rho_air_ref, 1, MPI_REAL, 0, comm_inter, &
+                          ierr )
+
 !
 !--    Conversions of fluxes received from atmosphere
-       IF ( humidity_remote )  THEN
+
+       DO  m = 1, surf_def_h(2)%ns
+
+          surf_def_h(2)%shf(m) = surf_def_h(2)%shf(m) * rho_ref_uv(nzt) / rho_air_ref
+          surf_def_h(2)%sasws(m) = surf_def_h(2)%sasws(m) * rho_ref_uv(nzt) / rho_air_ref
+
+          IF ( humidity_remote )  THEN
 !
-!--       Here top heat flux is still the sum of atmospheric bottom heat fluxes,
-!--       * latent heat of vaporization in m2/s2, or 540 cal/g, or 40.65 kJ/mol
-!--       /(rho_atm(=1.0)*c_p)
-          DO  m = 1, surf_def_h(2)%ns
-             i = surf_def_h(2)%i(m)
-             j = surf_def_h(2)%j(m)
-             
-             surf_def_h(2)%shf(m) = surf_def_h(2)%shf(m) +                     &
-                                    surf_def_h(2)%qsws(m) * l_v / cp
-!
+!--          Here top heat flux is still the sum of atmospheric bottom heat fluxes,
+!--          * latent heat of vaporization in m2/s2, or 540 cal/g, or 40.65 kJ/mol
+!--          /(rho_atm(=1.0)*c_p)
+             surf_def_h(2)%shf(m) = surf_def_h(2)%shf(m) +                       &
+                                    surf_def_h(2)%qsws(m) * rho_ref_uv(nzt) / rho_air_ref
 !--          ...and convert it to a salinity flux at the sea surface (top)
 !--          following Steinhorn (1991), JPO 21, pp. 1681-1683:
 !--          S'w' = -S * evaporation / ( rho_water * ( 1 - S ) )
-             surf_def_h(2)%sasws(m) = -1.0_wp * sa(nzt,j,i) * 0.001_wp *       &
-                                      surf_def_h(2)%qsws(m) /                  &
-                                    ( rho_ocean(nzt,j,i) *                     &
-                                      ( 1.0_wp - sa(nzt,j,i) * 0.001_wp )      &
-                                    )
-          ENDDO
-       ENDIF
+             surf_def_h(2)%sasws(m) = surf_def_h(2)%sasws(m) +                   &
+                                      -1.0_wp * sa(nzt,j,i) * 0.001_wp *         &
+                                         rho_air_ref * surf_def_h(2)%qsws(m) /   &
+                                       ( rho_ocean(nzt,j,i) *                    &
+                                         ( 1.0_wp - sa(nzt,j,i) * 0.001_wp ) )
+          ENDIF
 
-!
-!--    Adjust the kinematic heat flux with respect to ocean density
-!--    (constants are the specific heat capacities for air and water), as well 
-!--    as momentum fluxes 
-       DO  m = 1, surf_def_h(2)%ns
-          i = surf_def_h(2)%i(m)
-          j = surf_def_h(2)%j(m)
-          surf_def_h(2)%shf(m) = surf_def_h(2)%shf(m) / rho_ocean(nzt,j,i) *   &
-                                 cp / cpw
+          surf_def_h(2)%ssws(m) = surf_def_h(2)%ssws(m) * rho_ref_uv(nzt) / rho_air_ref
+          surf_def_h(2)%usws(m) = surf_def_h(2)%usws(m) * rho_ref_uv(nzt) / rho_air_ref
+          surf_def_h(2)%vsws(m) = surf_def_h(2)%vsws(m) * rho_ref_uv(nzt) / rho_air_ref
 
-          surf_def_h(2)%usws(m) = surf_def_h(2)%usws(m) / rho_ocean(nzt,j,i)
-          surf_def_h(2)%vsws(m) = surf_def_h(2)%vsws(m) / rho_ocean(nzt,j,i)
        ENDDO
 
-    ENDIF
+    ENDIF ! ocean-to-atmosphere
 
     IF ( coupling_topology == 1 )  THEN
        DEALLOCATE( total_2d_o, total_2d_a )

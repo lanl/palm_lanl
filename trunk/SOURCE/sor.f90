@@ -70,7 +70,7 @@
  SUBROUTINE sor( d, ddzu, ddzw, p )
 
     USE arrays_3d,                                                             &
-        ONLY:  rho_air, rho_air_zw
+        ONLY:  rho_ref_uv, rho_ref_zw
 
     USE grid_variables,                                                        &
         ONLY:  ddx2, ddy2
@@ -84,7 +84,7 @@
         ONLY:  bc_lr_cyc, bc_ns_cyc, force_bound_l, force_bound_n,             &
                force_bound_r, force_bound_s, ibc_p_b, ibc_p_t, inflow_l,       &
                inflow_n, inflow_r, inflow_s, nest_bound_l, nest_bound_n,       &
-               nest_bound_r, nest_bound_s, n_sor, omega_sor, outflow_l,        &
+               nest_bound_r, nest_bound_s, n_sor, ocean, omega_sor, outflow_l, &
                outflow_n, outflow_r, outflow_s
 
     IMPLICIT NONE
@@ -113,9 +113,9 @@
 !
 !-- Compute pre-factors.
     DO  k = 1, nz
-         f2(k) = ddzu(k+1) * ddzw(k) * rho_air_zw(k)
-         f3(k) = ddzu(k)   * ddzw(k) * rho_air_zw(k-1)
-         f1(k) = 2.0_wp * ( ddx2 + ddy2 ) * rho_air(k) + f2(k) + f3(k)
+       f2(k) = ddzu(k+1) * ddzw(k) * rho_ref_zw(k)
+       f3(k) = ddzu(k)   * ddzw(k) * rho_ref_zw(k-1)
+       f1(k) = 2.0_wp * ( ddx2 + ddy2 ) * rho_ref_uv(k) + f2(k) + f3(k)
     ENDDO
 
 !
@@ -143,8 +143,8 @@
           DO  j = nys2, nyn, 2
              DO  k = nzb+1, nzt
                 p(k,j,i) = p(k,j,i) + omega_sor / f1(k) * (            &
-                           rho_air(k) * ddx2 * ( p(k,j,i+1) + p(k,j,i-1) ) +   &
-                           rho_air(k) * ddy2 * ( p(k,j+1,i) + p(k,j-1,i) ) +   &
+                           rho_ref_uv(k) * ddx2 * ( p(k,j,i+1) + p(k,j,i-1) ) +   &
+                           rho_ref_uv(k) * ddy2 * ( p(k,j+1,i) + p(k,j-1,i) ) +   &
                            f2(k) * p(k+1,j,i)                              +   &
                            f3(k) * p(k-1,j,i)                              -   &
                            d(k,j,i)                                        -   &
@@ -157,8 +157,8 @@
           DO  j = nys1, nyn, 2
              DO  k = nzb+1, nzt
                 p(k,j,i) = p(k,j,i) + omega_sor / f1(k) * (                    &
-                           rho_air(k) * ddx2 * ( p(k,j,i+1) + p(k,j,i-1) ) +   &
-                           rho_air(k) * ddy2 * ( p(k,j+1,i) + p(k,j-1,i) ) +   &
+                           rho_ref_uv(k) * ddx2 * ( p(k,j,i+1) + p(k,j,i-1) ) +   &
+                           rho_ref_uv(k) * ddy2 * ( p(k,j+1,i) + p(k,j-1,i) ) +   &
                            f2(k) * p(k+1,j,i)                              +   &
                            f3(k) * p(k-1,j,i)                              -   &
                            d(k,j,i)                                        -   &
@@ -192,8 +192,8 @@
           DO  j = nys1, nyn, 2
              DO  k = nzb+1, nzt
                 p(k,j,i) = p(k,j,i) + omega_sor / f1(k) * (            &
-                           rho_air(k) * ddx2 * ( p(k,j,i+1) + p(k,j,i-1) ) +   &
-                           rho_air(k) * ddy2 * ( p(k,j+1,i) + p(k,j-1,i) ) +   &
+                           rho_ref_uv(k) * ddx2 * ( p(k,j,i+1) + p(k,j,i-1) ) +   &
+                           rho_ref_uv(k) * ddy2 * ( p(k,j+1,i) + p(k,j-1,i) ) +   &
                            f2(k) * p(k+1,j,i)                              +   &
                            f3(k) * p(k-1,j,i)                              -   &
                            d(k,j,i)                                        -   &
@@ -206,8 +206,8 @@
           DO  j = nys2, nyn, 2
              DO  k = nzb+1, nzt
                 p(k,j,i) = p(k,j,i) + omega_sor / f1(k) * (            &
-                           rho_air(k) * ddx2 * ( p(k,j,i+1) + p(k,j,i-1) ) +   &
-                           rho_air(k) * ddy2 * ( p(k,j+1,i) + p(k,j-1,i) ) +   &
+                           rho_ref_uv(k) * ddx2 * ( p(k,j,i+1) + p(k,j,i-1) ) +   &
+                           rho_ref_uv(k) * ddy2 * ( p(k,j+1,i) + p(k,j-1,i) ) +   &
                            f2(k) * p(k+1,j,i)                              +   &
                            f3(k) * p(k-1,j,i)                              -   &
                            d(k,j,i)                                        -   &

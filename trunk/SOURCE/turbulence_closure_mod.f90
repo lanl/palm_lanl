@@ -19,8 +19,10 @@
 !
 ! Current revisions:
 ! -----------------
-!
-!
+! 
+! 2018-10-22 cbegeman
+! Changed definition of buoyancy fluxes for ocean cases
+! 
 ! Former revisions:
 ! -----------------
 ! $Id: turbulence_closure_mod.f90 3086 2018-06-25 09:08:04Z gronemeier $
@@ -113,8 +115,8 @@
 
 #if defined( __nopointer )
     USE arrays_3d,                                                             &
-        ONLY:  diss, diss_p, dzu, e, e_p, kh, km,                              &
-               mean_inflow_profiles, prho, pt, tdiss_m, te_m, tend, u, v, vpt, w
+        ONLY:  diss, diss_p, dzu, e, e_p, kh, km, mean_inflow_profiles, prho,  &
+               pt, tdiss_m, te_m, tend, u, v, vpt, w
 #else
     USE arrays_3d,                                                             &
         ONLY:  diss, diss_1, diss_2, diss_3, diss_p, dzu, e, e_1, e_2, e_3,    &
@@ -1937,7 +1939,7 @@
  SUBROUTINE production_e_init
 
     USE arrays_3d,                                                             &
-        ONLY:  drho_air_zw, zu
+        ONLY:  drho_ref_zw, zu
 
     USE control_parameters,                                                    &
         ONLY:  constant_flux_layer
@@ -1977,11 +1979,11 @@
 !--       interpolation of km onto the u/v-grid is necessary. However, the
 !--       effect of this error is negligible.
           surf_def_h(0)%u_0(m) = u(k+1,j,i) + surf_def_h(0)%usws(m) *          &
-                                     drho_air_zw(k-1) *                        &
+                                     drho_ref_zw(k-1) *                        &
                                      ( zu(k+1)    - zu(k-1)    )  /            &
                                      ( km(k,j,i)  + 1.0E-20_wp )
           surf_def_h(0)%v_0(m) = v(k+1,j,i) + surf_def_h(0)%vsws(m) *          &
-                                     drho_air_zw(k-1) *                        &
+                                     drho_ref_zw(k-1) *                        &
                                      ( zu(k+1)    - zu(k-1)    )  /            &
                                      ( km(k,j,i)  + 1.0E-20_wp )
 
@@ -2004,11 +2006,11 @@
           k = surf_def_h(1)%k(m)
 
           surf_def_h(1)%u_0(m) = u(k-1,j,i) - surf_def_h(1)%usws(m) *          &
-                                     drho_air_zw(k-1) *                        &
+                                     drho_ref_zw(k-1) *                        &
                                      ( zu(k+1)    - zu(k-1)    )  /            &
                                      ( km(k,j,i)  + 1.0E-20_wp )
           surf_def_h(1)%v_0(m) = v(k-1,j,i) - surf_def_h(1)%vsws(m) *          &
-                                     drho_air_zw(k-1) *                        &
+                                     drho_ref_zw(k-1) *                        &
                                      ( zu(k+1)    - zu(k-1)    )  /            &
                                      ( km(k,j,i)  + 1.0E-20_wp )
 
@@ -2035,11 +2037,11 @@
 !--       interpolation of km onto the u/v-grid is necessary. However, the
 !--       effect of this error is negligible.
           surf_lsm_h%u_0(m) = u(k+1,j,i) + surf_lsm_h%usws(m)      *           &
-                                        drho_air_zw(k-1) *                     &
+                                        drho_ref_zw(k-1) *                     &
                                         ( zu(k+1)   - zu(k-1)    )  /          &
                                         ( km(k,j,i) + 1.0E-20_wp )
           surf_lsm_h%v_0(m) = v(k+1,j,i) + surf_lsm_h%vsws(m)      *           &
-                                        drho_air_zw(k-1) *                     &
+                                        drho_ref_zw(k-1) *                     &
                                         ( zu(k+1)   - zu(k-1)    )  /          &
                                         ( km(k,j,i) + 1.0E-20_wp )
 
@@ -2066,11 +2068,11 @@
 !--       interpolation of km onto the u/v-grid is necessary. However, the
 !--       effect of this error is negligible.
           surf_usm_h%u_0(m) = u(k+1,j,i) + surf_usm_h%usws(m)      *           &
-                                        drho_air_zw(k-1) *                     &
+                                        drho_ref_zw(k-1) *                     &
                                         ( zu(k+1)   - zu(k-1)    )  /          &
                                         ( km(k,j,i) + 1.0E-20_wp )
           surf_usm_h%v_0(m) = v(k+1,j,i) + surf_usm_h%vsws(m)      *           &
-                                        drho_air_zw(k-1) *                     &
+                                        drho_ref_zw(k-1) *                     &
                                         ( zu(k+1)   - zu(k-1)    )  /          &
                                         ( km(k,j,i) + 1.0E-20_wp )
 
@@ -2710,7 +2712,7 @@
  SUBROUTINE production_e
 
     USE arrays_3d,                                                             &
-        ONLY:  ddzw, dd2zu, drho_air_zw, q, ql
+        ONLY:  ddzw, dd2zu, drho_ref_zw, q, ql, rho_ocean, alpha_T, beta_S
 
     USE cloud_parameters,                                                      &
         ONLY:  l_d_cp, l_d_r, pt_d_t, t_d_pt
@@ -2983,7 +2985,7 @@
              ENDDO
           ENDDO
 
-       ELSE
+       ELSE ! not constant_flux_layer
 
           DO  j = nys, nyn
 !
@@ -3042,15 +3044,16 @@
 
              IF ( ocean )  THEN
 !
+!--             Density flux as a function of kh and density gradient
 !--             So far in the ocean no special treatment of density flux
 !--             in the bottom and top surface layer
                 DO  j = nys, nyn
                    DO  k = nzb+1, nzt
                       tend(k,j,i) = tend(k,j,i) +                              &
                                     kh(k,j,i) * g /                            &
-                           MERGE( rho_reference, prho(k,j,i),                  &
+                           MERGE( rho_reference, rho_ocean(k,j,i),                  &
                                   use_single_reference_value ) *               &
-                                    ( prho(k+1,j,i) - prho(k-1,j,i) ) *        &
+                                    ( rho_ocean(k+1,j,i) - rho_ocean(k-1,j,i) ) *        &
                                     dd2zu(k) *                                 &
                                 MERGE( 1.0_wp, 0.0_wp,                         &
                                        BTEST( wall_flags_0(k,j,i), 30 )        &
@@ -3062,38 +3065,34 @@
 !
 !--                Treatment of near-surface grid points, at up- and down-
 !--                ward facing surfaces
-                   IF ( use_surface_fluxes )  THEN
+                   IF ( use_surface_fluxes )  THEN ! corresponds to bottom boundary of domain
                       DO  l = 0, 1
                          surf_s = surf_def_h(l)%start_index(j,i)
                          surf_e = surf_def_h(l)%end_index(j,i)
                          DO  m = surf_s, surf_e
                             k = surf_def_h(l)%k(m)
-                            tend(k,j,i) = tend(k,j,i) + g /                    &
-                                      MERGE( rho_reference, prho(k,j,i),       &
-                                             use_single_reference_value ) *    &
-                                      drho_air_zw(k-1) *                       &
-                                      surf_def_h(l)%shf(m)
+                            tend(k,j,i) = tend(k,j,i) + g*(                     &
+                                          alpha_T(k,i,j)*surf_def_h(l)%shf(m) + &
+                                          beta_S(k,i,j)*surf_def_h(l)%sasws(m))
                          ENDDO
                       ENDDO
 
                    ENDIF
 
-                   IF ( use_top_fluxes )  THEN
+                   IF ( use_top_fluxes )  THEN ! corresponds to top boundary of domain
                       surf_s = surf_def_h(2)%start_index(j,i)
                       surf_e = surf_def_h(2)%end_index(j,i)
                       DO  m = surf_s, surf_e
                          k = surf_def_h(2)%k(m)
-                         tend(k,j,i) = tend(k,j,i) + g /                       &
-                                      MERGE( rho_reference, prho(k,j,i),       &
-                                             use_single_reference_value ) *    &
-                                      drho_air_zw(k) *                         &
-                                      surf_def_h(2)%shf(m)
+                         tend(k,j,i) = tend(k,j,i) + g*(                        &
+                                          alpha_T(k,i,j)*surf_def_h(2)%shf(m) + &
+                                          beta_S(k,i,j)*surf_def_h(2)%sasws(m))
                       ENDDO
                    ENDIF
 
                 ENDDO
 
-             ELSE
+             ELSE ! humidity
 
                 DO  j = nys, nyn
                    DO  k = nzb+1, nzt
@@ -3125,9 +3124,9 @@
                             tend(k,j,i) = tend(k,j,i) + g /                    &
                                  MERGE( pt_reference, pt(k,j,i),               &
                                         use_single_reference_value )           &
-                                                   * drho_air_zw(k-1)          &
-                                                   * surf_def_h(l)%shf(m)
-                         ENDDO
+                                                   * drho_ref_zw(k-1)          &
+                                                   * surf_def_h(l)%shf(m)       
+                         ENDDO      
                       ENDDO
 !
 !--                   Natural surfaces
@@ -3138,8 +3137,8 @@
                          tend(k,j,i) = tend(k,j,i) + g /                       &
                                  MERGE( pt_reference, pt(k,j,i),               &
                                         use_single_reference_value )           &
-                                                   * drho_air_zw(k-1)          &
-                                                   * surf_lsm_h%shf(m)
+                                                   * drho_ref_zw(k-1)          &
+                                                   * surf_lsm_h%shf(m)   
                       ENDDO
 !
 !--                   Urban surfaces
@@ -3150,9 +3149,9 @@
                          tend(k,j,i) = tend(k,j,i) + g /                       &
                                  MERGE( pt_reference, pt(k,j,i),               &
                                         use_single_reference_value )           &
-                                                   * drho_air_zw(k-1)          &
-                                                   * surf_usm_h%shf(m)
-                      ENDDO
+                                                   * drho_ref_zw(k-1)          &
+                                                   * surf_usm_h%shf(m)   
+                      ENDDO                          
                    ENDIF
 
                    IF ( use_top_fluxes )  THEN
@@ -3163,8 +3162,8 @@
                          tend(k,j,i) = tend(k,j,i) + g /                       &
                                  MERGE( pt_reference, pt(k,j,i),               &
                                         use_single_reference_value )           &
-                                                   * drho_air_zw(k)            &
-                                                   * surf_def_h(2)%shf(m)
+                                                   * drho_ref_zw(k)            &
+                                                   * surf_def_h(2)%shf(m) 
                       ENDDO
                    ENDIF
                 ENDDO
@@ -3283,7 +3282,7 @@
                                         use_single_reference_value ) *         &
                                             ( k1 * surf_def_h(l)%shf(m) +      &
                                               k2 * surf_def_h(l)%qsws(m)       &
-                                            ) * drho_air_zw(k-1)
+                                            ) * drho_ref_zw(k-1)
                       ENDDO
                    ENDDO
 !
@@ -3320,7 +3319,7 @@
                                         use_single_reference_value ) *         &
                                             ( k1 * surf_lsm_h%shf(m) +         &
                                               k2 * surf_lsm_h%qsws(m)          &
-                                            ) * drho_air_zw(k-1)
+                                            ) * drho_ref_zw(k-1)
                    ENDDO
 !
 !--                Treat horizontal urban surfaces
@@ -3356,7 +3355,7 @@
                                         use_single_reference_value ) *         &
                                             ( k1 * surf_usm_h%shf(m) +         &
                                               k2 * surf_usm_h%qsws(m)          &
-                                            ) * drho_air_zw(k-1)
+                                            ) * drho_ref_zw(k-1)
                    ENDDO
 
                 ENDDO
@@ -3399,7 +3398,7 @@
                                         use_single_reference_value ) *         &
                                             ( k1 * surf_def_h(2)%shf(m) +      &
                                               k2 * surf_def_h(2)%qsws(m)       &
-                                            ) * drho_air_zw(k)
+                                            ) * drho_ref_zw(k)
 
                    ENDDO
 
@@ -3428,7 +3427,7 @@
  SUBROUTINE production_e_ij( i, j, diss_production )
 
     USE arrays_3d,                                                             &
-        ONLY:  ddzw, dd2zu, drho_air_zw, q, ql
+        ONLY:  ddzw, dd2zu, drho_ref_zw, q, ql, rho_ocean, alpha_T, beta_S
 
     USE cloud_parameters,                                                      &
         ONLY:  l_d_cp, l_d_r, pt_d_t, t_d_pt
@@ -3852,9 +3851,9 @@
 
                 tend(k,j,i) = tend(k,j,i) +                                    &
                               kh(k,j,i) * g /                                  &
-                              MERGE( rho_reference, prho(k,j,i),               &
+                              MERGE( rho_reference, rho_ocean(k,j,i),               &
                                      use_single_reference_value ) *            &
-                              ( prho(k+1,j,i) - prho(k-1,j,i) ) *              &
+                              ( rho_ocean(k+1,j,i) - rho_ocean(k-1,j,i) ) *              &
                               dd2zu(k) *                                       &
                                 MERGE( 1.0_wp, 0.0_wp,                         &
                                        BTEST( wall_flags_0(k,j,i), 30 )        &
@@ -3872,11 +3871,9 @@
                    surf_e = surf_def_h(l)%end_index(j,i)
                    DO  m = surf_s, surf_e
                       k = surf_def_h(l)%k(m)
-                      tend(k,j,i) = tend(k,j,i) + g /                          &
-                                MERGE( rho_reference, prho(k,j,i),             &
-                                       use_single_reference_value ) *          &
-                                drho_air_zw(k-1) *                             &
-                                surf_def_h(l)%shf(m)
+                      tend(k,j,i) = tend(k,j,i) + g*(                           &
+                                       alpha_T(k,i,j)*surf_def_h(l)%shf(m) +    &
+                                       beta_S(k,i,j)*surf_def_h(l)%sasws(m))
                    ENDDO
                 ENDDO
 
@@ -3887,11 +3884,9 @@
                 surf_e = surf_def_h(2)%end_index(j,i)
                 DO  m = surf_s, surf_e
                    k = surf_def_h(2)%k(m)
-                   tend(k,j,i) = tend(k,j,i) + g /                             &
-                                MERGE( rho_reference, prho(k,j,i),             &
-                                       use_single_reference_value ) *          &
-                                drho_air_zw(k) *                               &
-                                surf_def_h(2)%shf(m)
+                   tend(k,j,i) = tend(k,j,i) + g*(                              &
+                                    alpha_T(k,i,j)*surf_def_h(2)%shf(m) +       &
+                                    beta_S(k,i,j)*surf_def_h(2)%sasws(m))
                 ENDDO
              ENDIF
 
@@ -3926,7 +3921,7 @@
                       tend(k,j,i) = tend(k,j,i) + g /                          &
                                 MERGE( pt_reference, pt(k,j,i),                &
                                        use_single_reference_value ) *          &
-                                drho_air_zw(k-1) *                             &
+                                drho_ref_zw(k-1) *                             &
                                 surf_def_h(l)%shf(m)
                    ENDDO
                 ENDDO
@@ -3939,8 +3934,8 @@
                    tend(k,j,i) = tend(k,j,i) + g /                             &
                                 MERGE( pt_reference, pt(k,j,i),                &
                                        use_single_reference_value ) *          &
-                                drho_air_zw(k-1) *                             &
-                                surf_lsm_h%shf(m)
+                                drho_ref_zw(k-1) *                             &
+                                surf_lsm_h%shf(m) 
                 ENDDO
 !
 !--             Urban surfaces
@@ -3951,8 +3946,8 @@
                    tend(k,j,i) = tend(k,j,i) + g /                             &
                                 MERGE( pt_reference, pt(k,j,i),                &
                                        use_single_reference_value ) *          &
-                                drho_air_zw(k-1) *                             &
-                                surf_usm_h%shf(m)
+                                drho_ref_zw(k-1) *                             &
+                                surf_usm_h%shf(m) 
                 ENDDO
              ENDIF
 
@@ -3964,8 +3959,8 @@
                    tend(k,j,i) = tend(k,j,i) + g /                             &
                                 MERGE( pt_reference, pt(k,j,i),                &
                                        use_single_reference_value ) *          &
-                                drho_air_zw(k) *                               &
-                                surf_def_h(2)%shf(m)
+                                drho_ref_zw(k) *                               &
+                                surf_def_h(2)%shf(m) 
                 ENDDO
              ENDIF
 
@@ -4073,7 +4068,7 @@
                                        use_single_reference_value ) *          &
                                       ( k1 * surf_def_h(l)%shf(m) +            &
                                         k2 * surf_def_h(l)%qsws(m)             &
-                                      ) * drho_air_zw(k-1)
+                                      ) * drho_ref_zw(k-1)
                 ENDDO
              ENDDO
 !
@@ -4110,7 +4105,7 @@
                                        use_single_reference_value ) *          &
                                          ( k1 * surf_lsm_h%shf(m) +            &
                                            k2 * surf_lsm_h%qsws(m)             &
-                                         ) * drho_air_zw(k-1)
+                                         ) * drho_ref_zw(k-1)
              ENDDO
 !
 !--          Treat horizontal urban surfaces
@@ -4146,7 +4141,7 @@
                                        use_single_reference_value ) *          &
                                          ( k1 * surf_usm_h%shf(m) +            &
                                            k2 * surf_usm_h%qsws(m)             &
-                                         ) * drho_air_zw(k-1)
+                                         ) * drho_ref_zw(k-1)
              ENDDO
 
           ENDIF
@@ -4186,7 +4181,7 @@
                                        use_single_reference_value ) *          &
                             ( k1* surf_def_h(2)%shf(m) +                       &
                               k2 * surf_def_h(2)%qsws(m)                       &
-                            ) * drho_air_zw(k)
+                            ) * drho_ref_zw(k)
              ENDDO
 
           ENDIF
@@ -4207,7 +4202,7 @@
  SUBROUTINE diffusion_e( var, var_reference )
 
     USE arrays_3d,                                                             &
-        ONLY:  ddzu, ddzw, drho_air, rho_air_zw
+        ONLY:  ddzu, ddzw, drho_ref_uv, rho_ref_zw
 
     USE grid_variables,                                                        &
         ONLY:  ddx2, ddy2
@@ -4284,10 +4279,10 @@
                                            ) * ddy2  * flag                    &
                                          + (                                   &
             ( km(k,j,i)+km(k+1,j,i) ) * ( e(k+1,j,i)-e(k,j,i) ) * ddzu(k+1)    &
-                                                          * rho_air_zw(k)      &
+                                                          * rho_ref_zw(k)      &
           - ( km(k,j,i)+km(k-1,j,i) ) * ( e(k,j,i)-e(k-1,j,i) ) * ddzu(k)      &
-                                                          * rho_air_zw(k-1)    &
-                                           ) * ddzw(k) * drho_air(k)           &
+                                                          * rho_ref_zw(k-1)    &
+                                           ) * ddzw(k) * drho_ref_uv(k)        &
                                          ) * flag * dsig_e                     &
                           - dissipation(k,j) * flag
 
@@ -4344,7 +4339,7 @@
  SUBROUTINE diffusion_e_ij( i, j, var, var_reference )
 
     USE arrays_3d,                                                             &
-        ONLY:  ddzu, ddzw, drho_air, rho_air_zw
+        ONLY:  ddzu, ddzw, drho_ref_uv, rho_ref_zw
 
     USE grid_variables,                                                        &
         ONLY:  ddx2, ddy2
@@ -4425,10 +4420,10 @@
                                       ) * ddy2                                 &
                                     + (                                        &
            ( km(k,j,i)+km(k+1,j,i) ) * ( e(k+1,j,i)-e(k,j,i) ) * ddzu(k+1)     &
-                                                         * rho_air_zw(k)       &
+                                                         * rho_ref_zw(k)       &
          - ( km(k,j,i)+km(k-1,j,i) ) * ( e(k,j,i)-e(k-1,j,i) ) * ddzu(k)       &
-                                                         * rho_air_zw(k-1)     &
-                                      ) * ddzw(k) * drho_air(k)                &
+                                                         * rho_ref_zw(k-1)     &
+                                      ) * ddzw(k) * drho_ref_uv(k)             &
                                    ) * flag * dsig_e                           &
                                  - dissipation(k) * flag
 
@@ -4473,7 +4468,7 @@
 !------------------------------------------------------------------------------!
  SUBROUTINE diffusion_diss()
     USE arrays_3d,                                                             &
-        ONLY:  ddzu, ddzw, drho_air, rho_air_zw
+        ONLY:  ddzu, ddzw, drho_ref_uv, rho_ref_zw
 
     USE grid_variables,                                                        &
         ONLY:  ddx2, ddy2
@@ -4507,10 +4502,10 @@
                                  ) * ddy2                                      &
                                + (                                             &
       ( km(k,j,i)+km(k+1,j,i) ) * ( diss(k+1,j,i)-diss(k,j,i) ) * ddzu(k+1)    &
-                                                    * rho_air_zw(k)            &
+                                                    * rho_ref_zw(k)            &
     - ( km(k,j,i)+km(k-1,j,i) ) * ( diss(k,j,i)-diss(k-1,j,i) ) * ddzu(k)      &
-                                                    * rho_air_zw(k-1)          &
-                                 ) * ddzw(k) * drho_air(k)                     &
+                                                    * rho_ref_zw(k-1)          &
+                                 ) * ddzw(k) * drho_ref_uv(k)                  &
                          ) * flag * dsig_diss                                  &
                          - c_2 * diss(k,j,i)**2                                &
                                / ( e(k,j,i) + 1.0E-20_wp ) * flag
@@ -4531,7 +4526,7 @@
  SUBROUTINE diffusion_diss_ij( i, j )
 
     USE arrays_3d,                                                             &
-        ONLY:  ddzu, ddzw, drho_air, rho_air_zw
+        ONLY:  ddzu, ddzw, drho_ref_uv, rho_ref_zw
 
     USE grid_variables,                                                        &
         ONLY:  ddx2, ddy2
@@ -4565,10 +4560,10 @@
                                 ) * ddy2                                       &
                               + (                                              &
      ( km(k,j,i)+km(k+1,j,i) ) * ( diss(k+1,j,i)-diss(k,j,i) ) * ddzu(k+1)     &
-                                                   * rho_air_zw(k)             &
+                                                   * rho_ref_zw(k)             &
    - ( km(k,j,i)+km(k-1,j,i) ) * ( diss(k,j,i)-diss(k-1,j,i) ) * ddzu(k)       &
-                                                   * rho_air_zw(k-1)           &
-                                ) * ddzw(k) * drho_air(k)                      &
+                                                   * rho_ref_zw(k-1)           &
+                                ) * ddzw(k) * drho_ref_uv(k)                   &
                    ) * flag * dsig_diss                                        &
                    - c_2 * diss(k,j,i)**2 / ( e(k,j,i) + 1.0E-20_wp ) * flag
 

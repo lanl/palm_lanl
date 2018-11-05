@@ -140,7 +140,7 @@
     SUBROUTINE tridia_init
 
        USE arrays_3d,                                                          &
-           ONLY:  ddzu_pres, ddzw, rho_air_zw
+           ONLY:  ddzu_pres, ddzw, rho_ref_zw
 
        USE kinds
 
@@ -151,11 +151,11 @@
        ALLOCATE( ddzuw(0:nz-1,3) )
 
        DO  k = 0, nz-1
-          ddzuw(k,1) = ddzu_pres(k+1) * ddzw(k+1) * rho_air_zw(k)
-          ddzuw(k,2) = ddzu_pres(k+2) * ddzw(k+1) * rho_air_zw(k+1)
+          ddzuw(k,1) = ddzu_pres(k+1) * ddzw(k+1) * rho_ref_zw(k)
+          ddzuw(k,2) = ddzu_pres(k+2) * ddzw(k+1) * rho_ref_zw(k+1)
           ddzuw(k,3) = -1.0_wp * &
-                       ( ddzu_pres(k+2) * ddzw(k+1) * rho_air_zw(k+1) +        &
-                         ddzu_pres(k+1) * ddzw(k+1) * rho_air_zw(k) )
+                       ( ddzu_pres(k+2) * ddzw(k+1) * rho_ref_zw(k+1) +        &
+                         ddzu_pres(k+1) * ddzw(k+1) * rho_ref_zw(k) )
        ENDDO
 !
 !--    Calculate constant coefficients of the tridiagonal matrix
@@ -180,7 +180,7 @@
 
 
           USE arrays_3d,                                                       &
-              ONLY:  tric, rho_air
+              ONLY:  tric, rho_ref_uv
 
           USE constants,                                                       &
               ONLY:  pi
@@ -241,7 +241,7 @@
           DO  k = 0, nz-1
              DO  j = nys_z, nyn_z
                 DO  i = nxl_z, nxr_z
-                   tric(i,j,k) = ddzuw(k,3) - ll(i,j) * rho_air(k+1)
+                   tric(i,j,k) = ddzuw(k,3) - ll(i,j) * rho_ref_uv(k+1)
                 ENDDO
              ENDDO
           ENDDO
@@ -473,7 +473,7 @@
 
 
        USE arrays_3d,                                                          &
-           ONLY:  ddzu_pres, ddzw, rho_air, rho_air_zw
+           ONLY:  ddzu_pres, ddzw, rho_ref_uv, rho_ref_zw
 
        USE control_parameters,                                                 &
            ONLY:  ibc_p_b, ibc_p_t
@@ -508,8 +508,8 @@
 !CDIR NOLOOPCHG
        DO  k = 0, nz-1
           DO  i = 0,nx
-             tri_for_1d(2,i,k) = ddzu_pres(k+1) * ddzw(k+1) * rho_air_zw(k)
-             tri_for_1d(3,i,k) = ddzu_pres(k+2) * ddzw(k+1) * rho_air_zw(k+1)
+             tri_for_1d(2,i,k) = ddzu_pres(k+1) * ddzw(k+1) * rho_ref_zw(k)
+             tri_for_1d(3,i,k) = ddzu_pres(k+2) * ddzw(k+1) * rho_ref_zw(k+1)
           ENDDO
        ENDDO
 
@@ -573,9 +573,9 @@
 
           DO  k = 0, nz-1
              DO  i = 0, nx
-                a = -1.0_wp * ddzu_pres(k+2) * ddzw(k+1) * rho_air_zw(k+1)
-                c = -1.0_wp * ddzu_pres(k+1) * ddzw(k+1) * rho_air_zw(k)
-                tri_for_1d(1,i,k) = a + c - l(i) * rho_air(k+1)
+                a = -1.0_wp * ddzu_pres(k+2) * ddzw(k+1) * rho_ref_zw(k+1)
+                c = -1.0_wp * ddzu_pres(k+1) * ddzw(k+1) * rho_ref_zw(k)
+                tri_for_1d(1,i,k) = a + c - l(i) * rho_ref_uv(k+1)
              ENDDO
           ENDDO
           IF ( ibc_p_b == 1 )  THEN

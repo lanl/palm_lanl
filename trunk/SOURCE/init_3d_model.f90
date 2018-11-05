@@ -490,13 +490,16 @@
         ONLY:  chem_emissions
 
     USE cloud_parameters,                                                      &
-        ONLY:  cp, l_v, r_d
+        ONLY:  cp, r_d
 
     USE constants,                                                             &
-        ONLY:  pi
+        ONLY:  pi, cpw
     
     USE control_parameters
     
+    USE eqn_state_seawater_mod,                                                &
+        ONLY:  eqn_state_seawater, eqn_state_seawater_func
+
     USE flight_mod,                                                            &
         ONLY:  flight_init
     
@@ -856,94 +859,59 @@
 !
 !-- Allocation of anelastic and Boussinesq approximation specific arrays
     ALLOCATE( p_hydrostatic(nzb:nzt+1) )
-    ALLOCATE( rho_air(nzb:nzt+1) )
-    ALLOCATE( rho_air_zw(nzb:nzt+1) )
-    ALLOCATE( drho_air(nzb:nzt+1) )
-    ALLOCATE( drho_air_zw(nzb:nzt+1) )
+    ALLOCATE( rho_ref_uv(nzb:nzt+1) )
+    ALLOCATE( rho_ref_zw(nzb:nzt+1) )
+    ALLOCATE( drho_ref_uv(nzb:nzt+1) )
+    ALLOCATE( drho_ref_zw(nzb:nzt+1) )
 
 !
 !-- Density profile calculation for anelastic approximation
-    t_surface = pt_surface * ( surface_pressure / 1000.0_wp )**( r_d / cp )
-    IF ( TRIM( approximation ) == 'anelastic' ) THEN
-       DO  k = nzb, nzt+1
-          p_hydrostatic(k)    = surface_pressure * 100.0_wp *                  &
-                                ( 1 - ( g * zu(k) ) / ( cp * t_surface )       &
-                                )**( cp / r_d )
-          rho_air(k)          = ( p_hydrostatic(k) *                           &
-                                  ( 100000.0_wp / p_hydrostatic(k)             &
-                                  )**( r_d / cp )                              &
-                                ) / ( r_d * pt_init(k) )
-       ENDDO
-       DO  k = nzb, nzt
-          rho_air_zw(k) = 0.5_wp * ( rho_air(k) + rho_air(k+1) )
-       ENDDO
-       rho_air_zw(nzt+1)  = rho_air_zw(nzt)                                    &
-                            + 2.0_wp * ( rho_air(nzt+1) - rho_air_zw(nzt)  )
+    IF ( ocean )  THEN
+!
+!--    Initialize quantities needed for the ocean model
+       CALL init_ocean
+
     ELSE
-       DO  k = nzb, nzt+1
-          p_hydrostatic(k)    = surface_pressure * 100.0_wp *                  &
-                                ( 1 - ( g * zu(nzb) ) / ( cp * t_surface )       &
-                                )**( cp / r_d )
-          rho_air(k)          = ( p_hydrostatic(k) *                           &
-                                  ( 100000.0_wp / p_hydrostatic(k)             &
-                                  )**( r_d / cp )                              &
+
+       t_surface = pt_surface * ( surface_pressure / 1000.0_wp )**( r_d / cp )
+       IF ( TRIM( approximation ) == 'anelastic' ) THEN
+          DO  k = nzb, nzt+1
+             p_hydrostatic(k)    = surface_pressure * 100.0_wp *                  &
+                                   ( 1 - ( g * zu(k) ) / ( cp * t_surface )       &
+                                   )**( cp / r_d )
+             rho_ref_uv(k)          = ( p_hydrostatic(k) *                           &
+                                     ( 100000.0_wp / p_hydrostatic(k)             &
+                                     )**( r_d / cp )                              &
+                                   ) / ( r_d * pt_init(k) )
+          ENDDO
+          DO  k = nzb, nzt
+             rho_ref_zw(k) = 0.5_wp * ( rho_ref_uv(k) + rho_ref_uv(k+1) )
+          ENDDO
+          rho_ref_zw(nzt+1)  = rho_ref_zw(nzt)                                    &
+                               + 2.0_wp * ( rho_ref_uv(nzt+1) - rho_ref_zw(nzt)  )
+       ELSE
+!          DO  k = nzb, nzt+1
+          p_hydrostatic(:)   = surface_pressure * 100.0_wp *                  &
+                               ( 1 - ( g * zu(nzb) ) / ( cp * t_surface )       &
+                               )**( cp / r_d )
+          rho_ref_uv(:)          = ( p_hydrostatic(nzb) *                           &
+                                ( 100000.0_wp / p_hydrostatic(nzb)             &
+                                )**( r_d / cp )                              &
                                 ) / ( r_d * pt_init(nzb) )
-       ENDDO
-       DO  k = nzb, nzt
-          rho_air_zw(k) = 0.5_wp * ( rho_air(k) + rho_air(k+1) )
-       ENDDO
-       rho_air_zw(nzt+1)  = rho_air_zw(nzt)                                    &
-                            + 2.0_wp * ( rho_air(nzt+1) - rho_air_zw(nzt)  )
+          rho_ref_zw(:) = rho_ref_uv(nzb)
+       ENDIF
+
     ENDIF
-    rho_air(:) = 1.0_wp
-!
-!-- compute the inverse density array in order to avoid expencive divisions
-    drho_air    = 1.0_wp / rho_air
-    drho_air_zw = 1.0_wp / rho_air_zw
 
 !
-!-- Allocation of flux conversion arrays
-    ALLOCATE( heatflux_input_conversion(nzb:nzt+1) )
-    ALLOCATE( waterflux_input_conversion(nzb:nzt+1) )
-    ALLOCATE( momentumflux_input_conversion(nzb:nzt+1) )
-    ALLOCATE( heatflux_output_conversion(nzb:nzt+1) )
-    ALLOCATE( waterflux_output_conversion(nzb:nzt+1) )
-    ALLOCATE( momentumflux_output_conversion(nzb:nzt+1) )
-
-!
-!-- calculate flux conversion factors according to approximation and in-/output mode
-    DO  k = nzb, nzt+1
-
-        IF ( TRIM( flux_input_mode ) == 'kinematic' )  THEN
-            heatflux_input_conversion(k)      = rho_air_zw(k)
-            waterflux_input_conversion(k)     = rho_air_zw(k)
-            momentumflux_input_conversion(k)  = rho_air_zw(k)
-        ELSEIF ( TRIM( flux_input_mode ) == 'dynamic' ) THEN
-            heatflux_input_conversion(k)      = 1.0_wp / cp
-            waterflux_input_conversion(k)     = 1.0_wp / l_v
-            momentumflux_input_conversion(k)  = 1.0_wp
-        ENDIF
-
-        IF ( TRIM( flux_output_mode ) == 'kinematic' )  THEN
-            heatflux_output_conversion(k)     = drho_air_zw(k)
-            waterflux_output_conversion(k)    = drho_air_zw(k)
-            momentumflux_output_conversion(k) = drho_air_zw(k)
-        ELSEIF ( TRIM( flux_output_mode ) == 'dynamic' ) THEN
-            heatflux_output_conversion(k)     = cp
-            waterflux_output_conversion(k)    = l_v
-            momentumflux_output_conversion(k) = 1.0_wp
-        ENDIF
-
-        IF ( .NOT. humidity ) THEN
-            waterflux_input_conversion(k)  = 1.0_wp
-            waterflux_output_conversion(k) = 1.0_wp
-        ENDIF
-
-    ENDDO
+!-- compute the inverse density array in order to avoid expensive divisions
+    drho_ref_uv = 1.0_wp / rho_ref_uv
+    drho_ref_zw = 1.0_wp / rho_ref_zw
 
 !
 !-- In case of multigrid method, compute grid lengths and grid factors for the
 !-- grid levels with respective density on each grid
+
     IF ( psolver(1:9) == 'multigrid' )  THEN
 
        ALLOCATE( ddx2_mg(maximum_grid_level) )
@@ -953,33 +921,33 @@
        ALLOCATE( f1_mg(nzb+1:nzt,maximum_grid_level) )
        ALLOCATE( f2_mg(nzb+1:nzt,maximum_grid_level) )
        ALLOCATE( f3_mg(nzb+1:nzt,maximum_grid_level) )
-       ALLOCATE( rho_air_mg(nzb:nzt+1,maximum_grid_level) )
-       ALLOCATE( rho_air_zw_mg(nzb:nzt+1,maximum_grid_level) )
-
+       ALLOCATE( rho_ref_mg(nzb:nzt+1,maximum_grid_level) )
+       ALLOCATE( rho_ref_zw_mg(nzb:nzt+1,maximum_grid_level) )
+       
        dzu_mg(:,maximum_grid_level) = dzu
-       rho_air_mg(:,maximum_grid_level) = rho_air
+       rho_ref_mg(:,maximum_grid_level) = rho_ref_uv
 !       
 !--    Next line to ensure an equally spaced grid. 
        dzu_mg(1,maximum_grid_level) = dzu(2)
-       rho_air_mg(nzb,maximum_grid_level) = rho_air(nzb) +                     &
-                                             (rho_air(nzb) - rho_air(nzb+1))
+       rho_ref_mg(nzb,maximum_grid_level) = rho_ref_uv(nzb) +                     &
+                                             (rho_ref_uv(nzb) - rho_ref_uv(nzb+1))
 
        dzw_mg(:,maximum_grid_level) = dzw
-       rho_air_zw_mg(:,maximum_grid_level) = rho_air_zw
+       rho_ref_zw_mg(:,maximum_grid_level) = rho_ref_zw
        nzt_l = nzt
        DO  l = maximum_grid_level-1, 1, -1
            dzu_mg(nzb+1,l) = 2.0_wp * dzu_mg(nzb+1,l+1)
            dzw_mg(nzb+1,l) = 2.0_wp * dzw_mg(nzb+1,l+1)
-           rho_air_mg(nzb,l)    = rho_air_mg(nzb,l+1) + (rho_air_mg(nzb,l+1) - rho_air_mg(nzb+1,l+1))
-           rho_air_zw_mg(nzb,l) = rho_air_zw_mg(nzb,l+1) + (rho_air_zw_mg(nzb,l+1) - rho_air_zw_mg(nzb+1,l+1))
-           rho_air_mg(nzb+1,l)    = rho_air_mg(nzb+1,l+1)
-           rho_air_zw_mg(nzb+1,l) = rho_air_zw_mg(nzb+1,l+1)
+           rho_ref_mg(nzb,l)    = rho_ref_mg(nzb,l+1) + (rho_ref_mg(nzb,l+1) - rho_ref_mg(nzb+1,l+1))
+           rho_ref_zw_mg(nzb,l) = rho_ref_zw_mg(nzb,l+1) + (rho_ref_zw_mg(nzb,l+1) - rho_ref_zw_mg(nzb+1,l+1))
+           rho_ref_mg(nzb+1,l)    = rho_ref_mg(nzb+1,l+1)
+           rho_ref_zw_mg(nzb+1,l) = rho_ref_zw_mg(nzb+1,l+1)
            nzt_l = nzt_l / 2
            DO  k = 2, nzt_l+1
               dzu_mg(k,l) = dzu_mg(2*k-2,l+1) + dzu_mg(2*k-1,l+1)
               dzw_mg(k,l) = dzw_mg(2*k-2,l+1) + dzw_mg(2*k-1,l+1)
-              rho_air_mg(k,l)    = rho_air_mg(2*k-1,l+1)
-              rho_air_zw_mg(k,l) = rho_air_zw_mg(2*k-1,l+1)
+              rho_ref_mg(k,l)    = rho_ref_mg(2*k-1,l+1)
+              rho_ref_zw_mg(k,l) = rho_ref_zw_mg(2*k-1,l+1)
            ENDDO
        ENDDO
 
@@ -990,10 +958,10 @@
           ddx2_mg(l) = 1.0_wp / dx_l**2
           ddy2_mg(l) = 1.0_wp / dy_l**2
           DO  k = nzb+1, nzt_l
-             f2_mg(k,l) = rho_air_zw_mg(k,l) / ( dzu_mg(k+1,l) * dzw_mg(k,l) )
-             f3_mg(k,l) = rho_air_zw_mg(k-1,l) / ( dzu_mg(k,l)   * dzw_mg(k,l) )
+             f2_mg(k,l) = rho_ref_zw_mg(k,l) / ( dzu_mg(k+1,l) * dzw_mg(k,l) )
+             f3_mg(k,l) = rho_ref_zw_mg(k-1,l) / ( dzu_mg(k,l)   * dzw_mg(k,l) )
              f1_mg(k,l) = 2.0_wp * ( ddx2_mg(l) + ddy2_mg(l) ) &
-                          * rho_air_mg(k,l) + f2_mg(k,l) + f3_mg(k,l)
+                          * rho_ref_mg(k,l) + f2_mg(k,l) + f3_mg(k,l)
           ENDDO
           nzt_l = nzt_l / 2
           dx_l  = dx_l * 2.0_wp
@@ -1159,8 +1127,6 @@
     sums_l_l           = 0.0_wp
     sums_wsts_bc_l     = 0.0_wp
 
-
-
 !
 !-- Initialize model variables
     IF ( TRIM( initializing_actions ) /= 'read_restart_data'  .AND.            &
@@ -1296,6 +1262,7 @@
           u = MERGE( u, 0.0_wp, BTEST( wall_flags_0, 1 ) )
           v = MERGE( v, 0.0_wp, BTEST( wall_flags_0, 2 ) )
           w = MERGE( w, 0.0_wp, BTEST( wall_flags_0, 3 ) )
+
 !
 !--       Initialize surface variables, e.g. friction velocity, momentum 
 !--       fluxes, etc. 
@@ -1382,6 +1349,7 @@
              ENDDO
 
           ENDIF
+
 !
 !--       Initialize surface variables, e.g. friction velocity, momentum 
 !--       fluxes, etc. 
@@ -1478,6 +1446,7 @@
 !--       Compute initial temperature field and other constants used in case
 !--       of a sloping surface
           IF ( sloping_surface )  CALL init_slope
+
 !
 !--       Initialize surface variables, e.g. friction velocity, momentum 
 !--       fluxes, etc. 
@@ -1487,6 +1456,7 @@
        THEN
 
           CALL location_message( 'initializing by user', .FALSE. )
+
 !
 !--       Pre-initialize surface variables, i.e. setting start- and end-indices
 !--       at each (j,i)-location. Please note, this does not supersede 
@@ -1678,6 +1648,7 @@
 
        CALL location_message( 'initializing in case of restart / cyclic_fill', &
                               .FALSE. )
+
 !
 !--    Initialize surface elements and its attributes, e.g. heat- and 
 !--    momentumfluxes, roughness, scaling parameters. As number of surface 
@@ -2367,16 +2338,23 @@
 !--    This routine must be called before lpm_init, because
 !--    otherwise, array pt_d_t, needed in data_output_dvrp (called by
 !--    lpm_init) is not defined.
+       CALL location_message( 'initializing cloud physics', .FALSE. )    
        CALL init_cloud_physics
+       CALL location_message( 'finished', .TRUE. )
 !
 !--    Initialize bulk cloud microphysics
+       CALL location_message( 'initializing cloud microphysics', .FALSE. )    
        CALL microphysics_init
+       CALL location_message( 'finished', .TRUE. )
     ENDIF
 
 !
 !-- If required, initialize particles
-    IF ( particle_advection )  CALL lpm_init
-
+    IF ( particle_advection )  THEN
+       CALL location_message( 'initializing partical advection', .FALSE. )    
+       CALL lpm_init
+       CALL location_message( 'finished', .TRUE. )
+    ENDIF
 !
 !-- If required, initialize quantities needed for the LSM
     IF ( land_surface )  THEN
@@ -2413,7 +2391,9 @@
 !-- If required, set chemical emissions
 !-- (todo(FK): This should later on be CALLed time-dependently in init_3d_model)
     IF ( air_chemistry )  THEN
+       CALL location_message( 'initializing air chemistry', .FALSE. )
        CALL chem_emissions
+       CALL location_message( 'finished', .TRUE. )
     ENDIF
 
 !
@@ -2656,7 +2636,5 @@
     IF ( nested_run )  CALL MPI_BARRIER( MPI_COMM_WORLD, ierr )
 #endif
 
-
-    CALL location_message( 'leaving init_3d_model', .TRUE. )
 
  END SUBROUTINE init_3d_model

@@ -226,10 +226,9 @@
  
 
     USE arrays_3d,                                                             &
-        ONLY:  dzw, e, heatflux_output_conversion, nc, nr, p, pt,              &
+        ONLY:  dzw, e, nc, nr, p, pt,                                          &
                precipitation_amount, prr, q, qc, ql, ql_c, ql_v, ql_vp, qr,    &
-               rho_ocean, s, sa, tend, u, v, vpt, w, zu, zw,                   &
-               waterflux_output_conversion
+               rho_ocean, s, sa, tend, u, v, vpt, w, zu, zw
         
     USE averaging
         
@@ -940,8 +939,7 @@
                       i = surf_def_h(0)%i(m)
                       j = surf_def_h(0)%j(m)
                       k = surf_def_h(0)%k(m)
-                      local_pf(i,j,nzb+1) = surf_def_h(0)%qsws(m) *            &
-                                            waterflux_output_conversion(k)
+                      local_pf(i,j,nzb+1) = surf_def_h(0)%qsws(m) * l_v
                    ENDDO
                    DO  m = 1, surf_lsm_h%ns
                       i = surf_lsm_h%i(m)
@@ -1066,8 +1064,7 @@
                       i = surf_def_h(0)%i(m)
                       j = surf_def_h(0)%j(m)
                       k = surf_def_h(0)%k(m)
-                      local_pf(i,j,nzb+1) = surf_def_h(0)%shf_sol(m) *             &
-                                            heatflux_output_conversion(k)
+                      local_pf(i,j,nzb+1) = surf_def_h(0)%shf_sol(m) * cp
                    ENDDO
                    DO  m = 1, surf_lsm_h%ns
                       i = surf_lsm_h%i(m)
@@ -1106,8 +1103,7 @@
                       i = surf_def_h(0)%i(m)
                       j = surf_def_h(0)%j(m)
                       k = surf_def_h(0)%k(m)
-                      local_pf(i,j,nzb+1) = surf_def_h(0)%shf(m) *             &
-                                            heatflux_output_conversion(k)
+                      local_pf(i,j,nzb+1) = surf_def_h(0)%shf(m) * cp
                    ENDDO
                    DO  m = 1, surf_lsm_h%ns
                       i = surf_lsm_h%i(m)

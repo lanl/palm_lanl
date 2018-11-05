@@ -156,16 +156,16 @@
  
 
     USE arrays_3d,                                                             &
-        ONLY:  d, ddzu, ddzu_pres, ddzw, dzw, p, p_loc, rho_air, rho_air_zw,   &
+        ONLY:  d, ddzu, ddzu_pres, ddzw, dzw, p, p_loc, rho_ref_uv, rho_ref_zw,&
                tend, u, v, w
 
     USE control_parameters,                                                    &
         ONLY:  bc_lr_cyc, bc_ns_cyc, conserve_volume_flow, coupling_mode,      &
                dt_3d, gathered_size, ibc_p_b, ibc_p_t,                         &
                intermediate_timestep_count, intermediate_timestep_count_max,   &
-               mg_switch_to_pe0_level, nest_domain, outflow_l, outflow_n,      &
-               outflow_r, outflow_s, psolver, subdomain_size, topography,      &
-               volume_flow, volume_flow_area, volume_flow_initial
+               mg_switch_to_pe0_level, nest_domain, ocean, outflow_l,          &
+               outflow_n, outflow_r, outflow_s, psolver, subdomain_size,       &
+               topography, volume_flow, volume_flow_area, volume_flow_initial
 
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point, log_point_s
@@ -449,10 +449,10 @@
     DO  i = nxl, nxr
        DO  j = nys, nyn
           DO  k = nzb+1, nzt
-             d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_air(k) * ddx +       &
-                          ( v(k,j+1,i) - v(k,j,i) ) * rho_air(k) * ddy +       &
-                          ( w(k,j,i)   * rho_air_zw(k) -                       &
-                            w(k-1,j,i) * rho_air_zw(k-1) ) * ddzw(k)           &
+             d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_ref_uv(k) * ddx +    &
+                          ( v(k,j+1,i) - v(k,j,i) ) * rho_ref_uv(k) * ddy +    &
+                          ( w(k,j,i)   * rho_ref_zw(k) -                       &
+                            w(k-1,j,i) * rho_ref_zw(k-1) ) * ddzw(k)           &
                         ) * ddt_3d * d_weight_pres                             &
                                    * MERGE( 1.0_wp, 0.0_wp,                    &
                                             BTEST( wall_flags_0(k,j,i), 0 )    &
@@ -482,10 +482,10 @@
     DO  i = nxl, nxr
        DO  j = nys, nyn
           DO  k = 1, nzt
-             d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_air(k) * ddx +       &
-                          ( v(k,j+1,i) - v(k,j,i) ) * rho_air(k) * ddy +       &
-                          ( w(k,j,i)   * rho_air_zw(k) -                       &
-                            w(k-1,j,i) * rho_air_zw(k-1) ) * ddzw(k)           &
+             d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_ref_uv(k) * ddx +    &
+                          ( v(k,j+1,i) - v(k,j,i) ) * rho_ref_uv(k) * ddy +    &
+                          ( w(k,j,i)   * rho_ref_zw(k) -                       &
+                            w(k-1,j,i) * rho_ref_zw(k-1) ) * ddzw(k)           &
                         ) * ddt_3d * d_weight_pres                             &
                                    * MERGE( 1.0_wp, 0.0_wp,                    &
                                             BTEST( wall_flags_0(k,j,i), 0 )    &
@@ -868,13 +868,13 @@
        DO  i = nxl, nxr
           DO  j = nys, nyn
              DO  k = nzb+1, nzt
-             d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_air(k) * ddx +       &
-                          ( v(k,j+1,i) - v(k,j,i) ) * rho_air(k) * ddy +       &
-                          ( w(k,j,i)   * rho_air_zw(k) -                       &
-                            w(k-1,j,i) * rho_air_zw(k-1) ) * ddzw(k)           &
-                        ) * MERGE( 1.0_wp, 0.0_wp,                             &
-                                   BTEST( wall_flags_0(k,j,i), 0 )             &
-                                 )
+                d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_ref_uv(k) * ddx +    &
+                             ( v(k,j+1,i) - v(k,j,i) ) * rho_ref_uv(k) * ddy +    &
+                             ( w(k,j,i)   * rho_ref_zw(k) -                       &
+                               w(k-1,j,i) * rho_ref_zw(k-1) ) * ddzw(k)           &
+                           ) * MERGE( 1.0_wp, 0.0_wp,                             &
+                                      BTEST( wall_flags_0(k,j,i), 0 )             &
+                                    )
              ENDDO
              DO  k = nzb+1, nzt
                 threadsum = threadsum + ABS( d(k,j,i) )
@@ -886,12 +886,12 @@
        DO  i = nxl, nxr
           DO  j = nys, nyn
              DO  k = nzb+1, nzt
-                d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_air(k) * ddx +    &
-                             ( v(k,j+1,i) - v(k,j,i) ) * rho_air(k) * ddy +    &
-                             ( w(k,j,i)   * rho_air_zw(k) -                    &
-                               w(k-1,j,i) * rho_air_zw(k-1) ) * ddzw(k)        &
-                           ) * MERGE( 1.0_wp, 0.0_wp,                          &
-                                   BTEST( wall_flags_0(k,j,i), 0 )             &
+                d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_ref_uv(k) * ddx +    &
+                             ( v(k,j+1,i) - v(k,j,i) ) * rho_ref_uv(k) * ddy +    &
+                             ( w(k,j,i)   * rho_ref_zw(k) -                       &
+                               w(k-1,j,i) * rho_ref_zw(k-1) ) * ddzw(k)           &
+                           ) * MERGE( 1.0_wp, 0.0_wp,                             &
+                                      BTEST( wall_flags_0(k,j,i), 0 )             &
                                     )
              ENDDO
           ENDDO

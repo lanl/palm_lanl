@@ -68,9 +68,11 @@
  MODULE lsf_nudging_mod
 
     USE arrays_3d,                                                             &
-        ONLY:  dzw, e, heatflux_input_conversion, pt, pt_init, q, q_init, s,   &
-               tend, u, u_init, ug, v, v_init, vg, w, w_subs,                  &
-               waterflux_input_conversion, zu, zw                  
+        ONLY:  dzw, e, pt, pt_init, q, q_init, s,                              &
+               tend, u, u_init, ug, v, v_init, vg, w, w_subs, zu, zw
+
+    USE cloud_parameters,                                                    &
+        ONLY: cp, l_v
 
     USE control_parameters,                                                    &
         ONLY:  bc_lr, bc_ns, bc_pt_b, bc_q_b, constant_diffusion,              &
@@ -1455,9 +1457,8 @@ flush(9)
 !
 !--       In case of Neumann boundary condition pt_surface is needed for 
 !--       calculation of reference density
-          dum_surf_flux = ( shf_surf(nt) + fac *                               &
-                            ( shf_surf(nt+1) - shf_surf(nt) )                  &
-                          ) * heatflux_input_conversion(nzb)
+          dum_surf_flux = shf_surf(nt) + fac *                               &
+                            ( shf_surf(nt+1) - shf_surf(nt) ) * cp
 !
 !--       Save surface sensible heat flux on default, natural and urban surface
 !--       type, if required 
@@ -1477,8 +1478,7 @@ flush(9)
 
        ELSEIF ( ibc_q_b == 1 )  THEN
           dum_surf_flux = ( qsws_surf(nt) + fac *                              &
-                             ( qsws_surf(nt+1) - qsws_surf(nt) )               &
-                             ) * waterflux_input_conversion(nzb)
+                             ( qsws_surf(nt+1) - qsws_surf(nt) )  ) * l_v
 !
 !--       Save surface sensible heat flux on default, natural and urban surface
 !--       type, if required 

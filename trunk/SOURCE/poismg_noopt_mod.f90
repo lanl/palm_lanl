@@ -343,7 +343,7 @@
 
 
        USE arrays_3d,                                                          &
-           ONLY:  f1_mg, f2_mg, f3_mg, rho_air_mg
+           ONLY:  f1_mg, f2_mg, f3_mg, rho_ref_mg
 
        USE control_parameters,                                                 &
            ONLY:  bc_lr_cyc, bc_ns_cyc, ibc_p_b, ibc_p_t
@@ -411,12 +411,12 @@
           DO  j = nys_mg(l), nyn_mg(l) 
              DO  k = nzb+1, nzt_mg(l)
                 r(k,j,i) = f_mg(k,j,i)                                         &
-                           - rho_air_mg(k,l) * ddx2_mg(l) *                    &
+                           - rho_ref_mg(k,l) * ddx2_mg(l) *                    &
                                ( p_mg(k,j,i+1) + IBITS( flags(k,j,i), 5, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i+1) ) + &
                                  p_mg(k,j,i-1) + IBITS( flags(k,j,i), 4, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i-1) ) ) &
-                           - rho_air_mg(k,l) * ddy2_mg(l) *                    &
+                           - rho_ref_mg(k,l) * ddy2_mg(l) *                    &
                                ( p_mg(k,j+1,i) + IBITS( flags(k,j,i), 3, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j+1,i) ) + &
                                  p_mg(k,j-1,i) + IBITS( flags(k,j,i), 2, 1 ) * &
@@ -814,7 +814,7 @@
 
 
        USE arrays_3d,                                                          &
-           ONLY:  f1_mg, f2_mg, f3_mg, rho_air_mg
+           ONLY:  f1_mg, f2_mg, f3_mg, rho_ref_mg
 
        USE control_parameters,                                                 &
            ONLY:  bc_lr_cyc, bc_ns_cyc, ibc_p_b, ibc_p_t, ngsrb
@@ -912,12 +912,12 @@
 !                                                       )
 
                          p_mg(k,j,i) = 1.0_wp / f1_mg(k,l) * (                 &
-                             rho_air_mg(k,l) * ddx2_mg(l) *                    &
+                             rho_ref_mg(k,l) * ddx2_mg(l) *                    &
                                ( p_mg(k,j,i+1) + IBITS( flags(k,j,i), 5, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i+1) ) + &
                                  p_mg(k,j,i-1) + IBITS( flags(k,j,i), 4, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i-1) ) ) &
-                           + rho_air_mg(k,l) * ddy2_mg(l) *                    &
+                           + rho_ref_mg(k,l) * ddy2_mg(l) *                    &
                                ( p_mg(k,j+1,i) + IBITS( flags(k,j,i), 3, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j+1,i) ) + &
                                  p_mg(k,j-1,i) + IBITS( flags(k,j,i), 2, 1 ) * &
@@ -937,12 +937,12 @@
                    DO  j = nys_mg(l) + (color-1), nyn_mg(l), 2
                       DO  k = nzb+1, nzt_mg(l), 2 
                          p_mg(k,j,i) = 1.0_wp / f1_mg(k,l) * (                 &
-                               rho_air_mg(k,l) * ddx2_mg(l) *                  &
+                               rho_ref_mg(k,l) * ddx2_mg(l) *                  &
                                ( p_mg(k,j,i+1) + IBITS( flags(k,j,i), 5, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i+1) ) + &
                                  p_mg(k,j,i-1) + IBITS( flags(k,j,i), 4, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i-1) ) ) &
-                           + rho_air_mg(k,l) * ddy2_mg(l) *                    &
+                           + rho_ref_mg(k,l) * ddy2_mg(l) *                    &
                                ( p_mg(k,j+1,i) + IBITS( flags(k,j,i), 3, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j+1,i) ) + &
                                  p_mg(k,j-1,i) + IBITS( flags(k,j,i), 2, 1 ) * &
@@ -962,12 +962,12 @@
                    DO  j = nys_mg(l) + (color-1), nyn_mg(l), 2
                       DO  k = nzb+2, nzt_mg(l), 2
                         p_mg(k,j,i) = 1.0_wp / f1_mg(k,l) * (                  &
-                             rho_air_mg(k,l) * ddx2_mg(l) *                    &
+                             rho_ref_mg(k,l) * ddx2_mg(l) *                    &
                                ( p_mg(k,j,i+1) + IBITS( flags(k,j,i), 5, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i+1) ) + &
                                  p_mg(k,j,i-1) + IBITS( flags(k,j,i), 4, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i-1) ) ) &
-                           + rho_air_mg(k,l) * ddy2_mg(l) *                    &
+                           + rho_ref_mg(k,l) * ddy2_mg(l) *                    &
                                ( p_mg(k,j+1,i) + IBITS( flags(k,j,i), 3, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j+1,i) ) + &
                                  p_mg(k,j-1,i) + IBITS( flags(k,j,i), 2, 1 ) * &
@@ -987,12 +987,12 @@
                    DO  j = nys_mg(l) + 2 - color, nyn_mg(l), 2
                       DO  k = nzb+2, nzt_mg(l), 2
                          p_mg(k,j,i) = 1.0_wp / f1_mg(k,l) * (                 &
-                             rho_air_mg(k,l) * ddx2_mg(l) *                    &
+                             rho_ref_mg(k,l) * ddx2_mg(l) *                    &
                                ( p_mg(k,j,i+1) + IBITS( flags(k,j,i), 5, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i+1) ) + &
                                  p_mg(k,j,i-1) + IBITS( flags(k,j,i), 4, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i-1) ) ) &
-                           + rho_air_mg(k,l) * ddy2_mg(l) *                    &
+                           + rho_ref_mg(k,l) * ddy2_mg(l) *                    &
                                ( p_mg(k,j+1,i) + IBITS( flags(k,j,i), 3, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j+1,i) ) + &
                                  p_mg(k,j-1,i) + IBITS( flags(k,j,i), 2, 1 ) * &
@@ -1021,12 +1021,12 @@
                       DO  k = nzb+1, nzt_mg(l), 2
                          j = jj
                          p_mg(k,j,i) = 1.0_wp / f1_mg(k,l) * (                 &
-                             rho_air_mg(k,l) * ddx2_mg(l) *                    &
+                             rho_ref_mg(k,l) * ddx2_mg(l) *                    &
                                ( p_mg(k,j,i+1) + IBITS( flags(k,j,i), 5, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i+1) ) + &
                                  p_mg(k,j,i-1) + IBITS( flags(k,j,i), 4, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i-1) ) ) &
-                           + rho_air_mg(k,l) * ddy2_mg(l) *                    &
+                           + rho_ref_mg(k,l) * ddy2_mg(l) *                    &
                                ( p_mg(k,j+1,i) + IBITS( flags(k,j,i), 3, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j+1,i) ) + &
                                  p_mg(k,j-1,i) + IBITS( flags(k,j,i), 2, 1 ) * &
@@ -1040,12 +1040,12 @@
                            - f_mg(k,j,i)               )
                          j = jj+2
                          p_mg(k,j,i) = 1.0_wp / f1_mg(k,l) * (                 &
-                             rho_air_mg(k,l) * ddx2_mg(l) *                    &
+                             rho_ref_mg(k,l) * ddx2_mg(l) *                    &
                                ( p_mg(k,j,i+1) + IBITS( flags(k,j,i), 5, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i+1) ) + &
                                  p_mg(k,j,i-1) + IBITS( flags(k,j,i), 4, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i-1) ) ) &
-                           + rho_air_mg(k,l) * ddy2_mg(l) *                    &
+                           + rho_ref_mg(k,l) * ddy2_mg(l) *                    &
                                ( p_mg(k,j+1,i) + IBITS( flags(k,j,i), 3, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j+1,i) ) + &
                                  p_mg(k,j-1,i) + IBITS( flags(k,j,i), 2, 1 ) * &
@@ -1064,12 +1064,12 @@
                       DO  k = nzb+1, nzt_mg(l), 2 
                          j =jj
                          p_mg(k,j,i) = 1.0_wp / f1_mg(k,l) * (                 &
-                             rho_air_mg(k,l) * ddx2_mg(l) *                    &
+                             rho_ref_mg(k,l) * ddx2_mg(l) *                    &
                                ( p_mg(k,j,i+1) + IBITS( flags(k,j,i), 5, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i+1) ) + &
                                  p_mg(k,j,i-1) + IBITS( flags(k,j,i), 4, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i-1) ) ) &
-                           + rho_air_mg(k,l) * ddy2_mg(l) *                    &
+                           + rho_ref_mg(k,l) * ddy2_mg(l) *                    &
                                ( p_mg(k,j+1,i) + IBITS( flags(k,j,i), 3, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j+1,i) ) + &
                                  p_mg(k,j-1,i) + IBITS( flags(k,j,i), 2, 1 ) * &
@@ -1083,12 +1083,12 @@
                            - f_mg(k,j,i)                     )
                          j = jj+2
                          p_mg(k,j,i) = 1.0_wp / f1_mg(k,l) * (                &
-                            rho_air_mg(k,l) * ddx2_mg(l) *                    &
+                            rho_ref_mg(k,l) * ddx2_mg(l) *                    &
                               ( p_mg(k,j,i+1) + IBITS( flags(k,j,i), 5, 1 ) * &
                                             ( p_mg(k,j,i) - p_mg(k,j,i+1) ) + &
                                 p_mg(k,j,i-1) + IBITS( flags(k,j,i), 4, 1 ) * &
                                             ( p_mg(k,j,i) - p_mg(k,j,i-1) ) ) &
-                          + rho_air_mg(k,l) * ddy2_mg(l) *                    &
+                          + rho_ref_mg(k,l) * ddy2_mg(l) *                    &
                               ( p_mg(k,j+1,i) + IBITS( flags(k,j,i), 3, 1 ) * &
                                             ( p_mg(k,j,i) - p_mg(k,j+1,i) ) + &
                                 p_mg(k,j-1,i) + IBITS( flags(k,j,i), 2, 1 ) * &
@@ -1107,12 +1107,12 @@
                       DO  k = nzb+2, nzt_mg(l), 2
                          j =jj
                          p_mg(k,j,i) = 1.0_wp / f1_mg(k,l) * (                 &
-                             rho_air_mg(k,l) * ddx2_mg(l) *                    &
+                             rho_ref_mg(k,l) * ddx2_mg(l) *                    &
                                ( p_mg(k,j,i+1) + IBITS( flags(k,j,i), 5, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i+1) ) + &
                                  p_mg(k,j,i-1) + IBITS( flags(k,j,i), 4, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i-1) ) ) &
-                           + rho_air_mg(k,l) * ddy2_mg(l) *                    &
+                           + rho_ref_mg(k,l) * ddy2_mg(l) *                    &
                                ( p_mg(k,j+1,i) + IBITS( flags(k,j,i), 3, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j+1,i) ) + &
                                  p_mg(k,j-1,i) + IBITS( flags(k,j,i), 2, 1 ) * &
@@ -1126,12 +1126,12 @@
                            - f_mg(k,j,i)                    )
                          j = jj+2
                          p_mg(k,j,i) = 1.0_wp / f1_mg(k,l) * (                 &
-                             rho_air_mg(k,l) * ddx2_mg(l) *                    &
+                             rho_ref_mg(k,l) * ddx2_mg(l) *                    &
                                ( p_mg(k,j,i+1) + IBITS( flags(k,j,i), 5, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i+1) ) + &
                                  p_mg(k,j,i-1) + IBITS( flags(k,j,i), 4, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i-1) ) ) &
-                           + rho_air_mg(k,l) * ddy2_mg(l) *                    &
+                           + rho_ref_mg(k,l) * ddy2_mg(l) *                    &
                                ( p_mg(k,j+1,i) + IBITS( flags(k,j,i), 3, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j+1,i) ) + &
                                  p_mg(k,j-1,i) + IBITS( flags(k,j,i), 2, 1 ) * &
@@ -1150,12 +1150,12 @@
                       DO  k = nzb+2, nzt_mg(l), 2
                          j =jj
                          p_mg(k,j,i) = 1.0_wp / f1_mg(k,l) * (                 &
-                             rho_air_mg(k,l) * ddx2_mg(l) *                    &
+                             rho_ref_mg(k,l) * ddx2_mg(l) *                    &
                                ( p_mg(k,j,i+1) + IBITS( flags(k,j,i), 5, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i+1) ) + &
                                  p_mg(k,j,i-1) + IBITS( flags(k,j,i), 4, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i-1) ) ) &
-                           + rho_air_mg(k,l) * ddy2_mg(l) *                    &
+                           + rho_ref_mg(k,l) * ddy2_mg(l) *                    &
                                ( p_mg(k,j+1,i) + IBITS( flags(k,j,i), 3, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j+1,i) ) + &
                                  p_mg(k,j-1,i) + IBITS( flags(k,j,i), 2, 1 ) * &
@@ -1169,12 +1169,12 @@
                            - f_mg(k,j,i)                     )
                          j = jj+2
                          p_mg(k,j,i) = 1.0_wp / f1_mg(k,l) * (                 &
-                             rho_air_mg(k,l) * ddx2_mg(l) *                    &
+                             rho_ref_mg(k,l) * ddx2_mg(l) *                    &
                                ( p_mg(k,j,i+1) + IBITS( flags(k,j,i), 5, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i+1) ) + &
                                  p_mg(k,j,i-1) + IBITS( flags(k,j,i), 4, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j,i-1) ) ) &
-                           + rho_air_mg(k,l) * ddy2_mg(l) *                    &
+                           + rho_ref_mg(k,l) * ddy2_mg(l) *                    &
                                ( p_mg(k,j+1,i) + IBITS( flags(k,j,i), 3, 1 ) * &
                                              ( p_mg(k,j,i) - p_mg(k,j+1,i) ) + &
                                  p_mg(k,j-1,i) + IBITS( flags(k,j,i), 2, 1 ) * &

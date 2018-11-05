@@ -8,6 +8,8 @@ atm_cores=32
 ocn_cores=32
 test_case="test_oceanml"
 run_config="mpirun"
+# build_config="pgi.darwin"
+build_config="pgi.darwin_openacc"
 openmp_threads=1
 repo_path=$PWD
 exec_path="/path/to/build/directory"
@@ -28,9 +30,7 @@ NN=$((NTASKS/nnodes))
 echo "PROCS = $NN"
 
 # set options for palm_simple_run
-palm_options="-w $exec_path -c $run_config -s $test_case -n $NN -p $NTASKS -t $openmp_threads"
-
-palm_options="$palm_options -b pgi.darwin"
+palm_options="-w $exec_path -d $script_path -c $run_config -s $test_case -n $NN -p $NTASKS -t $openmp_threads -b $build_config"
 
 if [[ $do_restart == "True" ]]; then
     palm_options="$palm_options -r"

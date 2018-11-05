@@ -1492,8 +1492,12 @@
 
 !
 !-- Prognostic equation for u-velocity component
+    !$acc kernels
+    !$acc loop independent
     DO  i = nxlu, nxr
+       !$acc loop independent
        DO  j = nys, nyn
+          !$acc loop independent
           DO  k = nzb+1, nzt
              u_p(k,j,i) = u(k,j,i) + ( dt_3d * ( tsc(2) * tend(k,j,i) +          &
                                                  tsc(3) * tu_m(k,j,i) )          &
@@ -1505,6 +1509,7 @@
           ENDDO
        ENDDO
     ENDDO
+    !$acc end kernels
 
 !
 !-- Calculate tendencies for the next Runge-Kutta step

@@ -1527,7 +1527,7 @@
     REAL(wp) ::  spinup_pt_mean = 9999999.9_wp                 !< namelist parameter
     REAL(wp) ::  spinup_time = 0.0_wp                          !< namelist parameter
     REAL(wp) ::  surface_heatflux = 9999999.9_wp               !< namelist parameter
-    REAL(wp) ::  surface_pressure = 1013.25_wp                 !< namelist parameter
+    REAL(wp) ::  surface_pressure = 1013.25_wp                 !< namelist parameter, if atm given in mbar. if ocean, given in dbar
     REAL(wp) ::  surface_scalarflux = 9999999.9_wp             !< namelist parameter
     REAL(wp) ::  surface_waterflux = 9999999.9_wp              !< namelist parameter
     REAL(wp) ::  s_surface = 0.0_wp                            !< namelist parameter

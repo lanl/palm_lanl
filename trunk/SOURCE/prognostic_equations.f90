@@ -461,8 +461,6 @@
     INTEGER      ::  n, lsp              !< lsp running index for chem spcs
     REAL(WP)      ::  wb_sfc, tod,arg1      !< surface buoyancy forcing -- only matters for ocean
 
-    CALL location_message('prog: start',.TRUE.)
-
 !
 !-- Time measurement can only be performed for the whole set of equations
     CALL cpu_log( log_point(32), 'all progn.equations', 'start' )
@@ -578,7 +576,11 @@
              CALL diffusion_u( i, j )
              CALL coriolis( i, j, 1 )
              IF ( sloping_surface  .AND.  .NOT. neutral )  THEN
-                CALL buoyancy( i, j, pt, 1 )
+                IF ( ocean ) THEN
+                   CALL buoyancy( i, j, rho_ocean, 1 ) ! add argument ref_state
+                ELSE
+                   CALL buoyancy( i, j, pt, 1 ) ! add argument pt_slope_ref
+                ENDIF
              ENDIF
 !
 !--          If required, compute Stokes forces
@@ -607,10 +609,10 @@
              IF ( wind_turbine )  CALL wtm_tendencies( i, j, 1 )
 
              CALL user_actions( i, j, 'u-tendency' )
+
 !
 !--          Prognostic equation for u-velocity component
              DO  k = nzb+1, nzt
-
                 u_p(k,j,i) = u(k,j,i) + ( dt_3d *                               &
                                             ( tsc(2) * tend(k,j,i) +            &
                                               tsc(3) * tu_m(k,j,i) )            &
@@ -685,6 +687,7 @@
              IF ( wind_turbine )  CALL wtm_tendencies( i, j, 2 )
 
              CALL user_actions( i, j, 'v-tendency' )
+
 !
 !--          Prognostic equation for v-velocity component
              DO  k = nzb+1, nzt
@@ -760,6 +763,7 @@
           IF ( wind_turbine )  CALL wtm_tendencies( i, j, 3 )
 
           CALL user_actions( i, j, 'w-tendency' )
+
 !
 !--       Prognostic equation for w-velocity component
           DO  k = nzb+1, nzt-1

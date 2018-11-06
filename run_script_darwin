@@ -12,11 +12,12 @@ run_config="mpirun"
 build_config="pgi.darwin_openacc"
 openmp_threads=1
 repo_path=$PWD
+script_path="$repo_path/trunk/SCRIPTS"
 exec_path="/path/to/build/directory"
 
 repo_path=$PWD
 cd $SLURM_SUBMIT_DIR
-export PATH="$repo_path/trunk/SCRIPTS:${PATH}"
+export PATH="$script_path:${PATH}"
 module purge
 module load pgi/18.7
 module load openmpi/3.1.2-pgi_18.7

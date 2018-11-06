@@ -2,10 +2,12 @@
 
 repo_path=$PWD
 build_path="/path/to/build/directory/"
+script_path="$repo_path/trunk/SCRIPTS"
+
 build_config="pgi.darwin"
 # build_config="pgi.darwin_openacc"
 
-export PATH="$repo_path/trunk/SCRIPTS:$PATH"
+export PATH="$script_path:$PATH"
 module purge
 module load pgi/18.7
 module load openmpi/3.1.2-pgi_18.7

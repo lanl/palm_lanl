@@ -577,7 +577,7 @@
              approximation, bc_e_b,                                            &
              bc_lr, bc_ns, bc_p_b, bc_p_t, bc_pt_b, bc_pt_t, bc_q_b,           &
              bc_q_t,bc_s_b, bc_s_t, bc_sa_b, bc_sa_t, bc_uv_b, bc_uv_t,        &
-             bottom_salinityflux, bubble_initial_condition, bubble_center_x, bubble_center_y,            &
+             bottom_salinityflux, bubble_center_x, bubble_center_y,            &
              bubble_center_z, bubble_radius, bubble_pt, bubble_sa,             &
              building_height, building_length_x,                               &
              building_length_y, building_wall_left, building_wall_south,       &

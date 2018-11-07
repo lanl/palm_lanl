@@ -628,6 +628,9 @@
     INTEGER(iwp) ::  nz_s_shift_l !< 
 
     CALL location_message( 'allocating arrays', .FALSE. )
+
+!CB    WRITE(message_string,*) 'init_3d_model: i = ',nxl,',',nxr,', j = ',nys,',',nyn
+!CB    CALL location_message(message_string,.TRUE.)
 !
 !-- Allocate arrays
     ALLOCATE( mean_surface_level_height(0:statistic_regions),                  &
@@ -1616,8 +1619,7 @@
 !--    close to surface
        IF ( INDEX( initializing_actions, 'initialize_ptanom' ) /= 0  .OR.  &
             INDEX( initializing_actions, 'initialize_2D_bubble' ) /= 0  .OR. &
-            INDEX( initializing_actions, 'initialize_3D_bubble' ) /= 0 .OR. &
-            bubble_initial_condition )  THEN
+            INDEX( initializing_actions, 'initialize_3D_bubble' ) /= 0 )  THEN
           CALL init_pt_anomaly
        ENDIF
        

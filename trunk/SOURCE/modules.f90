@@ -1276,7 +1276,6 @@
     LOGICAL ::  bc_ns_cyc = .TRUE.                               !< north-south boundary condition cyclic?
     LOGICAL ::  bc_ns_dirrad = .FALSE.                           !< north-south boundary condition dirichlet/radiation?
     LOGICAL ::  bc_ns_raddir = .FALSE.                           !< north-south boundary condition radiation/dirichlet?
-    LOGICAL ::  bubble_initial_condition = .FALSE.               !< namelist parameter
     LOGICAL ::  calc_soil_moisture_during_spinup = .FALSE.       !< namelist parameter
     LOGICAL ::  call_microphysics_at_all_substeps = .FALSE.      !< namelist parameter
     LOGICAL ::  call_psolver_at_all_substeps = .TRUE.            !< namelist parameter

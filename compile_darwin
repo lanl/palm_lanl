@@ -1,15 +1,19 @@
 #!/bin/bash
 
-repo_path=$PWD
-build_path="/path/to/build/directory/"
-script_path="$repo_path/trunk/SCRIPTS"
+# repo_path=${PWD}
+# scratch_path="/path/to/scratch/directory/"
+repo_path="${HOME}/models/palm_les_lanl"
+scratch_path="${HOME}/work/palm/run/"
+script_path="${repo_path}/trunk/SCRIPTS"
 
-build_config="pgi.darwin"
+# build_config="pgi.darwin"
 # build_config="pgi.darwin_openacc"
+# build_config="pgi.darwin_mpi"
+build_config="pgi.darwin_openacc_mpi"
 
-export PATH="$script_path:$PATH"
+export PATH="${script_path}:${PATH}"
 module purge
 module load pgi/18.7
 module load openmpi/3.1.2-pgi_18.7
 module load netcdf/4.6.1-pgi_18.7
-palm_simple_build -s $script_path -b $build_config -w $build_path
+palm_simple_build -s ${script_path} -b ${build_config} -w ${scratch_path}

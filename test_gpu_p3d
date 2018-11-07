@@ -1,0 +1,49 @@
+&initialization_parameters
+        nx = 31, ny = 31, nz = 32,
+        dx = 2.5, dy = 2.5, dz = 2.5,
+
+        fft_method = 'temperton-algorithm',
+
+        ocean = .T.,
+        idealized_diurnal = .F.,
+
+        initializing_actions = 'set_constant_profiles'
+
+        latitude = 55.6,
+
+        momentum_advec = 'pw-scheme',
+        scalar_advec = 'pw-scheme',
+        loop_optimization = 'vector',
+
+        ug_surface =0.0, vg_surface = 0.0,
+        pt_surface                 = 293.0,
+        pt_vertical_gradient       = 1.0,
+        pt_vertical_gradient_level = 0.0,
+        sa_surface                 = 35.0,
+        sa_vertical_gradient       = 0.0,
+
+        use_top_fluxes= .T.,
+        use_surface_fluxes = .F.,
+        constant_flux_layer= .F.,
+
+        top_momentumflux_u = 0.0,
+        top_momentumflux_v = 0.0,
+
+        top_heatflux = 1.78e-5,
+        top_salinityflux = 0.0,
+
+        bc_uv_b = 'neumann', bc_uv_t = 'neumann',
+        bc_pt_b = 'neumann', bc_pt_t = 'neumann',
+        bc_p_b  = 'neumann', bc_p_t  = 'neumann',
+        bc_s_b  = 'initial_gradient', bc_s_t  = 'neumann',
+        bc_sa_t = 'neumann', /
+
+&runtime_parameters
+        end_time = 60.0,
+        create_disturbances = .T.,
+        disturbance_energy_limit = 1.0e-2,
+        dt_disturb = 10.,
+        dt_run_control = 0.0,/
+
+
+

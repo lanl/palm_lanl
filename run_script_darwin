@@ -6,17 +6,19 @@ do_restart="False"
 # atm_cores + ocn_cores should be equal to $SLURM_NTASKS
 atm_cores=32
 ocn_cores=32
-test_case="test_oceanml"
+test_case="test_gpu"
 run_config="mpirun"
-# build_config="pgi.darwin"
-build_config="pgi.darwin_openacc"
 openmp_threads=1
-repo_path=$PWD
-script_path="$repo_path/trunk/SCRIPTS"
-exec_path="/path/to/build/directory"
 
-repo_path=$PWD
-cd $SLURM_SUBMIT_DIR
+# build_config="pgi.darwin"
+build_config="pgi.darwin_mpi"
+
+# repo_path=${PWD}
+# scratch_path="/path/to/scratch/directory/"
+repo_path="$HOME/models/palm_les_lanl"
+scratch_path="$HOME/work/palm/run/"
+script_path="$repo_path/trunk/SCRIPTS"
+
 export PATH="$script_path:${PATH}"
 module purge
 module load pgi/18.7
@@ -31,7 +33,7 @@ NN=$((NTASKS/nnodes))
 echo "PROCS = $NN"
 
 # set options for palm_simple_run
-palm_options="-w $exec_path -d $script_path -c $run_config -s $test_case -n $NN -p $NTASKS -t $openmp_threads -b $build_config"
+palm_options="-w $scratch_path -d $script_path -c $run_config -s $test_case -n $NN -p $NTASKS -t $openmp_threads -b $build_config"
 
 if [[ $do_restart == "True" ]]; then
     palm_options="$palm_options -r"

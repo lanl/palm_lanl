@@ -1,35 +1,44 @@
 #!/usr/bin/env bash
 
-test_case="test_oceanml"
-# build_config="pgi.darwin"
-build_config="pgi.darwin_openacc"
-repo_path="$HOME/models/palm_les_lanl"
-exec_path="$HOME/work/palm/run/"
+# Case name
+test_case="test_gpu"
 
-# set environment
-export PATH="$script_path:${PATH}"
+# Paths of palm repository and runs
+# repo_path=${PWD}
+# scratch_path="/path/to/scratch/directory/"
+repo_path="${HOME}/models/palm_les_lanl"
+scratch_path="${HOME}/work/palm/run/"
+
+# Build configuration
+## - Single process
+# build_config="pgi.darwin_openacc"
+## - Multiprocess
+mpi_ranks=4
+build_config="pgi.darwin_openacc_mpi"
+
+# --------
+
+# Set environment
+export PATH="${script_path}:${PATH}"
 module purge
 module load pgi/18.7
 module load openmpi/3.1.2-pgi_18.7
 module load netcdf/4.6.1-pgi_18.7
 
-# paths
-build_path=${exec_path}/BUILD_${build_config}
+# Paths
+build_path=${scratch_path}/BUILD_${build_config}
 suffix=${build_config}_pgprof_${test_case}
-execution_path=${exec_path}/RUN_${suffix}
+execution_path=${scratch_path}/RUN_${suffix}
 script_path="${repo_path}/trunk/SCRIPTS"
 
-# create execution directory
-if [[ ! -d ${execution_path} ]]
+# Create execution directory
+if [[ -d ${execution_path} ]]
 then
-  mkdir -p ${execution_path}
-else
   rm -r ${execution_path}
-  mkdir -p ${execution_path}
 fi
+mkdir -p ${execution_path}
 
-# Check if palm has been installed and copy executable into the run
-# directory
+# Check if palm has been installed and copy executable into the run directory
 if [[ ! -f ${build_path}/palm ]]
 then
    echo "+++ ERROR: palm executable does not exist."
@@ -39,8 +48,8 @@ else
    cp  ${build_path}/palm  ${execution_path}/palm
 fi
 
-# Check, if parameter file exists and copy into the run directory
-test_config_file=${exec_path}/${test_case}_p3d
+# Check if parameter file exists and copy into the run directory
+test_config_file=./${test_case}_p3d
 if [[ ! -f ${test_config_file} ]]
 then
    echo "+++ ERROR: parameter file"
@@ -59,7 +68,7 @@ cat  >  ${execution_path}/ENVPAR  <<  EOF
          tasks_per_node = 1,
          maximum_parallel_io_streams = 1,
          batch_job = .TRUE.,
-         write_binary = .TRUE.,
+         write_binary = .FALSE.,
          maximum_cpu_time_allowed = 999999.,
          local_dvrserver_running = .FALSE.,
 /
@@ -71,8 +80,20 @@ echo "no_coupling"  >  ${execution_path}/runfile
 # Switch to run directory
 cd  ${execution_path}
 
-# profiling
-pgprof -o ${test_case}.%p.pgprof ./palm
+# Profiling
+if [[ ${build_config} == *_mpi ]]; then
+    # Generate hostfile (if neccessary)
+    localhost_name=$(hostname)
+    (( ii = 1 ))
+    while (( ii <= ${mpi_ranks} ))
+    do
+       echo  ${localhost_name}  >>  ${execution_path}/hostfile
+       (( ii = ii + 1 ))
+    done
+    mpirun -n ${mpi_ranks} pgprof --profile-from-start off -o ${test_case}.%h.%p.pgprof ./palm
+else
+    pgprof --profile-from-start off -o ${test_case}.%h.%p.pgprof ./palm
+fi
 
 echo "*** PALM execution finished. Results can be found in:"
 echo "    \"${execution_path}\""

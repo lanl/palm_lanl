@@ -178,8 +178,8 @@
  MODULE surface_mod
 
     USE arrays_3d,                                                             &
-        ONLY:  heatflux_input_conversion, momentumflux_input_conversion,       &
-               alpha_T, beta_S, rho_air, rho_air_zw, zu, zw,                   &
+        ONLY:  heatflux_input_conversion, hyp, momentumflux_input_conversion,  &
+               alpha_T, beta_S, pt_init, rho_air, rho_air_zw, sa_init, zu, zw, &
                waterflux_input_conversion
 
     USE chem_modules
@@ -246,6 +246,9 @@
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  qrs       !< scaling parameter qr
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  nrs       !< scaling parameter nr
 
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  gamma_T   !< heat exchange velocity (m/s)
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  gamma_S   !< salt exchange velocity (m/s)
+
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  ol        !< Obukhov length
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  rib       !< Richardson bulk number
 
@@ -254,6 +257,9 @@
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  z0q       !< roughness length for humidity
 
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt1       !< Potential temperature at first grid level
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  sa1       !< Salinity at first grid level
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt_io     !< Potential temperature at ice-ocean interface
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  sa_io     !< Salinity at ice-ocean interface
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  qv1       !< mixing ratio at first grid level
        REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  css     !< scaling parameter chemical species
 !
@@ -1264,6 +1270,11 @@
 !--    Salinity flux
        IF ( ocean )  THEN
          DEALLOCATE ( surfaces%sasws )
+         DEALLOCATE ( surfaces%sa1 )
+         DEALLOCATE ( surfaces%gamma_T )
+         DEALLOCATE ( surfaces%gamma_S )
+         DEALLOCATE ( surfaces%pt_io )
+         DEALLOCATE ( surfaces%sa_io )
          DEALLOCATE ( surfaces%shf_sol )
        ENDIF
 
@@ -1338,7 +1349,12 @@
 !
 !--    Salinity flux
        IF ( ocean )  THEN
+         ALLOCATE ( surfaces%gamma_T(1:surfaces%ns) )
+         ALLOCATE ( surfaces%gamma_S(1:surfaces%ns) )
          ALLOCATE ( surfaces%sasws(1:surfaces%ns) )
+         ALLOCATE ( surfaces%sa1(1:surfaces%ns) )
+         ALLOCATE ( surfaces%pt_io(1:surfaces%ns) )
+         ALLOCATE ( surfaces%sa_io(1:surfaces%ns) )
          ALLOCATE ( surfaces%shf_sol(1:surfaces%ns) )
        ENDIF
 
@@ -2271,9 +2287,13 @@
              surf%k(num_h) = k
 !
              IF ( ocean ) THEN
+               surf%gamma_T(num_h) = 0.0_wp
+               surf%gamma_S(num_h) = 0.0_wp
                surf%shf(num_h) = 0.0_wp
                surf%sasws(num_h) = 0.0_wp
                surf%shf_sol(num_h) = 0.0_wp
+               surf%sa_io(num_h) = sa_init(nzt)
+               surf%pt_io(num_h) = c1 + c2 * surf%sa_io(num_h) + c3 * hyp(nzt+1)
              endif
 
 !--          Initialize top heat flux

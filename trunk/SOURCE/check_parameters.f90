@@ -4444,12 +4444,16 @@
 !-- Check for valid setting of most_method
     IF ( TRIM( most_method ) /= 'circular'  .AND.                              &
          TRIM( most_method ) /= 'newton'    .AND.                              &
-         TRIM( most_method ) /= 'lookup' )  THEN
+         TRIM( most_method ) /= 'lookup'    .AND.                              &
+         TRIM( most_method ) /= 'mcphee'            )  THEN
        message_string = 'most_method = "' // TRIM( most_method ) //            &
                         '" is unknown'
        CALL message( 'check_parameters', 'PA0416', 1, 2, 0, 6, 0 )
     ENDIF
-
+    IF ( TRIM( most_method ) == 'mcphee' .AND. .NOT. ( ocean ) )  THEN
+       message_string = 'most_method = mcphee is incompatible with atmosphere runs'
+       CALL message( 'check_parameters', 'PA0416', 1, 2, 0, 6, 0 )
+   ENDIF
 !
 !-- Check roughness length, which has to be smaller than dz/2
     IF ( ( constant_flux_layer .OR.  &

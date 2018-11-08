@@ -87,8 +87,9 @@
         ONLY:  dzu, hyp, pt_init, ref_state, sa_init, zu, zw
 
     USE control_parameters,                                                    &
-        ONLY:  g, molecular_viscosity, prho_reference, rho_surface,            &
-               rho_reference, surface_pressure, use_single_reference_value,    &
+        ONLY:  g, molecular_viscosity, prandtl_number, prho_reference,         &
+               rho_reference, rho_surface, surface_pressure,                   &
+               use_single_reference_value                                      &
                stokes_force
 
     USE eqn_state_seawater_mod,                                                &
@@ -119,6 +120,9 @@
 
     ALLOCATE( hyp(nzb:nzt+1) )
 
+!
+!-- Set Prandtl number for ocean case
+    prandtl_number = 13.8_wp
 !
 !-- Set water density near the ocean surface
     rho_surface = 1027.62_wp

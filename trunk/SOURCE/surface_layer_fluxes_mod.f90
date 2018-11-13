@@ -226,7 +226,7 @@
     USE control_parameters,                                                    &
         ONLY:  air_chemistry, c1, c2, c3, cloud_droplets, cloud_physics,       &
                constant_heatflux, constant_scalarflux, constant_waterflux,     &     
-               coupling_mode, drag_coeff, f, g, humidity, ibc_e_b,                &
+               coupling_mode, drag_coeff, f, g, humidity, ibc_e_b,             &
                ibc_pt_b, initializing_actions, kappa,                          &
                intermediate_timestep_count, intermediate_timestep_count_max,   &
                l_m, land_surface, large_scale_forcing, lsf_surf,               &

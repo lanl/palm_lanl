@@ -621,6 +621,7 @@
              linear_eqnOfState, rho_ref, fixed_alpha, alpha_const,             &
              beta_const, pt_ref, sa_ref,                                       &
              omega, omega_sor, wb_solar,                                       &
+             omega, omega_sor,                                                 &
              outflow_source_plane, passive_scalar,                             &
              prandtl_number, precipitation, psolver, pt_damping_factor,        &
              pt_damping_width, pt_reference, pt_surface,                       &
@@ -658,8 +659,7 @@
              wall_adjustment, wall_heatflux, wall_humidityflux,                &
              wall_salinityflux, wall_scalarflux,                               &
              wave_age, wind_dir, wind_speed,                                   &
-             y_shift, zeta_max, zeta_min,                                      &
-             z0h_factor
+             y_shift, z_offset, zeta_max, zeta_min, z0h_factor
 
     NAMELIST /d3par/  averaging_interval, averaging_interval_pr,               &
              cpu_log_barrierwait, create_disturbances,                         &

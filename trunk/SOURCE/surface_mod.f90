@@ -1669,7 +1669,11 @@
        surf_usm_h%koff      = -1
 !
 !--    Downward facing vertical offset
-       surf_def_h(1:2)%koff = 1
+       IF ( k_offset /= 9999 .AND. TRIM( most_method ) == 'mcphee' )
+          surf_def_h(1:2)%koff = k_offset
+       ELSE
+          surf_def_h(1:2)%koff = 1
+       ENDIF
 !
 !--    Vertical surfaces - no vertical offset
        surf_def_v(0:3)%koff = 0

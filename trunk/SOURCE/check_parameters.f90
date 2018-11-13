@@ -4453,7 +4453,31 @@
     IF ( TRIM( most_method ) == 'mcphee' .AND. .NOT. ( ocean ) )  THEN
        message_string = 'most_method = mcphee is incompatible with atmosphere runs'
        CALL message( 'check_parameters', 'PA0416', 1, 2, 0, 6, 0 )
-   ENDIF
+    ENDIF
+    IF ( z_offset /= 9999999.9_wp .AND. k_offset /= 9999 )  THEN
+       message_string = 'both z_offset and k_offset are specified for' //
+                        'most_method = mcphee. Choose one.'
+       CALL message( 'check_parameters', 'PA0416', 1, 2, 0, 6, 0 )
+    ENDIF
+    IF ( z_offset .LT. 0 )  THEN
+       message_string = 'z_offset is less than 0. z_offset must be greater than 0'
+       CALL message( 'check_parameters', 'PA0416', 1, 2, 0, 6, 0 )
+    ENDIF
+    IF ( z_offset /= 9999999.9_wp )  THEN
+       k_offset = CEILING( z_offset/dz )
+    ENDIF
+    IF ( k_offset .LT. 0 )  THEN
+       message_string = 'k_offset is less than 0. k_offset must be greater than 0'
+       CALL message( 'check_parameters', 'PA0416', 1, 2, 0, 6, 0 )
+    ENDIF
+    IF ( k_offset == 9999 .AND. TRIM( most_method ) == 'mcphee' )  THEN
+       k_offset = 3 ! set to default value
+    ENDIF
+
+    IF ( dz_most )  THEN
+       message_string = 'most_method = mcphee is incompatible with atmosphere runs'
+       CALL message( 'check_parameters', 'PA0416', 1, 2, 0, 6, 0 )
+    ENDIF
 !
 !-- Check roughness length, which has to be smaller than dz/2
     IF ( ( constant_flux_layer .OR.  &

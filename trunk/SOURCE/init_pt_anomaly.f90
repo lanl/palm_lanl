@@ -103,10 +103,6 @@
     IF ( bubble_center_y == 9999999.9_wp ) bubble_center_y = dy * ( ny+1 ) / 2
     IF ( bubble_center_z == 9999999.9_wp ) bubble_center_z = (zu(nzt) - zu(nzb)) / 2
 
-!CB remove this
-    WRITE(message_string,*) 'bubble_center = (',bubble_center_x,',',bubble_center_y,',',bubble_center_z,')'
-    CALL location_message(message_string,.TRUE.)
-
 !
 !--    Compute the perturbation.
     DO  i = nxl, nxr
@@ -118,15 +114,8 @@
                 bubble_dr = SQRT( ( dy*j - bubble_center_y )**2 +              &
                                   ( zu(k) - bubble_center_z )**2 )
 
-                WRITE(message_string,*) 'index = (',i,',',j,',',k,')'
-                CALL location_message(message_string,.TRUE.)
-                WRITE(message_string,*) 'location = (',dx*i,',',dy*j,',',zu(k),')'
-                CALL location_message(message_string,.TRUE.)
-                WRITE(message_string,*) 'bubble_radius = ',bubble_radius,', bubble_dr = ',bubble_dr
-                CALL location_message(message_string,.TRUE.)
-
                 IF ( bubble_dr <= bubble_radius )  THEN
-                   CALL location_message('Adding 2D pt anomaly - enabled',.TRUE.)
+
                    pt(k,j,i) = pt(k,j,i) + bubble_pt *                            &
                             EXP( -0.5 * ( (dy*j  - bubble_center_y) /          &
                                                    bubble_radius )**2) *       &
@@ -134,7 +123,6 @@
                                                    bubble_radius)**2)
                    IF ( ocean ) THEN
 
-                      CALL location_message('Adding 2D sa anomaly - enabled',.TRUE.)
                       sa(k,j,i) = sa(k,j,i) + bubble_sa *                         &
                                EXP( -0.5 * ( (dy*j  - bubble_center_y) /       &
                                                       bubble_radius )**2) *    &
@@ -154,17 +142,10 @@
                    IF ( INDEX( initializing_actions, 'initialize_3D_bubble' ) /= 0 &
                             .AND. bubble_radius /= 0 )  THEN
 
-                      CALL location_message('Adding 3D cos pt anomaly - enabled',.TRUE.)
-                      WRITE(*,*) 'dvar(',k,',',j,',',i,') = ampl*cos(pi*',bubble_dr/(2*bubble_radius),')\n'
-                      CALL location_message(message_string,.TRUE.)
-
                       pt(k,j,i) = pt(k,j,i) + bubble_pt*cos(pi*bubble_dr/(2*bubble_radius))
 
                       IF ( ocean ) THEN                                           
-
-                         CALL location_message('Adding 3D cos sa anomaly - enabled',.TRUE.)
                          sa(k,j,i) = sa(k,j,i) + bubble_sa*cos(pi*bubble_dr/(2*bubble_radius))
-
                       ENDIF
 
                    ENDIF

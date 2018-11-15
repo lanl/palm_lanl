@@ -1617,8 +1617,7 @@
 !
 !--    Impose temperature anomaly (advection test only) or warm air bubble 
 !--    close to surface
-       IF ( INDEX( initializing_actions, 'initialize_ptanom' ) /= 0  .OR.  &
-            INDEX( initializing_actions, 'initialize_2D_bubble' ) /= 0  .OR. &
+       IF ( INDEX( initializing_actions, 'initialize_2D_bubble' ) /= 0  .OR. &
             INDEX( initializing_actions, 'initialize_3D_bubble' ) /= 0 )  THEN
           CALL init_pt_anomaly
        ENDIF

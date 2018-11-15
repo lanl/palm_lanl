@@ -90,37 +90,21 @@
     IMPLICIT NONE
 
     INTEGER(iwp) ::  i  !< grid index along x
-    INTEGER(iwp) ::  ic !< center index along x 
     INTEGER(iwp) ::  j  !< grid index along y
-    INTEGER(iwp) ::  jc !< center index along y
     INTEGER(iwp) ::  k  !< grid index along z
-    INTEGER(iwp) ::  kc !< center index along z
     
-    REAL(wp)     ::  amount                               !< amount of temperature perturbation
-!    REAL(wp)     ::  bubble_center_y                      !< center of bubble in y
-!    REAL(wp)     ::  bubble_center_z = 170.0              !< center of bubble in z
-    REAL(wp)     ::  bubble_sigma_y = 300.0               !< width of bubble in y
-    REAL(wp)     ::  bubble_sigma_z = 150.0               !< width of bubble in z
-    REAL(wp)     ::  bubble_dr                            !< distance from the center of the bubble
-    REAL(wp)     ::  initial_temperature_difference = 0.4 !< temperature perturbation for bubble in K
-    REAL(wp)     ::  radius                               !< radius of pt anomaly
-    REAL(wp)     ::  rc                                   !< radius of pt anomaly
-    REAL(wp)     ::  x                                    !< x dimension of pt anomaly
-    REAL(wp)     ::  y                                    !< y dimension of pt anomaly
-    REAL(wp)     ::  z                                    !< z dimension of pt anomaly
-    
+    REAL(wp)     ::  bubble_dr                            !< distance from the center of the bubble    
     
 !
-!-- Defaults: radius rc, strength z,
-!--           position of center: ic, jc, kc
+!-- Set default bubble center to the center of the domain
     IF ( bubble_center_x == 9999999.9_wp ) bubble_center_x = dx * ( nx+1 ) / 2
     IF ( bubble_center_y == 9999999.9_wp ) bubble_center_y = dy * ( ny+1 ) / 2
     IF ( bubble_center_z == 9999999.9_wp ) bubble_center_z = (zu(nzt) - zu(nzb)) / 2
-!    rc =  10.0_wp * dx
-!    ic =  ( nx+1 ) / 2
-!    jc =  ic
-!    kc =  nzt / 2
-    
+
+!CB remove this
+    WRITE(message_string,*) 'bubble_center = (',bubble_center_x,',',bubble_center_y,',',bubble_center_z,')'
+    CALL location_message(message_string,.TRUE.)
+
 !
 !--    Compute the perturbation.
     DO  i = nxl, nxr
@@ -129,21 +113,34 @@
              IF ( INDEX( initializing_actions, 'initialize_2D_bubble' ) /= 0   &
                   .AND. bubble_radius /= 0 )  THEN
 
-                pt(k,j,i) = pt(k,j,i) + bubble_pt *                            &
+                bubble_dr = SQRT( ( dy*j - bubble_center_y )**2 +              &
+                                  ( zu(k) - bubble_center_z )**2 )
+
+                WRITE(message_string,*) 'index = (',i,',',j,',',k,')'
+                CALL location_message(message_string,.TRUE.)
+                WRITE(message_string,*) 'location = (',dx*i,',',dy*j,',',zu(k),')'
+                CALL location_message(message_string,.TRUE.)
+                WRITE(message_string,*) 'bubble_radius = ',bubble_radius,', bubble_dr = ',bubble_dr
+                CALL location_message(message_string,.TRUE.)
+
+                IF ( bubble_dr <= bubble_radius )  THEN
+                   CALL location_message('Adding 2D pt anomaly - enabled',.TRUE.)
+                   pt(k,j,i) = pt(k,j,i) + bubble_pt *                            &
                             EXP( -0.5 * ( (dy*j  - bubble_center_y) /          &
                                                    bubble_radius )**2) *       &
                             EXP( -0.5 * ( (zu(k) - bubble_center_z) /          &
                                                    bubble_radius)**2)
-                IF ( ocean ) THEN
+                   IF ( ocean ) THEN
 
-                   sa(k,j,i) = sa(k,j,i) + bubble_sa *                         &
+                      CALL location_message('Adding 2D sa anomaly - enabled',.TRUE.)
+                      sa(k,j,i) = sa(k,j,i) + bubble_sa *                         &
                                EXP( -0.5 * ( (dy*j  - bubble_center_y) /       &
                                                       bubble_radius )**2) *    &
                                EXP( -0.5 * ( (zu(k) - bubble_center_z) /       &
                                                       bubble_radius )**2)
 
+                   ENDIF
                 ENDIF
-
              ELSE
 
                 bubble_dr = SQRT( ( dx*i - bubble_center_x )**2 +              &
@@ -151,24 +148,20 @@
                                   ( zu(k) - bubble_center_z )**2 )
 
                 IF ( bubble_dr <= bubble_radius )  THEN
-!
-!--                Initialize warm air bubble close to surface and homogenous elegonated 
-!--                along x-Axis
-                   IF ( INDEX( initializing_actions, 'initialize_ptanom' ) /= 0 )  THEN
 
-                      pt(k,j,i) = pt(k,j,i) + 5.0_wp * EXP( -( bubble_dr * 0.001_wp / 2.0_wp )**2 )
-
-                   ELSEIF ( INDEX( initializing_actions, 'initialize_3D_bubble' ) /= 0 &
+                   IF ( INDEX( initializing_actions, 'initialize_3D_bubble' ) /= 0 &
                             .AND. bubble_radius /= 0 )  THEN
 
-                      WRITE(*,*) 'dvar(',k,',',j,',',i,') = ampl*cos(pi*',bubble_dr/bubble_radius,')\n'
-!CB                   CALL location_message(message_string,.TRUE.)
+                      CALL location_message('Adding 3D cos pt anomaly - enabled',.TRUE.)
+                      WRITE(*,*) 'dvar(',k,',',j,',',i,') = ampl*cos(pi*',bubble_dr/(2*bubble_radius),')\n'
+                      CALL location_message(message_string,.TRUE.)
 
-                      pt(k,j,i) = pt(k,j,i) + min(0.0_wp,bubble_pt*cos(pi*bubble_dr/bubble_radius))
+                      pt(k,j,i) = pt(k,j,i) + bubble_pt*cos(pi*bubble_dr/(2*bubble_radius))
 
                       IF ( ocean ) THEN                                           
 
-                         sa(k,j,i) = sa(k,j,i) + min(0.0_wp,bubble_sa*cos(pi*bubble_dr/bubble_radius))
+                         CALL location_message('Adding 3D cos sa anomaly - enabled',.TRUE.)
+                         sa(k,j,i) = sa(k,j,i) + bubble_sa*cos(pi*bubble_dr/(2*bubble_radius))
 
                       ENDIF
 

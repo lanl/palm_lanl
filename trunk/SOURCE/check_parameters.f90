@@ -1395,7 +1395,7 @@
           SELECT CASE ( action(1:position-1) )
 
              CASE ( 'set_constant_profiles', 'set_1d-model_profiles',          &
-                    'by_user', 'initialize_vortex', 'initialize_ptanom',       &
+                    'by_user', 'initialize_vortex', 			       &
                     'initialize_2D_bubble', 'initialize_3D_bubble', 'inifor' )
                 action = action(position+1:)
 
@@ -1918,10 +1918,9 @@
 
 !-- Check initial conditions for bubble case
     IF ( INDEX( initializing_actions, 'initialize_3D_bubble' ) /= 0 .OR.         &
-         INDEX( initializing_actions, 'initialize_2D_bubble' ) /= 0 .OR.         &
-         INDEX( initializing_actions, 'initialize_ptanom' ) /= 0 ) THEN
+         INDEX( initializing_actions, 'initialize_2D_bubble' ) /= 0 ) THEN
        IF ( bubble_radius == 9999999.9_wp ) THEN
-          message_string = 'initializing_actions includes bubble or ptanom, so '// &
+          message_string = 'initializing_actions includes bubble, so '// &
                            'bubble_radius must be specified in namelist'
           CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
        ELSEIF ( bubble_radius == 0 ) THEN

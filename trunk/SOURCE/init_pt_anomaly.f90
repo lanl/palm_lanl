@@ -20,6 +20,8 @@
 ! Current revisions:
 ! -----------------
 ! 
+! 2018-11-15 cbegeman
+! Change ptanom to 2D and 3D bubble with user-specified properties
 ! 
 ! Former revisions:
 ! -----------------

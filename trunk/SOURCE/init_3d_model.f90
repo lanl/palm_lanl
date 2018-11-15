@@ -20,6 +20,8 @@
 ! Current revisions:
 ! ------------------
 ! 
+! 2018-11-15 cbegeman
+! Modify call to init_pt_anomaly
 ! 
 ! Former revisions:
 ! -----------------

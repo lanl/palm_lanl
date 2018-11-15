@@ -19,12 +19,16 @@
 !
 ! Current revisions:
 ! ------------------
-! 
-! 2018-10-25 cbegeman
-! Add dirichlet bottom boundary conditions for salinity
+!
+! 2018-11-15 cbegeman
+! Add bubble property variables
 ! 
 ! Former revisions:
 ! -----------------
+!
+! 2018-10-25 cbegeman
+! Add dirichlet bottom boundary conditions for salinity
+!
 ! $Id: modules.f90 3083 2018-06-19 14:03:12Z gronemeier $
 ! set dt_3d = 0.01
 ! 

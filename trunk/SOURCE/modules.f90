@@ -19,12 +19,16 @@
 !
 ! Current revisions:
 ! ------------------
-! 
-! 2018-10-25 cbegeman
-! Add dirichlet bottom boundary conditions for salinity
+!
+! 2018-11-15 cbegeman
+! Add bubble property variables
 ! 
 ! Former revisions:
 ! -----------------
+!
+! 2018-10-25 cbegeman
+! Add dirichlet bottom boundary conditions for salinity
+!
 ! $Id: modules.f90 3083 2018-06-19 14:03:12Z gronemeier $
 ! set dt_3d = 0.01
 ! 
@@ -1416,6 +1420,12 @@
     REAL(wp) ::  bc_q_t_val                                    !< vertical gradient of humidity near domain top
     REAL(wp) ::  bc_s_t_val                                    !< vertical gradient of passive scalar near domain top
     REAL(wp) ::  bottom_salinityflux = 0.0_wp                  !< namelist parameter
+    REAL(wp) ::  bubble_center_x = 9999999.9_wp                !< namelist parameter
+    REAL(wp) ::  bubble_center_y = 9999999.9_wp                !< namelist parameter
+    REAL(wp) ::  bubble_center_z = 9999999.9_wp                !< namelist parameter
+    REAL(wp) ::  bubble_radius = 9999999.9_wp                  !< namelist parameter
+    REAL(wp) ::  bubble_pt = 9999999.9_wp                      !< namelist parameter
+    REAL(wp) ::  bubble_sa = 9999999.9_wp                      !< namelist parameter
     REAL(wp) ::  building_height = 50.0_wp                     !< namelist parameter
     REAL(wp) ::  building_length_x = 50.0_wp                   !< namelist parameter
     REAL(wp) ::  building_length_y = 50.0_wp                   !< namelist parameter

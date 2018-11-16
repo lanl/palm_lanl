@@ -19,13 +19,13 @@
 !
 ! Current revisions:
 ! -----------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: advec_w_pw.f90 2718 2018-01-02 08:49:38Z maronga $
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 !
@@ -33,21 +33,21 @@
 !
 ! 2232 2017-05-30 17:47:52Z suehring
 ! topography representation via flags
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1873 2016-04-18 14:50:06Z maronga
 ! Module renamed (removed _mod)
-! 
-! 
+!
+!
 ! 1850 2016-04-08 13:29:27Z maronga
 ! Module renamed
-! 
-! 
+!
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1353 2014-04-08 15:21:23Z heinze
 ! REAL constants provided with KIND-attribute
 !
@@ -74,7 +74,7 @@
 !> would be communicated upwards due to w=0 at k=nzb.
 !------------------------------------------------------------------------------!
  MODULE advec_w_pw_mod
- 
+
 
     PRIVATE
     PUBLIC advec_w_pw
@@ -83,7 +83,7 @@
        MODULE PROCEDURE advec_w_pw
        MODULE PROCEDURE advec_w_pw_ij
     END INTERFACE advec_w_pw
- 
+
  CONTAINS
 
 
@@ -114,15 +114,19 @@
        INTEGER(iwp) ::  i !<
        INTEGER(iwp) ::  j !<
        INTEGER(iwp) ::  k !<
-       
+
        REAL(wp)    ::  gu !<
        REAL(wp)    ::  gv !<
 
- 
+
        gu = 2.0_wp * u_gtrans
        gv = 2.0_wp * v_gtrans
+       !$acc kernels
+       !$acc loop independent
        DO  i = nxl, nxr
+          !$acc loop independent
           DO  j = nys, nyn
+             !$acc loop independent
              DO  k = nzb+1, nzt
                 tend(k,j,i) = tend(k,j,i) - 0.25_wp * (                        &
                          ( w(k,j,i+1) * ( u(k+1,j,i+1) + u(k,j,i+1) - gu )     &
@@ -138,6 +142,7 @@
              ENDDO
           ENDDO
        ENDDO
+       !$acc end kernels
 
     END SUBROUTINE advec_w_pw
 
@@ -169,7 +174,7 @@
        INTEGER(iwp) ::  i !<
        INTEGER(iwp) ::  j !<
        INTEGER(iwp) ::  k !<
-       
+
        REAL(wp)    ::  gu !<
        REAL(wp)    ::  gv !<
 

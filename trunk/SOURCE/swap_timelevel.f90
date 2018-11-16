@@ -19,50 +19,50 @@
 !
 ! Current revisions:
 ! -----------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: swap_timelevel.f90 2817 2018-02-19 16:32:21Z knoop $
 ! Preliminary gust module interface implemented
-! 
+!
 ! 2766 2018-01-22 17:17:47Z kanani
 ! Removed preprocessor directive __chem
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 ! Moved TKE to turbulence_closure_mod (TG)
 ! Implementation of chemistry module (FK)
-! 
+!
 ! 2350 2017-08-15 11:48:26Z kanani
 ! Bugfix in nopointer version
-! 
+!
 ! 2292 2017-06-20 09:51:42Z schwenkel
-! Implementation of new microphysic scheme: cloud_scheme = 'morrison' 
-! includes two more prognostic equations for cloud drop concentration (nc)  
-! and cloud water content (qc). 
-! 
+! Implementation of new microphysic scheme: cloud_scheme = 'morrison'
+! includes two more prognostic equations for cloud drop concentration (nc)
+! and cloud water content (qc).
+!
 ! 2233 2017-05-30 18:08:54Z suehring
 !
 ! 2232 2017-05-30 17:47:52Z suehring
 ! Adjustments to new surface concept
-! 
+!
 ! 2118 2017-01-17 16:38:49Z raasch
 ! OpenACC directives removed
-! 
+!
 ! 2011 2016-09-19 17:29:57Z kanani
 ! Flag urban_surface is now defined in module control_parameters.
-! 
+!
 ! 2007 2016-08-24 15:47:17Z kanani
 ! Added swapping of urban surface model quantities,
 ! removed redundance for land surface model
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1960 2016-07-12 16:34:24Z suehring
 ! Separate humidity and passive scalar
 !
@@ -76,14 +76,14 @@
 ! explicit loops in nopointer case to omit craypointer option of pgi compiler
 !
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1496 2014-12-02 17:25:50Z maronga
 ! Added swapping of land surface model quantities
-! 
+!
 ! 1374 2014-04-25 12:55:07Z raasch
 ! bugfix: use-statement for nopointer-case added
-! 
+!
 ! 1320 2014-03-20 08:40:49Z raasch
 ! ONLY-attribute added to USE-statements,
 ! revision history before 2012 removed,
@@ -113,14 +113,14 @@
 !
 ! Revision 1.1  2000/01/10  10:08:58  10:08:58  raasch (Siegfried Raasch)
 ! Initial revision
-! 
+!
 !
 ! Description:
 ! ------------
 !> Swap of timelevels of variables after each timestep
 !------------------------------------------------------------------------------!
  SUBROUTINE swap_timelevel
- 
+
 
 #if defined( __nopointer )
     USE arrays_3d,                                                             &
@@ -136,7 +136,7 @@
 #endif
 
     USE chemistry_model_mod,                                                   &
-        ONLY:  chem_swap_timelevel 
+        ONLY:  chem_swap_timelevel
 
     USE land_surface_model_mod,                                                &
         ONLY: lsm_swap_timelevel
@@ -202,14 +202,14 @@
        IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
           qc = qc_p
           nc = nc_p
-       ENDIF             
+       ENDIF
        IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
           qr = qr_p
           nr = nr_p
        ENDIF
     ENDIF
 
-    IF ( passive_scalar )  s = s_p             
+    IF ( passive_scalar )  s = s_p
 
     IF ( land_surface )  THEN
        CALL lsm_swap_timelevel ( 0 )

@@ -1471,13 +1471,18 @@
 !
 !-- External pressure gradient
     IF ( dp_external )  THEN
+       !$acc kernels
+       !$acc loop independent
        DO  i = nxlu, nxr
+          !$acc loop independent
           DO  j = nys, nyn
+             !$acc loop independent
              DO  k = dp_level_ind_b+1, nzt
                 tend(k,j,i) = tend(k,j,i) - dpdxy(1) * dp_smooth_factor(k)
              ENDDO
           ENDDO
        ENDDO
+       !$acc end kernels
     ENDIF
 
 !
@@ -1509,14 +1514,16 @@
           ENDDO
        ENDDO
     ENDDO
-    !$acc end kernels
 
 !
 !-- Calculate tendencies for the next Runge-Kutta step
     IF ( timestep_scheme(1:5) == 'runge' )  THEN
        IF ( intermediate_timestep_count == 1 )  THEN
+          !$acc loop independent
           DO  i = nxlu, nxr
+             !$acc loop independent
              DO  j = nys, nyn
+                !$acc loop independent
                 DO  k = nzb+1, nzt
                    tu_m(k,j,i) = tend(k,j,i)
                 ENDDO
@@ -1524,8 +1531,11 @@
           ENDDO
        ELSEIF ( intermediate_timestep_count < &
                 intermediate_timestep_count_max )  THEN
+          !$acc loop independent
           DO  i = nxlu, nxr
+             !$acc loop independent
              DO  j = nys, nyn
+                !$acc loop independent
                 DO  k = nzb+1, nzt
                    tu_m(k,j,i) =    -9.5625_wp * tend(k,j,i)                   &
                                    + 5.3125_wp * tu_m(k,j,i)
@@ -1534,6 +1544,7 @@
           ENDDO
        ENDIF
     ENDIF
+    !$acc end kernels
 
     CALL cpu_log( log_point(5), 'u-equation', 'stop' )
 
@@ -1567,13 +1578,18 @@
 !
 !-- External pressure gradient
     IF ( dp_external )  THEN
+       !$acc kernels
+       !$acc loop independent
        DO  i = nxl, nxr
+          !$acc loop independent
           DO  j = nysv, nyn
+             !$acc loop independent
              DO  k = dp_level_ind_b+1, nzt
                 tend(k,j,i) = tend(k,j,i) - dpdxy(2) * dp_smooth_factor(k)
              ENDDO
           ENDDO
        ENDDO
+       !$acc end kernels
     ENDIF
 
 !
@@ -1588,8 +1604,12 @@
 
 !
 !-- Prognostic equation for v-velocity component
+    !$acc kernels
+    !$acc loop independent
     DO  i = nxl, nxr
+       !$acc loop independent
        DO  j = nysv, nyn
+          !$acc loop independent
           DO  k = nzb+1, nzt
              v_p(k,j,i) = v(k,j,i) + ( dt_3d * ( tsc(2) * tend(k,j,i) +        &
                                                  tsc(3) * tv_m(k,j,i) )        &
@@ -1606,8 +1626,11 @@
 !-- Calculate tendencies for the next Runge-Kutta step
     IF ( timestep_scheme(1:5) == 'runge' )  THEN
        IF ( intermediate_timestep_count == 1 )  THEN
+          !$acc loop independent
           DO  i = nxl, nxr
+             !$acc loop independent
              DO  j = nysv, nyn
+                !$acc loop independent
                 DO  k = nzb+1, nzt
                    tv_m(k,j,i) = tend(k,j,i)
                 ENDDO
@@ -1615,8 +1638,11 @@
           ENDDO
        ELSEIF ( intermediate_timestep_count < &
                 intermediate_timestep_count_max )  THEN
+          !$acc loop independent
           DO  i = nxl, nxr
+             !$acc loop independent
              DO  j = nysv, nyn
+                !$acc loop independent
                 DO  k = nzb+1, nzt
                    tv_m(k,j,i) =   -9.5625_wp * tend(k,j,i)                    &
                                   + 5.3125_wp * tv_m(k,j,i)
@@ -1625,6 +1651,7 @@
           ENDDO
        ENDIF
     ENDIF
+    !$acc end kernels
 
     CALL cpu_log( log_point(6), 'v-equation', 'stop' )
 
@@ -1675,8 +1702,12 @@
 
 !
 !-- Prognostic equation for w-velocity component
+    !$acc kernels
+    !$acc loop independent
     DO  i = nxl, nxr
+       !$acc loop independent
        DO  j = nys, nyn
+          !$acc loop independent
           DO  k = nzb+1, nzt-1
              w_p(k,j,i) = w(k,j,i) + ( dt_3d * ( tsc(2) * tend(k,j,i) +        &
                                                  tsc(3) * tw_m(k,j,i) )        &
@@ -1692,8 +1723,11 @@
 !-- Calculate tendencies for the next Runge-Kutta step
     IF ( timestep_scheme(1:5) == 'runge' )  THEN
        IF ( intermediate_timestep_count == 1 )  THEN
+          !$acc loop independent
           DO  i = nxl, nxr
+             !$acc loop independent
              DO  j = nys, nyn
+                !$acc loop independent
                 DO  k = nzb+1, nzt-1
                    tw_m(k,j,i) = tend(k,j,i)
                 ENDDO
@@ -1701,8 +1735,11 @@
           ENDDO
        ELSEIF ( intermediate_timestep_count < &
                 intermediate_timestep_count_max )  THEN
+          !$acc loop independent
           DO  i = nxl, nxr
+             !$acc loop independent
              DO  j = nys, nyn
+                !$acc loop independent
                 DO  k = nzb+1, nzt-1
                    tw_m(k,j,i) =   -9.5625_wp * tend(k,j,i)                    &
                                   + 5.3125_wp * tw_m(k,j,i)
@@ -1711,6 +1748,7 @@
           ENDDO
        ENDIF
     ENDIF
+    !$acc end kernels
 
     CALL cpu_log( log_point(7), 'w-equation', 'stop' )
 
@@ -1824,8 +1862,12 @@
 
 !
 !--    Prognostic equation for potential temperature
+       !$acc kernels
+       !$acc loop independent
        DO  i = nxl, nxr
+          !$acc loop independent
           DO  j = nys, nyn
+             !$acc loop independent
              DO  k = nzb+1, nzt
                 pt_p(k,j,i) = pt(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +      &
                                                    tsc(3) * tpt_m(k,j,i) )     &
@@ -1843,8 +1885,11 @@
 !--    Calculate tendencies for the next Runge-Kutta step
        IF ( timestep_scheme(1:5) == 'runge' )  THEN
           IF ( intermediate_timestep_count == 1 )  THEN
+             !$acc loop independent
              DO  i = nxl, nxr
+                !$acc loop independent
                 DO  j = nys, nyn
+                   !$acc loop independent
                    DO  k = nzb+1, nzt
                       tpt_m(k,j,i) = tend(k,j,i)
                    ENDDO
@@ -1852,8 +1897,11 @@
              ENDDO
           ELSEIF ( intermediate_timestep_count < &
                    intermediate_timestep_count_max )  THEN
+             !$acc loop independent
              DO  i = nxl, nxr
+                !$acc loop independent
                 DO  j = nys, nyn
+                   !$acc loop independent
                    DO  k = nzb+1, nzt
                       tpt_m(k,j,i) =   -9.5625_wp * tend(k,j,i) +              &
                                         5.3125_wp * tpt_m(k,j,i)
@@ -1862,6 +1910,7 @@
              ENDDO
           ENDIF
        ENDIF
+       !$acc end kernels
 
        CALL cpu_log( log_point(13), 'pt-equation', 'stop' )
 
@@ -1924,8 +1973,12 @@
 
 !
 !--    Prognostic equation for salinity
+       !$acc kernels
+       !$acc loop independent
        DO  i = nxl, nxr
+          !$acc loop independent
           DO  j = nys, nyn
+             !$acc loop independent
              DO  k = nzb+1, nzt
                 sa_p(k,j,i) = sa(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +      &
                                                    tsc(3) * tsa_m(k,j,i) )     &
@@ -1944,8 +1997,11 @@
 !--    Calculate tendencies for the next Runge-Kutta step
        IF ( timestep_scheme(1:5) == 'runge' )  THEN
           IF ( intermediate_timestep_count == 1 )  THEN
+             !$acc loop independent
              DO  i = nxl, nxr
+                !$acc loop independent
                 DO  j = nys, nyn
+                   !$acc loop independent
                    DO  k = nzb+1, nzt
                       tsa_m(k,j,i) = tend(k,j,i)
                    ENDDO
@@ -1953,8 +2009,11 @@
              ENDDO
           ELSEIF ( intermediate_timestep_count < &
                    intermediate_timestep_count_max )  THEN
+             !$acc loop independent
              DO  i = nxl, nxr
+                !$acc loop independent
                 DO  j = nys, nyn
+                   !$acc loop independent
                    DO  k = nzb+1, nzt
                       tsa_m(k,j,i) =   -9.5625_wp * tend(k,j,i) +              &
                                         5.3125_wp * tsa_m(k,j,i)
@@ -1963,6 +2022,7 @@
              ENDDO
           ENDIF
        ENDIF
+       !$acc end kernels
 
        CALL cpu_log( log_point(37), 'sa-equation', 'stop' )
 

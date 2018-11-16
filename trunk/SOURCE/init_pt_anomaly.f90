@@ -102,6 +102,7 @@
     IF ( bubble_center_x == 9999999.9_wp ) bubble_center_x = dx * ( nx+1 ) / 2
     IF ( bubble_center_y == 9999999.9_wp ) bubble_center_y = dy * ( ny+1 ) / 2
     IF ( bubble_center_z == 9999999.9_wp ) bubble_center_z = (zu(nzt) - zu(nzb)) / 2
+    IF ( bubble_pt == 9999999.9_wp ) bubble_pt = 0.
     IF ( bubble_sa == 9999999.9_wp .AND. ocean ) bubble_sa = 0.
 
 !

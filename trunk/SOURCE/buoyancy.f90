@@ -19,13 +19,13 @@
 !
 ! Current revisions:
 ! ------------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: buoyancy.f90 2718 2018-01-02 08:49:38Z maronga $
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 !
@@ -33,32 +33,32 @@
 !
 ! 2232 2017-05-30 17:47:52Z suehring
 ! Adjustments to new topography concept
-! 
+!
 ! 2118 2017-01-17 16:38:49Z raasch
 ! OpenACC version of subroutine removed
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1873 2016-04-18 14:50:06Z maronga
 ! Module renamed (removed _mod)
-! 
-! 
+!
+!
 ! 1850 2016-04-08 13:29:27Z maronga
 ! Module renamed
-! 
-! 
+!
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1374 2014-04-25 12:55:07Z raasch
 ! missing variables added to ONLY list
-! 
+!
 ! 1365 2014-04-22 15:03:56Z boeske
 ! Calculation of reference state in subroutine calc_mean_profile moved to
 ! subroutine time_integration,
 ! subroutine calc_mean_profile moved to new file calc_mean_profile.f90
-! 
+!
 ! 1353 2014-04-08 15:21:23Z heinze
 ! REAL constants provided with KIND-attribute
 !
@@ -74,8 +74,8 @@
 ! vector length (32) removed from openacc clause
 !
 ! 1241 2013-10-30 11:36:58Z heinze
-! Generalize calc_mean_profile for wider use: use additional steering 
-! character loc 
+! Generalize calc_mean_profile for wider use: use additional steering
+! character loc
 !
 ! 1179 2013-06-14 05:57:58Z raasch
 ! steering of reference state revised (var_reference and pr removed from
@@ -110,7 +110,7 @@
 !> @attention Humidity is not regarded when using a sloping surface!
 !------------------------------------------------------------------------------!
  MODULE buoyancy_mod
- 
+
 
     PRIVATE
     PUBLIC buoyancy
@@ -152,7 +152,7 @@
        INTEGER(iwp) ::  j              !<
        INTEGER(iwp) ::  k              !<
        INTEGER(iwp) ::  wind_component !<
-       
+
 #if defined( __nopointer )
        REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  var !<
 #else
@@ -163,8 +163,12 @@
        IF ( .NOT. sloping_surface )  THEN
 !
 !--       Normal case: horizontal surface
+          !$acc kernels
+          !$acc loop independent
           DO  i = nxl, nxr
+             !$acc loop independent
              DO  j = nys, nyn
+                !$acc loop independent
                 DO  k = nzb+1, nzt-1
                    tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g * 0.5_wp *  &
                           (                                                     &
@@ -175,6 +179,7 @@
                 ENDDO
              ENDDO
           ENDDO
+          !$acc end kernels
 
        ELSE
 !
@@ -185,8 +190,12 @@
 !--       of the total domain.
           IF ( wind_component == 1 )  THEN
 
+             !$acc kernels
+             !$acc loop independent
              DO  i = nxlu, nxr
+                !$acc loop independent
                 DO  j = nys, nyn
+                   !$acc loop independent
                    DO  k = nzb+1, nzt-1
                       tend(k,j,i) = tend(k,j,i) + g * sin_alpha_surface *         &
                            0.5_wp * ( ( pt(k,j,i-1)         + pt(k,j,i)         ) &
@@ -197,11 +206,16 @@
                    ENDDO
                 ENDDO
              ENDDO
+             !$acc end kernels
 
           ELSEIF ( wind_component == 3 )  THEN
 
+             !$acc kernels
+             !$acc loop independent
              DO  i = nxl, nxr
+                !$acc loop independent
                 DO  j = nys, nyn
+                   !$acc loop independent
                    DO  k = nzb+1, nzt-1
                       tend(k,j,i) = tend(k,j,i) + g * cos_alpha_surface *         &
                            0.5_wp * ( ( pt(k,j,i)         + pt(k+1,j,i)         ) &
@@ -212,9 +226,10 @@
                    ENDDO
                 ENDDO
             ENDDO
+            !$acc end kernels
 
           ELSE
-             
+
              WRITE( message_string, * ) 'no term for component "',             &
                                        wind_component,'"'
              CALL message( 'buoyancy', 'PA0159', 1, 2, 0, 6, 0 )
@@ -258,7 +273,7 @@
        INTEGER(iwp) ::  k              !<
        INTEGER(iwp) ::  pr             !<
        INTEGER(iwp) ::  wind_component !<
-       
+
 #if defined( __nopointer )
        REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  var !<
 #else

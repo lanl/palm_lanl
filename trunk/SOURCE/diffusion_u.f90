@@ -19,36 +19,36 @@
 !
 ! Current revisions:
 ! -----------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: diffusion_u.f90 2718 2018-01-02 08:49:38Z maronga $
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 !
 ! 2638 2017-11-23 12:44:23Z raasch
 ! bugfix for constant top momentumflux
-! 
+!
 ! 2233 2017-05-30 18:08:54Z suehring
 !
 ! 2232 2017-05-30 17:47:52Z suehring
 ! Adjustments to new topography and surface concept
-! 
+!
 ! 2118 2017-01-17 16:38:49Z raasch
 ! OpenACC version of subroutine removed
-! 
+!
 ! 2037 2016-10-26 11:15:40Z knoop
 ! Anelastic approximation implemented
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1873 2016-04-18 14:50:06Z maronga
 ! Module renamed (removed _mod)
-! 
+!
 ! 1850 2016-04-08 13:29:27Z maronga
 ! Module renamed
 !
@@ -57,10 +57,10 @@
 !
 ! 1691 2015-10-26 16:17:44Z maronga
 ! Formatting corrections.
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1340 2014-03-25 19:45:13Z kanani
 ! REAL constants defined as wp-kind
 !
@@ -71,7 +71,7 @@
 ! revision history before 2012 removed,
 ! comment fields (!:) to be used for variable explanations added to
 ! all variable declaration statements
-! 
+!
 ! 1257 2013-11-08 15:18:40Z raasch
 ! openacc loop and loop vector clauses removed, declare create moved after
 ! the FORTRAN declaration statement
@@ -104,7 +104,7 @@
 !>       and slows down the speed on NEC about 5-10%
 !------------------------------------------------------------------------------!
  MODULE diffusion_u_mod
- 
+
 
     PRIVATE
     PUBLIC diffusion_u
@@ -126,17 +126,17 @@
 
        USE arrays_3d,                                                          &
            ONLY:  ddzu, ddzw, km, tend, u, v, w, drho_air, rho_air_zw
-       
+
        USE control_parameters,                                                 &
            ONLY:  constant_top_momentumflux, use_surface_fluxes,               &
                   use_top_fluxes
-       
+
        USE grid_variables,                                                     &
            ONLY:  ddx, ddx2, ddy
-       
+
        USE indices,                                                            &
            ONLY:  nxl, nxlu, nxr, nyn, nys, nzb, nzt, wall_flags_0
-     
+
        USE kinds
 
        USE surface_mod,                                                        &
@@ -154,27 +154,30 @@
        INTEGER(iwp) ::  surf_s        !< Start index of surface elements at (j,i)-gridpoint
 
        REAL(wp)     ::  flag          !< flag to mask topography grid points
-       REAL(wp)     ::  kmym          !< 
+       REAL(wp)     ::  kmym          !<
        REAL(wp)     ::  kmyp          !<
        REAL(wp)     ::  kmzm          !<
        REAL(wp)     ::  kmzp          !<
-       REAL(wp)     ::  mask_bottom   !< flag to mask vertical upward-facing surface       
-       REAL(wp)     ::  mask_north    !< flag to mask vertical surface north of the grid point 
-       REAL(wp)     ::  mask_south    !< flag to mask vertical surface south of the grid point 
-       REAL(wp)     ::  mask_top      !< flag to mask vertical downward-facing surface 
+       REAL(wp)     ::  mask_bottom   !< flag to mask vertical upward-facing surface
+       REAL(wp)     ::  mask_north    !< flag to mask vertical surface north of the grid point
+       REAL(wp)     ::  mask_south    !< flag to mask vertical surface south of the grid point
+       REAL(wp)     ::  mask_top      !< flag to mask vertical downward-facing surface
 
 
-
+!       !$acc data copyin( surf_def_v, surf_lsm_v, surf_usm_v, surf_def_h, surf_lsm_h, surf_usm_h )
+!       !$acc kernels present( surf_def_v, surf_lsm_v, surf_usm_v, surf_def_h, surf_lsm_h, surf_usm_h )
+!       !$acc loop independent
        DO  i = nxlu, nxr
+!          !$acc loop independent
           DO  j = nys, nyn
 !
 !--          Compute horizontal diffusion
              DO  k = nzb+1, nzt
 !
-!--             Predetermine flag to mask topography and wall-bounded grid points. 
+!--             Predetermine flag to mask topography and wall-bounded grid points.
 !--             It is sufficient to masked only north- and south-facing surfaces, which
-!--             need special treatment for the u-component. 
-                flag       = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i),   1 ) ) 
+!--             need special treatment for the u-component.
+                flag       = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i),   1 ) )
                 mask_south = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j-1,i), 1 ) )
                 mask_north = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j+1,i), 1 ) )
 !
@@ -197,22 +200,22 @@
                             kmym * ( u(k,j,i) - u(k,j-1,i) ) * ddy             &
                           + kmym * ( v(k,j,i) - v(k,j,i-1) ) * ddx             &
                                                   )                            &
-                                   ) * ddy  * flag                             
+                                   ) * ddy  * flag
              ENDDO
 !
 !--          Add horizontal momentum flux u'v' at north- (l=0) and south-facing (l=1)
-!--          surfaces. Note, in the the flat case, loops won't be entered as 
+!--          surfaces. Note, in the the flat case, loops won't be entered as
 !--          start_index > end_index. Furtermore, note, no vertical natural surfaces
-!--          so far.           
+!--          so far.
 !--          Default-type surfaces
              DO  l = 0, 1
                 surf_s = surf_def_v(l)%start_index(j,i)
                 surf_e = surf_def_v(l)%end_index(j,i)
                 DO  m = surf_s, surf_e
                    k           = surf_def_v(l)%k(m)
-                   tend(k,j,i) = tend(k,j,i) +                                 &                    
+                   tend(k,j,i) = tend(k,j,i) +                                 &
                                     surf_def_v(l)%mom_flux_uv(m) * ddy
-                ENDDO   
+                ENDDO
              ENDDO
 !
 !--          Natural-type surfaces
@@ -221,9 +224,9 @@
                 surf_e = surf_lsm_v(l)%end_index(j,i)
                 DO  m = surf_s, surf_e
                    k           = surf_lsm_v(l)%k(m)
-                   tend(k,j,i) = tend(k,j,i) +                                 &                    
+                   tend(k,j,i) = tend(k,j,i) +                                 &
                                     surf_lsm_v(l)%mom_flux_uv(m) * ddy
-                ENDDO   
+                ENDDO
              ENDDO
 !
 !--          Urban-type surfaces
@@ -232,30 +235,30 @@
                 surf_e = surf_usm_v(l)%end_index(j,i)
                 DO  m = surf_s, surf_e
                    k           = surf_usm_v(l)%k(m)
-                   tend(k,j,i) = tend(k,j,i) +                                 &                    
+                   tend(k,j,i) = tend(k,j,i) +                                 &
                                     surf_usm_v(l)%mom_flux_uv(m) * ddy
-                ENDDO   
+                ENDDO
              ENDDO
 
 !
 !--          Compute vertical diffusion. In case of simulating a surface layer,
-!--          respective grid diffusive fluxes are masked (flag 8) within this 
+!--          respective grid diffusive fluxes are masked (flag 8) within this
 !--          loop, and added further below, else, simple gradient approach is
-!--          applied. Model top is also mask if top-momentum flux is given. 
+!--          applied. Model top is also mask if top-momentum flux is given.
              DO  k = nzb+1, nzt
 !
-!--             Determine flags to mask topography below and above. Flag 1 is 
-!--             used to mask topography in general, and flag 8 implies 
-!--             information about use_surface_fluxes. Flag 9 is used to control 
-!--             momentum flux at model top.  
+!--             Determine flags to mask topography below and above. Flag 1 is
+!--             used to mask topography in general, and flag 8 implies
+!--             information about use_surface_fluxes. Flag 9 is used to control
+!--             momentum flux at model top.
                 mask_bottom = MERGE( 1.0_wp, 0.0_wp,                           &
-                                     BTEST( wall_flags_0(k-1,j,i), 8 ) ) 
+                                     BTEST( wall_flags_0(k-1,j,i), 8 ) )
                 mask_top    = MERGE( 1.0_wp, 0.0_wp,                           &
                                      BTEST( wall_flags_0(k+1,j,i), 8 ) ) *     &
                               MERGE( 1.0_wp, 0.0_wp,                           &
-                                     BTEST( wall_flags_0(k+1,j,i), 9 ) ) 
+                                     BTEST( wall_flags_0(k+1,j,i), 9 ) )
                 flag        = MERGE( 1.0_wp, 0.0_wp,                           &
-                                     BTEST( wall_flags_0(k,j,i), 1 ) ) 
+                                     BTEST( wall_flags_0(k,j,i), 1 ) )
 !
 !--             Interpolate eddy diffusivities on staggered gridpoints
                 kmzp = 0.25_wp *                                               &
@@ -350,6 +353,10 @@
 
           ENDDO
        ENDDO
+!       !$acc end kernels
+!       !$acc update host( surf_def_v, surf_lsm_v, surf_usm_v, surf_def_h, surf_lsm_h, surf_usm_h )
+!       !$acc end data
+
 
     END SUBROUTINE diffusion_u
 
@@ -363,17 +370,17 @@
 
        USE arrays_3d,                                                          &
            ONLY:  ddzu, ddzw, km, tend, u, v, w, drho_air, rho_air_zw
-       
+
        USE control_parameters,                                                 &
            ONLY:  constant_top_momentumflux, use_surface_fluxes,               &
                   use_top_fluxes
-       
+
        USE grid_variables,                                                     &
            ONLY:  ddx, ddx2, ddy
-       
+
        USE indices,                                                            &
            ONLY:  nzb, nzt, wall_flags_0
-      
+
        USE kinds
 
        USE surface_mod,                                                        &
@@ -391,22 +398,22 @@
        INTEGER(iwp) ::  surf_s        !< Start index of surface elements at (j,i)-gridpoint
 
        REAL(wp)     ::  flag          !< flag to mask topography grid points
-       REAL(wp)     ::  kmym          !< 
+       REAL(wp)     ::  kmym          !<
        REAL(wp)     ::  kmyp          !<
        REAL(wp)     ::  kmzm          !<
        REAL(wp)     ::  kmzp          !<
-       REAL(wp)     ::  mask_bottom   !< flag to mask vertical upward-facing surface       
-       REAL(wp)     ::  mask_north    !< flag to mask vertical surface north of the grid point 
-       REAL(wp)     ::  mask_south    !< flag to mask vertical surface south of the grid point 
-       REAL(wp)     ::  mask_top      !< flag to mask vertical downward-facing surface 
-! 
+       REAL(wp)     ::  mask_bottom   !< flag to mask vertical upward-facing surface
+       REAL(wp)     ::  mask_north    !< flag to mask vertical surface north of the grid point
+       REAL(wp)     ::  mask_south    !< flag to mask vertical surface south of the grid point
+       REAL(wp)     ::  mask_top      !< flag to mask vertical downward-facing surface
+!
 !--    Compute horizontal diffusion
        DO  k = nzb+1, nzt
 !
-!--       Predetermine flag to mask topography and wall-bounded grid points. 
+!--       Predetermine flag to mask topography and wall-bounded grid points.
 !--       It is sufficient to masked only north- and south-facing surfaces, which
-!--       need special treatment for the u-component. 
-          flag       = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i),   1 ) ) 
+!--       need special treatment for the u-component.
+          flag       = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i),   1 ) )
           mask_south = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j-1,i), 1 ) )
           mask_north = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j+1,i), 1 ) )
 !
@@ -431,9 +438,9 @@
 
 !
 !--    Add horizontal momentum flux u'v' at north- (l=0) and south-facing (l=1)
-!--    surfaces. Note, in the the flat case, loops won't be entered as 
+!--    surfaces. Note, in the the flat case, loops won't be entered as
 !--    start_index > end_index. Furtermore, note, no vertical natural surfaces
-!--    so far.           
+!--    so far.
 !--    Default-type surfaces
        DO  l = 0, 1
           surf_s = surf_def_v(l)%start_index(j,i)
@@ -441,7 +448,7 @@
           DO  m = surf_s, surf_e
              k           = surf_def_v(l)%k(m)
              tend(k,j,i) = tend(k,j,i) + surf_def_v(l)%mom_flux_uv(m) * ddy
-          ENDDO   
+          ENDDO
        ENDDO
 !
 !--    Natural-type surfaces
@@ -451,7 +458,7 @@
           DO  m = surf_s, surf_e
              k           = surf_lsm_v(l)%k(m)
              tend(k,j,i) = tend(k,j,i) + surf_lsm_v(l)%mom_flux_uv(m) * ddy
-          ENDDO   
+          ENDDO
        ENDDO
 !
 !--    Urban-type surfaces
@@ -461,27 +468,27 @@
           DO  m = surf_s, surf_e
              k           = surf_usm_v(l)%k(m)
              tend(k,j,i) = tend(k,j,i) + surf_usm_v(l)%mom_flux_uv(m) * ddy
-          ENDDO   
+          ENDDO
        ENDDO
 !
 !--    Compute vertical diffusion. In case of simulating a surface layer,
-!--    respective grid diffusive fluxes are masked (flag 8) within this 
+!--    respective grid diffusive fluxes are masked (flag 8) within this
 !--    loop, and added further below, else, simple gradient approach is
 !--    applied. Model top is also mask if top-momentum flux is given.
        DO  k = nzb+1, nzt
 !
-!--       Determine flags to mask topography below and above. Flag 1 is 
-!--       used to mask topography in general, and flag 8 implies 
-!--       information about use_surface_fluxes. Flag 9 is used to control 
-!--       momentum flux at model top. 
+!--       Determine flags to mask topography below and above. Flag 1 is
+!--       used to mask topography in general, and flag 8 implies
+!--       information about use_surface_fluxes. Flag 9 is used to control
+!--       momentum flux at model top.
           mask_bottom = MERGE( 1.0_wp, 0.0_wp,                                 &
-                               BTEST( wall_flags_0(k-1,j,i), 8 ) ) 
+                               BTEST( wall_flags_0(k-1,j,i), 8 ) )
           mask_top    = MERGE( 1.0_wp, 0.0_wp,                                 &
                                BTEST( wall_flags_0(k+1,j,i), 8 ) ) *           &
                         MERGE( 1.0_wp, 0.0_wp,                                 &
                                BTEST( wall_flags_0(k+1,j,i), 9 ) )
           flag        = MERGE( 1.0_wp, 0.0_wp,                                 &
-                               BTEST( wall_flags_0(k,j,i), 1 ) ) 
+                               BTEST( wall_flags_0(k,j,i), 1 ) )
 !
 !--       Interpolate eddy diffusivities on staggered gridpoints
           kmzp = 0.25_wp * ( km(k,j,i)+km(k+1,j,i)+km(k,j,i-1)+km(k+1,j,i-1) )
@@ -502,7 +509,7 @@
 !--    momentum flux at the bottom is given by the Prandtl law or if it is
 !--    prescribed by the user.
 !--    Difference quotient of the momentum flux is not formed over half of
-!--    the grid spacing (2.0*ddzw(k)) any more, since the comparison with 
+!--    the grid spacing (2.0*ddzw(k)) any more, since the comparison with
 !--    other (LES) models showed that the values of the momentum flux becomes
 !--    too large in this case.
        IF ( use_surface_fluxes )  THEN

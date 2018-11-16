@@ -19,13 +19,13 @@
 !
 ! Current revisions:
 ! -----------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: advec_s_pw.f90 2718 2018-01-02 08:49:38Z maronga $
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 !
@@ -33,24 +33,24 @@
 !
 ! 2232 2017-05-30 17:47:52Z suehring
 ! topography representation via flags
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1873 2016-04-18 14:50:06Z maronga
 ! Module renamed (removed _mod)
-! 
-! 
+!
+!
 ! 1850 2016-04-08 13:29:27Z maronga
 ! Module renamed
-! 
-! 
+!
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1374 2014-04-25 12:55:07Z raasch
 ! missing variables added to ONLY list
-! 
+!
 ! 1353 2014-04-08 15:21:23Z heinze
 ! REAL constants provided with KIND-attribute
 !
@@ -82,7 +82,7 @@
 !> NOTE: at the first grid point above the surface computation still takes place!
 !------------------------------------------------------------------------------!
  MODULE advec_s_pw_mod
- 
+
 
     PRIVATE
     PUBLIC advec_s_pw
@@ -91,7 +91,7 @@
        MODULE PROCEDURE advec_s_pw
        MODULE PROCEDURE advec_s_pw_ij
     END INTERFACE
- 
+
  CONTAINS
 
 
@@ -129,10 +129,14 @@
 #else
        REAL(wp), DIMENSION(:,:,:), POINTER ::  sk
 #endif
- 
 
+
+       !$acc kernels
+       !$acc loop independent
        DO  i = nxl, nxr
+          !$acc loop independent
           DO  j = nys, nyn
+             !$acc loop independent
              DO  k = nzb+1, nzt
                 tend(k,j,i) = tend(k,j,i) +                                       &
             ( -0.5_wp * ( ( u(k,j,i+1) - u_gtrans ) * ( sk(k,j,i+1) - sk(k,j,i) ) &
@@ -148,6 +152,7 @@
              ENDDO
           ENDDO
        ENDDO
+       !$acc end kernels
 
     END SUBROUTINE advec_s_pw
 

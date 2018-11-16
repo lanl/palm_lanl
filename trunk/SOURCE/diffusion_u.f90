@@ -164,11 +164,11 @@
        REAL(wp)     ::  mask_top      !< flag to mask vertical downward-facing surface
 
 
-!       !$acc data copyin( surf_def_v, surf_lsm_v, surf_usm_v, surf_def_h, surf_lsm_h, surf_usm_h )
-!       !$acc kernels present( surf_def_v, surf_lsm_v, surf_usm_v, surf_def_h, surf_lsm_h, surf_usm_h )
-!       !$acc loop independent
+       !$acc enter data copyin( surf_def_v, surf_lsm_v, surf_usm_v, surf_def_h, surf_lsm_h, surf_usm_h )
+       !$acc kernels present( surf_def_v, surf_lsm_v, surf_usm_v, surf_def_h, surf_lsm_h, surf_usm_h )
+       !$acc loop independent
        DO  i = nxlu, nxr
-!          !$acc loop independent
+          !$acc loop independent
           DO  j = nys, nyn
 !
 !--          Compute horizontal diffusion
@@ -353,9 +353,7 @@
 
           ENDDO
        ENDDO
-!       !$acc end kernels
-!       !$acc update host( surf_def_v, surf_lsm_v, surf_usm_v, surf_def_h, surf_lsm_h, surf_usm_h )
-!       !$acc end data
+       !$acc end kernels
 
 
     END SUBROUTINE diffusion_u

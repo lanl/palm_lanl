@@ -6,5 +6,5 @@ PROG=palm
 F90=pgf90
 F90_SER=pgf90
 COPT= -Mpreprocess -r8 -D__netcdf -D__lc -D__cudaProfiler
-F90FLAGS= -r8 -fast -acc -ta=tesla -Minfo=accel -Mcuda -I $(NETCDF)/include
+F90FLAGS= -r8 -fast -acc -ta=tesla:deepcopy -Minfo=accel -Mcuda -I $(NETCDF)/include
 LDFLAGS= -fast -acc -ta=tesla -Minfo=accel -Mcuda -L $(NETCDF)/lib -lnetcdff -lnetcdf -lhdf5 -lhdf5_hl -lm -lz

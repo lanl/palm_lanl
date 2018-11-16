@@ -631,8 +631,6 @@
 
     CALL location_message( 'allocating arrays', .FALSE. )
 
-!CB    WRITE(message_string,*) 'init_3d_model: i = ',nxl,',',nxr,', j = ',nys,',',nyn
-!CB    CALL location_message(message_string,.TRUE.)
 !
 !-- Allocate arrays
     ALLOCATE( mean_surface_level_height(0:statistic_regions),                  &

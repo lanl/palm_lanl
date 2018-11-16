@@ -1933,18 +1933,21 @@
           CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
        ENDIF
        IF ( bubble_center_x /= 9999999.9_wp .AND.                              &
-            ( bubble_center_x > nx*dx .OR. bubble_center_x < 0.0_wp ) ) THEN
-          WRITE(message_string,*) 'bubble_center_x is outside the domain, x>',nx*dx
+            ( ( bubble_center_x + bubble_radius ) > nx*dx .OR.                 &
+              ( bubble_center_x - bubble_radius ) < 0          ) ) THEN
+          message_string = 'bubble is outside the x-axis limits'
           CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
        ENDIF
        IF ( bubble_center_y /= 9999999.9_wp .AND.                              &
-            ( bubble_center_y > ny*dy .OR. bubble_center_y < 0.0_wp ) ) THEN
-          message_string = 'bubble_center_y is outside the domain'
+            ( ( bubble_center_y + bubble_radius ) > ny*dy .OR.                 &
+              ( bubble_center_y - bubble_radius ) < 0          ) ) THEN
+          message_string = 'bubble is outside the y-axis limits'
           CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
        ENDIF
        IF ( bubble_center_z /= 9999999.9_wp .AND.                              &
-            ( bubble_center_z > zu(nzt) .OR. bubble_center_z < zu(nzb) ) ) THEN
-          message_string = 'bubble_center_z is outside the domain'
+            ( ( bubble_center_z + bubble_radius ) > zu(nzt) .OR.               &
+              ( bubble_center_z - bubble_radius ) < zu(nzb) ) ) THEN
+          message_string = 'bubble is outside the z-axis limits'
           CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
        ENDIF
     ENDIF
@@ -1953,12 +1956,6 @@
        IF ( bubble_pt == 9999999.9_wp ) THEN
           message_string = 'initializing_actions includes bubble, so '//       &
                            'bubble_pt must be specified in namelist'
-          CALL message( 'check_parameters', 'PA0562', 1, 2, 0, 6, 0 )
-       ENDIF
-       IF ( bubble_sa == 9999999.9_wp .AND. ocean ) THEN
-          message_string = 'initializing_actions includes bubble '//           &
-                           'and it is an ocean case, so bubble_sa must be '//  &
-                           'specified in namelist'
           CALL message( 'check_parameters', 'PA0562', 1, 2, 0, 6, 0 )
        ENDIF
     ENDIF

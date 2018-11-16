@@ -52,9 +52,10 @@
 
    INTEGER(iwp), PARAMETER :: FROMUSDELTA = 1   !< Stokes drift from surface value and decay depth
    INTEGER(iwp), PARAMETER :: FROMSPECDHH85 = 2 !< Stokes drift from DHH85 spectrum
+   INTEGER(iwp), PARAMETER :: COASTAL = 3
 
    PRIVATE
-   ! PUBLIC stokes_drift_check_parameters, init_stokes_dirft
+
    PUBLIC init_stokes_drift, stokes_drift_check_parameters
 
  CONTAINS
@@ -69,7 +70,7 @@
 
       USE control_parameters,                                                  &
          ONLY: stokes_drift_method, u0_stk, v0_stk, d_stk,                     &
-               wind_speed, wind_dir, wave_age
+               wind_speed, wind_dir, wave_age, wave_length
 
       IMPLICIT NONE
 !
@@ -106,9 +107,22 @@
             CALL message( 'stokes_drift_check_parameters',                     &
                           'PA0603', 1, 2, 0, 6, 0)
          ENDIF
+       CASE ( 3 )
+         IF ( wind_dir == -9999999.9_wp .OR. wave_length == -9999999.9_wp ) THEN
+            WRITE( message_string, * )  'either wind_dir or wave_length ',    &
+               'is not set but required if stokes_drift_method == 3'
+            CALL message( 'stokes_drift_check_parameters',                     &
+                          'PA0603', 1, 2, 0, 6, 0)
+         ELSEIF ( wave_length < 0.0_wp ) THEN
+            WRITE( message_string, * )  'wave_length = ',                            &
+                   wave_length, ' must be > 0 (m)'
+            CALL message( 'stokes_drift_check_parameters',                     &
+                          'PA0603', 1, 2, 0, 6, 0)
+
+         ENDIF
       CASE DEFAULT
          WRITE( message_string, * )  'invalid stokes_drift_mehtod = ',         &
-                stokes_drift_method, ', must be 1, or 2'
+                stokes_drift_method, ', must be 1, 2, or 3'
          CALL message( 'stokes_drift_check_parameters', 'PA0603', 1, 2, 0, 6, 0)
       END SELECT
 
@@ -139,9 +153,11 @@
          CALL stokes_drift_usdelta
       CASE ( FROMSPECDHH85 )
          CALL stokes_drift_spec_dhh85
+      CASE (COASTAL)
+         CALL stokes_drift_coastal
       CASE DEFAULT
          WRITE( message_string, * )  'invalid stokes_drift_mehtod = ',         &
-                stokes_drift_method, ', must be 1, or 2'
+                stokes_drift_method, ', must be 1, 2, or 3'
          CALL message( 'init_stokes_drift', 'PA0602', 1, 2, 0, 6, 0 )
       END SELECT
 !
@@ -244,6 +260,58 @@
 !------------------------------------------------------------------------------!
 ! Description:
 ! ------------
+!> Compute Stokes drift profile following Sinha 2015 for coastal
+!  applications
+!------------------------------------------------------------------------------!
+   SUBROUTINE stokes_drift_coastal
+
+      USE control_parameters,                                                  &
+         ONLY:  wind_dir, wave_length
+
+      IMPLICIT NONE
+
+
+      INTEGER(iwp) :: k
+      REAL(wp)     :: d2r, xcomp, ycomp, domega, sd_omega, tmp, w_num, depth_s
+      REAL(wp) :: w_num_d, half_depth_stokes, num_depths, depth, dzdepth
+      REAL(wp), dimension (nzt) :: deps
+!
+
+!     Depth
+      num_depths=SIZE(zw)
+      depth=MAXVAL(abs(zw))
+      half_depth_stokes=depth/2
+      deps=-((abs(zw*2)/depth)-1)
+
+
+!     Wave number
+      w_num=2*pi/ wave_length
+      w_num_d=w_num*half_depth_stokes
+
+
+!--   Wind direction
+      d2r = pi / 180.0_wp
+      xcomp = COS( wind_dir * d2r )
+      ycomp = SIN( wind_dir * d2r )
+
+      DO  k = nzb+1, nzt, 1
+           u_stk(k)=(cosh(2*w_num_d*(deps(k)+1))/(2*sinh(2*w_num_d)**2))*xcomp
+           v_stk(k)=(cosh(2*w_num_d*(deps(k)+1))/(2*sinh(2*w_num_d)**2))*ycomp
+      ENDDO
+
+
+      u_stk(nzt+1) = u_stk(nzt)
+      v_stk(nzt+1) = v_stk(nzt)
+      u_stk(nzb) = u_stk(nzb+1)
+      v_stk(nzb) = v_stk(nzb+1)
+
+
+   END SUBROUTINE stokes_drift_coastal
+
+
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
 !> Evaluate kernel of the Stokes integral for the Donelan et al., 1985 spectrum
 !------------------------------------------------------------------------------!
    FUNCTION stokes_drift_kernel_dhh85(sd_omega, sd_z, sd_dz)
@@ -287,6 +355,7 @@
       RETURN
 
    END FUNCTION stokes_drift_kernel_dhh85
+
 
 
  END MODULE stokes_drift_mod

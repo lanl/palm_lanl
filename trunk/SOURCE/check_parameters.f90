@@ -709,8 +709,10 @@
     USE spectra_mod,                                                           &
         ONLY:  calculate_spectra, spectra_check_parameters
     USE statistics
-    USE stokes_drift_mod,                                                      &
-        ONLY: stokes_drift_check_parameters
+     USE stokes_drift_mod,                                                      &
+         ONLY: stokes_drift_check_parameters
+!    USE tide_mod, &
+!        ONLY: tide_check_parameters
     USE subsidence_mod
     USE statistics
     USE synthetic_turbulence_generator_mod,                                    &
@@ -1036,13 +1038,13 @@
 
 !
 !-- Check topography setting (check for illegal parameter combinations)
-    IF ( topography /= 'flat' )  THEN
+     IF ( topography /= 'flat' )  THEN
        action = ' '
        IF ( scalar_advec /= 'pw-scheme' .AND. scalar_advec /= 'ws-scheme'      &
-          )  THEN
+         )  THEN
           WRITE( action, '(A,A)' )  'scalar_advec = ', scalar_advec
-       ENDIF
-       IF ( momentum_advec /= 'pw-scheme' .AND. momentum_advec /= 'ws-scheme' )&
+        ENDIF
+        IF ( momentum_advec /= 'pw-scheme' .AND. momentum_advec /= 'ws-scheme' )&
        THEN
           WRITE( action, '(A,A)' )  'momentum_advec = ', momentum_advec
        ENDIF
@@ -1070,7 +1072,7 @@
           CALL message( 'check_parameters', 'PA0014', 1, 2, 0, 6, 0 )
        ENDIF
 
-    ENDIF
+     ENDIF
 
 !
 !-- Check turbulence closure setup

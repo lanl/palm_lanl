@@ -310,7 +310,7 @@
                timestep_scheme, tsc, use_subsidence_tendencies,                &
                use_upstream_for_tke, wind_turbine, ws_scheme_mom,              &
                ws_scheme_sca, urban_surface, land_surface, wb_solar,           &
-               stokes_force
+               stokes_force, tide
 
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point, log_point_s
@@ -413,6 +413,11 @@
     USE stokes_force_mod,                                                      &
         ONLY: stokes_force_uvw, stokes_force_s
 
+    USE  tide_eqs_mod,                                                         &
+        ONLY: tide_eqs_uvw, tide_eqs_s
+
+    USE tide_mod, &
+        ONLY: tide_simple
     PRIVATE
     PUBLIC prognostic_equations_cache, prognostic_equations_vector
 
@@ -549,7 +554,11 @@
        ENDIF
 
        DO  j = nys, nyn
-!
+! if needed, update tide in time loop
+       IF (ocean .and. tide) THEN
+          call tide_simple
+       ENDIF
+
 !--       Tendency terms for u-velocity component. Please note, in case of
 !--       non-cyclic boundary conditions the grid point i=0 is excluded from
 !--       the prognostic equations for the u-component.
@@ -571,12 +580,15 @@
                 CALL buoyancy( i, j, pt, 1 )
              ENDIF
 
-!
 !--          If required, compute Stokes forces
              IF ( ocean .AND. stokes_force ) THEN
                 CALL stokes_force_uvw( i, j, 1 )
              ENDIF
 
+!            If required, compute tide
+             IF (ocean .AND. tide) THEN
+                CALL tide_eqs_uvw( i, j, 1)
+             ENDIF
 !
 !--          Drag by plant canopy
              IF ( plant_canopy )  CALL pcm_tendency( i, j, 1 )
@@ -654,7 +666,11 @@
                 CALL stokes_force_uvw( i, j, 2 )
              ENDIF
 
-!
+!            If required, compute tide
+             IF( ocean .AND. tide) THEN
+                CALL tide_eqs_uvw(i, j, 2)
+             ENDIF
+
 !--          Drag by plant canopy
              IF ( plant_canopy )  CALL pcm_tendency( i, j, 2 )
 
@@ -739,7 +755,11 @@
              CALL stokes_force_uvw( i, j, 3 )
           ENDIF
 
-!
+!        If required, compute tide
+          IF (ocean .AND. tide) Then
+            CALL tide_eqs_uvw(i,j,3)
+          ENDIF
+
 !--       Drag by plant canopy
           IF ( plant_canopy )  CALL pcm_tendency( i, j, 3 )
 
@@ -810,6 +830,10 @@
                 CALL stokes_force_s( i, j, pt )
              ENDIF
 
+!            If required, compute tide advection
+             IF (ocean .AND. tide ) THEN
+                CALL tide_eqs_s(i, j, pt)
+             ENDIF
 !
 !--          If required compute heating/cooling due to long wave radiation
 !--          processes
@@ -919,7 +943,9 @@
              IF ( stokes_force ) THEN
                 CALL stokes_force_s( i, j, sa )
              ENDIF
-
+             If (tide) THEN
+                call tide_eqs_s( i, j, sa)
+             ENDIF
 
              CALL user_actions( i, j, 'sa-tendency' )
 
@@ -1310,7 +1336,9 @@
              IF ( ocean .AND. stokes_force ) THEN
                 CALL stokes_force_s( i, j, s )
              ENDIF
-
+             IF (ocean .And. tide ) THEN
+                CALL tide_eqs_s(i, j, s)
+              ENDIF
 !
 !--          Sink or source of scalar concentration due to canopy elements
              IF ( plant_canopy )  CALL pcm_tendency( i, j, 7 )
@@ -1463,7 +1491,9 @@
     IF ( ocean .AND. stokes_force ) THEN
        CALL stokes_force_uvw( 1 )
     ENDIF
-
+   IF (ocean .AND. tide) THEN
+       CALL tide_eqs_uvw(1)
+    ENDIF
 !
 !-- Drag by plant canopy
     IF ( plant_canopy )  CALL pcm_tendency( 1 )
@@ -1555,6 +1585,9 @@
        CALL stokes_force_uvw( 2 )
     ENDIF
 
+    IF (ocean .AND. tide) THEN
+       CALL tide_eqs_uvw(2)
+    ENDIF
 !
 !-- Drag by plant canopy
     IF ( plant_canopy )  CALL pcm_tendency( 2 )
@@ -1656,6 +1689,10 @@
 !-- If required, compute Stokes forces
     IF ( ocean .AND. stokes_force ) THEN
        CALL stokes_force_uvw( 3 )
+    ENDIF
+
+    IF (ocean .AND. tide) THEN
+       CALL tide_eqs_uvw(3)
     ENDIF
 
 !
@@ -1776,6 +1813,10 @@
 !--    If required, compute Stokes-advection term
        IF ( ocean .AND. stokes_force ) THEN
           CALL stokes_force_s( pt )
+       ENDIF
+
+       IF (ocean .AND. tide ) THEN
+          CALL tide_eqs_s(pt)
        ENDIF
 
 !
@@ -1913,6 +1954,10 @@
 !--    If required, compute Stokes-advection term
        IF ( stokes_force ) THEN
           CALL stokes_force_s( sa )
+       ENDIF
+
+       IF (tide) THEN
+         CALL tide_eqs_s(sa)
        ENDIF
 
        CALL user_actions( 'sa-tendency' )
@@ -2495,6 +2540,9 @@
           CALL stokes_force_s( s )
        ENDIF
 
+       IF (ocean .AND. tide ) THEN
+          CALL tide_eqs_s(s)
+       ENDIF
 !
 !--    Sink or source of humidity due to canopy elements
        IF ( plant_canopy ) CALL pcm_tendency( 7 )

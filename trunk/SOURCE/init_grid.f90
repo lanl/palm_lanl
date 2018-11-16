@@ -23,7 +23,31 @@
 ! 
 ! Former revisions:
 ! -----------------
-! $Id: init_grid.f90 3068 2018-06-12 14:49:41Z Giersch $
+! $Id: init_grid.f90 3294 2018-10-01 02:37:10Z raasch $
+! ocean renamed ocean_mode
+! 
+! 3241 2018-09-12 15:02:00Z raasch
+! unused variables removed
+! 
+! 3200 2018-08-17 14:46:36Z suehring
+! Bugfix, missing pre-processor directive
+! 
+! 3183 2018-07-27 14:25:55Z suehring
+! Rename variables in mesoscale-offline nesting mode
+! 
+! 3182 2018-07-27 13:36:03Z suehring
+! Bugfix in referencing buildings on orography top
+! 
+! 3139 2018-07-17 11:30:10Z Giersch
+! Bugfix in case of restarts and grid stretching
+! 
+! 3115 2018-07-10 12:49:26Z suehring
+! Referencing of buildings onto top of terrain - special treatment for bridges. 
+! 
+! 3103 2018-07-04 17:30:52Z suehring
+! Reference lowest terrain height to zero level
+! 
+! 3068 2018-06-12 14:49:41Z Giersch
 ! New warning message concerning grid stretching has been introduced
 ! 
 ! 3066 2018-06-12 08:55:55Z Giersch
@@ -329,25 +353,17 @@
         ONLY:  dd2zu, ddzu, ddzu_pres, ddzw, dzu, dzw, zu, zw
         
     USE control_parameters,                                                    &
-        ONLY:  bc_lr_cyc, bc_ns_cyc, building_height, building_length_x,       &
-               building_length_y, building_wall_left, building_wall_south,     &
-               canyon_height, canyon_wall_left, canyon_wall_south,             &
-               canyon_width_x, canyon_width_y, constant_flux_layer,            &
-               dp_level_ind_b, dz, dz_max, dz_stretch_factor,                  &   
+        ONLY:  bc_lr_cyc, bc_ns_cyc, inflow_l, inflow_n, inflow_r, inflow_s,   &
+               constant_flux_layer, dz, dz_max, dz_stretch_factor,             &
                dz_stretch_factor_array, dz_stretch_level, dz_stretch_level_end,&
                dz_stretch_level_end_index, dz_stretch_level_start_index,       &
-               dz_stretch_level_start, grid_level,                             &
-               force_bound_l, force_bound_r, force_bound_n, force_bound_s,     &
-               ibc_uv_b, inflow_l, inflow_n, inflow_r, inflow_s,               &
-               masking_method, maximum_grid_level, message_string,             &
-               momentum_advec, nest_domain, nest_bound_l,                      &
-               nest_bound_n, nest_bound_r, nest_bound_s,                       &
-               number_stretch_level_end, number_stretch_level_start, ocean,    &
-               outflow_l, outflow_n, outflow_r, outflow_s, psolver,            & 
-               scalar_advec, topography, topography_grid_convention,           &
-               tunnel_height, tunnel_length, tunnel_width_x, tunnel_width_y,   &
-               tunnel_wall_depth, use_surface_fluxes, use_top_fluxes,          &
-               wall_adjustment_factor
+               dz_stretch_level_start, ibc_uv_b, message_string,               &
+               momentum_advec, number_stretch_level_end,                       &
+               number_stretch_level_start, ocean, psolver, scalar_advec,        &
+               topography, use_surface_fluxes, force_bound_l, force_bound_n,   &
+               force_bound_s, force_bound_r, nest_bound_l, nest_bound_r,       &
+               nest_bound_n, nest_bound_s, outflow_n, outflow_s, outflow_r,   &
+               outflow_l
          
     USE grid_variables,                                                        &
         ONLY:  ddx, ddx2, ddy, ddy2, dx, dx2, dy, dy2, zu_s_inner, zw_w_inner
@@ -373,14 +389,14 @@
 
     IMPLICIT NONE
 
-    INTEGER(iwp) ::  i                           !< index variable along x 
-    INTEGER(iwp) ::  j                           !< index variable along y
-    INTEGER(iwp) ::  k                           !< index variable along z
-    INTEGER(iwp) ::  k_top                       !< topography top index on local PE
-    INTEGER(iwp) ::  n                           !< loop variable for stretching
-    INTEGER(iwp) ::  number_dz                   !< number of user-specified dz values       
-    INTEGER(iwp) ::  nzb_local_max               !< vertical grid index of maximum topography height
-    INTEGER(iwp) ::  nzb_local_min               !< vertical grid index of minimum topography height
+    INTEGER(iwp) ::  i             !< index variable along x 
+    INTEGER(iwp) ::  j             !< index variable along y
+    INTEGER(iwp) ::  k             !< index variable along z
+    INTEGER(iwp) ::  k_top         !< topography top index on local PE
+    INTEGER(iwp) ::  n             !< loop variable for stretching
+    INTEGER(iwp) ::  number_dz     !< number of user-specified dz values       
+    INTEGER(iwp) ::  nzb_local_max !< vertical grid index of maximum topography height
+    INTEGER(iwp) ::  nzb_local_min !< vertical grid index of minimum topography height
                                       
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  nzb_local  !< index for topography top at cell-center
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  nzb_tmp    !< dummy to calculate topography indices on u- and v-grid
@@ -425,8 +441,12 @@
 !
 !-- Determine number of dz values and stretching levels specified by the
 !-- user to allow right controlling of the stretching mechanism and to
-!-- perform error checks
-    number_dz = COUNT( dz /= -1.0_wp )
+!-- perform error checks. The additional requirement that dz /= dz_max
+!-- for counting number of user-specified dz values is necessary. Otherwise 
+!-- restarts would abort if the old stretching mechanism with dz_stretch_level
+!-- is used (Attention: The user is not allowed to specify a dz value equal
+!-- to the default of dz_max = 999.0). 
+    number_dz = COUNT( dz /= -1.0_wp .AND. dz /= dz_max)
     number_stretch_level_start = COUNT( dz_stretch_level_start /=              &
                                        -9999999.9_wp )
     number_stretch_level_end = COUNT( dz_stretch_level_end /=                  &
@@ -817,14 +837,19 @@
 #else
     nzb_max = k_top + 1
 #endif
-    IF ( inflow_l  .OR.  outflow_l  .OR.  force_bound_l  .OR.  nest_bound_l  .OR.&
-         inflow_r  .OR.  outflow_r  .OR.  force_bound_r  .OR.  nest_bound_r  .OR.&
-         inflow_n  .OR.  outflow_n  .OR.  force_bound_n  .OR.  nest_bound_n  .OR.&
-         inflow_s  .OR.  outflow_s  .OR.  force_bound_s  .OR.  nest_bound_s )    &
-         nzb_max = nzt
-!   
+!    IF ( bc_dirichlet_l  .OR.  bc_radiation_l     .OR.                         &
+!         bc_dirichlet_r  .OR.  bc_radiation_r     .OR.                         &
+!         bc_dirichlet_n  .OR.  bc_radiation_n     .OR.                         &
+!         bc_dirichlet_s  .OR.  bc_radiation_s )                                &
+!         nzb_max = nzt
+      IF ( inflow_l  .OR.  outflow_l  .OR.  force_bound_l  .OR.  nest_bound_l .OR.&
+           inflow_r  .OR.  outflow_r  .OR.  force_bound_r  .OR.  nest_bound_r .OR.&
+           inflow_n  .OR.  outflow_n  .OR.  force_bound_n  .OR.  nest_bound_n .OR.&
+           inflow_s  .OR.  outflow_s  .OR.  force_bound_s  .OR.  nest_bound_s )   &
+           nzb_max = nzt
+   
 !-- Finally, if topography extents up to the model top, limit nzb_max to nzt.
-    nzb_max = MIN( nzb_max, nzt )
+    nzb_max = MIN( nzb_max, nzt ) 
 !
 !-- Determine minimum index of topography. Usually, this will be nzb. In case
 !-- there is elevated topography, however, the lowest topography will be higher. 
@@ -840,6 +865,7 @@
 !
 !-- Initialize boundary conditions via surface type
     CALL init_bc
+
 !
 !-- Allocate and set topography height arrays required for data output
     IF ( TRIM( topography ) /= 'flat' )  THEN
@@ -909,7 +935,7 @@
     IF ( TRIM( topography ) /= 'flat' )  THEN
 #if defined( __parallel )
        CALL MPI_ALLREDUCE( MAXVAL( get_topography_top_index( 's' ) ),          &
-                           nzb_local_max, 1, MPI_INTEGER, MPI_MAX, comm2d, ierr )             
+                           nzb_local_max, 1, MPI_INTEGER, MPI_MAX, comm2d, ierr )               
 #else
        nzb_local_max = MAXVAL( get_topography_top_index( 's' ) )
 #endif
@@ -1126,7 +1152,7 @@
  SUBROUTINE calculate_stretching_factor( number_end )
  
     USE control_parameters,                                                    &
-        ONLY:  dz, dz_stretch_factor, dz_stretch_factor_array,                 &   
+        ONLY:  dz, dz_stretch_factor_array,                 &
                dz_stretch_level_end, dz_stretch_level_start, message_string
   
     USE kinds
@@ -1275,14 +1301,14 @@
         ONLY:  zu, zw
 
     USE control_parameters,                                                    &
-        ONLY:  bc_lr_cyc, bc_ns_cyc, land_surface, ocean, urban_surface
+        ONLY:  bc_lr_cyc, bc_ns_cyc, message_string, ocean
 
     USE indices,                                                               &
         ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, ny, nyn, nyng, nys, nysg, nzb,  &
                nzt
 
     USE netcdf_data_input_mod,                                                 &
-        ONLY:  buildings_f, building_id_f, input_pids_static,                  &
+        ONLY:  buildings_f, building_id_f, building_type_f, input_pids_static, &
                terrain_height_f
 
     USE kinds
@@ -1312,9 +1338,37 @@
     INTEGER(iwp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  topo_3d !< input array for 3D topography and dummy array for setting "outer"-flags
 
     REAL(wp)                            ::  ocean_offset        !< offset to consider inverse vertical coordinate at topography definition
+    REAL(wp)                            ::  oro_min = 0.0_wp    !< minimum terrain height in entire model domain, used to reference terrain to zero
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  oro_max             !< maximum terrain height occupied by an building with certain id
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  oro_max_l           !< maximum terrain height occupied by an building with certain id, on local subdomain
 
+
+!
+!-- Reference lowest terrain height to zero. In case the minimum terrain height
+!-- is non-zero, all grid points of the lower vertical grid levels might be 
+!-- entirely below the surface, meaning a waste of computational resources.
+!-- In order to avoid this, remove the lowest terrain height. Please note,
+!-- in case of a nested run, the global minimum from all parent and childs 
+!-- need to be remove to avoid steep edges at the child-domain boundaries.
+    IF ( input_pids_static )  THEN
+#if defined( __parallel ) 
+       CALL MPI_ALLREDUCE( MINVAL( terrain_height_f%var ), oro_min, 1,         &
+                           MPI_REAL, MPI_MIN, MPI_COMM_WORLD, ierr )
+#else
+       oro_min = MINVAL( terrain_height_f%var )
+#endif
+
+       terrain_height_f%var = terrain_height_f%var - oro_min
+!                           
+!--    Give an informative message that terrain height is referenced to zero    
+       IF ( oro_min > 0.0_wp )  THEN
+          WRITE( message_string, * ) 'Terrain height was internally shifted '//&
+                          'downwards by ', oro_min, 'meter(s) to save ' //     &
+                          'computational resources.'
+          CALL message( 'init_grid', 'PA0505', 0, 0, 0, 6, 0 )
+       ENDIF
+    ENDIF    
+    
 !
 !-- In the following, buildings and orography are further preprocessed 
 !-- before they are mapped on the LES grid.
@@ -1482,9 +1536,9 @@
           DO  nr = 1, SIZE(build_ids_final)
              DO  k = nzb, nzt
                 IF ( zu(k) - ocean_offset <= oro_max(nr) )                     &
-                   oro_max_l = zw(k) - ocean_offset
+                   oro_max_l(nr) = zw(k) - ocean_offset
              ENDDO
-             oro_max = oro_max_l
+             oro_max(nr) = oro_max_l(nr)
           ENDDO
        ENDIF
 !
@@ -1492,6 +1546,17 @@
        DO  i = nxl, nxr
           DO  j = nys, nyn
              topo_top_index = 0
+!
+!--          Obtain index in global building_id array
+             IF ( buildings_f%from_file )  THEN
+                IF ( building_id_f%var(j,i) /= building_id_f%fill )  THEN
+!
+!--                Determine index where maximum terrain height occupied by 
+!--                the respective building height is stored.
+                   nr = MINLOC( ABS( build_ids_final -                         &
+                                     building_id_f%var(j,i) ), DIM = 1 )
+                ENDIF
+             ENDIF
              DO  k = nzb, nzt
 !
 !--             In a first step, if grid point is below or equal the given 
@@ -1511,13 +1576,7 @@
 !--             Set building grid points. Here, only consider 2D buildings. 
 !--             3D buildings require separate treatment. 
                 IF ( buildings_f%from_file  .AND.  buildings_f%lod == 1 )  THEN
-                   IF ( building_id_f%var(j,i) /= building_id_f%fill )  THEN
-!
-!--                   Determine index where maximum terrain height occupied by 
-!--                   the respective building height is stored.
-                      nr = MINLOC( ABS( build_ids_final -                      &
-                                        building_id_f%var(j,i) ), DIM = 1 )
-        
+                   IF ( building_id_f%var(j,i) /= building_id_f%fill )  THEN       
                       IF ( zu(k) - ocean_offset <=                             &
                            oro_max(nr) + buildings_f%var_2d(j,i) )  THEN
                          topo_3d(k,j,i) = IBCLR( topo_3d(k,j,i), 0 )
@@ -1537,29 +1596,31 @@
              IF ( buildings_f%from_file  .AND.  buildings_f%lod == 2 )  THEN
                 IF ( building_id_f%var(j,i) /= building_id_f%fill )  THEN
 !
-!--                Determine index for maximum-terrain-height array.
-                   nr = MINLOC( ABS( build_ids_final -                         &
-                                     building_id_f%var(j,i) ), DIM = 1 )
-!
 !--                Extend building down to the terrain surface, i.e. fill-up
 !--                surface irregularities below a building. Note, oro_max
 !--                is already a discrete height according to the all-or-nothing
 !--                approach, i.e. grid box is either topography or atmosphere, 
 !--                terrain top is defined at upper bound of the grid box.
 !--                Hence, check for zw in this case. 
-                   DO k = topo_top_index + 1, nzt + 1      
-                      IF ( zw(k) - ocean_offset <= oro_max(nr) )  THEN
-                         topo_3d(k,j,i) = IBCLR( topo_3d(k,j,i), 0 )
-                         topo_3d(k,j,i) = IBSET( topo_3d(k,j,i), 2 )
-                      ENDIF
-                   ENDDO        
+!--                Note, do this only for buildings which are surface mounted, 
+!--                i.e. building types 1-6. Below bridges, which are represented
+!--                exclusively by building type 7, terrain shape should be
+!--                maintained. 
+                   IF ( building_type_f%var(j,i) /= 7 )  THEN
+                      DO k = topo_top_index + 1, nzt + 1      
+                         IF ( zw(k) - ocean_offset <= oro_max(nr) )  THEN
+                            topo_3d(k,j,i) = IBCLR( topo_3d(k,j,i), 0 )
+                            topo_3d(k,j,i) = IBSET( topo_3d(k,j,i), 2 )
+                         ENDIF
+                      ENDDO        
 !
-!--                After surface irregularities are smoothen, determine lower
-!--                start index where building starts. 
-                   DO  k = nzb, nzt
-                      IF ( zw(k) - ocean_offset <= oro_max(nr) )               &
-                         topo_top_index = k
-                   ENDDO
+!--                   After surface irregularities are smoothen, determine lower
+!--                   start index where building starts. 
+                      DO  k = nzb, nzt
+                         IF ( zw(k) - ocean_offset <= oro_max(nr) )            &
+                            topo_top_index = k
+                      ENDDO
+                   ENDIF
 !
 !--                Finally, map building on top.
                    k2 = 0
@@ -1843,7 +1904,7 @@
                building_length_y, building_wall_left, building_wall_south,     &
                canyon_height, canyon_wall_left, canyon_wall_south,             &
                canyon_width_x, canyon_width_y, dp_level_ind_b, dz,             &
-               message_string, ocean, topography, topography_grid_convention,  &
+               message_string, topography, topography_grid_convention,         &
                tunnel_height, tunnel_length, tunnel_width_x, tunnel_width_y,   &
                tunnel_wall_depth
          
@@ -2412,8 +2473,8 @@
                use_surface_fluxes, use_top_fluxes, urban_surface
 
     USE indices,                                                               &
-        ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, ny, nyn, nyng, nys, nysg, nz,   &
-               nzb, nzt, wall_flags_0
+        ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, ny, nyn, nyng, nys, nysg, nzb,  &
+               nzt, wall_flags_0
 
     USE kinds
 

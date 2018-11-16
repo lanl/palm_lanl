@@ -396,7 +396,7 @@
                use_initial_profile_as_reference,                               &
                use_single_reference_value, uv_exposure, u_gtrans, v_gtrans,    &
                virtual_flight, wind_turbine, ws_scheme_mom, ws_scheme_sca,     &
-               stokes_force
+               stokes_force, tide
 
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point, log_point_s
@@ -498,7 +498,8 @@
 
     USE stokes_force_mod,                                                      &
         ONLY:  stokes_pressure_head
-
+    use tide_eqs_mod, &
+        ONLY: tide_pressure_head
     IMPLICIT NONE
 
     CHARACTER (LEN=9) ::  time_to_string          !<
@@ -1092,7 +1093,9 @@
        IF ( ocean .AND. stokes_force ) THEN
           CALL stokes_pressure_head
        ENDIF
-
+       if (ocean .AND. tide) THEN
+          CALL tide_pressure_head
+       ENDIF
 !
 !--    If required, consider chemical emissions
 !--    (todo (FK): Implement hourly call of emissions, using time_utc from

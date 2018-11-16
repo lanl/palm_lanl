@@ -559,7 +559,7 @@ SOURCES = \
 	random_function_mod.f90 \
 	random_gauss.f90 \
 	random_generator_parallel_mod.f90 \
-        read_restart_data_mod.f90 \
+	read_restart_data_mod.f90 \
 	run_control.f90 \
 	set_slicer_attributes_dvrp.f90 \
 	singleton_mod.f90 \
@@ -575,6 +575,8 @@ SOURCES = \
 	swap_timelevel.f90 \
 	synthetic_turbulence_generator_mod.f90 \
 	temperton_fft_mod.f90 \
+	tide_mod.f90 \
+	tide_eqs_mod.f90 \
 	time_integration.f90 \
 	time_integration_spinup.f90 \
 	timestep.f90 \
@@ -621,7 +623,7 @@ SOURCES = \
 	virtual_flight_mod.f90 \
 	wind_turbine_model_mod.f90 \
 	wrd_write_string.f90 \
-        write_restart_data_mod.f90
+	write_restart_data_mod.f90
 
 
 OBJS=$(SOURCES:.f90=.o)
@@ -1465,6 +1467,13 @@ synthetic_turbulence_generator_mod.o: \
 	modules.o \
 	pmc_interface_mod.o
 temperton_fft_mod.o: \
+	mod_kinds.o \
+	modules.o
+tide_eqs_mod.o: \
+	tide_mod.o \
+	mod_kinds.o \
+	modules.o
+tide_mod.o: \
 	mod_kinds.o \
 	modules.o
 time_integration.o: \

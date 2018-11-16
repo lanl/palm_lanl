@@ -130,7 +130,7 @@
                pt_reference, rans_mode, rans_tke_e, rans_tke_l, simulated_time,&
                timestep_scheme, turbulence_closure, turbulent_inflow,          &
                use_upstream_for_tke, vpt_reference, ws_scheme_sca,             &
-               stokes_force
+               stokes_force, tide
 
     USE advec_ws,                                                              &
         ONLY:  advec_s_ws
@@ -167,7 +167,8 @@
 
     USE stokes_force_mod,                                                      &
         ONLY:  stokes_force_s, stokes_production_e
-
+    USE tide_eqs_mod, &
+        ONLY:  tide_eqs_s, tide_production_e
     IMPLICIT NONE
 
 
@@ -2167,7 +2168,9 @@
        IF ( ocean .AND. stokes_force ) THEN
           CALL stokes_force_s( e )
        ENDIF
-
+       IF (ocean .AND. tide) THEN
+          CALL tide_eqs_s(e)
+       ENDIF
        IF ( rans_tke_e )  advec = tend
 
        CALL production_e
@@ -2461,7 +2464,9 @@
        IF ( ocean .AND. stokes_force ) THEN
           CALL stokes_force_s( i, j, e )
        ENDIF
-
+       IF (ocean .AND. tide) THEN
+           CALL tide_eqs_s(i, j, e)
+       ENDIF
        dum_adv = tend(:,j,i)                                                    !> @todo remove later
 
        CALL production_e( i, j, .FALSE. )
@@ -2470,7 +2475,9 @@
        IF ( ocean .AND. stokes_force ) THEN
           CALL stokes_production_e( i, j )
        ENDIF
-
+        IF (ocean .AND. tide) THEN
+          CALL tide_production_e(i , j)
+        ENDIF
        dum_pro = tend(:,j,i) - dum_adv                                          !> @todo remove later
 
        IF ( .NOT. humidity )  THEN

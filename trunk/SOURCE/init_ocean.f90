@@ -89,7 +89,7 @@
     USE control_parameters,                                                    &
         ONLY:  g, molecular_viscosity, prho_reference, rho_surface,            &
                rho_reference, surface_pressure, use_single_reference_value,    &
-               stokes_force
+               stokes_force, tide
 
     USE eqn_state_seawater_mod,                                                &
         ONLY:  eqn_state_seawater, eqn_state_seawater_func
@@ -106,7 +106,8 @@
 
     USE stokes_drift_mod,                                                      &
         ONLY:  init_stokes_drift
-
+    USE tide_mod,  &
+        ONLY: init_tide
     IMPLICIT NONE
 
     INTEGER(iwp) ::  k !<
@@ -208,5 +209,9 @@
     IF ( stokes_force ) THEN
        CALL init_stokes_drift
     ENDIF
+
+   IF (tide) THEN
+       CALL init_tide
+   ENDIF
 
  END SUBROUTINE init_ocean

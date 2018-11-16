@@ -671,11 +671,12 @@
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  vg                     !< geostrophic wind component in y-direction
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  v_init                 !< initial profile of horizontal velocity component v
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  w_subs                 !< subsidence/ascent velocity
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  u_stk                  !< Stokes dirft in x-direction
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  v_stk                  !< Stokes dirft in y-direction
+     REAL(wp), DIMENSION(:), ALLOCATABLE ::  u_stk                  !< Stokes dirft in x-direction
+     REAL(wp), DIMENSION(:), ALLOCATABLE ::  v_stk                  !< Stokes dirft in y-direction
+     REAL(wp), DIMENSION(:), ALLOCATABLE ::  u_tide
+     REAl(wp), DIMENSION(:), ALLOCATABLE ::  v_tide
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  zu                     !< vertical grid coordinate of u-grid (in m)
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  zw                     !< vertical grid coordinate of w-grid (in m)
-
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  c_u                   !< phase speed of u-velocity component
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  c_v                   !< phase speed of v-velocity component
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  c_w                   !< phase speed of w-velocity component
@@ -1380,6 +1381,7 @@
     LOGICAL ::  synchronous_exchange = .FALSE.                   !< namelist parameter
     LOGICAL ::  syn_turb_gen = .FALSE.                           !< flag for synthetic turbulence generator module
     LOGICAL ::  terminate_run = .FALSE.                          !< terminate run (cpu-time limit, restarts)?
+    LOGICAL ::  tide = .FALSE.                                   !< tide
     LOGICAL ::  topo_no_distinct = .FALSE.                       !< flag controlling classification of topography surfaces
     LOGICAL ::  transpose_compute_overlap = .FALSE.              !< namelist parameter
     LOGICAL ::  turbulent_inflow = .FALSE.                       !< namelist parameter
@@ -1612,7 +1614,9 @@
     REAL(wp) ::  wind_speed = -9999999.9_wp                        !< 10-meter wind speed used to compute empirical wave spectra (m/s)
     REAL(wp) ::  wind_dir = -9999999.9_wp                          !< wind direction used to compute empirical wave spectra, degree counter-clockwise from x-direction
     REAL(wp) ::  wave_age = -9999999.9_wp                          !< wave age c_p/(U_{10}\cos\theta) used to compute empirical wave spectra
-
+    Real(wp) ::  wave_length= -9999999.9_wp
+    Real(wp) ::  tide_amp= -9999999.9_wp                              !amplitude of tide
+    Real(wp) ::  tide_dir= -9999999.9_wp !tide direction (0 is +u)
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  dp_smooth_factor  !< smoothing factor for external pressure gradient forcing
 
     REAL(wp), DIMENSION(max_masks,mask_xyz_dimension) ::  mask_x = -1.0_wp  !< namelist parameter

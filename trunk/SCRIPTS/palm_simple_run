@@ -255,11 +255,6 @@ else
       rm -r ${execution_dir}
       mkdir -p ${execution_dir}
    fi
-   sed -i "s/initializing_actions *=.*/initializing_actions = 'set_constant_profiles'/g" ${working_dir}/${test_case}_p3d
-   if [[ "$run_coupled_model" = true ]]
-   then
-      sed -i "s/initializing_actions *=.*/initializing_actions = 'set_constant_profiles'/g" ${working_dir}/${test_case}_o_p3d
-   fi
 fi
 echo "*** PALM running in directory ${execution_dir}"
 

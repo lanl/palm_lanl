@@ -70,7 +70,7 @@
     SUBROUTINE stokes_force_uvw( component )
 
        USE arrays_3d,                                                          &
-           ONLY:  tend, u, v, u_stk, v_stk
+           ONLY:  tend, u, v, w, u_stk, v_stk, ddzu
 
        USE control_parameters,                                                 &
            ONLY:  f, fs, message_string
@@ -155,7 +155,24 @@
                                     BTEST( wall_flags_0(k,j,i), 3 ) )
 !
 !--                   Stokes-Coriolis force
-                      tend(k,j,i) = tend(k,j,i) + fs * u_stk(k) * flag
+                      tend(k,j,i) = tend(k,j,i) + 0.5_wp * fs *                &
+                                    ( u_stk(k) + u_stk(k+1) ) * flag
+!
+!--                   Stokes-vortex force
+                      tend(k,j,i) = tend(k,j,i) + (                            &
+                                    0.5_wp * ( u_stk(k) + u_stk(k+1) ) * (     &
+                                    0.5_wp * ( u(k+1,j,i) - u(k,j,i) +         &
+                                               u(k+1,j,i+1) - u(k,j,i+1)       &
+                                             ) * ddzu(k+1) -                   &
+                                    0.5_wp * ( w(k,j,i+1) - w(k,j,i-1)         &
+                                             ) * ddx                     ) -   &
+                                    0.5_wp * ( v_stk(k) + v_stk(k+1) ) * (     &
+                                    0.5_wp * ( w(k,j+1,i) - w(k,j-1,i)         &
+                                             ) * ddy -                         &
+                                    0.5_wp * ( v(k+1,j,i) - v(k,j,i) +         &
+                                               v(k+1,j+1,i) - v(k,j+1,i)       &
+                                             ) * ddzu(k+1)               )     &
+                                                  ) * flag
                    ENDDO
                 ENDDO
              ENDDO
@@ -179,7 +196,7 @@
     SUBROUTINE stokes_force_uvw_ij( i, j, component )
 
        USE arrays_3d,                                                          &
-           ONLY:  tend, u, v, u_stk, v_stk
+           ONLY:  tend, u, v, w, u_stk, v_stk, ddzu
 
        USE control_parameters,                                                 &
            ONLY:  f, fs, message_string
@@ -220,7 +237,7 @@
                 tend(k,j,i) = tend(k,j,i) + v_stk(k) * (                       &
                               0.5_wp * ( v(k,j,i) - v(k,j,i-1) +               &
                               v(k,j+1,i) - v(k,j+1,i-1) ) * ddx -              &
-                              0.5_wp *( u(k,j+1,i) - u(k,j-1,i) ) * ddy        &
+                              0.5_wp * ( u(k,j+1,i) - u(k,j-1,i) ) * ddy       &
                                                        ) * flag
              ENDDO
 
@@ -239,7 +256,7 @@
                 tend(k,j,i) = tend(k,j,i) + u_stk(k) * (                       &
                               0.5_wp * ( u(k,j,i) - u(k,j-1,i) +               &
                               u(k,j,i+1) - u(k,j-1,i+1) ) * ddy -              &
-                              0.5_wp *( v(k,j,i+1) - v(k,j,i-1) ) * ddx        &
+                              0.5_wp * ( v(k,j,i+1) - v(k,j,i-1) ) * ddx       &
                                                        ) * flag
              ENDDO
 
@@ -252,7 +269,24 @@
                 flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 3 ) )
 !
 !--             Stokes-Coriolis force
-                tend(k,j,i) = tend(k,j,i) + fs * u_stk(k) * flag
+                tend(k,j,i) = tend(k,j,i) +                                    &
+                              0.5_wp * fs * ( u_stk(k) + u_stk(k+1) ) * flag
+!
+!--             Stokes-vortex force
+                tend(k,j,i) = tend(k,j,i) + (                                  &
+                              0.5_wp * ( u_stk(k) + u_stk(k+1) ) * (           &
+                              0.5_wp * ( u(k+1,j,i) - u(k,j,i) +               &
+                                         u(k+1,j,i+1) - u(k,j,i+1)             &
+                                       ) * ddzu(k+1) -                         &
+                              0.5_wp * ( w(k,j,i+1) - w(k,j,i-1)               &
+                                       ) * ddx                     ) -         &
+                              0.5_wp * ( v_stk(k) + v_stk(k+1) ) * (           &
+                              0.5_wp * ( w(k,j+1,i) - w(k,j-1,i)               &
+                                       ) * ddy -                               &
+                              0.5_wp * ( v(k+1,j,i) - v(k,j,i) +               &
+                                         v(k+1,j+1,i) - v(k,j+1,i)             &
+                                       ) * ddzu(k+1)               )           &
+                                            ) * flag
              ENDDO
 
           CASE DEFAULT

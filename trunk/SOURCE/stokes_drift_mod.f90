@@ -50,8 +50,13 @@
 
    IMPLICIT NONE
 
-   INTEGER(iwp), PARAMETER :: FROMUSDELTA = 1   !< Stokes drift from surface value and decay depth
-   INTEGER(iwp), PARAMETER :: FROMSPECDHH85 = 2 !< Stokes drift from DHH85 spectrum
+   ! flags for Stokes drift profile
+   INTEGER(iwp), PARAMETER :: EXPONENTIAL = 1   !< Exponential profile defined
+                                                !<  by the surface Stokes drift
+                                                !<  and decay depth
+   INTEGER(iwp), PARAMETER :: SPECDHH85 = 2     !< Compute from empirical wave
+                                                !<  spectrum following
+                                                !<  Donelan et al., 1985
 
    PRIVATE
    ! PUBLIC stokes_drift_check_parameters, init_stokes_dirft
@@ -135,14 +140,10 @@
 !
 !--   Compute Stokes drift
       SELECT CASE ( stokes_drift_method )
-      CASE ( FROMUSDELTA )
-         CALL stokes_drift_usdelta
-      CASE ( FROMSPECDHH85 )
+      CASE ( EXPONENTIAL )
+         CALL stokes_drift_exponential
+      CASE ( SPECDHH85 )
          CALL stokes_drift_spec_dhh85
-      CASE DEFAULT
-         WRITE( message_string, * )  'invalid stokes_drift_mehtod = ',         &
-                stokes_drift_method, ', must be 1, or 2'
-         CALL message( 'init_stokes_drift', 'PA0602', 1, 2, 0, 6, 0 )
       END SELECT
 !
 !--   Update initial condition for u and v
@@ -163,8 +164,10 @@
 ! ------------
 !> Compute grid cell-averaged Stokes drift profile from surface Stokes drift
 !> and the exponential decay depth scale
+!> For a monochromatic deep water wave the Stokes drift decays exponentially
+!> with depth (e.g., Phillips, 1977)
 !------------------------------------------------------------------------------!
-   SUBROUTINE stokes_drift_usdelta
+   SUBROUTINE stokes_drift_exponential
 
       USE control_parameters,                                                  &
          ONLY:  u0_stk, v0_stk, d_stk
@@ -191,7 +194,7 @@
       u_stk(nzb) = u_stk(nzb+1)
       v_stk(nzb) = v_stk(nzb+1)
 
-   END SUBROUTINE stokes_drift_usdelta
+   END SUBROUTINE stokes_drift_exponential
 
 
 !------------------------------------------------------------------------------!

@@ -1063,7 +1063,6 @@
 ! ------------
 !> Definition of parameters for program control
 !------------------------------------------------------------------------------!
-! TODO: Add control parameters for Stokes drift <20180921, Qing Li> !
  MODULE control_parameters
 
     USE kinds
@@ -1255,6 +1254,8 @@
     INTEGER(iwp) ::  vg_vertical_gradient_level_ind(10) = -9999  !< grid index values of vg_vertical_gradient_level(s)
     INTEGER(iwp) ::  subs_vertical_gradient_level_i(10) = -9999  !< grid index values of subs_vertical_gradient_level(s)
     INTEGER(iwp) ::  stokes_drift_method = -9999                 !< method to compute Stokes drift
+                                                                 !<  1: exponential profile
+                                                                 !<  2: use empirical wave spectrum of Donelan et al., 1985
 
     INTEGER(iwp), DIMENSION(0:1) ::  ntdim_2d_xy  !< number of output intervals for 2d data (xy)
     INTEGER(iwp), DIMENSION(0:1) ::  ntdim_2d_xz  !< number of output intervals for 2d data (xz)

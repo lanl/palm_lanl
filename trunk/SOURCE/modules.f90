@@ -673,6 +673,8 @@
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  w_subs                 !< subsidence/ascent velocity
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  u_stk                  !< Stokes dirft in x-direction
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  v_stk                  !< Stokes dirft in y-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  u_stk_zw               !< Stokes dirft in x-direction, at w-levels
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  v_stk_zw               !< Stokes dirft in y-direction, at w-levels
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  zu                     !< vertical grid coordinate of u-grid (in m)
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  zw                     !< vertical grid coordinate of w-grid (in m)
 

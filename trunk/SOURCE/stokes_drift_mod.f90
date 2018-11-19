@@ -35,7 +35,7 @@
  MODULE stokes_drift_mod
 
    USE arrays_3d,                                                              &
-      ONLY:  u, v, u_stk, v_stk, zu, zw, dzu
+      ONLY:  u, v, u_stk, v_stk, u_stk_zw, v_stk_zw, zu, zw, dzu, dzw
 
    USE control_parameters,                                                     &
       ONLY:  g, stokes_drift_method, message_string
@@ -134,9 +134,12 @@
       INTEGER(iwp) ::  k
 
       ALLOCATE( u_stk(nzb:nzt+1), v_stk(nzb:nzt+1) )
+      ALLOCATE( u_stk_zw(nzb:nzt+1), v_stk_zw(nzb:nzt+1) )
 
       u_stk = 0.0_wp
       v_stk = 0.0_wp
+      u_stk_zw = 0.0_wp
+      v_stk_zw = 0.0_wp
 !
 !--   Compute Stokes drift
       SELECT CASE ( stokes_drift_method )
@@ -177,10 +180,10 @@
       INTEGER(iwp) ::  k
       REAL(wp)     ::  kdz, dd_stk, tmp
 !
-!--   Stokes drift averaged over the grid cell
+!--   Stokes drift averaged over the grid cell at u-levels
       dd_stk = 1.0_wp / d_stk
       DO  k = nzt, nzb+1, -1
-         kdz = 0.5 * dzu(k) * dd_stk
+         kdz = 0.5_wp * dzu(k) * dd_stk
          IF ( kdz .LT. 10.0_wp ) THEN
              tmp = SINH(kdz) / kdz * EXP( zu(k) * dd_stk )
          ELSE
@@ -193,6 +196,31 @@
       v_stk(nzt+1) = v_stk(nzt)
       u_stk(nzb) = u_stk(nzb+1)
       v_stk(nzb) = v_stk(nzb+1)
+!
+!--   Stokes drift averaged over the grid cell at w-levels
+      DO  k = nzt-1, nzb+1, -1
+         kdz = 0.5_wp * dzw(k) * dd_stk
+         IF ( kdz .LT. 10.0_wp ) THEN
+             tmp = SINH(kdz) / kdz * EXP( zw(k) * dd_stk )
+         ELSE
+             tmp = EXP( zw(k) * dd_stk )
+         ENDIF
+         u_stk_zw(k) = u0_stk * tmp
+         v_stk_zw(k) = v0_stk * tmp
+      ENDDO
+      ! surface grid
+      kdz = 0.25_wp * dzw(nzt) * dd_stk
+      IF ( kdz .LT. 10.0_wp ) THEN
+         tmp = SINH(kdz) / kdz * EXP ( ( zw(nzt) - 0.25_wp * dzw(nzt) ) * dd_stk )
+      ELSE
+         tmp = EXP ( zw(nzt) * dd_stk )
+      ENDIF
+      u_stk_zw(nzt) = u0_stk * tmp
+      v_stk_zw(nzt) = v0_stk * tmp
+      u_stk_zw(nzt+1) = u_stk_zw(nzt)
+      v_stk_zw(nzt+1) = v_stk_zw(nzt)
+      u_stk_zw(nzb) = u_stk_zw(nzb+1)
+      v_stk_zw(nzb) = v_stk_zw(nzb+1)
 
    END SUBROUTINE stokes_drift_exponential
 
@@ -216,14 +244,14 @@
       INTEGER(iwp), PARAMETER :: nomega = 1000
 
       INTEGER(iwp) :: i, k
-      REAL(wp)     :: d2r, xcomp, ycomp, domega, sd_omega, tmp
+      REAL(wp)     :: d2r, xcomp, ycomp, domega, sd_omega, tmp, dztmp
 !
 !--   Wind direction
       d2r = pi / 180.0_wp
       xcomp = COS( wind_dir * d2r )
       ycomp = SIN( wind_dir * d2r )
 !
-!--   Integral over frequency
+!--   Stokes drift at u-levels
       domega = ( max_omega - min_omega ) / REAL(nomega, KIND=wp)
       DO  k = nzt, nzb+1, -1
          tmp = 0.0_wp
@@ -240,6 +268,34 @@
       v_stk(nzt+1) = v_stk(nzt)
       u_stk(nzb) = u_stk(nzb+1)
       v_stk(nzb) = v_stk(nzb+1)
+!
+!--   Stokes drift at w-levels
+      DO  k = nzt-1, nzb+1, -1
+         tmp = 0.0_wp
+         sd_omega = min_omega + 0.5_wp * domega
+         DO  i = 1, nomega
+            tmp = tmp +                                                       &
+               domega * stokes_drift_kernel_dhh85(sd_omega, zw(k), dzw(k))
+            sd_omega = sd_omega + domega
+         ENDDO
+         u_stk_zw(k) = xcomp * tmp
+         v_stk_zw(k) = ycomp * tmp
+      ENDDO
+      ! surface grid
+      tmp = 0.0_wp
+      dztmp = 0.5_wp * dzw(nzt)
+      sd_omega = min_omega + 0.5_wp * domega
+      DO  i = 1, nomega
+         tmp = tmp + domega * stokes_drift_kernel_dhh85(sd_omega,              &
+                                               zw(nzt)-0.5_wp*dztmp, dztmp)
+         sd_omega = sd_omega + domega
+      ENDDO
+      u_stk_zw(nzt) = xcomp * tmp
+      v_stk_zw(nzt) = ycomp * tmp
+      u_stk_zw(nzt+1) = u_stk_zw(nzt)
+      v_stk_zw(nzt+1) = v_stk_zw(nzt)
+      u_stk_zw(nzb) = u_stk_zw(nzb+1)
+      v_stk_zw(nzb) = v_stk_zw(nzb+1)
 
    END SUBROUTINE stokes_drift_spec_dhh85
 

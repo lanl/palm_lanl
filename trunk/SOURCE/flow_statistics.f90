@@ -280,7 +280,7 @@
                momentumflux_output_conversion, nc, nr, p, prho, prr, pt, q,    &
                qc, ql, qr, rho_air, rho_air_zw, rho_ocean, s,                  &
                sa, u, ug, v, vg, vpt, w, w_subs, waterflux_output_conversion,  &
-               zw, alpha_T, beta_S, solar3d, u_stk, v_stk
+               zw, alpha_T, beta_S, solar3d, u_stk, v_stk, u_stk_zw, v_stk_zw
 
     USE cloud_parameters,                                                      &
         ONLY:   l_d_cp, pt_d_t
@@ -1999,6 +1999,8 @@
        IF ( ocean .AND. stokes_force ) THEN
           hom(:,1,161,sr) = u_stk
           hom(:,1,162,sr) = v_stk
+          hom(:,1,163,sr) = u_stk_zw
+          hom(:,1,164,sr) = v_stk_zw
        ENDIF
 
        IF ( large_scale_forcing )  THEN

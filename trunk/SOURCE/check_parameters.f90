@@ -3096,6 +3096,40 @@
                 hom(:,2,162,:) = SPREAD( zu, 2, statistic_regions+1 )
              ENDIF
 
+          CASE ( 'u_stk_zw' )
+             IF (  .NOT.  ocean ) THEN
+                message_string = 'data_output_pr = ' //                        &
+                                 TRIM( data_output_pr(i) ) // ' is not imp' // &
+                                 'lemented for ocean = .FALSE.'
+                CALL message( 'check_parameters', 'PA0091', 1, 2, 0, 6, 0 )
+             ELSEIF (  .NOT.  stokes_force ) THEN
+                message_string = 'data_output_pr = ' //                        &
+                                 TRIM( data_output_pr(i) ) // ' is not imp' // &
+                                 'lemented for stokes_force = .FALSE.'
+                CALL message( 'check_parameters', 'PA0091', 1, 2, 0, 6, 0 )
+             ELSE
+                dopr_index(i) = 163
+                dopr_unit(i)  = 'm/s'
+                hom(:,2,163,:) = SPREAD( zw, 2, statistic_regions+1 )
+             ENDIF
+
+          CASE ( 'v_stk_zw' )
+             IF (  .NOT.  ocean ) THEN
+                message_string = 'data_output_pr = ' //                        &
+                                 TRIM( data_output_pr(i) ) // ' is not imp' // &
+                                 'lemented for ocean = .FALSE.'
+                CALL message( 'check_parameters', 'PA0091', 1, 2, 0, 6, 0 )
+             ELSEIF (  .NOT.  stokes_force ) THEN
+                message_string = 'data_output_pr = ' //                        &
+                                 TRIM( data_output_pr(i) ) // ' is not imp' // &
+                                 'lemented for stokes_force = .FALSE.'
+                CALL message( 'check_parameters', 'PA0091', 1, 2, 0, 6, 0 )
+             ELSE
+                dopr_index(i) = 164
+                dopr_unit(i)  = 'm/s'
+                hom(:,2,164,:) = SPREAD( zw, 2, statistic_regions+1 )
+             ENDIF
+
           CASE ( 'w*p*' )
              dopr_index(i) = 68
              dopr_unit(i)  = 'm3/s3'

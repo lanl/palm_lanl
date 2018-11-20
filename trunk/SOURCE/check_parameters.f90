@@ -20,6 +20,9 @@
 ! Current revisions:
 ! -----------------
 !
+! 2018-11-01 cbegeman
+! Add checks for bubble initial conditions
+!
 ! 2018-10-31 cbegeman
 ! Add checks for profile output
 !
@@ -759,6 +762,7 @@
 
 
     CALL location_message( 'checking parameters', .FALSE. )
+
 !
 !-- At first, check static and dynamic input for consistency
     CALL netcdf_data_input_check_dynamic
@@ -1377,6 +1381,10 @@
 
 !
 !-- Initializing actions must have been set by the user
+
+    WRITE(message_string,*) 'initializing_actions = ',initializing_actions
+    CALL location_message(adjustl(trim(message_string)),.TRUE.)
+
     IF ( TRIM( initializing_actions ) == '' )  THEN
        message_string = 'no value specified for initializing_actions'
        CALL message( 'check_parameters', 'PA0149', 1, 2, 0, 6, 0 )
@@ -1392,8 +1400,8 @@
           SELECT CASE ( action(1:position-1) )
 
              CASE ( 'set_constant_profiles', 'set_1d-model_profiles',          &
-                    'by_user', 'initialize_vortex', 'initialize_ptanom',       &
-                    'initialize_bubble', 'inifor' )
+                    'by_user', 'initialize_vortex', 			       &
+                    'initialize_2D_bubble', 'initialize_3D_bubble', 'inifor' )
                 action = action(position+1:)
 
              CASE DEFAULT
@@ -1917,6 +1925,64 @@
 !-- In case of using a prandtl-layer, calculated (or prescribed) surface
 !-- fluxes have to be used in the diffusion-terms
     IF ( constant_flux_layer )  use_surface_fluxes = .TRUE.
+
+!-- Check initial conditions for bubble case
+    IF ( INDEX( initializing_actions, 'initialize_3D_bubble' ) /= 0 .OR.         &
+         INDEX( initializing_actions, 'initialize_2D_bubble' ) /= 0 ) THEN
+
+       IF ( bubble_radius == 9999999.9_wp ) THEN
+          message_string = 'initializing_actions includes bubble, so '// &
+                           'bubble_radius must be specified in namelist'
+          CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
+       ELSEIF ( bubble_radius == 0 ) THEN
+          message_string = 'bubble_radius is zero, so bubble will not be '//     &
+                           'initialized'
+          CALL message( message_string, 'PA0562', 0, 2, 0, 6, 0 )
+       ELSEIF ( bubble_radius < 0 ) THEN
+          message_string = 'bubble_radius is negative. please specify a non-'//  &
+                           'negative bubble_radius'
+          CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
+       ENDIF
+
+       IF ( bubble_center_x /= 9999999.9_wp .AND.                              &
+            ( ( bubble_center_x + bubble_radius ) > nx*dx .OR.                 &
+              ( bubble_center_x - bubble_radius ) < 0          ) ) THEN
+          message_string = 'bubble is outside the x-axis limits'
+          CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
+       ENDIF
+
+       IF ( bubble_center_y /= 9999999.9_wp .AND.                              &
+            ( ( bubble_center_y + bubble_radius ) > ny*dy .OR.                 &
+              ( bubble_center_y - bubble_radius ) < 0          ) ) THEN
+          message_string = 'bubble is outside the y-axis limits'
+          CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
+       ENDIF
+
+       IF ( bubble_center_z /= 9999999.9_wp .AND.                              &
+            ( ( bubble_center_z + bubble_radius ) > zu(nzt) .OR.               &
+              ( bubble_center_z - bubble_radius ) < zu(nzb) ) ) THEN
+          message_string = 'bubble is outside the z-axis limits'
+          CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
+       ENDIF
+
+       IF ( bubble_pt == 9999999.9_wp .AND. bubble_sa == 9999999.9_wp ) THEN
+          message_string = 'initializing_actions includes bubble, so either '//   &
+                           'bubble_pt or bubble_sa should be specified.'
+          CALL message( message_string, 'PA0562', 1, 2, 0, 6, 0 )
+       ENDIF
+
+       IF ( .NOT. ocean .AND. bubble_pt == 0.0_wp ) THEN
+          message_string = 'bubble_pt is 0 so bubble will not be initialized.'
+          CALL message( message_string, 'PA0562', 0, 2, 0, 6, 0 )
+       ENDIF
+
+       IF ( ocean .AND. bubble_pt == 0.0_wp .AND. bubble_sa == 0.0_wp ) THEN
+          message_string = 'Both bubble_pt and bubble_sa are 0 so bubble will ' // &
+                           'not be initialized.'
+          CALL message( message_string, 'PA0562', 0, 2, 0, 6, 0 )
+       ENDIF
+
+    ENDIF
 
 !
 !-- Check boundary conditions and set internal variables:

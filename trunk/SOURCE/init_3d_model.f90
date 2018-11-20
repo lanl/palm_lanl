@@ -20,6 +20,8 @@
 ! Current revisions:
 ! ------------------
 ! 
+! 2018-11-15 cbegeman
+! Modify call to init_pt_anomaly
 ! 
 ! Former revisions:
 ! -----------------
@@ -628,6 +630,7 @@
     INTEGER(iwp) ::  nz_s_shift_l !< 
 
     CALL location_message( 'allocating arrays', .FALSE. )
+
 !
 !-- Allocate arrays
     ALLOCATE( mean_surface_level_height(0:statistic_regions),                  &
@@ -1480,8 +1483,6 @@
 !--       fluxes, etc. 
           CALL init_surfaces
 
-          CALL location_message( 'finished', .TRUE. )
-
        ELSEIF ( INDEX(initializing_actions, 'by_user') /= 0 )                  &
        THEN
 
@@ -1609,14 +1610,15 @@
 !
 !--    Impose vortex with vertical axis on the initial velocity profile
        IF ( INDEX( initializing_actions, 'initialize_vortex' ) /= 0 )  THEN
+          CALL location_message('initializing vortex',.TRUE.)
           CALL init_rankine
        ENDIF
 
 !
 !--    Impose temperature anomaly (advection test only) or warm air bubble 
 !--    close to surface
-       IF ( INDEX( initializing_actions, 'initialize_ptanom' ) /= 0  .OR.  &
-            INDEX( initializing_actions, 'initialize_bubble' ) /= 0  )  THEN
+       IF ( INDEX( initializing_actions, 'initialize_2D_bubble' ) /= 0  .OR. &
+            INDEX( initializing_actions, 'initialize_3D_bubble' ) /= 0 )  THEN
           CALL init_pt_anomaly
        ENDIF
        

@@ -229,7 +229,7 @@
     USE control_parameters,                                                    &
         ONLY:  air_chemistry, c1, c2, c3, cloud_droplets, cloud_physics,       &
                constant_heatflux, constant_scalarflux, constant_waterflux,     &     
-               coupling_mode, f, g, humidity, ibc_e_b,             &
+               coupling_mode, f, g, humidity, ibc_e_b,                         &
                ibc_pt_b, initializing_actions, kappa,                          &
                intermediate_timestep_count, intermediate_timestep_count_max,   &
                l_m, land_surface, large_scale_forcing, lsf_surf,               &
@@ -238,7 +238,7 @@
                passive_scalar, prandtl_number, pt_surface, q_surface,          &
                run_coupled, schmidt_number, surface_pressure, simulated_time,  &
                terminate_run, time_since_reference_point, urban_surface,       &
-               zeta_max, zeta_min
+               z_offset, zeta_max, zeta_min
 
     USE eqn_state_seawater,                                                    &
         ONLY: CT_freezing, CT_freezing_SA
@@ -1604,6 +1604,7 @@
              IF ( trim(most_method) == 'mcphee' ) THEN
                 DO  m = 1, surf%ns
                    ! Equivalent to: surf%us(m) = SQRT(drag_coeff) * surf%uvw_abs(m)
+                   ! Does not allow for spatially variable z_offset
                    surf%us(m) = ( kappa / LOG( z_offset / surf%z0(m) ) )  &
                                 * surf%uvw_abs(m)
                 ENDDO
@@ -2162,7 +2163,7 @@
 
              surf%shf(m)   = -1.0_wp * rho_ocean(k,j,i) *                     &
                              ( surf%gamma_T(m)                                &
-                               - gamma_S(m) *                                 &
+                               - surf%gamma_S(m) *                            &
                                  ( surf%sa_io(m) - surf%sa1(m) )/surf%sa_io(m)&
                              ) * ( surf%pt_io(m) - surf%pt1(m) )
              surf%sasws(m) = -1.0_wp * rho_ocean(k,j,i) *                     &
@@ -2384,12 +2385,12 @@
 
        INTEGER(iwp) :: m
 
-       surf%shf(m)   = -1.0_wp * rho_ocean(k,j,i) *                     &
+       surf%shf(m)   = -1.0_wp * rho_ocean(k,j,i) *                           &
                              ( surf%gamma_T(m)                                &
-                               - gamma_S(m) *                                 &
+                               - surf%gamma_S(m) *                            &
                                  ( surf%sa_io(m) - surf%sa1(m) )/surf%sa_io(m)&
                              ) * ( surf%pt_io(m) - surf%pt1(m) )
-       surf%sasws(m) = -1.0_wp * rho_ocean(k,j,i) *                     &
+       surf%sasws(m) = -1.0_wp * rho_ocean(k,j,i) *                           &
                              ( surf%gamma_S(m)                                &
                                - surf%gamma_S(m) *                            &
                                  ( surf%sa_io(m) - surf%sa1(m) )/surf%sa_io(m)&
@@ -2416,6 +2417,7 @@
        INTEGER(iwp)  ::  n                   !< iteration counter
        INTEGER(iwp)  ::  max_iter = 5        !< maximum number of iterations
 
+       REAL(wp) ::  a, b, c                  !< coefficients of quadratic equation
        REAL(wp) ::  dctf_dsa                 !< derivative of conservative temperature 
                                              !< at freezing point with respect to salinity
        REAL(wp) ::  sa_io_k                  !< change in salinity over kth iteration
@@ -2494,7 +2496,7 @@
 
 !--          Solve 3 equations for salinity at ice-ocean interface
 
-             term1 = pt_io_p(m) - ( dctf_dsa * sa_io_p ) - surf%pt1(m)
+             term1 = pt_io_p - ( dctf_dsa * sa_io_p ) - surf%pt1(m)
              a = dctf_dsa * ( surf%gamma_T(m) + surf%gamma_S(m) )
              b =   ( surf%gamma_T(m) * term1 )    &
                  + ( surf%gamma_S(m) * ( term1 - ( l_m / cp )                 &
@@ -2502,10 +2504,10 @@
              c = -1.0_wp * surf%gamma_S(m) * surf%sa1(m) *                    &
                  ( term1 - ( l_m / cp ) )
 
-             surf%sa_io(m) = sa_io_k = 2.0_wp*c / (-1.0_wp*b + SQRT(b**2 - 4.0_wp*a*c))
+             surf%sa_io(m) = 2.0_wp*c / (-1.0_wp*b + SQRT(b**2 - 4.0_wp*a*c))
 
 !--          Calculate approximate freezing temperature at ice-ocean interface
-             surf%pt_io(m) = pt_io_p(m) + ( dctf_dsa * ( sa_io_k - sa_io_p(m) ) )
+             surf%pt_io(m) = pt_io_p + ( dctf_dsa * ( sa_io_k - sa_io_p ) )
 
 !--          Update surface fluxes
              CALL calc_surface_fluxes_m(m)

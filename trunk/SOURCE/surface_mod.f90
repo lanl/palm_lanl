@@ -21,6 +21,8 @@
 ! Current revisions:
 ! ------------------
 ! 
+! 2018-11-21 cbegeman
+! Add k_offset conditions for mcphee MOST method.
 ! 
 ! Former revisions:
 ! -----------------
@@ -1669,7 +1671,7 @@
        surf_usm_h%koff      = -1
 !
 !--    Downward facing vertical offset
-       IF ( k_offset /= 9999 .AND. TRIM( most_method ) == 'mcphee' )
+       IF ( k_offset /= 9999 .AND. TRIM( most_method ) == 'mcphee' ) THEN
           surf_def_h(1:2)%koff = k_offset
        ELSE
           surf_def_h(1:2)%koff = 1

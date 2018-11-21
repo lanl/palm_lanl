@@ -486,26 +486,16 @@
        p_r = p*1e-4;
     
        ! Calculate 
-        CT_freezing_SA = (
-          c1 + x*(1.5*c2  + x*(2*c3  + x*(2.5*c4  + x*(3*c5  + 3.5*c6*x)))) 
-          + p_r*(c10 
-                 + x*(1.5*c11 + x*(2*c13 + x*(2.5*c16 + x*(3*c19 + 3.5*c22*x)))) 
-                 + p_r*(c12 + x*(1.5*c14 + x*(2*c17 + 2.5*c20*x))
-                        + p_r*(c15 + x*(1.5*c18 + 2*c21*x))
-                        )
-                 )
+        CT_freezing_SA = (                                                      &
+          c1 + x*(1.5*c2  + x*(2*c3  + x*(2.5*c4  + x*(3*c5  + 3.5*c6*x))))     &
+          + p_r*(c10                                                            &
+                 + x*(1.5*c11 + x*(2*c13 + x*(2.5*c16 + x*(3*c19 + 3.5*c22*x))))&
+                 + p_r*(c12 + x*(1.5*c14 + x*(2*c17 + 2.5*c20*x))               &
+                        + p_r*(c15 + x*(1.5*c18 + 2*c21*x))                     &
+                        )                                                       &
+                 )                                                              &
           )*1e-2;
      
-       CT_freezing = ( c0 + SA_r*(c1 + x*(c2 + x*(c3 + x*(c4 + x*(c5 + c6*x)))))
-                     + p_r*(c7 + p_r*(c8 + c9*p_r)) 
-                     + SA_r*p_r*(c10 + p_r*(c12 + p_r*(c15 + c21*SA_r)) 
-                                 + SA_r*(c13 + c17*p_r + c19*SA_r)
-                                 + x*(c11 + p_r*(c14 + c18*p_r)
-                                      + SA_r*(c16 + c20*p_r + c22*SA_r)
-                                      )
-                                 )
-                     )
-
     END FUNCTION CT_freezing_SA
 
 !------------------------------------------------------------------------------!
@@ -552,14 +542,14 @@
        p_r = p*1e-4;
     
        ! Calculate      
-       CT_freezing = ( c0 + SA_r*(c1 + x*(c2 + x*(c3 + x*(c4 + x*(c5 + c6*x)))))
-                     + p_r*(c7 + p_r*(c8 + c9*p_r)) 
-                     + SA_r*p_r*(c10 + p_r*(c12 + p_r*(c15 + c21*SA_r)) 
-                                 + SA_r*(c13 + c17*p_r + c19*SA_r)
-                                 + x*(c11 + p_r*(c14 + c18*p_r)
-                                      + SA_r*(c16 + c20*p_r + c22*SA_r)
-                                      )
-                                 )
+       CT_freezing = ( c0 + SA_r*(c1 + x*(c2 + x*(c3 + x*(c4 + x*(c5 + c6*x)))))&
+                     + p_r*(c7 + p_r*(c8 + c9*p_r))                             &
+                     + SA_r*p_r*(c10 + p_r*(c12 + p_r*(c15 + c21*SA_r))         &
+                                 + SA_r*(c13 + c17*p_r + c19*SA_r)              &
+                                 + x*(c11 + p_r*(c14 + c18*p_r)                 &
+                                      + SA_r*(c16 + c20*p_r + c22*SA_r)         &
+                                      )                                         &
+                                 )                                              &
                      )
 
     END FUNCTION CT_freezing

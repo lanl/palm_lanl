@@ -4473,6 +4473,9 @@
     IF ( k_offset == 9999 .AND. TRIM( most_method ) == 'mcphee' )  THEN
        k_offset = 3 ! set to default value
     ENDIF
+    IF ( z_offset == 9999999.9_wp .AND. k_offset /= 9999 )  THEN
+       z_offset = k_offset*dz
+    ENDIF
 
     IF ( dz_most )  THEN
        message_string = 'most_method = mcphee is incompatible with atmosphere runs'
@@ -4485,6 +4488,11 @@
          .AND. roughness_length >= 0.5 * dz(1) )  THEN
        message_string = 'roughness_length must be smaller than dz/2'
        CALL message( 'check_parameters', 'PA0424', 1, 2, 0, 6, 0 )
+    ENDIF
+
+!-- If drag_coefficient is specified, convert to roughness length
+    IF ( constant_flux_layer .AND. drag_coeff /= 9999999.9_wp ) THEN
+       roughness_length = z_offset / EXP( kappa/SQRT(drag_coeff) )
     ENDIF
 
 !

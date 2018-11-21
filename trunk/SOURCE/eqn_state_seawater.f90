@@ -19,8 +19,11 @@
 !
 ! Current revisions:
 ! -----------------
-!
-!
+! 
+! 2018-11-21 cbegeman
+! Added functions for freezing point and derivative of freezing point with 
+! respect to salinity
+! 
 ! Former revisions:
 ! -----------------
 ! $Id: eqn_state_seawater.f90 2718 2018-01-02 08:49:38Z maronga $
@@ -437,5 +440,128 @@
 
 
     END FUNCTION eqn_state_seawater_func
+
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Calculate derivative of conservative temperature freezing point with respect
+!> to absolute salinity at a given pressure and absolute salinity according to 
+!> TEOS10 polynomial function.
+!------------------------------------------------------------------------------!
+    REAL(wp) FUNCTION CT_freezing_SA( p, SA )
+
+       IMPLICIT NONE
+
+       REAL(wp) ::  p,p_r      !< given in dbar
+       REAL(wp) ::  SA,SA_r,x
+       REAL(wp) ::  c0,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15,c16,c17,c18,c19,c20,c21,c22
+
+       ! coefficients of polynomial 
+       c0  =  0.017947064327968736;
+       c1 =  -6.076099099929818;
+       c2 =   4.883198653547851;
+       c3 =  -11.88081601230542;
+       c4 =   13.34658511480257;
+       c5 =  -8.722761043208607;
+       c6 =   2.082038908808201;    
+       c7 =  -7.389420998107497;
+       c8 =  -2.110913185058476;
+       c9 =   0.2295491578006229;      
+       c10 = -0.9891538123307282;
+       c11 = -0.08987150128406496;
+       c12 =  0.3831132432071728;
+       c13 =  1.054318231187074;
+       c14 =  1.065556599652796;
+       c15 = -0.7997496801694032;
+       c16 =  0.3850133554097069;
+       c17 = -2.078616693017569;
+       c18 =  0.8756340772729538;
+       c19 = -2.079022768390933;
+       c20 =  1.596435439942262;
+       c21 =  0.1338002171109174;
+       c22 =  1.242891021876471;
+    
+       SA_r = SA*1e-2;
+       x = SQRT(SA_r);
+       p_r = p*1e-4;
+    
+       ! Calculate 
+        CT_freezing_SA = (
+          c1 + x*(1.5*c2  + x*(2*c3  + x*(2.5*c4  + x*(3*c5  + 3.5*c6*x)))) 
+          + p_r*(c10 
+                 + x*(1.5*c11 + x*(2*c13 + x*(2.5*c16 + x*(3*c19 + 3.5*c22*x)))) 
+                 + p_r*(c12 + x*(1.5*c14 + x*(2*c17 + 2.5*c20*x))
+                        + p_r*(c15 + x*(1.5*c18 + 2*c21*x))
+                        )
+                 )
+          )*1e-2;
+     
+       CT_freezing = ( c0 + SA_r*(c1 + x*(c2 + x*(c3 + x*(c4 + x*(c5 + c6*x)))))
+                     + p_r*(c7 + p_r*(c8 + c9*p_r)) 
+                     + SA_r*p_r*(c10 + p_r*(c12 + p_r*(c15 + c21*SA_r)) 
+                                 + SA_r*(c13 + c17*p_r + c19*SA_r)
+                                 + x*(c11 + p_r*(c14 + c18*p_r)
+                                      + SA_r*(c16 + c20*p_r + c22*SA_r)
+                                      )
+                                 )
+                     )
+
+    END FUNCTION CT_freezing_SA
+
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Calculate conservative temperature freezing point at a given pressure and 
+!> absolute salinity according to TEOS10 polynomial function.
+!------------------------------------------------------------------------------!
+    REAL(wp) FUNCTION CT_freezing( p, SA )
+
+       IMPLICIT NONE
+
+       REAL(wp) ::  p,p_r       !< given in dbar
+       REAL(wp) ::  SA,SA_r,x
+       REAL(wp) ::  c0,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15,c16,c17,c18,c19,c20,c21,c22
+
+       ! coefficients of polynomial 
+       c0  =  0.017947064327968736;
+       c1 =  -6.076099099929818;
+       c2 =   4.883198653547851;
+       c3 =  -11.88081601230542;
+       c4 =   13.34658511480257;
+       c5 =  -8.722761043208607;
+       c6 =   2.082038908808201;    
+       c7 =  -7.389420998107497;
+       c8 =  -2.110913185058476;
+       c9 =   0.2295491578006229;      
+       c10 = -0.9891538123307282;
+       c11 = -0.08987150128406496;
+       c12 =  0.3831132432071728;
+       c13 =  1.054318231187074;
+       c14 =  1.065556599652796;
+       c15 = -0.7997496801694032;
+       c16 =  0.3850133554097069;
+       c17 = -2.078616693017569;
+       c18 =  0.8756340772729538;
+       c19 = -2.079022768390933;
+       c20 =  1.596435439942262;
+       c21 =  0.1338002171109174;
+       c22 =  1.242891021876471;
+    
+       SA_r = SA*1e-2;
+       x = SQRT(SA_r);
+       p_r = p*1e-4;
+    
+       ! Calculate      
+       CT_freezing = ( c0 + SA_r*(c1 + x*(c2 + x*(c3 + x*(c4 + x*(c5 + c6*x)))))
+                     + p_r*(c7 + p_r*(c8 + c9*p_r)) 
+                     + SA_r*p_r*(c10 + p_r*(c12 + p_r*(c15 + c21*SA_r)) 
+                                 + SA_r*(c13 + c17*p_r + c19*SA_r)
+                                 + x*(c11 + p_r*(c14 + c18*p_r)
+                                      + SA_r*(c16 + c20*p_r + c22*SA_r)
+                                      )
+                                 )
+                     )
+
+    END FUNCTION CT_freezing
 
  END MODULE eqn_state_seawater_mod

@@ -1449,7 +1449,7 @@
     REAL(wp) ::  disturbance_level_b = -9999999.9_wp           !< namelist parameter
     REAL(wp) ::  disturbance_level_t = -9999999.9_wp           !< namelist parameter
     REAL(wp) ::  dp_level_b = 0.0_wp                           !< namelist parameter
-    REAL(wp) ::  drag_coeff = 0.003_wp                         !< namelist parameter
+    REAL(wp) ::  drag_coeff = 9999999.9_wp                     !< namelist parameter
     REAL(wp) ::  dt = -1.0_wp                                  !< namelist parameter
     REAL(wp) ::  dt_averaging_input = 0.0_wp                   !< namelist parameter
     REAL(wp) ::  dt_averaging_input_pr = 9999999.9_wp          !< namelist parameter

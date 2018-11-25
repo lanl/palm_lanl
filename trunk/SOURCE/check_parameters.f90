@@ -20,32 +20,32 @@
 ! Current revisions:
 ! -----------------
 !
-! 2018-10-31 cbegeman
-! Add checks for profile output
-! 
 ! 2018-11-01 cbegeman
 ! Add checks for bubble initial conditions
-! 
+!
+! 2018-10-31 cbegeman
+! Add checks for profile output
+!
 ! 2018-10-25 cbegeman
 ! Add checks for dirichlet bottom boundary conditions for salinity
-! 
+!
 ! Former revisions:
 ! -----------------
 ! $Id: check_parameters.f90 2520 2017-10-05 13:50:26Z gronemeier &
 ! Add inital profile output for e (TG)
-! 
+!
 ! 3065 2018-06-12 07:03:02Z Giersch
 ! dz was replaced by dz(1), error message revised
-! 
+!
 ! 3049 2018-05-29 13:52:36Z Giersch
 ! add variable description
-! 
+!
 ! 3046 2018-05-29 08:02:15Z Giersch
 ! Error messages revised
 !
 ! 3045 2018-05-28 07:55:41Z Giersch
 ! Error messages revised
-! 
+!
 ! 3035 2018-05-24 09:35:20Z schwenkel
 ! Add option to initialize warm air bubble close to surface
 !
@@ -54,147 +54,147 @@
 !
 ! 2980 2018-04-17 15:19:27Z suehring
 ! Further improvement for spinup checks.
-! 
+!
 ! 2974 2018-04-16 12:59:52Z gronemeier
 ! Bugfix: check if dt_data_output_av is zero in case of parallel NetCDF output
-! 
+!
 ! 2970 2018-04-13 15:09:23Z suehring
 ! Bugfix in old large-scale forcing mode
-! 
+!
 ! 2964 2018-04-12 16:04:03Z Giersch
 ! Calculation of fixed number of output time levels for parallel netcdf output
 ! has been revised (based on calculations in netcdf_interface_mod)
-! 
+!
 ! 2938 2018-03-27 15:52:42Z suehring
 ! - Revise start and end indices for imposing random disturbances in case of
 !   nesting or large-scale forcing.
-! - Remove check for inifor initialization in case of nested runs. 
+! - Remove check for inifor initialization in case of nested runs.
 ! - Adapt call to check for synthetic turbulence geneartor settings.
-! 
+!
 ! 2936 2018-03-27 14:49:27Z suehring
-! Check spinup in case of nested runs, spinup time and timestep must be 
-! identical to assure synchronuous simulations. 
-! 
+! Check spinup in case of nested runs, spinup time and timestep must be
+! identical to assure synchronuous simulations.
+!
 ! 2932 2018-03-26 09:39:22Z maronga
 ! renamed particles_par to particle_parameters
-! 
+!
 ! 2918 2018-03-21 15:52:14Z gronemeier
 ! Add check for 1D model
-! 
+!
 ! 2883 2018-03-14 08:29:10Z Giersch
 ! dt_dopr_listing is not set to the default value zero anymore
-! 
+!
 ! 2851 2018-03-05 14:39:31Z maronga
 ! Bugfix: calculation of output time levels in case of restart runs (parallel
 ! NetCDF)
-! 
+!
 ! 2836 2018-02-26 13:40:05Z Giersch
-! dt_dopr_listing is set to the default value zero 
-! 
+! dt_dopr_listing is set to the default value zero
+!
 ! 2817 2018-02-19 16:32:21Z knoop
 ! Preliminary gust module interface implemented
-! 
+!
 ! 2798 2018-02-09 17:16:39Z suehring
-! Consider also default-type surfaces for surface temperature output. 
-! 
+! Consider also default-type surfaces for surface temperature output.
+!
 ! 2797 2018-02-08 13:24:35Z suehring
 ! Enable output of ground-heat flux also at urban surfaces.
-! 
+!
 ! 2776 2018-01-31 10:44:42Z Giersch
 ! Variable synthetic_turbulence_generator has been abbreviated
-! 
+!
 ! 2773 2018-01-30 14:12:54Z suehring
 ! Check for consistent initialization in nesting mode added.
-! 
+!
 ! 2766 2018-01-22 17:17:47Z kanani
 ! Removed preprocessor directive __chem
-! 
+!
 ! 2765 2018-01-22 11:34:58Z maronga
-! Renamed simulation_time_since_reference to 
+! Renamed simulation_time_since_reference to
 ! time_to_be_simulated_from_reference_point
-! 
+!
 ! 2746 2018-01-15 12:06:04Z suehring
 ! Move flag plant canopy to modules
-! 
+!
 ! 2743 2018-01-12 16:03:39Z suehring
 ! In case of natural- and urban-type surfaces output surfaces fluxes in W/m2.
-! 
+!
 ! 2742 2018-01-12 14:59:47Z suehring
 ! Enable output of surface temperature
-! 
+!
 ! 2735 2018-01-11 12:01:27Z suehring
 ! output of r_a moved from land-surface to consider also urban-type surfaces
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 ! Implementation of uv exposure model (FK)
 ! + new possible value for dissipation_1d
 ! Added checks for turbulence_closure_mod (TG)
 ! Implementation of chemistry module (FK)
-! 
+!
 ! 2689 2017-12-12 17:46:55Z Giersch
 ! Bugfix in if query
-! 
+!
 ! 2688 2017-12-12 17:27:04Z Giersch
 ! Check if humidity is set to TRUE in the _p3d file for coupled runs
-! 
+!
 ! 2669 2017-12-06 16:03:27Z raasch
 ! mrun-string replaced by palmrun
-! 
+!
 ! 2628 2017-11-20 12:40:38Z schwenkel
 ! Enabled particle advection with grid stretching -> Removed parameter check
-! 
+!
 ! 2575 2017-10-24 09:57:58Z maronga
 ! Renamed phi --> latitude
-! 
+!
 ! 2564 2017-10-19 15:56:56Z Giersch
 ! Variable wind_turbine was added to control_parameters.
-! 
+!
 ! 2550 2017-10-16 17:12:01Z boeske
 ! Added checks for complex terrain simulations
-! 
+!
 ! 2513 2017-10-04 09:24:39Z kanani
-! Bugfix for some dopr(_initial)_index values and units connected to 
+! Bugfix for some dopr(_initial)_index values and units connected to
 ! passive-scalar output
-! 
+!
 ! 2508 2017-10-02 08:57:09Z suehring
-! Bugfix, change default value of vertical_gradient level in order to consider 
-! also ocean runs 
-! 
+! Bugfix, change default value of vertical_gradient level in order to consider
+! also ocean runs
+!
 ! 2422 2017-09-08 08:25:41Z raasch
 ! error message in case of missing "restart" file activation string
-! 
+!
 ! 2375 2017-08-29 14:10:28Z schwenkel
 ! Added aerosol for bulk microphysics
-! 
+!
 ! 2365 2017-08-21 14:59:59Z kanani
 ! Vertical grid nesting implemented: Check coupling mode. Generate file header
 ! (SadiqHuq)
-! 
+!
 ! 2354 2017-08-17 10:49:36Z schwenkel
 ! Bugfix correlated to lsm_check_data_output_pr.
-! If-statement for following checks is essential, otherwise units for lsm output 
+! If-statement for following checks is essential, otherwise units for lsm output
 ! are set to 'illegal' and palm will be aborted.
-! 
+!
 ! 2348 2017-08-10 10:40:10Z kanani
 ! New: Check for simultaneous use of geostrophic wind and u_profile/v_profile
-! 
+!
 ! 2345 2017-08-09 11:50:30Z Giersch
-! Remove error message PA0156 and the conserve_volume_flow_mode option 
+! Remove error message PA0156 and the conserve_volume_flow_mode option
 ! inflow_profile
-! 
+!
 ! 2339 2017-08-07 13:55:26Z raasch
 ! corrected timestamp in header
-! 
+!
 ! 2338 2017-08-07 12:15:38Z gronemeier
 ! Modularize 1D model
-! 
+!
 ! 2329 2017-08-03 14:24:56Z knoop
 ! Bugfix: index corrected for rho_air and rho_air_zw output
-! 
+!
 ! 2320 2017-07-21 12:47:43Z suehring
 ! Modularize large-scale forcing and nudging
 !
@@ -665,7 +665,7 @@
     USE arrays_3d
     USE chemistry_model_mod,                                                   &
         ONLY:  chem_boundary_conds, chem_check_data_output,                    &
-               chem_check_data_output_pr, chem_species                 
+               chem_check_data_output_pr, chem_species
     USE chem_modules
     USE cloud_parameters
     USE constants
@@ -712,6 +712,8 @@
     USE spectra_mod,                                                           &
         ONLY:  calculate_spectra, spectra_check_parameters
     USE statistics
+    USE stokes_drift_mod,                                                      &
+        ONLY: stokes_drift_check_parameters
     USE subsidence_mod
     USE statistics
     USE synthetic_turbulence_generator_mod,                                    &
@@ -791,7 +793,7 @@
                         'for coupled runs between ocean and atmosphere.'
        CALL message( 'check_parameters', 'PA0476', 1, 2, 0, 6, 0 )
     ENDIF
-   
+
 !
 !-- Check dt_coupling, restart_time, dt_restart, end_time, dx, dy, nx and ny
     IF ( coupling_mode /= 'uncoupled'       .AND.                              &
@@ -1147,7 +1149,7 @@
 
 
 !
-!-- When the land- or urban-surface model is used, the flux output must be 
+!-- When the land- or urban-surface model is used, the flux output must be
 !-- dynamic.
     IF ( land_surface  .OR.  urban_surface )  THEN
        flux_output_mode = 'dynamic'
@@ -1272,7 +1274,7 @@
     END IF
 !
 !-- Advection schemes:
-    IF ( momentum_advec /= 'pw-scheme'  .AND.                                  &  
+    IF ( momentum_advec /= 'pw-scheme'  .AND.                                  &
          momentum_advec /= 'ws-scheme'  .AND.                                  &
          momentum_advec /= 'up-scheme' )                                       &
     THEN
@@ -1441,8 +1443,8 @@
        CALL message( 'check_parameters', 'PA0033', 1, 2, 0, 6, 0 )
     ENDIF
 !
-!-- In case of spinup and nested run, spinup end time must be identical 
-!-- in order to have synchronously running simulations. 
+!-- In case of spinup and nested run, spinup end time must be identical
+!-- in order to have synchronously running simulations.
     IF ( nested_run )  THEN
 #if defined( __parallel )
        CALL MPI_ALLREDUCE( spinup_time, spinup_time_max, 1, MPI_REAL,          &
@@ -1474,6 +1476,11 @@
 !
 !-- Check for synthetic turbulence generator settings
     CALL stg_check_parameters
+
+!
+!-- Check for Stokes drift settings if Stokes forcing in ocean mode is used
+    IF ( ocean .AND. stokes_force ) CALL stokes_drift_check_parameters
+
 !
 !-- When plant canopy model is used, peform addtional checks
     IF ( plant_canopy )  CALL pcm_check_parameters
@@ -1515,7 +1522,7 @@
        IF ( passive_scalar )  s_init  = s_surface
        IF ( air_chemistry )  THEN
          DO lsp = 1, nvar
-            chem_species(lsp)%conc_pr_init = cs_surface(lsp)      
+            chem_species(lsp)%conc_pr_init = cs_surface(lsp)
          ENDDO
        ENDIF
 !
@@ -1729,7 +1736,7 @@
        ENDIF
 !
 !--    Compute initial chemistry profile using the given chemical species gradients
-       IF ( air_chemistry )  THEN                                                          
+       IF ( air_chemistry )  THEN
          DO lsp = 1, nvar
           CALL init_vertical_profiles( cs_vertical_gradient_level_ind(lsp,:),  &
                                        cs_vertical_gradient_level(lsp,:),      &
@@ -1792,7 +1799,7 @@
     ENDIF
 
 !
-!-- Overwrite latitude if necessary and compute Coriolis parameter. 
+!-- Overwrite latitude if necessary and compute Coriolis parameter.
 !-- To do - move initialization of f and fs to coriolis_mod.
     IF ( input_pids_static )  THEN
        latitude  = init_model%latitude
@@ -3048,6 +3055,7 @@
                    data_output_pr(i)     = data_output_pr(i)(2:)
                 ENDIF
              ENDIF
+
            CASE ( 'solar3d' )
              IF (  .NOT.  ocean ) THEN
                 message_string = 'data_output_pr = ' //                        &
@@ -3084,7 +3092,6 @@
                 hom(:,2,151,:) = SPREAD( zu, 2, statistic_regions+1 )
              ENDIF
 
-
           CASE ( 'w"sa"' )
              IF (  .NOT.  ocean ) THEN
                 message_string = 'data_output_pr = ' //                        &
@@ -3119,6 +3126,74 @@
                 dopr_index(i) = 67
                 dopr_unit(i)  = 'psu m/s'
                 hom(:,2,67,:) = SPREAD( zw, 2, statistic_regions+1 )
+             ENDIF
+
+          CASE ( 'u_stk' )
+             IF (  .NOT.  ocean ) THEN
+                message_string = 'data_output_pr = ' //                        &
+                                 TRIM( data_output_pr(i) ) // ' is not imp' // &
+                                 'lemented for ocean = .FALSE.'
+                CALL message( 'check_parameters', 'PA0091', 1, 2, 0, 6, 0 )
+             ELSEIF (  .NOT.  stokes_force ) THEN
+                message_string = 'data_output_pr = ' //                        &
+                                 TRIM( data_output_pr(i) ) // ' is not imp' // &
+                                 'lemented for stokes_force = .FALSE.'
+                CALL message( 'check_parameters', 'PA0091', 1, 2, 0, 6, 0 )
+             ELSE
+                dopr_index(i) = 161
+                dopr_unit(i)  = 'm/s'
+                hom(:,2,161,:) = SPREAD( zu, 2, statistic_regions+1 )
+             ENDIF
+
+          CASE ( 'v_stk' )
+             IF (  .NOT.  ocean ) THEN
+                message_string = 'data_output_pr = ' //                        &
+                                 TRIM( data_output_pr(i) ) // ' is not imp' // &
+                                 'lemented for ocean = .FALSE.'
+                CALL message( 'check_parameters', 'PA0091', 1, 2, 0, 6, 0 )
+             ELSEIF (  .NOT.  stokes_force ) THEN
+                message_string = 'data_output_pr = ' //                        &
+                                 TRIM( data_output_pr(i) ) // ' is not imp' // &
+                                 'lemented for stokes_force = .FALSE.'
+                CALL message( 'check_parameters', 'PA0091', 1, 2, 0, 6, 0 )
+             ELSE
+                dopr_index(i) = 162
+                dopr_unit(i)  = 'm/s'
+                hom(:,2,162,:) = SPREAD( zu, 2, statistic_regions+1 )
+             ENDIF
+
+          CASE ( 'u_stk_zw' )
+             IF (  .NOT.  ocean ) THEN
+                message_string = 'data_output_pr = ' //                        &
+                                 TRIM( data_output_pr(i) ) // ' is not imp' // &
+                                 'lemented for ocean = .FALSE.'
+                CALL message( 'check_parameters', 'PA0091', 1, 2, 0, 6, 0 )
+             ELSEIF (  .NOT.  stokes_force ) THEN
+                message_string = 'data_output_pr = ' //                        &
+                                 TRIM( data_output_pr(i) ) // ' is not imp' // &
+                                 'lemented for stokes_force = .FALSE.'
+                CALL message( 'check_parameters', 'PA0091', 1, 2, 0, 6, 0 )
+             ELSE
+                dopr_index(i) = 163
+                dopr_unit(i)  = 'm/s'
+                hom(:,2,163,:) = SPREAD( zw, 2, statistic_regions+1 )
+             ENDIF
+
+          CASE ( 'v_stk_zw' )
+             IF (  .NOT.  ocean ) THEN
+                message_string = 'data_output_pr = ' //                        &
+                                 TRIM( data_output_pr(i) ) // ' is not imp' // &
+                                 'lemented for ocean = .FALSE.'
+                CALL message( 'check_parameters', 'PA0091', 1, 2, 0, 6, 0 )
+             ELSEIF (  .NOT.  stokes_force ) THEN
+                message_string = 'data_output_pr = ' //                        &
+                                 TRIM( data_output_pr(i) ) // ' is not imp' // &
+                                 'lemented for stokes_force = .FALSE.'
+                CALL message( 'check_parameters', 'PA0091', 1, 2, 0, 6, 0 )
+             ELSE
+                dopr_index(i) = 164
+                dopr_unit(i)  = 'm/s'
+                hom(:,2,164,:) = SPREAD( zw, 2, statistic_regions+1 )
              ENDIF
 
           CASE ( 'w*p*' )
@@ -3307,10 +3382,10 @@
                                                    dopr_unit(i) )
              ENDIF
 
-             IF ( unit == 'illegal' )  THEN                                        
+             IF ( unit == 'illegal' )  THEN
                 CALL chem_check_data_output_pr( data_output_pr(i), i,          &
                                                 unit, dopr_unit(i) )
-             ENDIF 
+             ENDIF
 
              IF ( unit == 'illegal' )  THEN
                 unit = ''
@@ -3620,7 +3695,7 @@
              ENDIF
 
              IF ( ( TRIM( var ) == 'r_a*' .OR.  TRIM( var ) == 'ghf*' )        &
-                 .AND.  .NOT.  land_surface  .AND.  .NOT.  urban_surface )     &         
+                 .AND.  .NOT.  land_surface  .AND.  .NOT.  urban_surface )     &
              THEN
                 message_string = 'output of "' // TRIM( var ) // '" requi' //  &
                                  'res land_surface = .TRUE. or ' //            &
@@ -3639,18 +3714,18 @@
              IF ( TRIM( var ) == 'pra*'   )  unit = 'mm'
              IF ( TRIM( var ) == 'prr*'   )  unit = 'mm/s'
              IF ( TRIM( var ) == 'qsws*'  )  unit = 'kgm/kgs'
-             IF ( TRIM( var ) == 'r_a*'   )  unit = 's/m'     
+             IF ( TRIM( var ) == 'r_a*'   )  unit = 's/m'
              IF ( TRIM( var ) == 'shf*'   )  unit = 'K*m/s'
              IF ( TRIM( var ) == 'shf_sol*' ) unit = 'K*m/s'
              IF ( TRIM( var ) == 'ssws*'  )  unit = 'kg/m2*s'
              IF ( TRIM( var ) == 't*'     )  unit = 'K'
-             IF ( TRIM( var ) == 'tsurf*' )  unit = 'K'  
+             IF ( TRIM( var ) == 'tsurf*' )  unit = 'K'
              IF ( TRIM( var ) == 'u*'     )  unit = 'm/s'
              IF ( TRIM( var ) == 'z0*'    )  unit = 'm'
              IF ( TRIM( var ) == 'z0h*'   )  unit = 'm'
 !
-!--          Output of surface latent and sensible heat flux will be in W/m2 
-!--          in case of natural- and urban-type surfaces, even if 
+!--          Output of surface latent and sensible heat flux will be in W/m2
+!--          in case of natural- and urban-type surfaces, even if
 !--          flux_output_mode is set to kinematic units.
              IF ( land_surface  .OR.  urban_surface )  THEN
                 IF ( TRIM( var ) == 'shf*'   )  unit = 'W/m2'
@@ -3889,7 +3964,7 @@
        CALL check_dt_do( dt_do2d_yz,        'dt_do2d_yz'        )
        CALL check_dt_do( dt_data_output_av, 'dt_data_output_av' )
 
-!--    Set needed time levels (ntdim) to 
+!--    Set needed time levels (ntdim) to
 !--    saved time levels + to be saved time levels.
        ntdim_3d(0) = do3d_time_count(0) + CEILING(                             &
                      ( end_time - MAX( skip_time_do3d,                         &
@@ -4395,7 +4470,7 @@
     ENDIF
 
 !
-!-- Check if vertical grid stretching is switched off in case of complex 
+!-- Check if vertical grid stretching is switched off in case of complex
 !-- terrain simulations
     IF ( complex_terrain  .AND.                                                &
          ANY( dz_stretch_level_start /= -9999999.9_wp ) )  THEN
@@ -4514,7 +4589,7 @@
                 IF ( vertical_gradient_level(i) >= zu(k)  .AND.            &
                      vertical_gradient_level(i) <= 0.0_wp )  THEN
                    gradient = vertical_gradient(i) / 100.0_wp
-                   vertical_gradient_level_ind(i) = k + 1  
+                   vertical_gradient_level_ind(i) = k + 1
                    i = i + 1
                 ENDIF
              ENDIF

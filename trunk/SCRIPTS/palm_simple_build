@@ -119,7 +119,7 @@ do
   case  $option  in
       (b)   build_config=$OPTARG;;
       (s)   SCRIPT_LOCATION=$OPTARG;;
-      (w)   work_dir=$OPTARG;;   
+      (w)   work_dir=$OPTARG;;
       (D)   debug_mode=true;;
       (x)   clean=true;;
       (h)   print_help

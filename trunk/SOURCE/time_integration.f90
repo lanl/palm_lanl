@@ -19,55 +19,55 @@
 !
 ! Current revisions:
 ! ------------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: time_integration.f90 3042 2018-05-25 10:44:37Z schwenkel $
 ! Changed the name specific humidity to mixing ratio
-! 
+!
 ! 3040 2018-05-25 10:22:08Z schwenkel
 ! Fixed bug in IF statement
 ! Ensure that the time when calling the radiation to be the time step of the
 ! pre-calculated time when first calculate the positions of the sun
-! 
+!
 ! 3004 2018-04-27 12:33:25Z Giersch
-! First call of flow_statistics has been removed. It is already called in 
+! First call of flow_statistics has been removed. It is already called in
 ! run_control itself
-! 
+!
 ! 2984 2018-04-18 11:51:30Z hellstea
 ! CALL pmci_ensure_nest_mass_conservation is removed (so far only commented out)
 ! as seemingly unnecessary.
-! 
+!
 ! 2941 2018-04-03 11:54:58Z kanani
-! Deduct spinup_time from RUN_CONTROL output of main 3d run 
+! Deduct spinup_time from RUN_CONTROL output of main 3d run
 ! (use time_since_reference_point instead of simulated_time)
-! 
+!
 ! 2938 2018-03-27 15:52:42Z suehring
 ! Nesting of dissipation rate in case of RANS mode and TKE-e closure is applied
-! 
+!
 ! 2936 2018-03-27 14:49:27Z suehring
 ! Little formatting adjustment.
-! 
+!
 ! 2817 2018-02-19 16:32:21Z knoop
 ! Preliminary gust module interface implemented
-! 
+!
 ! 2801 2018-02-14 16:01:55Z thiele
 ! Changed lpm from subroutine to module.
 ! Introduce particle transfer in nested models.
-! 
+!
 ! 2776 2018-01-31 10:44:42Z Giersch
 ! Variable use_synthetic_turbulence_generator has been abbreviated
-! 
+!
 ! 2773 2018-01-30 14:12:54Z suehring
 ! - Nesting for chemical species
-! 
+!
 ! 2766 2018-01-22 17:17:47Z kanani
 ! Removed preprocessor directive __chem
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! - Change in file header (GPL part)
 ! - Implementation of uv exposure model (FK)
@@ -79,34 +79,34 @@
 ! - Implementation of chemistry module (FK)
 ! - Calls for setting boundary conditions in USM and LSM (MS)
 ! - Large-scale forcing with larger-scale models implemented (MS)
-! - Rename usm_radiation into radiation_interactions; merge with branch 
+! - Rename usm_radiation into radiation_interactions; merge with branch
 !   radiation (MS)
 ! - added call for usm_green_heat_model for green building surfaces (RvT)
 ! - added call for usm_temperature_near_surface for use in indoor model (RvT)
-! 
+!
 ! 2617 2017-11-16 12:47:24Z suehring
 ! Bugfix, assure that the reference state does not become zero.
-! 
+!
 ! 2563 2017-10-19 15:36:10Z Giersch
 ! Variable wind_turbine moved to module control_parameters
-! 
+!
 ! 2365 2017-08-21 14:59:59Z kanani
 ! Vertical grid nesting implemented (SadiqHuq)
-! 
+!
 ! 2320 2017-07-21 12:47:43Z suehring
 ! Set bottom boundary conditions after nesting interpolation and anterpolation
-! 
+!
 ! 2299 2017-06-29 10:14:38Z maronga
 ! Call of soil model adjusted
-! 
+!
 ! 2292 2017-06-20 09:51:42Z schwenkel
-! Implementation of new microphysic scheme: cloud_scheme = 'morrison' 
-! includes two more prognostic equations for cloud drop concentration (nc)  
-! and cloud water content (qc). 
-! 
+! Implementation of new microphysic scheme: cloud_scheme = 'morrison'
+! includes two more prognostic equations for cloud drop concentration (nc)
+! and cloud water content (qc).
+!
 ! 2271 2017-06-09 12:34:55Z sward
 ! Start timestep message changed
-! 
+!
 ! 2259 2017-06-08 09:09:11Z gronemeier
 ! Implemented synthetic turbulence generator
 !
@@ -115,44 +115,44 @@
 ! 2232 2017-05-30 17:47:52Z suehring
 ! Adjustments to new topography and surface concept
 ! Modify passed parameters for disturb_field
-! 
+!
 ! 2178 2017-03-17 11:07:39Z hellstea
 ! Setting perturbations at all times near inflow boundary is removed
 ! in case of nested boundaries
 !
 ! 2174 2017-03-13 08:18:57Z maronga
 ! Added support for nesting with cloud microphysics
-! 
+!
 ! 2118 2017-01-17 16:38:49Z raasch
 ! OpenACC directives and related code removed
-! 
+!
 ! 2050 2016-11-08 15:00:55Z gronemeier
 ! Implement turbulent outflow condition
-! 
+!
 ! 2031 2016-10-21 15:11:58Z knoop
 ! renamed variable rho to rho_ocean
-! 
+!
 ! 2011 2016-09-19 17:29:57Z kanani
 ! Flag urban_surface is now defined in module control_parameters,
 ! removed commented CALLs of global_min_max.
-! 
+!
 ! 2007 2016-08-24 15:47:17Z kanani
 ! Added CALLs for new urban surface model
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1976 2016-07-27 13:28:04Z maronga
 ! Simplified calls to radiation model
-! 
+!
 ! 1960 2016-07-12 16:34:24Z suehring
 ! Separate humidity and passive scalar
-! 
+!
 ! 1957 2016-07-07 10:43:48Z suehring
 ! flight module added
-! 
+!
 ! 1919 2016-05-27 14:51:23Z raasch
-! Initial version of purely vertical nesting introduced. 
+! Initial version of purely vertical nesting introduced.
 !
 ! 1918 2016-05-27 14:35:57Z raasch
 ! determination of time step moved to the end of the time step loop,
@@ -164,7 +164,7 @@
 !
 ! 1878 2016-04-19 12:30:36Z hellstea
 ! Synchronization for nested runs rewritten
-! 
+!
 ! 1853 2016-04-11 09:00:35Z maronga
 ! Adjusted for use with radiation_scheme = constant
 !
@@ -213,33 +213,33 @@
 ! 1691 2015-10-26 16:17:44Z maronga
 ! Added option for spin-ups without land surface and radiation models. Moved calls
 ! for radiation and lan surface schemes.
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1671 2015-09-25 03:29:37Z raasch
 ! bugfix: ghostpoint exchange for array diss in case that sgs velocities are used
 ! for particles
 !
 ! 1585 2015-04-30 07:05:52Z maronga
 ! Moved call of radiation scheme. Added support for RRTM
-! 
+!
 ! 1551 2015-03-03 14:18:16Z maronga
 ! Added interface for different radiation schemes.
-! 
+!
 ! 1496 2014-12-02 17:25:50Z maronga
 ! Added calls for the land surface model and radiation scheme
-! 
+!
 ! 1402 2014-05-09 14:25:13Z raasch
 ! location messages modified
-! 
+!
 ! 1384 2014-05-02 14:31:06Z raasch
 ! location messages added
-! 
+!
 ! 1380 2014-04-28 12:40:45Z heinze
-! CALL of nudge_ref added 
+! CALL of nudge_ref added
 ! bc_pt_t_val and bc_q_t_val are updated in case nudging is used
-! 
+!
 ! 1365 2014-04-22 15:03:56Z boeske
 ! Reset sums_ls_l to zero at each timestep
 ! +sums_ls_l
@@ -247,7 +247,7 @@
 
 ! 1342 2014-03-26 17:04:47Z kanani
 ! REAL constants defined as wp-kind
-! 
+!
 ! 1320 2014-03-20 08:40:49Z raasch
 ! ONLY-attribute added to USE-statements,
 ! kind-parameters added to all INTEGER and REAL declaration statements,
@@ -255,13 +255,13 @@
 ! old module precision_kind is removed,
 ! revision history before 2012 removed,
 ! comment fields (!:) to be used for variable explanations added to
-! all variable declaration statements 
+! all variable declaration statements
 ! 1318 2014-03-17 13:35:16Z raasch
 ! module interfaces removed
 !
 ! 1308 2014-03-13 14:58:42Z fricke
 ! +netcdf_data_format_save
-! For masked data, parallel netcdf output is not tested so far, hence 
+! For masked data, parallel netcdf output is not tested so far, hence
 ! netcdf_data_format is switched back to non-paralell output.
 !
 ! 1276 2014-01-15 13:40:41Z heinze
@@ -341,7 +341,7 @@
 !> output
 !------------------------------------------------------------------------------!
  SUBROUTINE time_integration
- 
+
 
     USE advec_ws,                                                              &
         ONLY:  ws_statistics
@@ -359,7 +359,7 @@
         ONLY:  chem_emissions, chem_species
 
     USE chem_modules,                                                          &
-        ONLY:  nspec 
+        ONLY:  nspec
 
     USE control_parameters,                                                    &
         ONLY:  advected_distance_x, advected_distance_y, air_chemistry,        &
@@ -395,7 +395,8 @@
                turbulent_inflow, turbulent_outflow, urban_surface,             &
                use_initial_profile_as_reference,                               &
                use_single_reference_value, uv_exposure, u_gtrans, v_gtrans,    &
-               virtual_flight, wind_turbine, ws_scheme_mom, ws_scheme_sca
+               virtual_flight, wind_turbine, ws_scheme_mom, ws_scheme_sca,     &
+               stokes_force
 
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point, log_point_s
@@ -491,13 +492,16 @@
 
     USE vertical_nesting_mod,                                                  &
         ONLY:  vnested, vnest_anterpolate, vnest_anterpolate_e,                &
-               vnest_boundary_conds, vnest_boundary_conds_khkm,                & 
+               vnest_boundary_conds, vnest_boundary_conds_khkm,                &
                vnest_deallocate, vnest_init, vnest_init_fine,                  &
                vnest_start_time
 
+    USE stokes_force_mod,                                                      &
+        ONLY:  stokes_pressure_head
+
     IMPLICIT NONE
 
-    CHARACTER (LEN=9) ::  time_to_string          !< 
+    CHARACTER (LEN=9) ::  time_to_string          !<
     INTEGER(iwp)      ::  it
     INTEGER(iwp)      ::  lsp
     INTEGER(iwp)      ::  n
@@ -525,12 +529,12 @@
 !-- run_control
     CALL run_control
 !
-!-- Data exchange between coupled models in case that a call has been omitted 
+!-- Data exchange between coupled models in case that a call has been omitted
 !-- at the end of the previous run of a job chain.
     IF ( coupling_mode /= 'uncoupled'  .AND.  run_coupled .AND. .NOT. vnested)  THEN
 !
-!--    In case of model termination initiated by the local model the coupler 
-!--    must not be called because this would again cause an MPI hang. 
+!--    In case of model termination initiated by the local model the coupler
+!--    must not be called because this would again cause an MPI hang.
        DO WHILE ( time_coupling >= dt_coupling  .AND.  terminate_coupled == 0 )
           CALL surface_coupler
           time_coupling = time_coupling - dt_coupling
@@ -544,7 +548,7 @@
 
 #if defined( __dvrp_graphics )
 !
-!-- Time measurement with dvrp software  
+!-- Time measurement with dvrp software
     CALL DVRP_LOG_EVENT( 2, current_timestep_number )
 #endif
 
@@ -566,7 +570,7 @@
           ENDIF
        ENDIF
 !
-!--    Determine ug, vg and w_subs in dependence on data from external file 
+!--    Determine ug, vg and w_subs in dependence on data from external file
 !--    LSF_DATA
        IF ( large_scale_forcing .AND. lsf_vert )  THEN
            CALL ls_forcing_vert ( simulated_time )
@@ -574,8 +578,8 @@
        ENDIF
 
 !
-!--    Set pt_init and q_init to the current profiles taken from 
-!--    NUDGING_DATA 
+!--    Set pt_init and q_init to the current profiles taken from
+!--    NUDGING_DATA
        IF ( nudging )  THEN
            CALL nudge_ref ( simulated_time )
 !
@@ -612,8 +616,8 @@
 
           CALL cpu_log( log_point(55), 'wind_turbine', 'stop' )
 
-       ENDIF       
-       
+       ENDIF
+
 !
 !--    Start of intermediate step loop
        intermediate_timestep_count = 0
@@ -650,7 +654,7 @@
              ENDIF
 !
 !--          Assure that ref_state does not become zero at any level
-!--          ( might be the case if a vertical level is completely occupied 
+!--          ( might be the case if a vertical level is completely occupied
 !--            with topography ).
              ref_state = MERGE( MAXVAL(ref_state), ref_state,                  &
                                 ref_state == 0.0_wp )
@@ -748,8 +752,8 @@
           ENDIF
           IF ( passive_scalar )  CALL exchange_horiz( s_p, nbgp )
           IF ( air_chemistry )  THEN
-             DO  n = 1, nspec     
-                CALL exchange_horiz( chem_species(n)%conc_p, nbgp ) 
+             DO  n = 1, nspec
+                CALL exchange_horiz( chem_species(n)%conc_p, nbgp )
              ENDDO
           ENDIF
 
@@ -815,8 +819,8 @@
                    CALL exchange_horiz( diss, nbgp )
 
                 IF ( air_chemistry )  THEN
-                   DO  n = 1, nspec     
-                      CALL exchange_horiz( chem_species(n)%conc, nbgp ) 
+                   DO  n = 1, nspec
+                      CALL exchange_horiz( chem_species(n)%conc, nbgp )
                    ENDDO
                 ENDIF
 
@@ -826,9 +830,9 @@
              CALL pmci_boundary_conds
 !
 !--          Correct the w top-BC in nest domains to ensure mass conservation.
-!--          This action must never be done for the root domain. Vertical 
+!--          This action must never be done for the root domain. Vertical
 !--          nesting implies mass conservation.
-!--          Commented out April 18, 2018 as seemingly unnecessary. 
+!--          Commented out April 18, 2018 as seemingly unnecessary.
 !--          Will later be completely removed.
 !--             IF ( nest_domain )  THEN
 !--                CALL pmci_ensure_nest_mass_conservation
@@ -891,8 +895,8 @@
           ENDIF
 
 !
-!--       Map forcing data derived from larger scale model onto domain 
-!--       boundaries. 
+!--       Map forcing data derived from larger scale model onto domain
+!--       boundaries.
           IF ( forcing  .AND.  intermediate_timestep_count ==                  &
                                intermediate_timestep_count_max  )  THEN
              CALL forcing_bc
@@ -916,7 +920,7 @@
                 CALL cpu_log( log_point(82), 'vnest_bc', 'start' )
                 CALL vnest_boundary_conds
                 CALL cpu_log( log_point(82), 'vnest_bc', 'stop' )
- 
+
                 IF ( coupling_mode == 'vnested_fine' )  CALL pres
 
 !--             Anterpolate TKE, satisfy Germano Identity
@@ -938,18 +942,18 @@
              CALL calc_liquid_water_content
           ENDIF
 !
-!--       If required, compute virtual potential temperature 
-          IF ( humidity )  THEN 
-             CALL compute_vpt 
-          ENDIF 
+!--       If required, compute virtual potential temperature
+          IF ( humidity )  THEN
+             CALL compute_vpt
+          ENDIF
 
 !
 !--       Compute the diffusion quantities
           IF ( .NOT. constant_diffusion )  THEN
 
 !
-!--          Determine surface fluxes shf and qsws and surface values 
-!--          pt_surface and q_surface in dependence on data from external 
+!--          Determine surface fluxes shf and qsws and surface values
+!--          pt_surface and q_surface in dependence on data from external
 !--          file LSF_DATA respectively
              IF ( ( large_scale_forcing .AND. lsf_surf ) .AND. &
                  intermediate_timestep_count == intermediate_timestep_count_max )&
@@ -958,7 +962,7 @@
              ENDIF
 
 !
-!--          First the vertical (and horizontal) fluxes in the surface 
+!--          First the vertical (and horizontal) fluxes in the surface
 !--          (constant flux) layer are computed
              IF ( constant_flux_layer )  THEN
                 CALL cpu_log( log_point(19), 'surface_layer_fluxes', 'start' )
@@ -966,7 +970,7 @@
                 CALL cpu_log( log_point(19), 'surface_layer_fluxes', 'stop' )
              ENDIF
 !
-!--          If required, solve the energy balance for the surface and run soil 
+!--          If required, solve the energy balance for the surface and run soil
 !--          model. Call for horizontal as well as vertical surfaces
              IF ( land_surface .AND. time_since_reference_point >= skip_time_do_lsm)  THEN
 
@@ -993,14 +997,14 @@
                 CALL lsm_soil_model( .FALSE., 3, .TRUE. )
 !
 !--             At the end, set boundary conditons for potential temperature
-!--             and humidity after running the land-surface model. This 
+!--             and humidity after running the land-surface model. This
 !--             might be important for the nesting, where arrays are transfered.
                 CALL lsm_boundary_condition
 
                 CALL cpu_log( log_point(54), 'land_surface', 'stop' )
              ENDIF
 !
-!--          If required, solve the energy balance for urban surfaces and run 
+!--          If required, solve the energy balance for urban surfaces and run
 !--          the material heat model
              IF (urban_surface) THEN
                 CALL cpu_log( log_point(74), 'urban_surface', 'start' )
@@ -1013,7 +1017,7 @@
                 CALL usm_temperature_near_surface
 !
 !--             At the end, set boundary conditons for potential temperature
-!--             and humidity after running the urban-surface model. This 
+!--             and humidity after running the urban-surface model. This
 !--             might be important for the nesting, where arrays are transfered.
                 CALL usm_boundary_condition
 
@@ -1057,7 +1061,7 @@
 
 !
 !--             Adjust the current_ time to the time step of the radiation model.
-!--             Needed since radiation is pre-calculated and stored only on apparent 
+!--             Needed since radiation is pre-calculated and stored only on apparent
 !--             solar positions
                 it = FLOOR(time_since_reference_point/dt_radiation)
                 tsrp_org = time_since_reference_point
@@ -1073,7 +1077,7 @@
                    CALL radiation_interaction
                    CALL cpu_log( log_point(75), 'radiation_interaction', 'stop' )
                 ENDIF
-    
+
 !
 !--             Return the current time to its original value
                 time_since_reference_point = tsrp_org
@@ -1082,6 +1086,13 @@
           ENDIF
 
        ENDDO   ! Intermediate step loop
+!
+!--    Update perturbation pressure to account for the Stokes pressure
+!--    head, if required
+       IF ( ocean .AND. stokes_force ) THEN
+          CALL stokes_pressure_head
+       ENDIF
+
 !
 !--    If required, consider chemical emissions
 !--    (todo (FK): Implement hourly call of emissions, using time_utc from
@@ -1147,10 +1158,10 @@
           time_coupling = time_coupling + dt_3d
 
 !
-!--       In case of model termination initiated by the local model 
-!--       (terminate_coupled > 0), the coupler must be skipped because it would 
+!--       In case of model termination initiated by the local model
+!--       (terminate_coupled > 0), the coupler must be skipped because it would
 !--       cause an MPI intercomminucation hang.
-!--       If necessary, the coupler will be called at the beginning of the 
+!--       If necessary, the coupler will be called at the beginning of the
 !--       next restart run.
           DO WHILE ( time_coupling >= dt_coupling .AND. terminate_coupled == 0 )
              CALL surface_coupler
@@ -1399,7 +1410,7 @@
 
     ENDDO   ! time loop
 
-!-- Vertical nesting: Deallocate variables initialized for vertical nesting    
+!-- Vertical nesting: Deallocate variables initialized for vertical nesting
     IF ( vnest_init )  CALL vnest_deallocate
 
     IF ( myid == 0 )  CALL finish_progress_bar

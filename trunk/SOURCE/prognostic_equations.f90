@@ -19,62 +19,62 @@
 !
 ! Current revisions:
 ! ------------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: prognostic_equations.f90 3022 2018-05-18 11:12:35Z suehring $
 ! Revise recent bugfix for nesting
-! 
+!
 ! 3021 2018-05-16 08:14:20Z maronga
 ! Bugfix in IF clause for nesting
-! 
+!
 ! 3014 2018-05-09 08:42:38Z maronga
-! Fixed a bug in the IF condition to call pcm_tendency in case of 
+! Fixed a bug in the IF condition to call pcm_tendency in case of
 ! potential temperature
-! 
+!
 ! 2815 2018-02-19 11:29:57Z kanani
 ! Rename chem_tendency to chem_prognostic_equations,
 ! implement vector version for air chemistry
-! 
+!
 ! 2766 2018-01-22 17:17:47Z kanani
 ! Removed preprocessor directive __chem
-! 
+!
 ! 2746 2018-01-15 12:06:04Z suehring
 ! Move flag plant canopy to modules
-! 
+!
 ! 2719 2018-01-02 09:02:06Z maronga
 ! Bugfix for last change.
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! - Change in file header (GPL part)
 ! - Moved TKE equation to tcm_prognostic (TG)
 ! - Added switch for chemical reactions (RF, FK)
 ! - Implementation of chemistry module (RF, BK, FK)
-! 
+!
 ! 2563 2017-10-19 15:36:10Z Giersch
 ! Variable wind_turbine moved to module control_parameters
-! 
+!
 ! 2320 2017-07-21 12:47:43Z suehring
 ! Modularize large-scale forcing and nudging
-! 
+!
 ! 2292 2017-06-20 09:51:42Z schwenkel
-! Implementation of new microphysic scheme: cloud_scheme = 'morrison' 
-! includes two more prognostic equations for cloud drop concentration (nc)  
-! and cloud water content (qc). 
-! 
+! Implementation of new microphysic scheme: cloud_scheme = 'morrison'
+! includes two more prognostic equations for cloud drop concentration (nc)
+! and cloud water content (qc).
+!
 ! 2261 2017-06-08 14:25:57Z raasch
 ! bugfix for r2232: openmp directives removed
-! 
+!
 ! 2233 2017-05-30 18:08:54Z suehring
 !
 ! 2232 2017-05-30 17:47:52Z suehring
-! Adjutst to new surface-type structure. Remove call for usm_wall_heat_flux, 
+! Adjutst to new surface-type structure. Remove call for usm_wall_heat_flux,
 ! which is realized directly in diffusion_s now.
-! 
+!
 ! 2192 2017-03-22 04:14:10Z raasch
 ! Bugfix for misplaced and missing openMP directives from r2155
 !
@@ -285,7 +285,7 @@
     USE chemistry_model_mod,                                                   &
         ONLY:  chem_integrate, chem_prognostic_equations,                      &
                chem_species, nspec, nvar, spc_names
-           
+
     USE chem_photolysis_mod,                                                   &
         ONLY:  photolysis_control
 
@@ -308,8 +308,9 @@
                prho_reference, pt_reference, pt_reference, pt_reference,       &
                scalar_advec, scalar_advec, simulated_time, sloping_surface,    &
                timestep_scheme, tsc, use_subsidence_tendencies,                &
-               use_upstream_for_tke, wind_turbine, ws_scheme_mom,              & 
-               ws_scheme_sca, urban_surface, land_surface, wb_solar
+               use_upstream_for_tke, wind_turbine, ws_scheme_mom,              &
+               ws_scheme_sca, urban_surface, land_surface, wb_solar,           &
+               stokes_force
 
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point, log_point_s
@@ -402,13 +403,15 @@
 
     USE surface_mod,                                                           &
         ONLY :  surf_def_h, surf_def_v, surf_lsm_h, surf_lsm_v, surf_usm_h,    &
-                surf_usm_v 
+                surf_usm_v
 
-    USE constants 
+    USE constants
 
     USE wind_turbine_model_mod,                                                &
         ONLY:  wtm_tendencies
 
+    USE stokes_force_mod,                                                      &
+        ONLY: stokes_force_uvw, stokes_force_s
 
     PRIVATE
     PUBLIC prognostic_equations_cache, prognostic_equations_vector
@@ -452,7 +455,7 @@
     INTEGER(iwp) ::  m
 
     LOGICAL      ::  loop_start          !<
-    INTEGER      ::  n, lsp              !< lsp running index for chem spcs  
+    INTEGER      ::  n, lsp              !< lsp running index for chem spcs
     REAL(WP)      ::  wb_sfc, tod,arg1      !< surface buoyancy forcing -- only matters for ocean
 
 !
@@ -462,10 +465,10 @@
 !
 !-- Calculation of chemical reactions. This is done outside of main loop,
 !-- since exchange of ghost points is required after this update of the
-!-- concentrations of chemical species                                    
+!-- concentrations of chemical species
     IF ( air_chemistry )  THEN
 !
-!--    If required, calculate photolysis frequencies - 
+!--    If required, calculate photolysis frequencies -
 !--    UNFINISHED: Why not before the intermediate timestep loop?
        IF ( intermediate_timestep_count ==  1 )  THEN
           CALL photolysis_control
@@ -473,29 +476,29 @@
 !
 !--    Chemical reactions
        CALL cpu_log( log_point(82), '(chem react + exch_h)', 'start' )
-  
+
        IF ( chem_gasphase_on ) THEN
           DO  i = nxl, nxr
              DO  j = nys, nyn
 
                 IF ( intermediate_timestep_count == 1 .OR.                        &
                      call_chem_at_all_substeps ) THEN
-                   CALL chem_integrate (i,j)                                                
+                   CALL chem_integrate (i,j)
                 ENDIF
              ENDDO
           ENDDO
        ENDIF
 !
-!--    Loop over chemical species       
+!--    Loop over chemical species
        CALL cpu_log( log_point_s(84), 'chemistry exch-horiz ', 'start' )
        DO  n = 1, nspec
-          CALL exchange_horiz( chem_species(n)%conc, nbgp )     
+          CALL exchange_horiz( chem_species(n)%conc, nbgp )
        ENDDO
        CALL cpu_log( log_point_s(84), 'chemistry exch-horiz ', 'stop' )
-     
+
        CALL cpu_log( log_point(82), '(chem react + exch_h)', 'stop' )
 
-    ENDIF       
+    ENDIF
 
 !
 !-- If required, calculate cloud microphysics
@@ -547,9 +550,9 @@
 
        DO  j = nys, nyn
 !
-!--       Tendency terms for u-velocity component. Please note, in case of 
+!--       Tendency terms for u-velocity component. Please note, in case of
 !--       non-cyclic boundary conditions the grid point i=0 is excluded from
-!--       the prognostic equations for the u-component.    
+!--       the prognostic equations for the u-component.
           IF ( i >= nxlu )  THEN
 
              tend(:,j,i) = 0.0_wp
@@ -566,6 +569,12 @@
              CALL coriolis( i, j, 1 )
              IF ( sloping_surface  .AND.  .NOT. neutral )  THEN
                 CALL buoyancy( i, j, pt, 1 )
+             ENDIF
+
+!
+!--          If required, compute Stokes forces
+             IF ( ocean .AND. stokes_force ) THEN
+                CALL stokes_force_uvw( i, j, 1 )
              ENDIF
 
 !
@@ -621,9 +630,9 @@
 
           ENDIF
 !
-!--       Tendency terms for v-velocity component. Please note, in case of 
+!--       Tendency terms for v-velocity component. Please note, in case of
 !--       non-cyclic boundary conditions the grid point j=0 is excluded from
-!--       the prognostic equations for the v-component. !--       
+!--       the prognostic equations for the v-component. !--
           IF ( j >= nysv )  THEN
 
              tend(:,j,i) = 0.0_wp
@@ -638,6 +647,12 @@
              ENDIF
              CALL diffusion_v( i, j )
              CALL coriolis( i, j, 2 )
+
+!
+!--          If required, compute Stokes forces
+             IF ( ocean .AND. stokes_force ) THEN
+                CALL stokes_force_uvw( i, j, 2 )
+             ENDIF
 
 !
 !--          Drag by plant canopy
@@ -719,6 +734,12 @@
           ENDIF
 
 !
+!--       If required, compute Stokes forces
+          IF ( ocean .AND. stokes_force ) THEN
+             CALL stokes_force_uvw( i, j, 3 )
+          ENDIF
+
+!
 !--       Drag by plant canopy
           IF ( plant_canopy )  CALL pcm_tendency( i, j, 3 )
 
@@ -782,6 +803,13 @@
                                surf_usm_v(0)%shf, surf_usm_v(1)%shf,           &
                                surf_usm_v(2)%shf, surf_usm_v(3)%shf,           &
                                surf_def_h(2)%shf_sol )
+
+!
+!--          If required, compute Stokes-advection term
+             IF ( ocean .AND. stokes_force ) THEN
+                CALL stokes_force_s( i, j, pt )
+             ENDIF
+
 !
 !--          If required compute heating/cooling due to long wave radiation
 !--          processes
@@ -878,13 +906,20 @@
              CALL diffusion_s( i, j, sa,                                       &
                                surf_def_h(0)%sasws, surf_def_h(1)%sasws,       &
                                surf_def_h(2)%sasws,                            &
-                               surf_lsm_h%sasws,    surf_usm_h%sasws,          & 
+                               surf_lsm_h%sasws,    surf_usm_h%sasws,          &
                                surf_def_v(0)%sasws, surf_def_v(1)%sasws,       &
                                surf_def_v(2)%sasws, surf_def_v(3)%sasws,       &
                                surf_lsm_v(0)%sasws, surf_lsm_v(1)%sasws,       &
                                surf_lsm_v(2)%sasws, surf_lsm_v(3)%sasws,       &
                                surf_usm_v(0)%sasws, surf_usm_v(1)%sasws,       &
                                surf_usm_v(2)%sasws, surf_usm_v(3)%sasws )
+
+!
+!--          If required, compute Stokes-advection term
+             IF ( stokes_force ) THEN
+                CALL stokes_force_s( i, j, sa )
+             ENDIF
+
 
              CALL user_actions( i, j, 'sa-tendency' )
 
@@ -914,7 +949,7 @@
                    DO  k = nzb+1, nzt
                       tsa_m(k,j,i) =   -9.5625_wp * tend(k,j,i) +              &
                                         5.3125_wp * tsa_m(k,j,i)
-                   ENDDO  
+                   ENDDO
                 ENDIF
              ENDIF
 
@@ -987,7 +1022,7 @@
                                         )                                      &
                                        * MERGE( 1.0_wp, 0.0_wp,                &
                                                 BTEST( wall_flags_0(k,j,i), 0 )&
-                                              )                
+                                              )
                 IF ( q_p(k,j,i) < 0.0_wp )  q_p(k,j,i) = 0.1_wp * q(k,j,i)
              ENDDO
 
@@ -1029,7 +1064,7 @@
                 CALL diffusion_s( i, j, qc,                                   &
                                   surf_def_h(0)%qcsws, surf_def_h(1)%qcsws,   &
                                   surf_def_h(2)%qcsws,                        &
-                                  surf_lsm_h%qcsws,    surf_usm_h%qcsws,      &  
+                                  surf_lsm_h%qcsws,    surf_usm_h%qcsws,      &
                                   surf_def_v(0)%qcsws, surf_def_v(1)%qcsws,   &
                                   surf_def_v(2)%qcsws, surf_def_v(3)%qcsws,   &
                                   surf_lsm_v(0)%qcsws, surf_lsm_v(1)%qcsws,   &
@@ -1048,7 +1083,7 @@
                                              )                                 &
                                        * MERGE( 1.0_wp, 0.0_wp,                &
                                                 BTEST( wall_flags_0(k,j,i), 0 )&
-                                              ) 
+                                              )
                    IF ( qc_p(k,j,i) < 0.0_wp )  qc_p(k,j,i) = 0.0_wp
                 ENDDO
 !
@@ -1145,7 +1180,7 @@
                 CALL diffusion_s( i, j, qr,                                   &
                                   surf_def_h(0)%qrsws, surf_def_h(1)%qrsws,   &
                                   surf_def_h(2)%qrsws,                        &
-                                  surf_lsm_h%qrsws,    surf_usm_h%qrsws,      &  
+                                  surf_lsm_h%qrsws,    surf_usm_h%qrsws,      &
                                   surf_def_v(0)%qrsws, surf_def_v(1)%qrsws,   &
                                   surf_def_v(2)%qrsws, surf_def_v(3)%qrsws,   &
                                   surf_lsm_v(0)%qrsws, surf_lsm_v(1)%qrsws,   &
@@ -1164,7 +1199,7 @@
                                              )                                 &
                                        * MERGE( 1.0_wp, 0.0_wp,                &
                                                 BTEST( wall_flags_0(k,j,i), 0 )&
-                                              ) 
+                                              )
                    IF ( qr_p(k,j,i) < 0.0_wp )  qr_p(k,j,i) = 0.0_wp
                 ENDDO
 !
@@ -1271,6 +1306,12 @@
                                surf_usm_v(2)%ssws, surf_usm_v(3)%ssws )
 
 !
+!--          If required, compute Stokes-advection term
+             IF ( ocean .AND. stokes_force ) THEN
+                CALL stokes_force_s( i, j, s )
+             ENDIF
+
+!
 !--          Sink or source of scalar concentration due to canopy elements
              IF ( plant_canopy )  CALL pcm_tendency( i, j, 7 )
 
@@ -1339,7 +1380,7 @@
              CALL cpu_log( log_point(83), '(chem advec+diff+prog)', 'start' )
 !
 !--          Loop over chemical species
-             DO  lsp = 1, nvar                         
+             DO  lsp = 1, nvar
                 CALL chem_prognostic_equations ( chem_species(lsp)%conc_p,     &
                                      chem_species(lsp)%conc,                   &
                                      chem_species(lsp)%tconc_m,                &
@@ -1348,11 +1389,11 @@
                                      chem_species(lsp)%flux_s_cs,              &
                                      chem_species(lsp)%diss_s_cs,              &
                                      chem_species(lsp)%flux_l_cs,              &
-                                     chem_species(lsp)%diss_l_cs )       
+                                     chem_species(lsp)%diss_l_cs )
              ENDDO
 
-             CALL cpu_log( log_point(83), '(chem advec+diff+prog)', 'stop' )             
-          ENDIF   ! Chemicals equations                     
+             CALL cpu_log( log_point(83), '(chem advec+diff+prog)', 'stop' )
+          ENDIF   ! Chemicals equations
 
        ENDDO
     ENDDO
@@ -1415,6 +1456,12 @@
     CALL coriolis( 1 )
     IF ( sloping_surface  .AND.  .NOT. neutral )  THEN
        CALL buoyancy( pt, 1 )
+    ENDIF
+
+!
+!-- If required, compute Stokes forces
+    IF ( ocean .AND. stokes_force ) THEN
+       CALL stokes_force_uvw( 1 )
     ENDIF
 
 !
@@ -1501,6 +1548,12 @@
     ENDIF
     CALL diffusion_v
     CALL coriolis( 2 )
+
+!
+!-- If required, compute Stokes forces
+    IF ( ocean .AND. stokes_force ) THEN
+       CALL stokes_force_uvw( 2 )
+    ENDIF
 
 !
 !-- Drag by plant canopy
@@ -1600,6 +1653,12 @@
     ENDIF
 
 !
+!-- If required, compute Stokes forces
+    IF ( ocean .AND. stokes_force ) THEN
+       CALL stokes_force_uvw( 3 )
+    ENDIF
+
+!
 !-- Drag by plant canopy
     IF ( plant_canopy )  CALL pcm_tendency( 3 )
 
@@ -1696,7 +1755,7 @@
                                      surf_def_h(2)%sasws(m)*beta_S(k,j,i))
                     tod = simulated_time / 86400.0_wp
                     arg1 = cos(2.0_wp*pi*(tod - 0.75_wp))
-                    surf_def_h(2)%shf_sol(m) = wb_solar*max(arg1,0.0_wp) 
+                    surf_def_h(2)%shf_sol(m) = wb_solar*max(arg1,0.0_wp)
                 ENDIF
           enddo
        enddo
@@ -1712,6 +1771,13 @@
                          surf_usm_v(0)%shf, surf_usm_v(1)%shf,                 &
                          surf_usm_v(2)%shf, surf_usm_v(3)%shf,                 &
                          surf_def_h(2)%shf_sol )
+
+!
+!--    If required, compute Stokes-advection term
+       IF ( ocean .AND. stokes_force ) THEN
+          CALL stokes_force_s( pt )
+       ENDIF
+
 !
 !--    If required compute heating/cooling due to long wave radiation processes
        IF ( cloud_top_radiation )  THEN
@@ -1842,6 +1908,12 @@
                          surf_lsm_v(2)%sasws, surf_lsm_v(3)%sasws,             &
                          surf_usm_v(0)%sasws, surf_usm_v(1)%sasws,             &
                          surf_usm_v(2)%sasws, surf_usm_v(3)%sasws )
+
+!
+!--    If required, compute Stokes-advection term
+       IF ( stokes_force ) THEN
+          CALL stokes_force_s( sa )
+       ENDIF
 
        CALL user_actions( 'sa-tendency' )
 
@@ -2136,7 +2208,7 @@
           CALL diffusion_s( nc,                                                &
                             surf_def_h(0)%ncsws, surf_def_h(1)%ncsws,          &
                             surf_def_h(2)%ncsws,                               &
-                            surf_lsm_h%ncsws,    surf_usm_h%ncsws,             & 
+                            surf_lsm_h%ncsws,    surf_usm_h%ncsws,             &
                             surf_def_v(0)%ncsws, surf_def_v(1)%ncsws,          &
                             surf_def_v(2)%ncsws, surf_def_v(3)%ncsws,          &
                             surf_lsm_v(0)%ncsws, surf_lsm_v(1)%ncsws,          &
@@ -2315,7 +2387,7 @@
           CALL diffusion_s( nr,                                                &
                             surf_def_h(0)%nrsws, surf_def_h(1)%nrsws,          &
                             surf_def_h(2)%nrsws,                               &
-                            surf_lsm_h%nrsws,    surf_usm_h%nrsws,             & 
+                            surf_lsm_h%nrsws,    surf_usm_h%nrsws,             &
                             surf_def_v(0)%nrsws, surf_def_v(1)%nrsws,          &
                             surf_def_v(2)%nrsws, surf_def_v(3)%nrsws,          &
                             surf_lsm_v(0)%nrsws, surf_lsm_v(1)%nrsws,          &
@@ -2418,6 +2490,12 @@
                          surf_usm_v(2)%ssws, surf_usm_v(3)%ssws )
 
 !
+!--    If required, compute Stokes-advection term
+       IF ( ocean .AND. stokes_force ) THEN
+          CALL stokes_force_s( s )
+       ENDIF
+
+!
 !--    Sink or source of humidity due to canopy elements
        IF ( plant_canopy ) CALL pcm_tendency( 7 )
 
@@ -2496,15 +2574,15 @@
        CALL cpu_log( log_point(83), '(chem advec+diff+prog)', 'start' )
 !
 !--    Loop over chemical species
-       DO  lsp = 1, nvar                         
+       DO  lsp = 1, nvar
           CALL chem_prognostic_equations ( chem_species(lsp)%conc_p,           &
                                            chem_species(lsp)%conc,             &
                                            chem_species(lsp)%tconc_m,          &
                                            chem_species(lsp)%conc_pr_init,     &
-                                           lsp )       
+                                           lsp )
        ENDDO
 
-       CALL cpu_log( log_point(83), '(chem advec+diff+prog)', 'stop' )             
+       CALL cpu_log( log_point(83), '(chem advec+diff+prog)', 'stop' )
     ENDIF   ! Chemicals equations
 
 

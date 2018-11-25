@@ -19,90 +19,90 @@
 !
 ! Current revisions:
 ! -----------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: flow_statistics.f90 3042 2018-05-25 10:44:37Z schwenkel $
 ! Changed the name specific humidity to mixing ratio
-! 
+!
 ! 3040 2018-05-25 10:22:08Z schwenkel
 ! Comments related to the calculation of the inversion height expanded
-! 
+!
 ! 3003 2018-04-23 10:22:58Z Giersch
-! The inversion height will not be calcuated before the first timestep in 
+! The inversion height will not be calcuated before the first timestep in
 ! case of restarts.
-! 
+!
 ! 2968 2018-04-13 11:52:24Z suehring
 ! Bugfix in output of timeseries quantities in case of elevated model surfaces.
-! 
+!
 ! 2817 2018-02-19 16:32:21Z knoop
 ! Preliminary gust module interface implemented
-! 
+!
 ! 2773 2018-01-30 14:12:54Z suehring
 ! Timeseries output of surface temperature.
-! 
+!
 ! 2753 2018-01-16 14:16:49Z suehring
-! Tile approach for spectral albedo implemented. 
-! 
+! Tile approach for spectral albedo implemented.
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 ! Bugfix in evaluation of surface quantities in case different surface types
 ! are used (MS)
-! 
+!
 ! 2674 2017-12-07 11:49:21Z suehring
-! Bugfix in output conversion of resolved-scale momentum fluxes in case of 
+! Bugfix in output conversion of resolved-scale momentum fluxes in case of
 ! PW advections scheme.
-! 
+!
 ! 2320 2017-07-21 12:47:43Z suehring
 ! Modularize large-scale forcing and nudging
-! 
+!
 ! 2296 2017-06-28 07:53:56Z maronga
 ! Enabled output of radiation quantities for radiation_scheme = 'constant'
-! 
+!
 ! 2292 2017-06-20 09:51:42Z schwenkel
-! Implementation of new microphysic scheme: cloud_scheme = 'morrison' 
-! includes two more prognostic equations for cloud drop concentration (nc)  
-! and cloud water content (qc). 
-! 
+! Implementation of new microphysic scheme: cloud_scheme = 'morrison'
+! includes two more prognostic equations for cloud drop concentration (nc)
+! and cloud water content (qc).
+!
 ! 2270 2017-06-09 12:18:47Z maronga
 ! Revised numbering (removed 2 timeseries)
-! 
+!
 ! 2252 2017-06-07 09:35:37Z knoop
 ! perturbation pressure now depending on flux_output_mode
-! 
+!
 ! 2233 2017-05-30 18:08:54Z suehring
 !
 ! 2232 2017-05-30 17:47:52Z suehring
 ! Adjustments to new topography and surface concept
-! 
+!
 ! 2118 2017-01-17 16:38:49Z raasch
 ! OpenACC version of subroutine removed
-! 
+!
 ! 2073 2016-11-30 14:34:05Z raasch
 ! openmp bugfix: large scale forcing calculations cannot be executed thread
 ! parallel
-! 
+!
 ! 2037 2016-10-26 11:15:40Z knoop
 ! Anelastic approximation implemented
-! 
+!
 ! 2031 2016-10-21 15:11:58Z knoop
 ! renamed variable rho to rho_ocean
-! 
+!
 ! 2026 2016-10-18 10:27:02Z suehring
 ! Bugfix, enable output of s*2.
 ! Change, calculation of domain-averaged perturbation energy.
 ! Some formatting adjustments.
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1976 2016-07-27 13:28:04Z maronga
 ! Removed some unneeded __rrtmg preprocessor directives
-! 
+!
 ! 1960 2016-07-12 16:34:24Z suehring
 ! Separate humidity and passive scalar
 !
@@ -136,11 +136,11 @@
 !
 ! 1709 2015-11-04 14:47:01Z maronga
 ! Updated output of Obukhov length
-! 
+!
 ! 1691 2015-10-26 16:17:44Z maronga
 ! Revised calculation of Obukhov length. Added output of radiative heating >
 ! rates for RRTMG.
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
 ! Code annotations made doxygen readable
 !
@@ -159,10 +159,10 @@
 !
 ! 1585 2015-04-30 07:05:52Z maronga
 ! Added output of timeseries and profiles for RRTMG
-! 
+!
 ! 1571 2015-03-12 16:12:49Z maronga
 ! Bugfix: output of rad_net and rad_sw_in
-! 
+!
 ! 1567 2015-03-10 17:57:55Z suehring
 ! Reverse modifications made for monotonic limiter.
 !
@@ -171,7 +171,7 @@
 !
 ! 1555 2015-03-04 17:44:27Z maronga
 ! Added output of r_a and r_s.
-! 
+!
 ! 1551 2015-03-03 14:18:16Z maronga
 ! Added suppport for land surface model and radiation model output.
 !
@@ -188,37 +188,37 @@
 ! bugfix: "copyin" replaced by "update device" in openacc-branch
 !
 ! 1386 2014-05-05 13:55:30Z boeske
-! bugfix: simulated time before the last timestep is needed for the correct 
-! calculation of the profiles of large scale forcing tendencies 
-! 
+! bugfix: simulated time before the last timestep is needed for the correct
+! calculation of the profiles of large scale forcing tendencies
+!
 ! 1382 2014-04-30 12:15:41Z boeske
 ! Renamed variables which store large scale forcing tendencies
-! pt_lsa -> td_lsa_lpt, pt_subs -> td_sub_lpt, 
+! pt_lsa -> td_lsa_lpt, pt_subs -> td_sub_lpt,
 ! q_lsa  -> td_lsa_q,   q_subs  -> td_sub_q,
 ! added Neumann boundary conditions for profile data output of large scale
 ! advection and subsidence terms at nzt+1
-! 
+!
 ! 1374 2014-04-25 12:55:07Z raasch
 ! bugfix: syntax errors removed from openacc-branch
 ! missing variables added to ONLY-lists
-! 
+!
 ! 1365 2014-04-22 15:03:56Z boeske
 ! Output of large scale advection, large scale subsidence and nudging tendencies
 ! +sums_ls_l, ngp_sums_ls, use_subsidence_tendencies
-! 
+!
 ! 1353 2014-04-08 15:21:23Z heinze
-! REAL constants provided with KIND-attribute 
+! REAL constants provided with KIND-attribute
 !
 ! 1322 2014-03-20 16:38:49Z raasch
 ! REAL constants defined as wp-kind
 !
 ! 1320 2014-03-20 08:40:49Z raasch
 ! ONLY-attribute added to USE-statements,
-! kind-parameters added to all INTEGER and REAL declaration statements, 
-! kinds are defined in new module kinds, 
+! kind-parameters added to all INTEGER and REAL declaration statements,
+! kinds are defined in new module kinds,
 ! revision history before 2012 removed,
 ! comment fields (!:) to be used for variable explanations added to
-! all variable declaration statements 
+! all variable declaration statements
 !
 ! 1299 2014-03-06 13:15:21Z heinze
 ! Output of large scale vertical velocity w_subs
@@ -267,48 +267,49 @@
 !> user-defined (sub-)regions. The region indexed 0 is the total model domain.
 !>
 !> @note For simplicity, nzb_s_inner and nzb_diff_s_inner are being used as a
-!>       lower vertical index for k-loops for all variables, although strictly 
-!>       speaking the k-loops would have to be split up according to the staggered 
-!>       grid. However, this implies no error since staggered velocity components 
+!>       lower vertical index for k-loops for all variables, although strictly
+!>       speaking the k-loops would have to be split up according to the staggered
+!>       grid. However, this implies no error since staggered velocity components
 !>       are zero at the walls and inside buildings.
 !------------------------------------------------------------------------------!
  SUBROUTINE flow_statistics
- 
+
 
     USE arrays_3d,                                                             &
         ONLY:  ddzu, ddzw, e, heatflux_output_conversion, hyp, km, kh,         &
                momentumflux_output_conversion, nc, nr, p, prho, prr, pt, q,    &
                qc, ql, qr, rho_air, rho_air_zw, rho_ocean, s,                  &
                sa, u, ug, v, vg, vpt, w, w_subs, waterflux_output_conversion,  &
-               zw, alpha_T, beta_S, solar3d
-        
+               zw, alpha_T, beta_S, solar3d, u_stk, v_stk, u_stk_zw, v_stk_zw
+
     USE cloud_parameters,                                                      &
         ONLY:   l_d_cp, pt_d_t
-        
+
     USE control_parameters,                                                    &
         ONLY:   average_count_pr, cloud_droplets, cloud_physics, do_sum,       &
                 dt_3d, g, humidity, initializing_actions, kappa, land_surface, &
                 large_scale_forcing, large_scale_subsidence, max_pr_user,      &
                 message_string, neutral, microphysics_morrison,                &
                 microphysics_seifert, ocean, passive_scalar, simulated_time,   &
-                simulated_time_at_begin, use_subsidence_tendencies,            & 
+                simulated_time_at_begin, stokes_force,                         &
+                use_subsidence_tendencies,            &
                 use_surface_fluxes, use_top_fluxes, ws_scheme_mom,             &
                 ws_scheme_sca, idealized_diurnal
-        
+
     USE cpulog,                                                                &
         ONLY:   cpu_log, log_point
-        
+
     USE grid_variables,                                                        &
         ONLY:   ddx, ddy
 
     USE gust_mod,                                                              &
         ONLY:  gust_module_enabled, gust_statistics
-        
+
     USE indices,                                                               &
         ONLY:   ngp_2dh, ngp_2dh_s_inner, ngp_3d, ngp_3d_inner, ngp_sums,      &
                 ngp_sums_ls, nxl, nxr, nyn, nys, nzb, nzt, topo_min_level,     &
                 wall_flags_0
-        
+
     USE kinds
 
     USE land_surface_model_mod,                                                &
@@ -331,7 +332,7 @@
     USE radiation_model_mod,                                                   &
         ONLY:  rrtm_aldif, rrtm_aldir, rrtm_asdif, rrtm_asdir
 #endif
-  
+
     USE statistics
 
        USE surface_mod,                                                        &
@@ -343,9 +344,9 @@
     INTEGER(iwp) ::  i                   !<
     INTEGER(iwp) ::  j                   !<
     INTEGER(iwp) ::  k                   !<
-    INTEGER(iwp) ::  ki                  !< 
+    INTEGER(iwp) ::  ki                  !<
     INTEGER(iwp) ::  k_surface_level     !<
-    INTEGER(iwp) ::  m                   !< loop variable over all horizontal wall elements 
+    INTEGER(iwp) ::  m                   !< loop variable over all horizontal wall elements
     INTEGER(iwp) ::  l                   !< loop variable over surface facing -- up- or downward-facing
     INTEGER(iwp) ::  nt                  !<
     INTEGER(iwp) ::  omp_get_thread_num  !<
@@ -354,8 +355,8 @@
     INTEGER(iwp) :: top_bottom_flag
 
     LOGICAL ::  first  !<
-    
-    REAL(wp) ::  dptdz_threshold  !< 
+
+    REAL(wp) ::  dptdz_threshold  !<
     REAL(wp) ::  fac              !<
     REAL(wp) ::  flag             !<
     REAL(wp) ::  height           !<
@@ -369,7 +370,7 @@
     REAL(wp) ::  vst2             !<
     REAL(wp) ::  v2               !<
     REAL(wp) ::  w2               !<
-    
+
     REAL(wp) ::  dptdz(nzb+1:nzt+1)    !<
     REAL(wp) ::  sums_ll(nzb:nzt+1,2)  !<
 
@@ -399,7 +400,7 @@
 !--    Store sums that have been computed in other subroutines in summation
 !--    array
        sums_l(:,11,:) = sums_l_l(:,sr,:)      ! mixing length from diffusivities
-!--    WARNING: next line still has to be adjusted for OpenMP 
+!--    WARNING: next line still has to be adjusted for OpenMP
        sums_l(:,21,0) = sums_wsts_bc_l(:,sr) *                                 &
                         heatflux_output_conversion  ! heat flux from advec_s_bc
        sums_l(nzb+9,pr_palm,0)  = sums_divold_l(sr)  ! old divergence from pres
@@ -409,16 +410,16 @@
 !--    When calcuating horizontally-averaged total (resolved- plus subgrid-
 !--    scale) vertical fluxes and velocity variances by using commonly-
 !--    applied Reynolds-based methods ( e.g. <w'pt'> = (w-<w>)*(pt-<pt>) )
-!--    in combination with the 5th order advection scheme, pronounced 
-!--    artificial kinks could be observed in the vertical profiles near the 
-!--    surface. Please note: these kinks were not related to the model truth, 
-!--    i.e. these kinks are just related to an evaluation problem.   
-!--    In order avoid these kinks, vertical fluxes and horizontal as well 
+!--    in combination with the 5th order advection scheme, pronounced
+!--    artificial kinks could be observed in the vertical profiles near the
+!--    surface. Please note: these kinks were not related to the model truth,
+!--    i.e. these kinks are just related to an evaluation problem.
+!--    In order avoid these kinks, vertical fluxes and horizontal as well
 !--    vertical velocity variances are calculated directly within the advection
-!--    routines, according to the numerical discretization, to evaluate the 
-!--    statistical quantities as they will appear within the prognostic 
+!--    routines, according to the numerical discretization, to evaluate the
+!--    statistical quantities as they will appear within the prognostic
 !--    equations.
-!--    Copy the turbulent quantities, evaluated in the advection routines to 
+!--    Copy the turbulent quantities, evaluated in the advection routines to
 !--    the local array sums_l() for further computations.
        IF ( ws_scheme_mom .AND. sr == 0 )  THEN
 
@@ -437,10 +438,10 @@
                               * momentumflux_output_conversion ! w*u*
              sums_l(:,15,i) = sums_wsvs_ws_l(:,i)                              &
                               * momentumflux_output_conversion ! w*v*
-             sums_l(:,30,i) = sums_us2_ws_l(:,i)        ! u*2 
-             sums_l(:,31,i) = sums_vs2_ws_l(:,i)        ! v*2 
-             sums_l(:,32,i) = sums_ws2_ws_l(:,i)        ! w*2 
-             sums_l(:,34,i) = sums_l(:,34,i) + 0.5_wp *                        & 
+             sums_l(:,30,i) = sums_us2_ws_l(:,i)        ! u*2
+             sums_l(:,31,i) = sums_vs2_ws_l(:,i)        ! v*2
+             sums_l(:,32,i) = sums_ws2_ws_l(:,i)        ! w*2
+             sums_l(:,34,i) = sums_l(:,34,i) + 0.5_wp *                        &
                               ( sums_us2_ws_l(:,i) + sums_vs2_ws_l(:,i) +      &
                                 sums_ws2_ws_l(:,i) )    ! e*
           ENDDO
@@ -459,7 +460,7 @@
           ENDDO
 
        ENDIF
-! 
+!
 !--    Horizontally averaged profiles of horizontal velocities and temperature.
 !--    They must have been computed before, because they are already required
 !--    for other horizontal averages.
@@ -629,7 +630,7 @@
 #endif
 
 !
-!--    Final values are obtained by division by the total number of grid points 
+!--    Final values are obtained by division by the total number of grid points
 !--    used for summation. After that store profiles.
        sums(:,1) = sums(:,1) / ngp_2dh(sr)
        sums(:,2) = sums(:,2) / ngp_2dh(sr)
@@ -664,14 +665,14 @@
 !
 !--    Passive scalar
        IF ( passive_scalar )  hom(:,1,115,sr) = sums(:,115) /                  &
-            ngp_2dh_s_inner(:,sr)                    ! s 
+            ngp_2dh_s_inner(:,sr)                    ! s
 
 !
 !--    Horizontally averaged profiles of the remaining prognostic variables,
 !--    variances, the total and the perturbation energy (single values in last
 !--    column of sums_l) and some diagnostic quantities.
-!--    NOTE: for simplicity, nzb_s_inner is used below, although strictly 
-!--    ----  speaking the following k-loop would have to be split up and 
+!--    NOTE: for simplicity, nzb_s_inner is used below, although strictly
+!--    ----  speaking the following k-loop would have to be split up and
 !--          rearranged according to the staggered grid.
 !--          However, this implies no error since staggered velocity components
 !--          are zero at the walls and inside buildings.
@@ -697,7 +698,7 @@
                 sums_l(k,10,tn) = sums_l(k,10,tn) + kh(k,j,i) * rmask(j,i,sr)  &
                                                               * flag
                 sums_l(k,40,tn) = sums_l(k,40,tn) + ( p(k,j,i)                 &
-                                         / momentumflux_output_conversion(k) ) &
+                                         * momentumflux_output_conversion(k) ) &
                                                               * flag
 
                 sums_l(k,33,tn) = sums_l(k,33,tn) + &
@@ -767,7 +768,7 @@
              IF ( surf_def_h(2)%end_index(j,i) >=                              &
                   surf_def_h(2)%start_index(j,i) )  THEN
                 m = surf_def_h(2)%start_index(j,i)
-  
+
                 IF ( idealized_diurnal ) THEN
                   !LPV - note that surf_def_h(2) = is top of model / ocean, 0 is bottom
                    sums_l(nzb+15,pr_palm,tn) = sums_l(nzb+15,pr_palm,tn) +           &
@@ -835,7 +836,7 @@
        ENDDO
 
 !
-!--    Computation of statistics when ws-scheme is not used. Else these 
+!--    Computation of statistics when ws-scheme is not used. Else these
 !--    quantities are evaluated in the advection routines.
        IF ( .NOT. ws_scheme_mom .OR. sr /= 0 .OR. simulated_time == 0.0_wp )   &
        THEN
@@ -868,11 +869,11 @@
           ENDDO
        ENDIF
 !
-!--    Computaion of domain-averaged perturbation energy. Please note, 
-!--    to prevent that perturbation energy is larger (even if only slightly) 
+!--    Computaion of domain-averaged perturbation energy. Please note,
+!--    to prevent that perturbation energy is larger (even if only slightly)
 !--    than the total kinetic energy, calculation is based on deviations from
 !--    the horizontal mean, instead of spatial descretization of the advection
-!--    term. 
+!--    term.
        !$OMP DO
        DO  i = nxl, nxr
           DO  j =  nys, nyn
@@ -899,15 +900,15 @@
        DO  i = nxl, nxr
           DO  j = nys, nyn
 !
-!--          Subgridscale fluxes (without Prandtl layer from k=nzb, 
+!--          Subgridscale fluxes (without Prandtl layer from k=nzb,
 !--          oterwise from k=nzb+1)
 !--          NOTE: for simplicity, nzb_diff_s_inner is used below, although
 !--          ----  strictly speaking the following k-loop would have to be
 !--                split up according to the staggered grid.
-!--                However, this implies no error since staggered velocity 
+!--                However, this implies no error since staggered velocity
 !--                components are zero at the walls and inside buildings.
 !--          Flag 23 is used to mask surface fluxes as well as model-top fluxes,
-!--          which are added further below. 
+!--          which are added further below.
              DO  k = nzb, nzt
                 flag = MERGE( 1.0_wp, 0.0_wp,                                  &
                               BTEST( wall_flags_0(k,j,i), 23 ) ) *             &
@@ -1292,7 +1293,7 @@
                 sums_l(nzt:nzt+1,58,tn) = sums_l(nzt:nzt+1,58,tn) + &
                                     0.0_wp * rmask(j,i,sr)        ! u"pt"
                 sums_l(nzt:nzt+1,61,tn) = sums_l(nzt:nzt+1,61,tn) + &
-                                    0.0_wp * rmask(j,i,sr)        ! v"pt" 
+                                    0.0_wp * rmask(j,i,sr)        ! v"pt"
 
                 IF ( ocean )  THEN
                    sums_l(nzt,65,tn) = sums_l(nzt,65,tn) + &
@@ -1333,8 +1334,8 @@
 
 !
 !--          Resolved fluxes (can be computed for all horizontal points)
-!--          NOTE: for simplicity, nzb_s_inner is used below, although strictly 
-!--          ----  speaking the following k-loop would have to be split up and 
+!--          NOTE: for simplicity, nzb_s_inner is used below, although strictly
+!--          ----  speaking the following k-loop would have to be split up and
 !--                rearranged according to the staggered grid.
              DO  k = nzb, nzt
                 flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 22 ) )
@@ -1417,7 +1418,7 @@
                          IF ( microphysics_seifert )  THEN
                             sums_l(k,73,tn) = sums_l(k,73,tn) + nr(k,j,i) *    &
                                                                 rmask(j,i,sr) *&
-                                                                flag 
+                                                                flag
                             sums_l(k,74,tn) = sums_l(k,74,tn) + qr(k,j,i) *    &
                                                                 rmask(j,i,sr) *&
                                                                 flag
@@ -1433,7 +1434,7 @@
                                                              rmask(j,i,sr)  *  &
                                                              flag
                       ELSE IF ( ws_scheme_sca .AND. sr == 0 )  THEN
-                         sums_l(k,46,tn) = ( ( 1.0_wp + 0.61_wp *              & 
+                         sums_l(k,46,tn) = ( ( 1.0_wp + 0.61_wp *              &
                                                hom(k,1,41,sr) ) *              &
                                              sums_l(k,17,tn) +                 &
                                              0.61_wp * hom(k,1,4,sr) *         &
@@ -1467,7 +1468,7 @@
        !$OMP END PARALLEL
 
        !
-!--    Treat land-surface quantities according to new wall model structure. 
+!--    Treat land-surface quantities according to new wall model structure.
        IF ( land_surface )  THEN
           tn = 0
           !$OMP PARALLEL PRIVATE( i, j, m, tn )
@@ -1476,9 +1477,9 @@
           DO  m = 1, surf_lsm_h%ns
              i = surf_lsm_h%i(m)
              j = surf_lsm_h%j(m)
-        
+
              IF ( i >= nxl  .AND.  i <= nxr  .AND.                             &
-                  j >= nys  .AND.  j <= nyn )  THEN 
+                  j >= nys  .AND.  j <= nyn )  THEN
                 sums_l(nzb,93,tn)  = sums_l(nzb,93,tn) + surf_lsm_h%ghf(m)
                 sums_l(nzb,94,tn)  = sums_l(nzb,94,tn) + surf_lsm_h%qsws_liq(m)
                 sums_l(nzb,95,tn)  = sums_l(nzb,95,tn) + surf_lsm_h%qsws_soil(m)
@@ -1495,11 +1496,11 @@
           !$OMP DO
           DO  m = 1, surf_lsm_h%ns
 
-             i = surf_lsm_h%i(m)            
+             i = surf_lsm_h%i(m)
              j = surf_lsm_h%j(m)
 
              IF ( i >= nxl  .AND.  i <= nxr  .AND.                             &
-                  j >= nys  .AND.  j <= nyn )  THEN 
+                  j >= nys  .AND.  j <= nyn )  THEN
 
                 DO  k = nzb_soil, nzt_soil
                    sums_l(k,89,tn)  = sums_l(k,89,tn)  + t_soil_h%var_2d(k,m)  &
@@ -1525,8 +1526,8 @@
              DO  j = nys, nyn
                 DO  k = nzb, nzt
 !
-!--                Flag 23 is used to mask surface fluxes as well as model-top 
-!--                fluxes, which are added further below. 
+!--                Flag 23 is used to mask surface fluxes as well as model-top
+!--                fluxes, which are added further below.
                    flag = MERGE( 1.0_wp, 0.0_wp,                               &
                                  BTEST( wall_flags_0(k,j,i), 23 ) ) *          &
                           MERGE( 1.0_wp, 0.0_wp,                               &
@@ -1623,7 +1624,7 @@
 
                    sums_ll(k,2) = sums_ll(k,2) + 0.5_wp * w(k,j,i)             &
                                        * ( ( p(k,j,i) + p(k+1,j,i) )           &
-                                         / momentumflux_output_conversion(k) ) &
+                                         * momentumflux_output_conversion(k) ) &
                                        * flag
 
                 ENDDO
@@ -1675,8 +1676,8 @@
        ENDIF
 
 !
-!--    Horizontal heat fluxes (subgrid, resolved, total). 
-!--    Do it only, if profiles shall be plotted. 
+!--    Horizontal heat fluxes (subgrid, resolved, total).
+!--    Do it only, if profiles shall be plotted.
        IF ( hom(nzb+1,2,58,0) /= 0.0_wp ) THEN
 
           !$OMP DO
@@ -1734,7 +1735,7 @@
 !--    data output
        IF ( large_scale_forcing  .AND.  ( simulated_time > 0.0_wp ) )  THEN
 !
-!--       Interpolation in time of LSF_DATA 
+!--       Interpolation in time of LSF_DATA
           nt = 1
           DO WHILE ( simulated_time - dt_3d > time_vert(nt) )
              nt = nt + 1
@@ -1775,7 +1776,7 @@
 
        tn = 0
        !$OMP PARALLEL PRIVATE( i, j, k, tn )
-       !$ tn = omp_get_thread_num()       
+       !$ tn = omp_get_thread_num()
        IF ( radiation .AND. radiation_scheme == 'rrtmg' )  THEN
           !$OMP DO
           DO  i = nxl, nxr
@@ -1847,9 +1848,9 @@
        ENDIF
 #endif
 
-    
+
 !
-!--    Final values are obtained by division by the total number of grid points 
+!--    Final values are obtained by division by the total number of grid points
 !--    used for summation. After that store profiles.
 !--    Check, if statistical regions do contain at least one grid point at the
 !--    respective k-level, otherwise division by zero will lead to undefined
@@ -1939,7 +1940,7 @@
        hom(:,1,21,sr) = sums(:,21)     ! w*pt*BC
        hom(:,1,22,sr) = sums(:,16) + sums(:,21)    ! wptBC
                                        ! profile 24 is initial profile (sa)
-                                       ! profiles 25-29 left empty for initial 
+                                       ! profiles 25-29 left empty for initial
                                        ! profiles
        hom(:,1,30,sr) = sums(:,30)     ! u*2
        hom(:,1,31,sr) = sums(:,31)     ! v*2
@@ -1956,13 +1957,13 @@
        hom(:,1,39,sr) = sums(:,38) / ( abs( sums(:,32) ) + 1E-20_wp )**1.5_wp   ! Sw
        hom(:,1,40,sr) = sums(:,40)     ! p
        hom(:,1,45,sr) = sums(:,45)     ! w"vpt"
-       hom(:,1,46,sr) = sums(:,46)     ! w*vpt*       
+       hom(:,1,46,sr) = sums(:,46)     ! w*vpt*
        hom(:,1,47,sr) = sums(:,45) + sums(:,46)    ! wvpt
        hom(:,1,48,sr) = sums(:,48)     ! w"q" (w"qv")
        hom(:,1,49,sr) = sums(:,49)     ! w*q* (w*qv*)
        hom(:,1,50,sr) = sums(:,48) + sums(:,49)    ! wq (wqv)
        hom(:,1,51,sr) = sums(:,51)     ! w"qv"
-       hom(:,1,52,sr) = sums(:,52)     ! w*qv*       
+       hom(:,1,52,sr) = sums(:,52)     ! w*qv*
        hom(:,1,53,sr) = sums(:,52) + sums(:,51)    ! wq (wqv)
        hom(:,1,54,sr) = sums(:,54)     ! ql
        hom(:,1,55,sr) = sums(:,55)     ! w*u*u*/dz
@@ -1995,6 +1996,12 @@
        hom(:,1,78,sr) = ug             ! ug
        hom(:,1,79,sr) = vg             ! vg
        hom(:,1,80,sr) = w_subs         ! w_subs
+       IF ( ocean .AND. stokes_force ) THEN
+          hom(:,1,161,sr) = u_stk
+          hom(:,1,162,sr) = v_stk
+          hom(:,1,163,sr) = u_stk_zw
+          hom(:,1,164,sr) = v_stk_zw
+       ENDIF
 
        IF ( large_scale_forcing )  THEN
           hom(:,1,81,sr) = sums_ls_l(:,0)          ! td_lsa_lpt
@@ -2051,7 +2058,7 @@
        IF ( passive_scalar )  THEN
           hom(:,1,117,sr) = sums(:,117)     ! w"s"
           hom(:,1,114,sr) = sums(:,114)     ! w*s*
-          hom(:,1,118,sr) = sums(:,117) + sums(:,114)    ! ws 
+          hom(:,1,118,sr) = sums(:,117) + sums(:,114)    ! ws
           hom(:,1,116,sr) = sums(:,116)     ! s*2
        ENDIF
 
@@ -2072,11 +2079,11 @@
 !--    first relative minimum (maximum) of the total heat flux.
 !--    The corresponding height is assumed as the boundary layer height, if it
 !--    is less than 1.5 times the height where the heat flux becomes negative
-!--    (positive) for the first time. Attention: the resolved vertical sensible 
+!--    (positive) for the first time. Attention: the resolved vertical sensible
 !--    heat flux (hom(:,1,17,sr) = w*pt*) is not known at the beginning because
-!--    the calculation happens in advec_s_ws which is called after 
-!--    flow_statistics. Therefore z_i is directly taken from restart data at 
-!--    the beginning of restart runs.  
+!--    the calculation happens in advec_s_ws which is called after
+!--    flow_statistics. Therefore z_i is directly taken from restart data at
+!--    the beginning of restart runs.
        IF ( TRIM( initializing_actions ) /= 'read_restart_data' .OR.           &
             simulated_time_at_begin /= simulated_time ) THEN
 
@@ -2118,13 +2125,13 @@
           ENDIF
 
 !
-!--       Second scheme: Gradient scheme from Sullivan et al. (1998), modified 
-!--       by Uhlenbrock(2006). The boundary layer height is the height with the 
+!--       Second scheme: Gradient scheme from Sullivan et al. (1998), modified
+!--       by Uhlenbrock(2006). The boundary layer height is the height with the
 !--       maximal local temperature gradient: starting from the second (the
-!--       last but one) vertical gridpoint, the local gradient must be at least 
+!--       last but one) vertical gridpoint, the local gradient must be at least
 !--       0.2K/100m and greater than the next four gradients.
 !--       WARNING: The threshold value of 0.2K/100m must be adjusted for the
-!--       ocean case! 
+!--       ocean case!
           z_i(2) = 0.0_wp
           DO  k = nzb+1, nzt+1
              dptdz(k) = ( hom(k,1,4,sr) - hom(k-1,1,4,sr) ) * ddzu(k)
@@ -2185,11 +2192,11 @@
        ENDIF
 
 !
-!--    Collect the time series quantities. Please note, timeseries quantities 
-!--    which are collected from horizontally averaged profiles, e.g. wpt 
-!--    or pt(zp), are treated specially. In case of elevated model surfaces, 
+!--    Collect the time series quantities. Please note, timeseries quantities
+!--    which are collected from horizontally averaged profiles, e.g. wpt
+!--    or pt(zp), are treated specially. In case of elevated model surfaces,
 !--    index nzb+1 might be within topography and data will be zero. Therefore,
-!--    take value for the first atmosphere index, which is topo_min_level+1. 
+!--    take value for the first atmosphere index, which is topo_min_level+1.
        ts_value(1,sr) = hom(nzb+4,1,pr_palm,sr)        ! E
        ts_value(2,sr) = hom(nzb+5,1,pr_palm,sr)        ! E*
        ts_value(3,sr) = dt_3d

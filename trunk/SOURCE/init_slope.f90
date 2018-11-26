@@ -78,9 +78,10 @@
         ONLY:  pi
                     
     USE control_parameters,                                                    &
-        ONLY:  alpha_surface, initializing_actions, sin_alpha_surface,         &
+        ONLY:  initializing_actions, ocean,                                    &
+               alpha_surface, sin_alpha_surface, slope_offset,                 &
                pt_surface, pt_vertical_gradient, pt_slope_offset,              &
-               sa_surface, sa_vertical_gradient, sa_slope_offset, ocean
+               sa_surface, sa_vertical_gradient, sa_slope_offset
 
     USE eqn_state_seawater_mod,                                                &
         ONLY:  eqn_state_seawater, eqn_state_seawater_func
@@ -113,6 +114,7 @@
 
     CHARACTER(LEN=200)  :: message_string
 
+    CALL location_message('Initialize slope',.TRUE.)
 !
 !-- Calculate reference temperature field needed for computing buoyancy
     ALLOCATE( pt_slope_ref(nzb:nzt+1,nxlg:nxrg) )
@@ -122,50 +124,61 @@
 
     DO  i = nxlg, nxrg
        DO  k = nzb, nzt+1
+          IF ( slope_offset ) THEN
 !
-!--       Compute height of grid-point relative to lower left corner of
-!--       the total domain.
-!--       First compute the distance between the actual grid point and the
-!--       lower left corner as well as the angle between the line connecting
-!--       these points and the bottom of the model.
-          IF ( k /= nzb )  THEN
-             radius = SQRT( ( i * dx )**2 + zu(k)**2 )
-             height = zu(k)
-          ELSE
-             radius = SQRT( ( i * dx )**2 )
-             height = 0.0_wp
-          ENDIF
-          IF ( radius /= 0.0_wp )  THEN
-             alpha = ASIN( height / radius )
-          ELSE
-             alpha = 0.0_wp
-          ENDIF
+!--          Compute height of grid-point relative to lower left corner of
+!--          the total domain.
+!--          First compute the distance between the actual grid point and the
+!--          lower left corner as well as the angle between the line connecting
+!--          these points and the bottom of the model.
+             IF ( k /= nzb )  THEN
+                radius = SQRT( ( i * dx )**2 + zu(k)**2 )
+                height = zu(k)
+             ELSE
+                radius = SQRT( ( i * dx )**2 )
+                height = 0.0_wp
+             ENDIF
+             IF ( radius /= 0.0_wp )  THEN
+                alpha = ASIN( height / radius )
+             ELSE
+                alpha = 0.0_wp
+             ENDIF
+
 !
-!--       Compute temperatures in the rotated coordinate system
-          alpha    = alpha + alpha_surface / 180.0_wp * pi
-          pt_value = pt_surface + radius * SIN( alpha ) * &
+!--          Compute temperatures in the rotated coordinate system
+             alpha    = alpha + alpha_surface / 180.0_wp * pi
+             pt_value = pt_surface + radius * SIN( alpha ) * &
                                   pt_vertical_gradient(1) / 100.0_wp
-          pt_slope_ref(k,i) = pt_value
-          rho_slope_ref(k,i) = eqn_state_seawater_func(hyp(k),pt_slope_ref(k,i),sa_init(k))
+             pt_slope_ref(k,i) = pt_value
           
-          IF ( ocean ) THEN
-             sa_value = sa_surface + radius * SIN( alpha ) * &
-                                     sa_vertical_gradient(1) / 100.0_wp
-             sa_slope_ref(k,i) = sa_value
+             IF ( ocean ) THEN
+                sa_value = sa_surface + radius * SIN( alpha ) * &
+                                       sa_vertical_gradient(1) / 100.0_wp
+                sa_slope_ref(k,i) = sa_value
+             ENDIF
+
+          ELSE
+             pt_slope_ref(k,i) = pt_init(k)
+             IF ( ocean ) sa_slope_ref(k,i) = sa_init(k)   
           ENDIF
+
+          rho_slope_ref(k,i) = eqn_state_seawater_func(hyp(k),pt_slope_ref(k,i),sa_slope_ref(k,i))
     
        ENDDO                
     ENDDO
 
-!
-!-- Temperature difference between left and right boundary of the total domain,
-!-- used for the cyclic boundary in x-direction
-    pt_slope_offset = (nx+1) * dx * sin_alpha_surface * &
-                      pt_vertical_gradient(1) / 100.0_wp
 
-    IF (ocean) THEN
-       sa_slope_offset = (nx+1) * dx * sin_alpha_surface * &
-                         sa_vertical_gradient(1) / 100.0_wp
+!-- Temperature and salinity difference between left and right boundary of the total domain,
+!-- used for the cyclic boundary in x-direction
+    IF ( slope_offset ) THEN
+       pt_slope_offset = (nx+1) * dx * sin_alpha_surface * &
+                         pt_vertical_gradient(1) / 100.0_wp
+
+       IF ( ocean ) THEN
+          sa_slope_offset = (nx+1) * dx * sin_alpha_surface * &
+                            sa_vertical_gradient(1) / 100.0_wp
+       ENDIF
+
     ENDIF
 !
 !-- Following action must only be executed for initial runs

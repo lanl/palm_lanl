@@ -552,7 +552,7 @@
              reference_state, residual_limit,                                  &
              roughness_length, sa_surface,                                     &
              sa_vertical_gradient, sa_vertical_gradient_level, scalar_advec,   &
-             scalar_rayleigh_damping, sigma_bulk,                              &
+             scalar_rayleigh_damping, slope_offset, sigma_bulk,                &
              spinup_time, spinup_pt_amplitude, spinup_pt_mean,                 &
              statistic_regions, stokes_force, stokes_drift_method,             &
              subs_vertical_gradient,                                           &
@@ -634,7 +634,7 @@
              reference_state, residual_limit,                                  &
              roughness_length, sa_surface,                                     &
              sa_vertical_gradient, sa_vertical_gradient_level, scalar_advec,   &
-             scalar_rayleigh_damping, sigma_bulk,                              &
+             scalar_rayleigh_damping, slope_offset, sigma_bulk,                &
              spinup_time, spinup_pt_amplitude, spinup_pt_mean,                 &
              statistic_regions, stokes_force, stokes_drift_method,             &
              subs_vertical_gradient,                                           &

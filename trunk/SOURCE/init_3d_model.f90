@@ -1649,8 +1649,7 @@
 !
 !--       Compute initial temperature field and other constants used in case
 !--       of a sloping surface
-          IF ( sloping_surface )  CALL init_slope
-
+          IF ( sloping_surface ) CALL init_slope
 !
 !--       Initialize surface variables, e.g. friction velocity, momentum 
 !--       fluxes, etc. 
@@ -2085,7 +2084,7 @@
 !
 !--    Calculate initial temperature field and other constants used in case
 !--    of a sloping surface
-       IF ( sloping_surface )  CALL init_slope
+       IF ( sloping_surface ) CALL init_slope
 
 !
 !--    Initialize new time levels (only done in order to set boundary values

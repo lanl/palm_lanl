@@ -89,8 +89,7 @@
     USE control_parameters,                                                    &
         ONLY:  g, molecular_viscosity, prandtl_number, prho_reference,         &
                rho_reference, rho_surface, surface_pressure,                   &
-               use_single_reference_value                                      &
-               stokes_force
+               use_single_reference_value, stokes_force
 
     USE eqn_state_seawater_mod,                                                &
         ONLY:  eqn_state_seawater, eqn_state_seawater_func

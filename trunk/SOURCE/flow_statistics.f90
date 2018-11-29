@@ -276,11 +276,11 @@
 
 
     USE arrays_3d,                                                             &
-        ONLY:  ddzu, ddzw, e, hyp, km, kh,         &
-               nc, nr, p, prho, prr, pt, q,    &
+        ONLY:  ddzu, ddzw, e, hyp, km, kh,                                     &
+               nc, nr, p, prho, prr, pt, q,                                    &
                qc, ql, qr, rho_ref_uv, rho_ref_zw, rho_ocean,                  &
                s, sa, u, ug, v, vg, vpt, w, w_subs,                            &
-               waterflux_output_conversion, zw, alpha_T, beta_S, solar3d,      &
+               zw, alpha_T, beta_S, solar3d,                                   &
                u_stk, v_stk, u_stk_zw, v_stk_zw
         
     USE cloud_parameters,                                                      &

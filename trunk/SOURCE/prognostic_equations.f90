@@ -19,11 +19,14 @@
 !
 ! Current revisions:
 ! ------------------
+! 
+! 2019-01-22 cbegeman
+! Add timers to prognostic_equations_cache and to tcm_prognostic
 !
 !
 ! 2018-10-19 cbegeman
 ! Change buoyancy call for sloped ocean cases
-! 
+!
 ! Former revisions:
 ! -----------------
 ! $Id: prognostic_equations.f90 3022 2018-05-18 11:12:35Z suehring $
@@ -364,7 +367,7 @@
 
     USE coriolis_mod,                                                          &
         ONLY:  coriolis
-
+    
     USE diffusion_s_mod,                                                       &
         ONLY:  diffusion_s
 
@@ -541,9 +544,6 @@
     enddo
     !$OMP DO
 
-    IF ( count(isnan(u)) /= 0 ) CALL location_message('prog: u is NaN before advec_u',.TRUE.)
-    IF ( count(isnan(v)) /= 0 ) CALL location_message('prog: v is NaN before advec_u',.TRUE.)
-    IF ( count(isnan(w)) /= 0 ) CALL location_message('prog: w is NaN before advec_u',.TRUE.)
 
     DO  i = nxl, nxr
 
@@ -612,6 +612,7 @@
 
 !
 !--          Prognostic equation for u-velocity component
+             CALL cpu_log( log_point(48), 'prog-u', 'start' )
              DO  k = nzb+1, nzt
                 u_p(k,j,i) = u(k,j,i) + ( dt_3d *                               &
                                             ( tsc(2) * tend(k,j,i) +            &
@@ -622,10 +623,8 @@
                                                    BTEST( wall_flags_0(k,j,i), 1 )&
                                                  )
              ENDDO
-             IF ( count(isnan(u_p)) /= 0 ) CALL location_message('prog: u_p is NaN after u-prog',.TRUE.)
 
-!
-!--          Calculate tendencies for the next Runge-Kutta step
+!!--          Calculate tendencies for the next Runge-Kutta step
              IF ( timestep_scheme(1:5) == 'runge' )  THEN
                 IF ( intermediate_timestep_count == 1 )  THEN
                    DO  k = nzb+1, nzt
@@ -700,7 +699,6 @@
                                                    BTEST( wall_flags_0(k,j,i), 2 )&
                                                  )
              ENDDO
-             IF ( count(isnan(v_p)) /= 0 ) CALL location_message('prog: v_p is NaN after prog_v',.TRUE.)
 
 !
 !--          Calculate tendencies for the next Runge-Kutta step
@@ -746,7 +744,6 @@
                 ENDIF
              ENDIF
           ENDIF
-          IF ( count(isnan(tend)) /= 0 ) CALL location_message('prog: tend is NaN after buoyancy',.TRUE.)
 
 !
 !--       If required, compute Stokes forces
@@ -775,7 +772,6 @@
                                                 BTEST( wall_flags_0(k,j,i), 3 )&
                                               )
           ENDDO
-          IF ( count(isnan(w_p)) /= 0 ) CALL location_message('w_p: tend is NaN after prog_w',.TRUE.)
 
 !
 !--       Calculate tendencies for the next Runge-Kutta step
@@ -809,7 +805,6 @@
              ELSE
                 CALL advec_s_up( i, j, pt )
              ENDIF
-             IF ( count(isnan(tend)) /= 0 ) CALL location_message('prog: tend is NaN after advec_pt',.TRUE.)
              CALL diffusion_s( i, j, pt,                                       &
                                surf_def_h(0)%shf, surf_def_h(1)%shf,           &
                                surf_def_h(2)%shf,                              &
@@ -828,7 +823,6 @@
                 CALL stokes_force_s( i, j, pt )
              ENDIF
 
-             IF ( count(isnan(tend)) /= 0 ) CALL location_message('prog: tend is NaN after diffusion_pt',.TRUE.)
 !
 !--          If required compute heating/cooling due to long wave radiation
 !--          processes
@@ -886,7 +880,6 @@
 
 
              ENDDO
-             IF ( count(isnan(pt_p)) /= 0 ) CALL location_message('prog: pt_p is NaN after prog_pt',.TRUE.)
 
 !
 !--          Calculate tendencies for the next Runge-Kutta step
@@ -924,7 +917,6 @@
              ELSE
                 CALL advec_s_up( i, j, sa )
              ENDIF
-             IF ( count(isnan(tend)) /= 0 ) CALL location_message('prog: tend is NaN after advec_sa',.TRUE.)
 
              CALL diffusion_s( i, j, sa,                                       &
                                surf_def_h(0)%sasws, surf_def_h(1)%sasws,       &
@@ -936,7 +928,6 @@
                                surf_lsm_v(2)%sasws, surf_lsm_v(3)%sasws,       &
                                surf_usm_v(0)%sasws, surf_usm_v(1)%sasws,       &
                                surf_usm_v(2)%sasws, surf_usm_v(3)%sasws )
-             IF ( count(isnan(tend)) /= 0 ) CALL location_message('prog: tend is NaN after diffusion_sa',.TRUE.)
 
 !
 !--          If required, compute Stokes-advection term
@@ -960,7 +951,6 @@
                                                    )
                 IF ( sa_p(k,j,i) < 0.0_wp )  sa_p(k,j,i) = 0.1_wp * sa(k,j,i)
              ENDDO
-             IF ( count(isnan(sa_p)) /= 0 ) CALL location_message('prog: sa_p is NaN after prog_sa',.TRUE.)
 
 !
 !--          Calculate tendencies for the next Runge-Kutta step
@@ -1395,6 +1385,7 @@
              ENDIF
 
           ENDIF
+
 !
 !--       Calculate prognostic equations for turbulence closure
           CALL tcm_prognostic( i, j, i_omp_start, tn )

@@ -1097,8 +1097,6 @@
     CHARACTER (LEN=16)   ::  psolver = 'poisfft'                          !< namelist parameter
     CHARACTER (LEN=16)   ::  scalar_advec = 'ws-scheme'                   !< namelist parameter
     CHARACTER (LEN=20)   ::  approximation = 'boussinesq'                 !< namelist parameter
-    CHARACTER (LEN=40)   ::  flux_input_mode = 'approximation-specific'   !< type of flux input: dynamic or kinematic
-    CHARACTER (LEN=40)   ::  flux_output_mode = 'approximation-specific'  !< type of flux output: dynamic or kinematic
     CHARACTER (LEN=20)   ::  bc_e_b = 'neumann'                           !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_lr = 'cyclic'                             !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_ns = 'cyclic'                             !< namelist parameter

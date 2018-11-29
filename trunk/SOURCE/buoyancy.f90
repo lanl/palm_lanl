@@ -295,7 +295,6 @@
 #else
        REAL(wp), DIMENSION(:,:,:), POINTER ::  var
 #endif
-       IF (count(isnan(tend)) .GT. 0) CALL location_message('tend is NaN before buoyancy_ij,var',.TRUE.) !CB
 
        IF ( .NOT. sloping_surface )  THEN
 
@@ -308,8 +307,6 @@
                                       * MERGE( 1.0_wp, 0.0_wp,                 &
                                                BTEST( wall_flags_0(k,j,i), 0 ) )
           ENDDO
-
-          IF (count(isnan(tend)) .GT. 0) CALL location_message('tend is NaN after buoyancy_ij,var',.TRUE.) !CB
 
        ELSE
 !
@@ -344,8 +341,6 @@
 
              ENDIF
 
-             IF (count(isnan(tend)) .GT. 0) CALL location_message('tend is NaN after buoyancy_ij,x',.TRUE.) !CB
-
           ELSEIF ( wind_component == 3 )  THEN
 
              IF ( ocean ) THEN
@@ -369,8 +364,6 @@
                                             * MERGE( 1.0_wp, 0.0_wp,                    &
                                                      BTEST( wall_flags_0(k,j,i), 0 ) )
                 ENDDO
-
-                IF (count(isnan(tend)) .GT. 0) CALL location_message('tend is NaN after buoyancy_ij,z',.TRUE.) !CB
 
              ENDIF
 

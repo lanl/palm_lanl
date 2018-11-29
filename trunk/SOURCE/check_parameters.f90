@@ -1111,61 +1111,9 @@
        CALL message( 'check_parameters', 'PA0449', 1, 2, 0, 6, 0 )
     ENDIF
 
-!
-!-- Check flux input mode
-    IF ( TRIM( flux_input_mode ) /= 'dynamic'    .AND.                         &
-         TRIM( flux_input_mode ) /= 'kinematic'  .AND.                         &
-         TRIM( flux_input_mode ) /= 'approximation-specific' )  THEN
-       message_string = 'unknown flux input mode: flux_input_mode = "' //      &
-                        TRIM( flux_input_mode ) // '"'
-       CALL message( 'check_parameters', 'PA0450', 1, 2, 0, 6, 0 )
-    ENDIF
-!-- Set flux input mode according to approximation if applicable
-    IF ( TRIM( flux_input_mode ) == 'approximation-specific' )  THEN
-       IF ( TRIM( approximation ) == 'anelastic' )  THEN
-          flux_input_mode = 'dynamic'
-       ELSEIF ( TRIM( approximation ) == 'boussinesq' )  THEN
-          flux_input_mode = 'kinematic'
-       ENDIF
-    ENDIF
-
-!
-!-- Check flux output mode
-    IF ( TRIM( flux_output_mode ) /= 'dynamic'    .AND.                        &
-         TRIM( flux_output_mode ) /= 'kinematic'  .AND.                        &
-         TRIM( flux_output_mode ) /= 'approximation-specific' )  THEN
-       message_string = 'unknown flux output mode: flux_output_mode = "' //    &
-                        TRIM( flux_output_mode ) // '"'
-       CALL message( 'check_parameters', 'PA0451', 1, 2, 0, 6, 0 )
-    ENDIF
-!-- Set flux output mode according to approximation if applicable
-    IF ( TRIM( flux_output_mode ) == 'approximation-specific' )  THEN
-       IF ( TRIM( approximation ) == 'anelastic' )  THEN
-          flux_output_mode = 'dynamic'
-       ELSEIF ( TRIM( approximation ) == 'boussinesq' )  THEN
-          flux_output_mode = 'kinematic'
-       ENDIF
-    ENDIF
-
-
-!
-!-- When the land- or urban-surface model is used, the flux output must be
-!-- dynamic.
-    IF ( land_surface  .OR.  urban_surface )  THEN
-       flux_output_mode = 'dynamic'
-    ENDIF
-
-!
-!-- set the flux output units according to flux_output_mode
-    IF ( TRIM( flux_output_mode ) == 'kinematic' ) THEN
-        heatflux_output_unit              = 'K m/s'
-        waterflux_output_unit             = 'kg/kg m/s'
-        momentumflux_output_unit          = 'm2/s2'
-    ELSEIF ( TRIM( flux_output_mode ) == 'dynamic' ) THEN
-        heatflux_output_unit              = 'W/m2'
-        waterflux_output_unit             = 'W/m2'
-        momentumflux_output_unit          = 'N/m2'
-    ENDIF
+    heatflux_output_unit              = 'W/m2'
+    waterflux_output_unit             = 'W/m2'
+    momentumflux_output_unit          = 'N/m2'
 
 !-- set time series output units for fluxes
     dots_unit(14:16) = heatflux_output_unit

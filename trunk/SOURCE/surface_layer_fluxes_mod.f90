@@ -2160,7 +2160,7 @@
              ENDDO
 
           ELSEIF ( trim(most_method) == 'mcphee' .AND. downward ) THEN
-
+!--       CB TODO check sign of flux terms
              surf%shf(m)   = -1.0_wp * rho_ocean(k,j,i) *                     &
                              ( surf%gamma_T(m)                                &
                                - surf%gamma_S(m) *                            &
@@ -2171,6 +2171,8 @@
                                - surf%gamma_S(m) *                            &
                                  ( surf%sa_io(m) - surf%sa1(m) )/surf%sa_io(m)&
                              ) * ( surf%sa_io(m) - surf%sa1(m) )
+             surf%usws(m) = 0.5_wp * surf%us(m)**2
+             surf%vsws(m) = 0.5_wp * surf%us(m)**2
 
           ENDIF
 !

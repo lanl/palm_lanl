@@ -11,9 +11,6 @@
 
         latitude = 55.6,
 
-        momentum_advec = 'pw-scheme',
-        scalar_advec = 'pw-scheme',
-
         ug_surface =0.0, vg_surface = 0.0,
         pt_surface                 = 293.0,
         pt_vertical_gradient       = 1.0,

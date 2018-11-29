@@ -13,9 +13,6 @@
 
         humidity = .T.,
 
-        momentum_advec = 'pw-scheme',
-        scalar_advec = 'pw-scheme',
-
         ug_surface =0.0, vg_surface = 0.0,
         pt_surface                 = 293.0,
         pt_vertical_gradient       = 3.0,

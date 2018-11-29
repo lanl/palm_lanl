@@ -57,7 +57,7 @@ class LESProfile(object):
 
         """
         # use curret axis if not specified
-        if not axis:
+        if axis is:
             axis = plt.gca()
         # plot type
         if ptype == 'contourf':
@@ -67,20 +67,20 @@ class LESProfile(object):
         else:
             raise ValueError('Plot type (ptype) should be \'contourf\' or \'pcolor\', got {}.'.format(ptype))
         # x- and y-label, turn off by passing in 'off'
-        if not xlabel:
+        if xlabel is None:
             axis.set_xlabel(self.time_name+' ('+self.time_units+')')
         else:
             if xlabel != 'off':
                 axis.set_xlabel(xlabel)
-        if not ylabel:
+        if ylabel is None:
             axis.set_ylabel(self.z_name+' ('+self.z_units+')')
         else:
             if ylabel != 'off':
                 axis.set_ylabel(ylabel)
         # x- and y-limits
-        if xlim:
+        if xlim is not None:
             axis.set_xlim(xlim)
-        if ylim:
+        if ylim is not None:
             axis.set_ylim(ylim)
         # return figure
         return fig
@@ -102,25 +102,25 @@ class LESProfile(object):
 
         """
         # use curret axis if not specified
-        if not axis:
+        if axis is None:
             axis = plt.gca()
         # plot figure
         fig = axis.plot(self.data_mean*norm, self.z*znorm, **kwargs)
         # x- and y-label, turn off by passing in 'off'
-        if not xlabel:
+        if xlabel is None:
             axis.set_xlabel(self.data_name+' ('+self.data_units+')')
         else:
             if xlabel != 'off':
                 axis.set_xlabel(xlabel)
-        if not ylabel:
+        if ylabel is None:
             axis.set_ylabel(self.z_name+' ('+self.z_units+')')
         else:
             if ylabel != 'off':
                 axis.set_ylabel(ylabel)
         # x- and y-limits
-        if xlim:
+        if xlim is not None:
             axis.set_xlim(xlim)
-        if ylim:
+        if ylim is not None:
             axis.set_ylim(ylim)
         # return figure
         return fig
@@ -173,25 +173,25 @@ class LESTimeseries(object):
 
         """
         # use curret axis if not specified
-        if not axis:
+        if axis is None:
             axis = plt.gca()
         # plot figure
         fig = axis.plot(self.time, self.data, **kwargs)
         # x- and y-label, turn off by passing in 'off'
-        if not xlabel:
+        if xlabel is None:
             axis.set_xlabel(self.time_name+' ('+self.time_units+')')
         else:
             if xlabel != 'off':
                 axis.set_xlabel(xlabel)
-        if not ylabel:
+        if ylabel is None:
             axis.set_ylabel(self.data_name+' ('+self.data_units+')')
         else:
             if ylabel != 'off':
                 axis.set_ylabel(ylabel)
         # x- and y-limits
-        if xlim:
+        if xlim is not None:
             axis.set_xlim(xlim)
-        if ylim:
+        if ylim is not None:
             axis.set_ylim(ylim)
         # return figure
         return fig
@@ -242,7 +242,7 @@ class LESSlice(object):
 
         """
         # use curret axis if not specified
-        if not axis:
+        if axis is None:
             axis = plt.gca()
         if ptype == 'pcolor':
             fig = axis.pcolor(self.xx, self.yy, self.data, vmin=clim[0], vmax=clim[1], **kwargs)

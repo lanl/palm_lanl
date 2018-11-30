@@ -368,9 +368,6 @@
     USE surface_mod,                                                           &
         ONLY:  get_topography_top_index, get_topography_top_index_ji, init_bc
 
-    USE vertical_nesting_mod,                                                  &
-        ONLY:  vnested, vnest_init_grid
-
     IMPLICIT NONE
 
     INTEGER(iwp) ::  i                           !< index variable along x 
@@ -489,133 +486,6 @@
 !
 !-- Allocation of arrays for stretching
     ALLOCATE( min_dz_stretch_level_end(number_stretch_level_start) )
-
-!
-!-- Define the vertical grid levels
-    IF ( .NOT. ocean )  THEN
-    
-!
-!--    The stretching region has to be large enough to allow for a smooth
-!--    transition between two different grid spacings
-       DO n = 1, number_stretch_level_start
-          min_dz_stretch_level_end(n) = dz_stretch_level_start(n) +            &
-                                        4 * MAX( dz(n),dz(n+1) )
-       ENDDO
-
-       IF ( ANY( min_dz_stretch_level_end(1:number_stretch_level_start) >      &
-                 dz_stretch_level_end(1:number_stretch_level_start) ) ) THEN
-             message_string= 'Eeach dz_stretch_level_end has to be larger ' // &
-                             'than its corresponding value for &' //           &
-                             'dz_stretch_level_start + 4*MAX(dz(n),dz(n+1)) '//&
-                             'to allow for smooth grid stretching'
-             CALL message( 'init_grid', 'PA0224', 1, 2, 0, 6, 0 )
-       ENDIF
-       
-!
-!--    Stretching must not be applied within the prandtl_layer 
-!--    (first two grid points). For the default case dz_stretch_level_start 
-!--    is negative. Therefore the absolut value is checked here.
-       IF ( ANY( ABS( dz_stretch_level_start ) < dz(1) * 1.5_wp ) ) THEN
-          WRITE( message_string, * ) 'Eeach dz_stretch_level_start has to be ',&
-                                     'larger than ', dz(1) * 1.5
-             CALL message( 'init_grid', 'PA0226', 1, 2, 0, 6, 0 )
-       ENDIF
-
-!
-!--    The stretching has to start and end on a grid level. Therefore 
-!--    user-specified values have to ''interpolate'' to the next lowest level
-       IF ( number_stretch_level_start /= 0 ) THEN
-          dz_stretch_level_start(1) = INT( (dz_stretch_level_start(1) -        &
-                                            dz(1)/2.0) / dz(1) )               &
-                                      * dz(1) + dz(1)/2.0
-       ENDIF
-       
-       IF ( number_stretch_level_start > 1 ) THEN
-          DO n = 2, number_stretch_level_start
-             dz_stretch_level_start(n) = INT( dz_stretch_level_start(n) /      &
-                                              dz(n) ) * dz(n)
-          ENDDO
-       ENDIF
-       
-       IF ( number_stretch_level_end /= 0 ) THEN
-          DO n = 1, number_stretch_level_end
-             dz_stretch_level_end(n) = INT( dz_stretch_level_end(n) /          &
-                                            dz(n+1) ) * dz(n+1)
-          ENDDO
-       ENDIF
- 
-!
-!--    Determine stretching factor if necessary
-       IF ( number_stretch_level_end >= 1 ) THEN 
-          CALL calculate_stretching_factor( number_stretch_level_end )
-       ENDIF
-
-!
-!--    Grid for atmosphere with surface at z=0 (k=0, w-grid).
-!--    First compute the u- and v-levels. In case of dirichlet bc for u and v
-!--    the first u/v- and w-level (k=0) are defined at same height (z=0). 
-!--    The second u-level (k=1) corresponds to the top of the 
-!--    Prandtl-layer.
-       IF ( ibc_uv_b == 0 .OR. ibc_uv_b == 2 ) THEN
-          zu(0) = 0.0_wp
-       ELSE
-          zu(0) = - dz(1) * 0.5_wp
-       ENDIF
-          
-       zu(1) =   dz(1) * 0.5_wp
-       
-!
-!--    Determine u and v height levels considering the possibility of grid
-!--    stretching in several heights.
-       n = 1
-       dz_stretch_level_start_index = nzt+1
-       dz_stretch_level_end_index = nzt+1
-       dz_stretched = dz(1)
-
-!--    The default value of dz_stretch_level_start is negative, thus the first
-!--    condition is always true. Hence, the second condition is necessary.
-       DO  k = 2, nzt+1
-          IF ( dz_stretch_level_start(n) <= zu(k-1) .AND.                      &
-               dz_stretch_level_start(n) /= -9999999.9_wp ) THEN
-             dz_stretched = dz_stretched * dz_stretch_factor_array(n)
-             
-             IF ( dz(n) > dz(n+1) ) THEN
-                dz_stretched = MAX( dz_stretched, dz(n+1) ) !Restrict dz_stretched to the user-specified (higher) dz
-             ELSE
-                dz_stretched = MIN( dz_stretched, dz(n+1) ) !Restrict dz_stretched to the user-specified (lower) dz
-             ENDIF
-             
-             IF ( dz_stretch_level_start_index(n) == nzt+1 )                         &
-             dz_stretch_level_start_index(n) = k-1
-             
-          ENDIF
-          
-          zu(k) = zu(k-1) + dz_stretched
-          
-!
-!--       Make sure that the stretching ends exactly at dz_stretch_level_end 
-          dz_level_end = ABS( zu(k) - dz_stretch_level_end(n) ) 
-          
-          IF ( dz_level_end  < dz(n+1)/3.0 ) THEN
-             zu(k) = dz_stretch_level_end(n)
-             dz_stretched = dz(n+1)
-             dz_stretch_level_end_index(n) = k
-             n = n + 1             
-          ENDIF
-       ENDDO
-
-!
-!--    Compute the w-levels. They are always staggered half-way between the 
-!--    corresponding u-levels. In case of dirichlet bc for u and v at the 
-!--    ground the first u- and w-level (k=0) are defined at same height (z=0). 
-!--    The top w-level is extrapolated linearly.
-       zw(0) = 0.0_wp
-       DO  k = 1, nzt
-          zw(k) = ( zu(k) + zu(k+1) ) * 0.5_wp
-       ENDDO
-       zw(nzt+1) = zw(nzt) + 2.0_wp * ( zu(nzt+1) - zw(nzt) )
-
-    ELSE
 
 !
 !--    The stretching region has to be large enough to allow for a smooth
@@ -739,8 +609,6 @@
           zu(0) = zw(0)
        ENDIF
 
-    ENDIF
-
 !
 !-- Compute grid lengths.
     DO  k = 1, nzt+1
@@ -786,11 +654,6 @@
 !-- Set flags to mask topography on the grid. 
     CALL set_topo_flags( topo )    
 !
-!-- Calculate wall flag arrays for the multigrid method.
-!-- Please note, wall flags are only applied in the non-optimized version.
-    IF ( psolver == 'multigrid_noopt' )  CALL poismg_noopt_init 
-
-!
 !-- Init flags for ws-scheme to degrade order of the numerics near walls, i.e. 
 !-- to decrease the numerical stencil appropriately.
     IF ( momentum_advec == 'ws-scheme'  .OR.  scalar_advec == 'ws-scheme' )    &
@@ -817,12 +680,7 @@
 #else
     nzb_max = k_top + 1
 #endif
-    IF ( inflow_l  .OR.  outflow_l  .OR.  force_bound_l  .OR.  nest_bound_l  .OR.&
-         inflow_r  .OR.  outflow_r  .OR.  force_bound_r  .OR.  nest_bound_r  .OR.&
-         inflow_n  .OR.  outflow_n  .OR.  force_bound_n  .OR.  nest_bound_n  .OR.&
-         inflow_s  .OR.  outflow_s  .OR.  force_bound_s  .OR.  nest_bound_s )    &
-         nzb_max = nzt
-!   
+   
 !-- Finally, if topography extents up to the model top, limit nzb_max to nzt.
     nzb_max = MIN( nzb_max, nzt )
 !
@@ -840,47 +698,6 @@
 !
 !-- Initialize boundary conditions via surface type
     CALL init_bc
-!
-!-- Allocate and set topography height arrays required for data output
-    IF ( TRIM( topography ) /= 'flat' )  THEN
-!
-!--    Allocate and set the arrays containing the topography height
-       IF ( nxr == nx  .AND.  nyn /= ny )  THEN
-          ALLOCATE( zu_s_inner(nxl:nxr+1,nys:nyn),                             &
-                    zw_w_inner(nxl:nxr+1,nys:nyn) )
-       ELSEIF ( nxr /= nx  .AND.  nyn == ny )  THEN
-          ALLOCATE( zu_s_inner(nxl:nxr,nys:nyn+1),                             &
-                    zw_w_inner(nxl:nxr,nys:nyn+1) )
-       ELSEIF ( nxr == nx  .AND.  nyn == ny )  THEN
-          ALLOCATE( zu_s_inner(nxl:nxr+1,nys:nyn+1),                           &
-                    zw_w_inner(nxl:nxr+1,nys:nyn+1) )
-       ELSE
-          ALLOCATE( zu_s_inner(nxl:nxr,nys:nyn),                               &
-                    zw_w_inner(nxl:nxr,nys:nyn) )
-       ENDIF
-
-       zu_s_inner   = 0.0_wp
-       zw_w_inner   = 0.0_wp
-!
-!--    Determine local topography height on scalar and w-grid. Note, setting
-!--    lateral boundary values is not necessary, realized via wall_flags_0 
-!--    array. Further, please note that loop bounds are different from 
-!--    nxl to nxr and nys to nyn on south and right model boundary, hence, 
-!--    use intrinsic lbound and ubound functions to infer array bounds.
-       DO  i = LBOUND(zu_s_inner, 1), UBOUND(zu_s_inner, 1)
-          DO  j = LBOUND(zu_s_inner, 2), UBOUND(zu_s_inner, 2)
-!
-!--          Topography height on scalar grid. Therefore, determine index of 
-!--          upward-facing surface element on scalar grid. 
-             zu_s_inner(i,j) = zu( get_topography_top_index_ji( j, i, 's' ) )
-!
-!--          Topography height on w grid. Therefore, determine index of 
-!--          upward-facing surface element on w grid.
-             zw_w_inner(i,j) = zw( get_topography_top_index_ji( j, i, 's' ) )
-          ENDDO
-       ENDDO
-    ENDIF
-
 !
 !-- In the following, calculate 2D index arrays. Note, these will be removed
 !-- soon. 
@@ -904,27 +721,6 @@
     CALL exchange_horiz_2d_int( nzb_local, nys, nyn, nxl, nxr, nbgp )
 !
 !-- Check topography for consistency with model domain. Therefore, use
-!-- maximum and minium topography-top indices. Note, minimum topography top
-!-- index is already calculated.  
-    IF ( TRIM( topography ) /= 'flat' )  THEN
-#if defined( __parallel )
-       CALL MPI_ALLREDUCE( MAXVAL( get_topography_top_index( 's' ) ),          &
-                           nzb_local_max, 1, MPI_INTEGER, MPI_MAX, comm2d, ierr )             
-#else
-       nzb_local_max = MAXVAL( get_topography_top_index( 's' ) )
-#endif
-       nzb_local_min = topo_min_level
-!
-!--    Consistency checks
-       IF ( nzb_local_min < 0  .OR.  nzb_local_max  > nz + 1 )  THEN
-          WRITE( message_string, * ) 'nzb_local values are outside the',       &
-                                ' model domain',                               &
-                                '&MINVAL( nzb_local ) = ', nzb_local_min,      &
-                                '&MAXVAL( nzb_local ) = ', nzb_local_max
-          CALL message( 'init_grid', 'PA0210', 1, 2, 0, 6, 0 )
-       ENDIF
-    ENDIF
-
     nzb_s_inner = nzb;  nzb_s_outer = nzb
     nzb_u_inner = nzb;  nzb_u_outer = nzb
     nzb_v_inner = nzb;  nzb_v_outer = nzb
@@ -1106,11 +902,6 @@
        nzb_diff_s_inner   = nzb_s_inner + 1
        nzb_diff_s_outer   = nzb_s_outer + 1
     ENDIF
-!
-!-- Vertical nesting: communicate vertical grid level arrays between fine and
-!-- coarse grid
-    IF ( vnested )  CALL vnest_init_grid
-
  END SUBROUTINE init_grid
 
 
@@ -2317,7 +2108,6 @@
 !--       contains a wrong character string or if the user has defined a special
 !--       case in the user interface. There, the subroutine user_init_grid 
 !--       checks which of these two conditions applies.
-          CALL user_init_grid( topo )
           CALL filter_topography( topo )
 
     END SELECT

@@ -118,21 +118,9 @@
     USE indices,                                                               &
         ONLY:  nbgp, nzb, nzt, nysg, nyng, nxlg, nxrg
 
-
-    USE land_surface_model_mod,                                                &
-        ONLY:  lsm_energy_balance, lsm_soil_model, lsm_swap_timelevel
-
     USE pegrid
 
-    USE pmc_interface,                                                         &
-        ONLY:  nested_run
-
     USE kinds
-
-    USE radiation_model_mod,                                                   &
-        ONLY:  force_radiation_call, radiation,                                &
-               radiation_control, rad_sw_in, time_radiation,                   &
-               radiation_interaction, radiation_interactions
 
     USE statistics,                                                            &
         ONLY:  flow_statistics_called
@@ -141,15 +129,7 @@
         ONLY:  surface_layer_fluxes
 
     USE surface_mod,                                                           &
-        ONLY :  surf_def_h, surf_def_v, surf_lsm_h, surf_lsm_v, surf_usm_h,    &
-                surf_usm_v
-
-    USE urban_surface_mod,                                                     &
-        ONLY:  usm_material_heat_model, usm_material_model,                    &
-               usm_surface_energy_balance, usm_swap_timelevel,                 &
-               usm_green_heat_model, usm_temperature_near_surface
-
-
+        ONLY :  surf_def_h, surf_def_v
 
 
     IMPLICIT NONE
@@ -193,46 +173,6 @@
 !-- original velocity field must be preserved because the surface schemes crash 
 !-- otherwise. The precise reason is still unknown. A minimum velocity of 0.1
 !-- m/s is used to maintain turbulent transfer at the surface.
-    IF ( land_surface )  THEN
-       DO  m = 1, surf_lsm_h%ns
-          i   = surf_lsm_h%i(m)            
-          j   = surf_lsm_h%j(m)
-          k   = surf_lsm_h%k(m)
-          u(k,j,i) = SIGN(1.0_wp,u_init(k)) * MAX( ABS( u_init(k) ),0.1_wp)
-          v(k,j,i) = SIGN(1.0_wp,v_init(k)) * MAX( ABS( v_init(k) ),0.1_wp)
-       ENDDO
-
-       DO  l = 0, 3
-          DO  m = 1, surf_lsm_v(l)%ns
-             i   = surf_lsm_v(l)%i(m)            
-             j   = surf_lsm_v(l)%j(m)
-             k   = surf_lsm_v(l)%k(m)
-             u(k,j,i) = SIGN(1.0_wp,u_init(k)) * MAX( ABS( u_init(k) ),0.1_wp)
-             v(k,j,i) = SIGN(1.0_wp,v_init(k)) * MAX( ABS( v_init(k) ),0.1_wp)
-          ENDDO
-       ENDDO
-    ENDIF
-
-    IF ( urban_surface )  THEN
-       DO  m = 1, surf_usm_h%ns
-          i   = surf_usm_h%i(m)            
-          j   = surf_usm_h%j(m)
-          k   = surf_usm_h%k(m)
-          u(k,j,i) = SIGN(1.0_wp,u_init(k)) * MAX( ABS( u_init(k) ),0.1_wp)
-          v(k,j,i) = SIGN(1.0_wp,v_init(k)) * MAX( ABS( v_init(k) ),0.1_wp)
-       ENDDO
-
-       DO  l = 0, 3
-          DO  m = 1, surf_usm_v(l)%ns
-             i   = surf_usm_v(l)%i(m)            
-             j   = surf_usm_v(l)%j(m)
-             k   = surf_usm_v(l)%k(m)
-             u(k,j,i) = SIGN(1.0_wp,u_init(k)) * MAX( ABS( u_init(k) ),0.1_wp)
-             v(k,j,i) = SIGN(1.0_wp,v_init(k)) * MAX( ABS( v_init(k) ),0.1_wp)
-          ENDDO
-       ENDDO
-    ENDIF
-
     CALL exchange_horiz( u,  nbgp )
     CALL exchange_horiz( v,  nbgp )
 
@@ -265,48 +205,10 @@
 !--       sun and user input about mean temperature and amplitude. The time is
 !--       shifted by one hour to simulate a lag between air temperature and
 !--       incoming radiation
-          pt_spinup = spinup_pt_mean + spinup_pt_amplitude                     &
-             * solar_angle (time_utc_init + time_since_reference_point - 3600.0)
+          pt_spinup = spinup_pt_mean 
+
 
 !
-!--       Map air temperature to all grid points in the vicinity of a surface
-!--       element
-          IF ( land_surface )  THEN
-             DO  m = 1, surf_lsm_h%ns
-                i   = surf_lsm_h%i(m)            
-                j   = surf_lsm_h%j(m)
-                k   = surf_lsm_h%k(m)
-                pt(k,j,i) = pt_spinup
-             ENDDO
-
-             DO  l = 0, 3
-                DO  m = 1, surf_lsm_v(l)%ns
-                   i   = surf_lsm_v(l)%i(m)            
-                   j   = surf_lsm_v(l)%j(m)
-                   k   = surf_lsm_v(l)%k(m)
-                   pt(k,j,i) = pt_spinup
-                ENDDO
-             ENDDO
-          ENDIF
-
-          IF ( urban_surface )  THEN
-             DO  m = 1, surf_usm_h%ns
-                i   = surf_usm_h%i(m)            
-                j   = surf_usm_h%j(m)
-                k   = surf_usm_h%k(m)
-                pt(k,j,i) = pt_spinup
-             ENDDO
-
-             DO  l = 0, 3
-                DO  m = 1, surf_usm_v(l)%ns
-                   i   = surf_usm_v(l)%i(m)            
-                   j   = surf_usm_v(l)%j(m)
-                   k   = surf_usm_v(l)%k(m)
-                   pt(k,j,i) = pt_spinup
-                ENDDO
-             ENDDO
-          ENDIF
-
           CALL exchange_horiz( pt,  nbgp )    
 
 
@@ -314,28 +216,6 @@
 !--       Swap the time levels in preparation for the next time step.
           timestep_count = timestep_count + 1
      
-          IF ( land_surface )  THEN
-              CALL lsm_swap_timelevel ( 0 )
-          ENDIF
-
-          IF ( urban_surface )  THEN
-             CALL usm_swap_timelevel ( 0 )
-          ENDIF
-
-          IF ( land_surface )  THEN
-             CALL lsm_swap_timelevel ( MOD( timestep_count, 2) )
-          ENDIF
-
-          IF ( urban_surface )  THEN
-             CALL usm_swap_timelevel ( MOD( timestep_count, 2) )
-          ENDIF
-         
-!
-!--       If required, compute virtual potential temperature 
-          IF ( humidity )  THEN 
-             CALL compute_vpt 
-          ENDIF 
-
 !
 !--       Compute the diffusion quantities
           IF ( .NOT. constant_diffusion )  THEN
@@ -350,82 +230,7 @@
              ENDIF
 
 !
-!--          If required, solve the energy balance for the surface and run soil 
-!--          model. Call for horizontal as well as vertical surfaces.
-!--          The prognostic equation for soil moisure is switched off
-             IF ( land_surface )  THEN
-
-                CALL cpu_log( log_point(54), 'land_surface', 'start' )
-!
-!--             Call for horizontal upward-facing surfaces
-                CALL lsm_energy_balance( .TRUE., -1 )
-                CALL lsm_soil_model( .TRUE., -1, calc_soil_moisture_during_spinup )
-!
-!--             Call for northward-facing surfaces
-                CALL lsm_energy_balance( .FALSE., 0 )
-                CALL lsm_soil_model( .FALSE., 0, calc_soil_moisture_during_spinup )
-!
-!--             Call for southward-facing surfaces
-                CALL lsm_energy_balance( .FALSE., 1 )
-                CALL lsm_soil_model( .FALSE., 1, calc_soil_moisture_during_spinup )
-!
-!--             Call for eastward-facing surfaces
-                CALL lsm_energy_balance( .FALSE., 2 )
-                CALL lsm_soil_model( .FALSE., 2, calc_soil_moisture_during_spinup )
-!
-!--             Call for westward-facing surfaces
-                CALL lsm_energy_balance( .FALSE., 3 )
-                CALL lsm_soil_model( .FALSE., 3, calc_soil_moisture_during_spinup )
-
-                CALL cpu_log( log_point(54), 'land_surface', 'stop' )
-             ENDIF
-
-!
-!--          If required, solve the energy balance for urban surfaces and run 
-!--          the material heat model
-             IF (urban_surface) THEN
-                CALL cpu_log( log_point(74), 'urban_surface', 'start' )
-                CALL usm_surface_energy_balance
-                IF ( usm_material_model )  THEN
-                   CALL usm_green_heat_model
-                   CALL usm_material_heat_model
-                ENDIF
-                IF ( urban_surface ) THEN
-                   CALL usm_temperature_near_surface
-                ENDIF
-                CALL cpu_log( log_point(74), 'urban_surface', 'stop' )
-             ENDIF
-
           ENDIF
-
-!
-!--       If required, calculate radiative fluxes and heating rates
-          IF ( radiation .AND. intermediate_timestep_count                     &
-               == intermediate_timestep_count_max )  THEN
-
-               time_radiation = time_radiation + dt_3d
-
-             IF ( time_radiation >= dt_3d .OR. force_radiation_call )          &
-             THEN
-
-                CALL cpu_log( log_point(50), 'radiation', 'start' )
-
-                IF ( .NOT. force_radiation_call )  THEN
-                   time_radiation = time_radiation - dt_3d
-                ENDIF
-
-                CALL radiation_control
-
-                CALL cpu_log( log_point(50), 'radiation', 'stop' )
-
-                IF ( radiation_interactions )  THEN
-                   CALL cpu_log( log_point(75), 'radiation_interaction', 'start' )
-                   CALL radiation_interaction
-                   CALL cpu_log( log_point(75), 'radiation_interaction', 'stop' )
-                ENDIF
-             ENDIF
-          ENDIF
-
        ENDDO   ! Intermediate step loop
 
 !
@@ -436,9 +241,6 @@
        time_since_reference_point = simulated_time - coupling_start_time
 
        IF ( data_output_during_spinup )  THEN
-          IF ( simulated_time >= skip_time_do2d_xy )  THEN
-             time_do2d_xy       = time_do2d_xy     + dt_3d
-          ENDIF
           IF ( simulated_time >= skip_time_do3d    )  THEN
              time_do3d          = time_do3d        + dt_3d
           ENDIF
@@ -487,14 +289,6 @@
              CALL data_output_tseries
              time_dots = MOD( time_dots, MAX( dt_dots, dt_3d ) )
           ENDIF
-
-!
-!--       2d-data output (cross-sections)
-          IF ( time_do2d_xy >= dt_do2d_xy )  THEN
-             CALL data_output_2d( 'xy', 0 )
-             time_do2d_xy = MOD( time_do2d_xy, MAX( dt_do2d_xy, dt_3d ) )
-          ENDIF
-
 !
 !--       3d-data output (volume data)
           IF ( time_do3d >= dt_do3d )  THEN
@@ -504,20 +298,6 @@
 
 
        ENDIF
-
-!
-!--    Computation and output of run control parameters.
-!--    This is also done whenever perturbations have been imposed
-!        IF ( time_run_control >= dt_run_control  .OR.                           &
-!             timestep_scheme(1:5) /= 'runge'  .OR.  disturbance_created )       &
-!        THEN
-!           CALL run_control
-!           IF ( time_run_control >= dt_run_control )  THEN
-!              time_run_control = MOD( time_run_control,                         &
-!                                      MAX( dt_run_control, dt_3d ) )
-!           ENDIF
-!        ENDIF
-
        CALL cpu_log( log_point_s(15), 'timesteps spinup', 'stop' )
 
 
@@ -558,10 +338,6 @@
     DEALLOCATE(u_save)
     DEALLOCATE(v_save)
 
-#if defined( __parallel )
-    IF ( nested_run )  CALL MPI_BARRIER( MPI_COMM_WORLD, ierr )
-#endif
-
     CALL location_message( 'finished spinup-sequence', .TRUE. )
 
 
@@ -572,52 +348,4 @@
             'ITER.  HH:MM:SS    DT   PT(z_MO)'/   &
             '--------------------------------')
 101 FORMAT (I5,2X,A9,1X,F6.2,3X,F6.2,2X,F6.2)
-
- CONTAINS
-
-!
-!-- Returns the cosine of the solar zenith angle at a given time. This routine
-!-- is similar to that for calculation zenith (see radiation_model_mod.f90)
-    FUNCTION solar_angle( local_time ) 
-
-       USE constants,                                                          &
-       ONLY:  pi
-      
-       USE kinds
-
-       USE radiation_model_mod,                                                &
-           ONLY:  decl_1, decl_2, decl_3, lat, lon
-
-       IMPLICIT NONE 
-
-
-       REAL(wp) ::  solar_angle     !< cosine of the solar zenith angle
-
-       REAL(wp) ::  day             !< day of the year
-       REAL(wp) ::  declination     !< solar declination angle
-       REAL(wp) ::  hour_angle      !< solar hour angle
-       REAL(wp) ::  time_utc        !< current time in UTC
-       REAL(wp), INTENT(IN) :: local_time
-!
-!--    Calculate current day and time based on the initial values and simulation
-!--    time
-
-       day = day_of_year_init + INT(FLOOR( local_time / 86400.0_wp ), KIND=iwp)
-       time_utc = MOD(local_time, 86400.0_wp)
-
-
-!
-!--    Calculate solar declination and hour angle   
-       declination = ASIN( decl_1 * SIN(decl_2 * REAL(day, KIND=wp) - decl_3) )
-       hour_angle  = 2.0_wp * pi * (time_utc / 86400.0_wp) + lon - pi
-
-!
-!--    Calculate cosine of solar zenith angle
-       solar_angle = SIN(lat) * SIN(declination) + COS(lat) * COS(declination) &
-                     * COS(hour_angle)
-
-
-    END FUNCTION solar_angle
-
-
  END SUBROUTINE time_integration_spinup

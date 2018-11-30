@@ -135,8 +135,7 @@
        USE kinds
 
        USE surface_mod,                                                        &
-           ONLY :  surf_def_h, surf_def_v, surf_lsm_h, surf_lsm_v, surf_usm_h, &
-                   surf_usm_v
+           ONLY :  surf_def_h, surf_def_v
 
        IMPLICIT NONE
 
@@ -209,28 +208,6 @@
                 ENDDO   
              ENDDO
 !
-!--          Natural-type surfaces
-             DO  l = 2, 3
-                surf_s = surf_lsm_v(l)%start_index(j,i)
-                surf_e = surf_lsm_v(l)%end_index(j,i)
-                DO  m = surf_s, surf_e
-                   k           = surf_lsm_v(l)%k(m)
-                   tend(k,j,i) = tend(k,j,i) +                                 &
-                                    surf_lsm_v(l)%mom_flux_uv(m) * ddx
-                ENDDO   
-             ENDDO
-!
-!--          Urban-type surfaces
-             DO  l = 2, 3
-                surf_s = surf_usm_v(l)%start_index(j,i)
-                surf_e = surf_usm_v(l)%end_index(j,i)
-                DO  m = surf_s, surf_e
-                   k           = surf_usm_v(l)%k(m)
-                   tend(k,j,i) = tend(k,j,i) +                                 &
-                                    surf_usm_v(l)%mom_flux_uv(m) * ddx
-                ENDDO   
-             ENDDO
-!
 !--          Compute vertical diffusion. In case of simulating a surface layer,
 !--          respective grid diffusive fluxes are masked (flag 10) within this 
 !--          loop, and added further below, else, simple gradient approach is
@@ -297,30 +274,6 @@
                         + ( - surf_def_h(1)%vsws(m)                            &
                           ) * ddzw(k) * drho_air(k)
                 ENDDO
-!
-!--             Natural-type surfaces, upward-facing
-                surf_s = surf_lsm_h%start_index(j,i)
-                surf_e = surf_lsm_h%end_index(j,i)
-                DO  m = surf_s, surf_e
-                   k   = surf_lsm_h%k(m)
-
-                   tend(k,j,i) = tend(k,j,i)                                   &
-                        + ( - ( - surf_lsm_h%vsws(m) )                         &
-                          ) * ddzw(k) * drho_air(k)
-
-                ENDDO
-!
-!--             Urban-type surfaces, upward-facing
-                surf_s = surf_usm_h%start_index(j,i)
-                surf_e = surf_usm_h%end_index(j,i)
-                DO  m = surf_s, surf_e
-                   k   = surf_usm_h%k(m)
-
-                   tend(k,j,i) = tend(k,j,i)                                   &
-                        + ( - ( - surf_usm_h%vsws(m) )                         &
-                          ) * ddzw(k) * drho_air(k)
-
-                ENDDO
              ENDIF
 !
 !--          Add momentum flux at model top
@@ -365,8 +318,7 @@
        USE kinds
 
        USE surface_mod,                                                        &
-           ONLY :  surf_def_h, surf_def_v, surf_lsm_h, surf_lsm_v, surf_usm_h, &
-                   surf_usm_v
+           ONLY :  surf_def_h, surf_def_v
 
        IMPLICIT NONE
 
@@ -435,26 +387,6 @@
           ENDDO   
        ENDDO
 !
-!--    Natural-type surfaces
-       DO  l = 2, 3
-          surf_s = surf_lsm_v(l)%start_index(j,i)
-          surf_e = surf_lsm_v(l)%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k           = surf_lsm_v(l)%k(m)
-             tend(k,j,i) = tend(k,j,i) + surf_lsm_v(l)%mom_flux_uv(m) * ddx
-          ENDDO   
-       ENDDO
-!
-!--    Urban-type surfaces
-       DO  l = 2, 3
-          surf_s = surf_usm_v(l)%start_index(j,i)
-          surf_e = surf_usm_v(l)%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k           = surf_usm_v(l)%k(m)
-             tend(k,j,i) = tend(k,j,i) + surf_usm_v(l)%mom_flux_uv(m) * ddx
-          ENDDO   
-       ENDDO
-!
 !--    Compute vertical diffusion. In case of simulating a surface layer,
 !--    respective grid diffusive fluxes are masked (flag 8) within this 
 !--    loop, and added further below, else, simple gradient approach is
@@ -518,30 +450,6 @@
              tend(k,j,i) = tend(k,j,i)                                         &
                         + ( - surf_def_h(1)%vsws(m)                            &
                           ) * ddzw(k) * drho_air(k)
-          ENDDO
-!
-!--       Natural-type surfaces, upward-facing
-          surf_s = surf_lsm_h%start_index(j,i)
-          surf_e = surf_lsm_h%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k   = surf_lsm_h%k(m)
-
-             tend(k,j,i) = tend(k,j,i)                                         &
-                        + ( - ( - surf_lsm_h%vsws(m) )                         &
-                          ) * ddzw(k) * drho_air(k)
-
-          ENDDO
-!
-!--       Urban-type surfaces, upward-facing
-          surf_s = surf_usm_h%start_index(j,i)
-          surf_e = surf_usm_h%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k   = surf_usm_h%k(m)
-
-             tend(k,j,i) = tend(k,j,i)                                         &
-                        + ( - ( - surf_usm_h%vsws(m) )                         &
-                          ) * ddzw(k) * drho_air(k)
-
           ENDDO
        ENDIF
 !

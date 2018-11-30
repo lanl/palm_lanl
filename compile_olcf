@@ -1,4 +1,7 @@
 #!/bin/bash
 
-module load cray-netcdf-hdf5parallel/4.4.1.1 
-palm_simple_build -b ifort.titan.nc4 -w "/lustre/atlas1/cli127/proj-shared/vanroek/palm/jobs/diurnal_non_brackish_L/"
+repo_path=$PWD
+
+export PATH="$repo_path/trunk/SCRIPTS:$PATH"
+module load cray-netcdf/4.4.1.1 
+palm_simple_build -b ifort.titan -w "/lustre/atlas1/cli127/proj-shared/vanroek/palm/jobs/smallLES/"

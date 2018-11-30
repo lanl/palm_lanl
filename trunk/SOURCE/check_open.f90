@@ -174,7 +174,7 @@ SUBROUTINE check_open( file_id )
         ONLY:  zu
 
     USE control_parameters,                                                    &
-        ONLY:  coupling_char, data_output_2d_on_each_pe,                       &
+        ONLY:  coupling_char,                      &
                max_masks, message_string, mid, nz_do3d, openfile,              &
                run_description_header, runnr
 
@@ -191,15 +191,10 @@ SUBROUTINE check_open( file_id )
 #endif
 
     USE netcdf_interface,                                                      &
-        ONLY:  id_set_fl, id_set_mask, id_set_pr, id_set_prt, id_set_pts,      &
-               id_set_sp, id_set_ts, id_set_xy, id_set_xz, id_set_yz,          &
+        ONLY:  id_set_pr, id_set_prt, id_set_pts,      &
+               id_set_ts,          &
                id_set_3d, nc_stat, netcdf_create_file, netcdf_data_format,     &
                netcdf_define_header, netcdf_handle_error, netcdf_open_write_file
-
-    USE particle_attributes,                                                   &
-        ONLY:  max_number_of_particle_groups, number_of_particle_groups,       &
-               particle_groups
-
     USE pegrid
 
     USE posix_calls_from_fortran,                                              &
@@ -272,16 +267,6 @@ SUBROUTINE check_open( file_id )
                 CALL message( 'check_open', 'PA0167', 2, 2, -1, 6, 1 )
              ENDIF
      
-          ENDIF
-
-       CASE ( 21, 22, 23 )
-
-          IF ( .NOT.  data_output_2d_on_each_pe )  THEN
-             IF ( myid /= 0 )  THEN
-                WRITE( message_string, * ) 'opening file-id ',file_id,         &
-                                           ' not allowed for PE ',myid
-                CALL message( 'check_open', 'PA0167', 2, 2, -1, 6, 1 )
-             END IF
           ENDIF
 
        CASE ( 90:99 )
@@ -404,63 +389,6 @@ SUBROUTINE check_open( file_id )
 
           ENDIF
 
-       CASE ( 21 )
-
-          IF ( data_output_2d_on_each_pe )  THEN
-             OPEN ( 21, FILE='PLOT2D_XY'//TRIM( coupling_char )//myid_char,    &
-                        FORM='UNFORMATTED', POSITION='APPEND' )
-          ELSE
-             OPEN ( 21, FILE='PLOT2D_XY'//TRIM( coupling_char ),                       &
-                        FORM='UNFORMATTED', POSITION='APPEND' )
-          ENDIF
-
-          IF ( myid == 0  .AND.  .NOT. openfile(file_id)%opened_before )  THEN
-!
-!--          Write index bounds of total domain for combine_plot_fields
-             IF ( data_output_2d_on_each_pe  .AND.  myid_char /= '' )  THEN
-                WRITE (21)   0, nx,  0, ny
-             ENDIF
-
-          ENDIF
-
-       CASE ( 22 )
-
-          IF ( data_output_2d_on_each_pe )  THEN
-             OPEN ( 22, FILE='PLOT2D_XZ'//TRIM( coupling_char )//myid_char,    &
-                        FORM='UNFORMATTED', POSITION='APPEND' )
-          ELSE
-             OPEN ( 22, FILE='PLOT2D_XZ'//TRIM( coupling_char ),               &
-                        FORM='UNFORMATTED', POSITION='APPEND' )
-          ENDIF
-
-          IF ( myid == 0  .AND.  .NOT. openfile(file_id)%opened_before )  THEN
-!
-!--          Write index bounds of total domain for combine_plot_fields
-             IF ( data_output_2d_on_each_pe  .AND.  myid_char /= '' )  THEN
-                WRITE (22)   0, nx, 0, nz+1    ! output part
-             ENDIF
-
-          ENDIF
-
-       CASE ( 23 )
-
-          IF ( data_output_2d_on_each_pe )  THEN
-             OPEN ( 23, FILE='PLOT2D_YZ'//TRIM( coupling_char )//myid_char,    &
-                        FORM='UNFORMATTED', POSITION='APPEND' )
-          ELSE
-             OPEN ( 23, FILE='PLOT2D_YZ'//TRIM( coupling_char ),               &
-                        FORM='UNFORMATTED', POSITION='APPEND' )
-          ENDIF
-
-          IF ( myid == 0  .AND.  .NOT. openfile(file_id)%opened_before )  THEN
-!
-!--          Write index bounds of total domain for combine_plot_fields
-             IF ( data_output_2d_on_each_pe  .AND.  myid_char /= '' )  THEN
-                WRITE (23)   0, ny, 0, nz+1    ! output part
-             ENDIF
-
-          ENDIF
-
        CASE ( 30 )
 
           OPEN ( 30, FILE='PLOT3D_DATA'//TRIM( coupling_char )//myid_char,     &
@@ -477,82 +405,7 @@ SUBROUTINE check_open( file_id )
 
           OPEN ( 50, FILE='runfile')
 
-       CASE ( 80 )
 
-          IF ( myid_char == '' )  THEN
-             OPEN ( 80, FILE='PARTICLE_INFOS'//TRIM(coupling_char)//myid_char, &
-                        FORM='FORMATTED', POSITION='APPEND' )
-          ELSE
-             IF ( myid == 0  .AND.  .NOT. openfile(80)%opened_before )  THEN
-                CALL local_system( 'mkdir  PARTICLE_INFOS' //                  &
-                                   TRIM( coupling_char ) )
-             ENDIF
-#if defined( __parallel )
-!
-!--          Set a barrier in order to allow that thereafter all other
-!--          processors in the directory created by PE0 can open their file.
-!--          WARNING: The following barrier will lead to hanging jobs, if
-!--                   check_open is first called from routine
-!--                   allocate_prt_memory!
-             IF ( .NOT. openfile(80)%opened_before )  THEN
-                CALL MPI_BARRIER( comm2d, ierr )
-             ENDIF
-#endif
-             OPEN ( 80, FILE='PARTICLE_INFOS'//TRIM( coupling_char )//'/'//    &
-                             myid_char,                                        &
-                        FORM='FORMATTED', POSITION='APPEND' )
-          ENDIF
-
-          IF ( .NOT. openfile(80)%opened_before )  THEN
-             WRITE ( 80, 8000 )  TRIM( run_description_header )
-          ENDIF
-
-       CASE ( 85 )
-
-          IF ( myid_char == '' )  THEN
-             OPEN ( 85, FILE='PARTICLE_DATA'//TRIM(coupling_char)//myid_char,  &
-                        FORM='UNFORMATTED', POSITION='APPEND' )
-          ELSE
-             IF ( myid == 0  .AND.  .NOT. openfile(85)%opened_before )  THEN
-                CALL local_system( 'mkdir  PARTICLE_DATA' //                   &
-                                   TRIM( coupling_char ) )
-             ENDIF
-#if defined( __parallel )
-!
-!--          Set a barrier in order to allow that thereafter all other
-!--          processors in the directory created by PE0 can open their file
-             CALL MPI_BARRIER( comm2d, ierr )
-#endif
-             ioerr = 1
-             DO WHILE ( ioerr /= 0 )
-                OPEN ( 85, FILE='PARTICLE_DATA'//TRIM( coupling_char )//'/'//  &
-                           myid_char,                                          &
-                           FORM='UNFORMATTED', POSITION='APPEND', IOSTAT=ioerr )
-                IF ( ioerr /= 0 )  THEN
-                   WRITE( 9, * )  '*** could not open "PARTICLE_DATA'//        &
-                                  TRIM( coupling_char )//'/'//myid_char//      &
-                                  '"! Trying again in 1 sec.'
-                   CALL fortran_sleep( 1 )
-                ENDIF
-             ENDDO
-
-          ENDIF
-
-          IF ( .NOT. openfile(85)%opened_before )  THEN
-             WRITE ( 85 )  run_description_header
-!
-!--          Attention: change version number whenever the output format on
-!--                     unit 85 is changed (see also in routine
-!--                     lpm_data_output_particles)
-             rtext = 'data format version 3.1'
-             WRITE ( 85 )  rtext
-             WRITE ( 85 )  number_of_particle_groups,                          &
-                           max_number_of_particle_groups
-             WRITE ( 85 )  particle_groups
-             WRITE ( 85 )  nxl, nxr, nys, nyn, nzb, nzt, nbgp
-          ENDIF
-
-!
 !--    File where sky-view factors and further required data is stored will be 
 !--    read
        CASE ( 88 )
@@ -606,194 +459,6 @@ SUBROUTINE check_open( file_id )
                       STATUS='REPLACE', FORM='FORMATTED' )
 
 #if defined( __netcdf )
-       CASE ( 101, 111 )
-!
-!--       Set filename depending on unit number
-          IF ( file_id == 101 )  THEN
-             filename = 'DATA_2D_XY_NETCDF' // TRIM( coupling_char )
-             av = 0
-          ELSE
-             filename = 'DATA_2D_XY_AV_NETCDF' // TRIM( coupling_char )
-             av = 1
-          ENDIF
-!
-!--       Inquire, if there is a netCDF file from a previuos run. This should
-!--       be opened for extension, if its dimensions and variables match the
-!--       actual run.
-          INQUIRE( FILE=filename, EXIST=netcdf_extend )
-          IF ( netcdf_extend )  THEN
-!
-!--          Open an existing netCDF file for output
-             CALL netcdf_open_write_file( filename, id_set_xy(av), .TRUE., 20 )
-!
-!--          Read header information and set all ids. If there is a mismatch
-!--          between the previuos and the actual run, netcdf_extend is returned
-!--          as .FALSE.
-             CALL netcdf_define_header( 'xy', netcdf_extend, av )
-
-!
-!--          Remove the local file, if it can not be extended
-             IF ( .NOT. netcdf_extend )  THEN
-                nc_stat = NF90_CLOSE( id_set_xy(av) )
-                CALL netcdf_handle_error( 'check_open', 21 )
-                IF ( myid == 0 )  CALL local_system( 'rm ' // TRIM( filename ) )
-#if defined( __parallel )
-!
-!--             Set a barrier in order to assure that PE0 deleted the old file
-!--             before any other processor tries to open a new file.
-!--             Barrier is only needed in case of parallel I/O
-                IF ( netcdf_data_format > 4 )  CALL MPI_BARRIER( comm2d, ierr )
-#endif
-             ENDIF
-
-          ENDIF
-
-          IF ( .NOT. netcdf_extend )  THEN
-!
-!--          Create a new netCDF output file with requested netCDF format
-             CALL netcdf_create_file( filename, id_set_xy(av), .TRUE., 22 )
-
-!
-!--          Define the header
-             CALL netcdf_define_header( 'xy', netcdf_extend, av )
-
-!
-!--          In case of parallel netCDF output, create flag file which tells
-!--          combine_plot_fields that nothing is to do.
-             IF ( myid == 0  .AND.  netcdf_data_format > 4 )  THEN
-                OPEN( 99, FILE='NO_COMBINE_PLOT_FIELDS_XY' )
-                WRITE ( 99, '(A)' )  'no combine_plot_fields.x neccessary'
-                CLOSE( 99 )
-             ENDIF
-
-          ENDIF
-
-       CASE ( 102, 112 )
-!
-!--       Set filename depending on unit number
-          IF ( file_id == 102 )  THEN
-             filename = 'DATA_2D_XZ_NETCDF' // TRIM( coupling_char )
-             av = 0
-          ELSE
-             filename = 'DATA_2D_XZ_AV_NETCDF' // TRIM( coupling_char )
-             av = 1
-          ENDIF
-!
-!--       Inquire, if there is a netCDF file from a previuos run. This should
-!--       be opened for extension, if its dimensions and variables match the
-!--       actual run.
-          INQUIRE( FILE=filename, EXIST=netcdf_extend )
-
-          IF ( netcdf_extend )  THEN
-!
-!--          Open an existing netCDF file for output
-             CALL netcdf_open_write_file( filename, id_set_xz(av), .TRUE., 23 )
-!
-!--          Read header information and set all ids. If there is a mismatch
-!--          between the previuos and the actual run, netcdf_extend is returned
-!--          as .FALSE.
-             CALL netcdf_define_header( 'xz', netcdf_extend, av )
-
-!
-!--          Remove the local file, if it can not be extended
-             IF ( .NOT. netcdf_extend )  THEN
-                nc_stat = NF90_CLOSE( id_set_xz(av) )
-                CALL netcdf_handle_error( 'check_open', 24 )
-                IF ( myid == 0 )  CALL local_system( 'rm ' // TRIM( filename ) )
-#if defined( __parallel )
-!
-!--             Set a barrier in order to assure that PE0 deleted the old file
-!--             before any other processor tries to open a new file
-!--             Barrier is only needed in case of parallel I/O
-                IF ( netcdf_data_format > 4 )  CALL MPI_BARRIER( comm2d, ierr )
-#endif
-             ENDIF
-
-          ENDIF
-
-          IF ( .NOT. netcdf_extend )  THEN
-!
-!--          Create a new netCDF output file with requested netCDF format
-             CALL netcdf_create_file( filename, id_set_xz(av), .TRUE., 25 )
-
-!
-!--          Define the header
-             CALL netcdf_define_header( 'xz', netcdf_extend, av )
-
-!
-!--          In case of parallel netCDF output, create flag file which tells
-!--          combine_plot_fields that nothing is to do.
-             IF ( myid == 0  .AND.  netcdf_data_format > 4 )  THEN
-                OPEN( 99, FILE='NO_COMBINE_PLOT_FIELDS_XZ' )
-                WRITE ( 99, '(A)' )  'no combine_plot_fields.x neccessary'
-                CLOSE( 99 )
-             ENDIF
-
-          ENDIF
-
-       CASE ( 103, 113 )
-!
-!--       Set filename depending on unit number
-          IF ( file_id == 103 )  THEN
-             filename = 'DATA_2D_YZ_NETCDF' // TRIM( coupling_char )
-             av = 0
-          ELSE
-             filename = 'DATA_2D_YZ_AV_NETCDF' // TRIM( coupling_char )
-             av = 1
-          ENDIF
-!
-!--       Inquire, if there is a netCDF file from a previuos run. This should
-!--       be opened for extension, if its dimensions and variables match the
-!--       actual run.
-          INQUIRE( FILE=filename, EXIST=netcdf_extend )
-
-          IF ( netcdf_extend )  THEN
-!
-!--          Open an existing netCDF file for output
-             CALL netcdf_open_write_file( filename, id_set_yz(av), .TRUE., 26 )
-!
-!--          Read header information and set all ids. If there is a mismatch
-!--          between the previuos and the actual run, netcdf_extend is returned
-!--          as .FALSE.
-             CALL netcdf_define_header( 'yz', netcdf_extend, av )
-
-!
-!--          Remove the local file, if it can not be extended
-             IF ( .NOT. netcdf_extend )  THEN
-                nc_stat = NF90_CLOSE( id_set_yz(av) )
-                CALL netcdf_handle_error( 'check_open', 27 )
-                IF ( myid == 0 )  CALL local_system( 'rm ' // TRIM( filename ) )
-#if defined( __parallel )
-!
-!--             Set a barrier in order to assure that PE0 deleted the old file
-!--             before any other processor tries to open a new file
-!--             Barrier is only needed in case of parallel I/O
-                IF ( netcdf_data_format > 4 )  CALL MPI_BARRIER( comm2d, ierr )
-#endif
-             ENDIF
-
-          ENDIF
-
-          IF ( .NOT. netcdf_extend )  THEN
-!
-!--          Create a new netCDF output file with requested netCDF format
-             CALL netcdf_create_file( filename, id_set_yz(av), .TRUE., 28 )
-
-!
-!--          Define the header
-             CALL netcdf_define_header( 'yz', netcdf_extend, av )
-
-!
-!--          In case of parallel netCDF output, create flag file which tells
-!--          combine_plot_fields that nothing is to do.
-             IF ( myid == 0  .AND.  netcdf_data_format > 4 )  THEN
-                OPEN( 99, FILE='NO_COMBINE_PLOT_FIELDS_YZ' )
-                WRITE ( 99, '(A)' )  'no combine_plot_fields.x neccessary'
-                CLOSE( 99 )
-             ENDIF
-
-          ENDIF
-
        CASE ( 104 )
 !
 !--       Set filename
@@ -938,110 +603,6 @@ SUBROUTINE check_open( file_id )
           ENDIF
 
 
-       CASE ( 107 )
-!
-!--       Set filename
-          filename = 'DATA_1D_SP_NETCDF' // TRIM( coupling_char )
-
-!
-!--       Inquire, if there is a netCDF file from a previuos run. This should
-!--       be opened for extension, if its variables match the actual run.
-          INQUIRE( FILE=filename, EXIST=netcdf_extend )
-
-          IF ( netcdf_extend )  THEN
-!
-!--          Open an existing netCDF file for output
-             CALL netcdf_open_write_file( filename, id_set_sp, .FALSE., 38 )
-
-!
-!--          Read header information and set all ids. If there is a mismatch
-!--          between the previuos and the actual run, netcdf_extend is returned
-!--          as .FALSE.
-             CALL netcdf_define_header( 'sp', netcdf_extend, 0 )
-
-!
-!--          Remove the local file, if it can not be extended
-             IF ( .NOT. netcdf_extend )  THEN
-                nc_stat = NF90_CLOSE( id_set_sp )
-                CALL netcdf_handle_error( 'check_open', 39 )
-                CALL local_system( 'rm ' // TRIM( filename ) )
-             ENDIF
-
-          ENDIF          
-
-          IF ( .NOT. netcdf_extend )  THEN
-!
-!--          Create a new netCDF output file with requested netCDF format
-             CALL netcdf_create_file( filename, id_set_sp, .FALSE., 40 )
-!
-!--          Define the header
-             CALL netcdf_define_header( 'sp', netcdf_extend, 0 )
-
-          ENDIF
-
-!
-!--     Currently disabled
-!       CASE ( 108 )
-
-!          IF ( myid_char == '' )  THEN
-!             filename = 'DATA_PRT_NETCDF' // TRIM( coupling_char )
-!          ELSE
-!             filename = 'DATA_PRT_NETCDF' // TRIM( coupling_char ) // '/' //   &
-!                        myid_char
-!          ENDIF
-!
-!--       Inquire, if there is a netCDF file from a previuos run. This should
-!--       be opened for extension, if its variables match the actual run.
-!          INQUIRE( FILE=filename, EXIST=netcdf_extend )
-
-!          IF ( netcdf_extend )  THEN
-!
-!--          Open an existing netCDF file for output
-!             CALL netcdf_open_write_file( filename, id_set_prt, .FALSE., 41 )
-!
-!--          Read header information and set all ids. If there is a mismatch
-!--          between the previuos and the actual run, netcdf_extend is returned
-!--          as .FALSE.
-!             CALL netcdf_define_header( 'pt', netcdf_extend, 0 )
-
-!
-!--          Remove the local file, if it can not be extended
-!             IF ( .NOT. netcdf_extend )  THEN
-!                nc_stat = NF90_CLOSE( id_set_prt )
-!                CALL netcdf_handle_error( 'check_open', 42 )
-!                CALL local_system( 'rm ' // TRIM( filename ) )
-!             ENDIF
-
-!          ENDIF          
-
-!          IF ( .NOT. netcdf_extend )  THEN
-
-!
-!--          For runs on multiple processors create the subdirectory
-!             IF ( myid_char /= '' )  THEN
-!                IF ( myid == 0  .AND. .NOT. openfile(file_id)%opened_before )  &
-!                THEN    ! needs modification in case of non-extendable sets
-!                   CALL local_system( 'mkdir  DATA_PRT_NETCDF' //              &
-!                                       TRIM( coupling_char ) // '/' )
-!                ENDIF
-#if defined( __parallel )
-! 
-!--             Set a barrier in order to allow that all other processors in the
-!--             directory created by PE0 can open their file
-!                CALL MPI_BARRIER( comm2d, ierr )
-#endif
-!             ENDIF
-
-!
-!--          Create a new netCDF output file with requested netCDF format
-!             CALL netcdf_create_file( filename, id_set_prt, .FALSE., 43 )
-
-!
-!--          Define the header
-!             CALL netcdf_define_header( 'pt', netcdf_extend, 0 )
-
-!          ENDIF
-
        CASE ( 109 )
 !
 !--       Set filename
@@ -1082,110 +643,9 @@ SUBROUTINE check_open( file_id )
 
           ENDIF
 
-!
-!--    nc-file for virtual flight measurements
-       CASE ( 199 )
-!
-!--       Set filename
-          filename = 'DATA_1D_FL_NETCDF' // TRIM( coupling_char )
-
-!
-!--       Inquire, if there is a netCDF file from a previuos run. This should
-!--       be opened for extension, if its variables match the actual run.
-          INQUIRE( FILE=filename, EXIST=netcdf_extend )
-
-          IF ( netcdf_extend )  THEN
-!
-!--          Open an existing netCDF file for output
-             CALL netcdf_open_write_file( filename, id_set_fl, .FALSE., 532 )
-!
-!--          Read header information and set all ids. If there is a mismatch
-!--          between the previuos and the actual run, netcdf_extend is returned
-!--          as .FALSE.
-             CALL netcdf_define_header( 'fl', netcdf_extend, 0 )
-
-!
-!--          Remove the local file, if it can not be extended
-             IF ( .NOT. netcdf_extend )  THEN
-                nc_stat = NF90_CLOSE( id_set_fl )
-                CALL netcdf_handle_error( 'check_open', 533 )
-                CALL local_system( 'rm ' // TRIM( filename ) )
-             ENDIF
-
-          ENDIF          
-
-          IF ( .NOT. netcdf_extend )  THEN
-!
-!--          Create a new netCDF output file with requested netCDF format
-             CALL netcdf_create_file( filename, id_set_fl, .FALSE., 534 )
-!
-!--          Define the header
-             CALL netcdf_define_header( 'fl', netcdf_extend, 0 )
-
-          ENDIF
-
-
-       CASE ( 201:200+2*max_masks )
-!
-!--       Set filename depending on unit number
-          IF ( file_id <= 200+max_masks )  THEN
-             mid = file_id - 200
-             WRITE ( mask_char,'(A2,I2.2)')  '_M', mid
-             filename = 'DATA_MASK_NETCDF' // TRIM( coupling_char ) //         &
-                        mask_char
-             av = 0
-          ELSE
-             mid = file_id - (200+max_masks)
-             WRITE ( mask_char,'(A2,I2.2)')  '_M', mid
-             filename = 'DATA_MASK_AV_NETCDF' // TRIM( coupling_char ) //      &
-                        mask_char
-             av = 1
-          ENDIF
-!
-!--       Inquire, if there is a netCDF file from a previuos run. This should
-!--       be opened for extension, if its dimensions and variables match the
-!--       actual run.
-          INQUIRE( FILE=filename, EXIST=netcdf_extend )
-
-          IF ( netcdf_extend )  THEN
-!
-!--          Open an existing netCDF file for output
-             CALL netcdf_open_write_file( filename, id_set_mask(mid,av),       &
-                                          .TRUE., 456 )
-!
-!--          Read header information and set all ids. If there is a mismatch
-!--          between the previuos and the actual run, netcdf_extend is returned
-!--          as .FALSE.
-             CALL netcdf_define_header( 'ma', netcdf_extend, file_id )
-
-!
-!--          Remove the local file, if it can not be extended
-             IF ( .NOT. netcdf_extend )  THEN
-                nc_stat = NF90_CLOSE( id_set_mask(mid,av) )
-                CALL netcdf_handle_error( 'check_open', 457 )
-                CALL local_system('rm ' // TRIM( filename ) )
-             ENDIF
-
-          ENDIF          
-
-          IF ( .NOT. netcdf_extend )  THEN
-!
-!--          Create a new netCDF output file with requested netCDF format
-             CALL netcdf_create_file( filename, id_set_mask(mid,av), .TRUE., 458 )
-!
-!--          Define the header
-             CALL netcdf_define_header( 'ma', netcdf_extend, file_id )
-
-          ENDIF
-
 
 #else
 
-       CASE ( 101:109, 111:113, 116, 201:200+2*max_masks )
-
-!
-!--       Nothing is done in case of missing netcdf support
-          RETURN
 
 #endif
 

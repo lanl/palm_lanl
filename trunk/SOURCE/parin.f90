@@ -401,11 +401,6 @@
         ONLY:  pt_init, q_init, ref_state, s_init, sa_init,                    &
                ug, u_init, v_init, vg
 
-    USE chemistry_model_mod,                                                   &
-        ONLY:  chem_parin
-
-    USE chem_modules
-
     USE control_parameters
 
     USE cpulog,                                                                &
@@ -414,45 +409,17 @@
     USE date_and_time_mod,                                                     &
         ONLY:  day_of_year_init, time_utc_init
 
-    USE dvrp_variables,                                                        &
-        ONLY:  local_dvrserver_running
-
-    USE flight_mod,                                                            &
-        ONLY:  flight_parin
-
     USE grid_variables,                                                        &
         ONLY:  dx, dy
-
-    USE gust_mod,                                                              &
-        ONLY: gust_parin
 
     USE indices,                                                               &
         ONLY:  nx, ny, nz
 
     USE kinds
-
-    USE land_surface_model_mod,                                                &
-        ONLY: lsm_parin
-
-    USE microphysics_mod,                                                      &
-        ONLY:  c_sedimentation, cloud_water_sedimentation,                     &
-               collision_turbulence, curvature_solution_effects_bulk,          &
-               dry_aerosol_radius, limiter_sedimentation, na_init, nc_const,   &
-               sigma_bulk, ventilation_effect
-
-    USE model_1d_mod,                                                          &
-        ONLY:  damp_level_1d, dt_pr_1d, dt_run_control_1d, end_time_1d
-
     USE netcdf_interface,                                                      &
         ONLY:  netcdf_data_format, netcdf_deflate, netcdf_precision
 
     USE pegrid
-
-    USE plant_canopy_model_mod,                                                &
-         ONLY: pcm_parin
-
-    USE pmc_interface,                                                         &
-        ONLY:  nested_run, nesting_mode
 
     USE profil_parameter,                                                      &
         ONLY:  cross_profiles, profile_columns, profile_rows
@@ -460,35 +427,14 @@
     USE progress_bar,                                                          &
         ONLY :  batch_job
 
-    USE radiation_model_mod,                                                   &
-        ONLY: radiation_parin
-
     USE read_restart_data_mod,                                                 &
         ONLY:  rrd_global
-
-    USE spectra_mod,                                                           &
-        ONLY :  spectra_parin
 
     USE statistics,                                                            &
         ONLY:  hom, hom_sum, pr_palm, region, statistic_regions
 
-    USE synthetic_turbulence_generator_mod,                                    &
-        ONLY:  stg_parin
-
     USE turbulence_closure_mod,                                                &
         ONLY:  rans_const_c, rans_const_sigma
-
-    USE urban_surface_mod,                                                     &
-        ONLY: usm_parin
-
-    USE uv_exposure_model_mod,                                                 &
-        ONLY:  uvem_parin
-
-    USE vertical_nesting_mod,                                                  &
-        ONLY:  vnest_start_time
-
-    USE wind_turbine_model_mod,                                                &
-        ONLY:  wtm_parin
 
 
     IMPLICIT NONE
@@ -509,32 +455,30 @@
              call_psolver_at_all_substeps, call_microphysics_at_all_substeps,  &
              canyon_height,                                                    &
              canyon_width_x, canyon_width_y, canyon_wall_left,                 &
-             canyon_wall_south, c_sedimentation, cfl_factor, cloud_droplets,   &
+             canyon_wall_south, cfl_factor, cloud_droplets,   &
              cloud_physics, cloud_scheme, cloud_top_radiation,                 &
-             cloud_water_sedimentation,                                        &
-             collective_wait, collision_turbulence, complex_terrain,           &
+             collective_wait, complex_terrain,           &
              conserve_volume_flow,                                             &
              conserve_volume_flow_mode, constant_flux_layer,                   &
-             coupling_start_time, curvature_solution_effects_bulk,             &
-             cycle_mg, damp_level_1d,                                          &
+             coupling_start_time,              &
+             cycle_mg,                                           &
              data_output_during_spinup,                                        &
              day_of_year_init,                                                 &
-             dissipation_1d,                                                   &
-             dp_external, dp_level_b, dp_smooth, dpdxy, dry_aerosol_radius,    &
-             dt, dt_pr_1d, dt_run_control_1d, dt_spinup, dx, dy, dz, dz_max,   &
+             dp_external, dp_level_b, dp_smooth, dpdxy,     &
+             dt, dt_spinup, dx, dy, dz, dz_max,   &
              dz_stretch_factor, dz_stretch_level, dz_stretch_level_start,      &
              dz_stretch_level_end, d_stk,                                      &
-             end_time_1d, ensemble_member_nr, e_init,                          &
+             ensemble_member_nr, e_init,                          &
              e_min, fft_method, flux_input_mode, flux_output_mode, forcing,    &
              galilei_transformation, humidity,                                 &
              inflow_damping_height, inflow_damping_width,                      &
              inflow_disturbance_begin, inflow_disturbance_end,                 &
              initializing_actions, km_constant,                                &
              large_scale_forcing, large_scale_subsidence, latitude,            &
-             limiter_sedimentation, longitude,                                 &
+             longitude,                                 &
              loop_optimization, lsf_exception, masking_method, mg_cycles,      &
-             mg_switch_to_pe0_level, mixing_length_1d, momentum_advec,         &
-             most_method, na_init, nc_const, netcdf_precision, neutral, ngsrb, &
+             mg_switch_to_pe0_level, momentum_advec,         &
+             most_method, netcdf_precision, neutral, ngsrb, &
              nsor, nsor_ini, nudging, nx, ny, nz, ocean, idealized_diurnal,    &
              linear_eqnOfState, rho_ref, fixed_alpha, alpha_const,             &
              beta_const, pt_ref, sa_ref,                                       &
@@ -552,7 +496,7 @@
              reference_state, residual_limit,                                  &
              roughness_length, sa_surface,                                     &
              sa_vertical_gradient, sa_vertical_gradient_level, scalar_advec,   &
-             scalar_rayleigh_damping, sigma_bulk,                              &
+             scalar_rayleigh_damping,                               &
              spinup_time, spinup_pt_amplitude, spinup_pt_mean,                 &
              statistic_regions, stokes_force, stokes_drift_method,             &
              subs_vertical_gradient,                                           &
@@ -572,7 +516,7 @@
              use_top_fluxes, use_ug_for_galilei_tr, use_upstream_for_tke,      &
              uv_heights, u_bulk, u_profile,                                    &
              v0_stk, vg_surface, vg_vertical_gradient,                         &
-             vg_vertical_gradient_level, v_bulk, v_profile, ventilation_effect,&
+             vg_vertical_gradient_level, v_bulk, v_profile, &
              wall_adjustment, wall_heatflux, wall_humidityflux,                &
              wall_salinityflux, wall_scalarflux,                               &
              wave_age, wind_dir, wind_speed,                                   &
@@ -591,32 +535,30 @@
              call_psolver_at_all_substeps, call_microphysics_at_all_substeps,  &
              canyon_height,                                                    &
              canyon_width_x, canyon_width_y, canyon_wall_left,                 &
-             canyon_wall_south, c_sedimentation, cfl_factor, cloud_droplets,   &
+             canyon_wall_south, cfl_factor, cloud_droplets,   &
              cloud_physics, cloud_scheme, cloud_top_radiation,                 &
-             cloud_water_sedimentation,                                        &
-             collective_wait, collision_turbulence, complex_terrain,           &
+             collective_wait, complex_terrain,           &
              conserve_volume_flow,                                             &
              conserve_volume_flow_mode, constant_flux_layer,                   &
-             coupling_start_time, curvature_solution_effects_bulk,             &
-             cycle_mg, damp_level_1d,                                          &
+             coupling_start_time,              &
+             cycle_mg,                                           &
              data_output_during_spinup,                                        &
              day_of_year_init,                                                 &
-             dissipation_1d,                                                   &
-             dp_external, dp_level_b, dp_smooth, dpdxy, dry_aerosol_radius,    &
-             dt, dt_pr_1d, dt_run_control_1d, dt_spinup, dx, dy, dz, dz_max,   &
+             dp_external, dp_level_b, dp_smooth, dpdxy,     &
+             dt, dt_spinup, dx, dy, dz, dz_max,   &
              dz_stretch_factor, dz_stretch_level, dz_stretch_level_start,      &
              dz_stretch_level_end, d_stk,                                      &
-             end_time_1d, ensemble_member_nr, e_init,                          &
+             ensemble_member_nr, e_init,                          &
              e_min, fft_method, flux_input_mode, flux_output_mode, forcing,    &
              galilei_transformation, humidity,                                 &
              inflow_damping_height, inflow_damping_width,                      &
              inflow_disturbance_begin, inflow_disturbance_end,                 &
              initializing_actions, km_constant,                                &
              large_scale_forcing, large_scale_subsidence, latitude,            &
-             limiter_sedimentation, longitude,                                 &
+             longitude,                                 &
              loop_optimization, lsf_exception, masking_method, mg_cycles,      &
-             mg_switch_to_pe0_level, mixing_length_1d, momentum_advec,         &
-             most_method, na_init, nc_const, netcdf_precision, neutral, ngsrb, &
+             mg_switch_to_pe0_level, momentum_advec,         &
+             most_method, netcdf_precision, neutral, ngsrb, &
              nsor, nsor_ini, nudging, nx, ny, nz, ocean, idealized_diurnal,    &
              linear_eqnOfState, rho_ref, fixed_alpha, alpha_const,             &
              beta_const, pt_ref, sa_ref,                                       &
@@ -634,7 +576,7 @@
              reference_state, residual_limit,                                  &
              roughness_length, sa_surface,                                     &
              sa_vertical_gradient, sa_vertical_gradient_level, scalar_advec,   &
-             scalar_rayleigh_damping, sigma_bulk,                              &
+             scalar_rayleigh_damping,                               &
              spinup_time, spinup_pt_amplitude, spinup_pt_mean,                 &
              statistic_regions, stokes_force, stokes_drift_method,             &
              subs_vertical_gradient,                                           &
@@ -654,7 +596,7 @@
              use_top_fluxes, use_ug_for_galilei_tr, use_upstream_for_tke,      &
              uv_heights, u_bulk, u_profile,                                    &
              v0_stk,  vg_surface, vg_vertical_gradient,                        &
-             vg_vertical_gradient_level, v_bulk, v_profile, ventilation_effect,&
+             vg_vertical_gradient_level, v_bulk, v_profile, &
              wall_adjustment, wall_heatflux, wall_humidityflux,                &
              wall_salinityflux, wall_scalarflux,                               &
              wave_age, wind_dir, wind_speed,                                   &
@@ -663,8 +605,8 @@
 
     NAMELIST /d3par/  averaging_interval, averaging_interval_pr,               &
              cpu_log_barrierwait, create_disturbances,                         &
-             cross_profiles, data_output, data_output_masks,                   &
-             data_output_pr, data_output_2d_on_each_pe, disturbance_amplitude, &
+             cross_profiles, data_output,                   &
+             data_output_pr,disturbance_amplitude, &
              disturbance_energy_limit, disturbance_level_b,                    &
              disturbance_level_t, do2d_at_begin, do3d_at_begin,                &
              dt, dt_averaging_input, dt_averaging_input_pr,                    &
@@ -680,12 +622,12 @@
              skip_time_data_output, skip_time_data_output_av, skip_time_dopr,  &
              skip_time_do2d_xy, skip_time_do2d_xz, skip_time_do2d_yz,          &
              skip_time_do3d, skip_time_domask, synchronous_exchange,           &
-             termination_time_needed, vnest_start_time
+             termination_time_needed
 
     NAMELIST /runtime_parameters/  averaging_interval, averaging_interval_pr,  &
              cpu_log_barrierwait, create_disturbances,                         &
-             cross_profiles, data_output, data_output_masks,                   &
-             data_output_pr, data_output_2d_on_each_pe, disturbance_amplitude, &
+             cross_profiles, data_output,                   &
+             data_output_pr, disturbance_amplitude, &
              disturbance_energy_limit, disturbance_level_b,                    &
              disturbance_level_t, do2d_at_begin, do3d_at_begin,                &
              dt, dt_averaging_input, dt_averaging_input_pr,                    &
@@ -701,9 +643,9 @@
              skip_time_data_output, skip_time_data_output_av, skip_time_dopr,  &
              skip_time_do2d_xy, skip_time_do2d_xz, skip_time_do2d_yz,          &
              skip_time_do3d, skip_time_domask, synchronous_exchange,           &
-             termination_time_needed, vnest_start_time
+             termination_time_needed
 
-    NAMELIST /envpar/  batch_job, host, local_dvrserver_running,               &
+    NAMELIST /envpar/  batch_job, host,                &
                        maximum_cpu_time_allowed, maximum_parallel_io_streams,  &
                        read_svf, revision, run_identifier, tasks_per_node,     &
                        write_binary, write_svf
@@ -843,57 +785,7 @@
 
  21       CONTINUE
 
-!
-!--       Check if land surface model is used and read &lsm_par if required
-          CALL lsm_parin
 
-!
-!--       Check if urban surface model is used and read &urban_surface_par if required
-          CALL usm_parin
-
-!
-!--       Check if spectra shall be calculated and read spectra_par if required
-          CALL spectra_parin
-
-!
-!--       Check if radiation model is used and read &radiation_par if required
-          CALL radiation_parin
-
-!
-!--       Check if gust module is used and read &gust_par if required
-          CALL gust_parin
-
-
-!--       Check if plant canopy model is used and read &canopy_par if required
-          CALL pcm_parin
-
-!
-!--       Read control parameters for optionally used model software packages
-          CALL package_parin
-
-!
-!--       Check if wind turbine model is used and read &wind_turbine_par if
-!--       required
-          CALL wtm_parin
-!
-!--       Check if virtual flights should be carried out and read &flight_par
-!--       if required
-          CALL flight_parin
-!
-!--       Check if synthetic turbulence generator is used and read stg_par if
-!--       required
-          CALL stg_parin
-!
-!--       Read chemistry variables
-          CALL chem_parin
-!
-!--       Check if uv exposure model is used and read &uvexposure_par
-          CALL uvem_parin
-!
-!--       Read user-defined variables
-          CALL user_parin
-
-!
 !--       If required, read control parameters from restart file (produced by
 !--       a prior run). All PEs are reading from file created by PE0 (see
 !--       check_open)
@@ -905,59 +797,6 @@
              runnr = runnr + 1
           ENDIF
 
-!
-!--       Activate spinup
-          IF ( land_surface .OR. urban_surface )  THEN
-             IF ( spinup_time > 0.0_wp )  THEN
-                coupling_start_time = spinup_time
-                time_since_reference_point = simulated_time - coupling_start_time
-                IF ( spinup_pt_mean == 9999999.9_wp )  THEN
-                   spinup_pt_mean = pt_surface
-                ENDIF
-                end_time = end_time + spinup_time
-                IF ( TRIM( initializing_actions ) /= 'read_restart_data' )     &
-                   spinup = .TRUE.
-             ENDIF
-          ENDIF
-
-!
-!--       In case of nested runs, explicitly set nesting boundary conditions.
-!--       This will overwrite the user settings and basic defaults.
-!--       bc_lr and bc_ns always need to be cyclic for vertical nesting.
-          IF ( nested_run )  THEN
-             IF ( nesting_mode == 'vertical' )  THEN
-                IF (bc_lr /= 'cyclic' .OR. bc_ns /= 'cyclic' )  THEN
-                   WRITE ( message_string, *) 'bc_lr and bc_ns were set to ,', &
-                        'cyclic for vertical nesting'
-                   CALL message( 'parin', 'PA0428', 0, 0, 0, 6, 0 )
-                   bc_lr   = 'cyclic'
-                   bc_ns   = 'cyclic'
-                ENDIF
-                IF ( nest_domain )  THEN
-                   bc_uv_t  = 'nested'
-                   bc_pt_t  = 'nested'
-                   bc_q_t   = 'nested'
-                   bc_s_t   = 'nested'
-                   bc_cs_t  = 'nested'
-                   bc_p_t   = 'neumann'
-                ENDIF
-!
-!--          For other nesting modes only set boundary conditions for
-!--          nested domains.
-             ELSE
-                IF ( nest_domain )  THEN
-                   bc_lr    = 'nested'
-                   bc_ns    = 'nested'
-                   bc_uv_t  = 'nested'
-                   bc_pt_t  = 'nested'
-                   bc_q_t   = 'nested'
-                   bc_s_t   = 'nested'
-                   bc_cs_t  = 'nested'
-                   bc_p_t   = 'neumann'
-                ENDIF
-             ENDIF
-          ENDIF
-
           IF ( forcing )  THEN
              bc_lr    = 'forcing'
              bc_ns    = 'forcing'
@@ -965,29 +804,7 @@
              bc_pt_t  = 'forcing'
              bc_q_t   = 'forcing'
              bc_s_t   = 'forcing'  ! scalar boundary condition is not clear
-             bc_cs_t  = 'forcing'  ! same for chemical species
              bc_p_t   = 'neumann'
-          ENDIF
-
-!
-!--       In case of nested runs, make sure that initializing_actions =
-!--       'set_constant_profiles' even though the constant-profiles
-!--       initializations for the prognostic variables will be overwritten
-!--       by pmci_child_initialize and pmci_parent_initialize. This is,
-!--       however, important e.g. to make sure that diagnostic variables
-!--       are set properly. An exception is made in case of restart runs and
-!--       if user decides to do everything by its own.
-          IF ( nest_domain  .AND.  .NOT. (                                     &
-               TRIM( initializing_actions ) == 'read_restart_data'      .OR.   &
-               TRIM( initializing_actions ) == 'set_constant_profiles'  .OR.   &
-               TRIM( initializing_actions ) == 'by_user' ) )  THEN
-             message_string = 'initializing_actions = ' //                     &
-                              TRIM( initializing_actions ) // ' has been ' //  &
-                              'changed to set_constant_profiles in child ' //  &
-                              'domain.'
-             CALL message( 'parin', 'PA0492', 0, 0, 0, 6, 0 )
-
-             initializing_actions = 'set_constant_profiles'
           ENDIF
 
 !

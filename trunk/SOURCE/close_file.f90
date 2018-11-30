@@ -106,8 +106,8 @@
 
     USE netcdf_interface,                                                      &
         ONLY:  id_set_mask, id_set_pr, id_set_prt, id_set_pts, id_set_sp,      &
-               id_set_ts, id_set_xy, id_set_xz, id_set_yz, id_set_3d,          &
-               id_set_fl, nc_stat, netcdf_data_format, netcdf_handle_error
+               id_set_ts, id_set_3d,          &
+               nc_stat, netcdf_data_format, netcdf_handle_error
                 
     USE pegrid                                           
 
@@ -157,27 +157,6 @@
           SELECT CASE ( fid )
 
 #if defined( __netcdf )
-             CASE ( 101 )
-
-                IF ( myid == 0  .OR.  netcdf_data_format > 4 )  THEN
-                   nc_stat = NF90_CLOSE( id_set_xy(0) )
-                   CALL netcdf_handle_error( 'close_file', 44 )
-                ENDIF
-
-             CASE ( 102 )
-
-                IF ( myid == 0  .OR.  netcdf_data_format > 4 )  THEN
-                   nc_stat = NF90_CLOSE( id_set_xz(0) )
-                   CALL netcdf_handle_error( 'close_file', 45 )
-                ENDIF
-
-             CASE ( 103 )
-
-                IF ( myid == 0  .OR.  netcdf_data_format > 4 )  THEN
-                   nc_stat = NF90_CLOSE( id_set_yz(0) )
-                   CALL netcdf_handle_error( 'close_file', 46 )
-                ENDIF
-
              CASE ( 104 )
 
                 IF ( myid == 0 )  THEN
@@ -199,75 +178,16 @@
                    CALL netcdf_handle_error( 'close_file', 49 )
                 ENDIF
 
-             CASE ( 107 )
-
-                IF ( myid == 0 )  THEN
-                   nc_stat = NF90_CLOSE( id_set_sp )
-                   CALL netcdf_handle_error( 'close_file', 50 )
-                ENDIF
-
-!
-!--           Currently disabled
-!             CASE ( 108 )
-
-!                nc_stat = NF90_CLOSE( id_set_prt )
-!                CALL netcdf_handle_error( 'close_file', 51 )
-
-             CASE ( 109 ) 
+            CASE ( 109 ) 
 
                 nc_stat = NF90_CLOSE( id_set_pts )
                 CALL netcdf_handle_error( 'close_file', 412 )
 
-             CASE ( 111 )
-
-                IF ( myid == 0  .OR.  netcdf_data_format > 4 )  THEN
-                   nc_stat = NF90_CLOSE( id_set_xy(1) )
-                   CALL netcdf_handle_error( 'close_file', 52 )
-                ENDIF
-
-             CASE ( 112 )
-
-                IF ( myid == 0  .OR.  netcdf_data_format > 4 )  THEN
-                   nc_stat = NF90_CLOSE( id_set_xz(1) )
-                   CALL netcdf_handle_error( 'close_file', 352 )
-                ENDIF
-
-             CASE ( 113 )
-
-                IF ( myid == 0  .OR.  netcdf_data_format > 4 )  THEN
-                   nc_stat = NF90_CLOSE( id_set_yz(1) )
-                   CALL netcdf_handle_error( 'close_file', 353 )
-                ENDIF
-
-             CASE ( 116 )
+            CASE ( 116 )
 
                 IF ( myid == 0  .OR.  netcdf_data_format > 4 )  THEN
                    nc_stat = NF90_CLOSE( id_set_3d(1) )
                    CALL netcdf_handle_error( 'close_file', 353 )
-                ENDIF
-
-             CASE ( 199 )
-
-                IF ( myid == 0  .OR.  netcdf_data_format > 4 )  THEN
-                   nc_stat = NF90_CLOSE( id_set_fl )
-                   CALL netcdf_handle_error( 'close_file', 353 )
-                ENDIF
-
-             CASE ( 201:200+2*max_masks )
-
-                IF ( myid == 0  .OR.  netcdf_data_format > 4 )  THEN
-!
-!--                decompose fid into mid and av
-                   IF ( fid <= 200+max_masks )  THEN
-                      mid = fid - 200
-                      av = 0
-                   ELSE
-                      mid = fid - (200+max_masks)
-                      av = 1
-                   ENDIF
-                   nc_stat = NF90_CLOSE( id_set_mask(mid,av) )
-                   CALL netcdf_handle_error( 'close_file', 459 )
-
                 ENDIF
 
 #endif

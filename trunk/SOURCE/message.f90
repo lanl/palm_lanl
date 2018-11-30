@@ -96,9 +96,6 @@
 
     USE pegrid
 
-    USE pmc_interface,                                                         &
-        ONLY:  cpl_id, nested_run
-
     IMPLICIT NONE
 
     CHARACTER(LEN=6)   ::  message_identifier            !<
@@ -123,12 +120,7 @@
     pe_out_of_range = .FALSE.
 
 !
-!-- In case of nested runs create the nest id informations
-    IF ( nested_run )  THEN
-       WRITE( nest_string, '(1X,A,I2.2)' )  'from nest-id ', cpl_id
-    ELSE
        nest_string = ''
-    ENDIF
 !
 !-- Create the complete output string, starting with the message level
     IF ( message_level == 0 )  THEN
@@ -261,20 +253,12 @@
 
     USE pegrid
 
-    USE pmc_interface,                                                         &
-        ONLY:  cpl_id, nested_run
-
     IMPLICIT NONE
 
     CHARACTER(LEN=*) ::  location !< text to be output on stdout
     LOGICAL          ::  advance  !< switch for advancing/noadvancing I/O
-
-#if defined( __parallel )
-!    IF ( nested_run )  CALL MPI_BARRIER( MPI_COMM_WORLD, ierr )
-#endif
 !
 !-- Output for nested runs only on the root domain
-    IF ( cpl_id /= 1 )  RETURN
 
     IF ( myid == 0 )  THEN
        IF ( advance )  THEN

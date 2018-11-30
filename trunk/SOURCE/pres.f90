@@ -239,135 +239,6 @@
        weight_substep_l = weight_substep(intermediate_timestep_count)
     ENDIF
 
-!
-!-- Multigrid method expects array d to have one ghost layer.
-!-- 
-    IF ( psolver(1:9) == 'multigrid' )  THEN
-     
-       DEALLOCATE( d )
-       ALLOCATE( d(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1) ) 
-
-!
-!--    Since p is later used to hold the weighted average of the substeps, it
-!--    cannot be used in the iterative solver. Therefore, its initial value is
-!--    stored on p_loc, which is then iteratively advanced in every substep.
-       IF ( intermediate_timestep_count <= 1 )  THEN
-          DO  i = nxl-1, nxr+1
-             DO  j = nys-1, nyn+1
-                DO  k = nzb, nzt+1
-                   p_loc(k,j,i) = p(k,j,i)
-                ENDDO
-             ENDDO
-          ENDDO
-       ENDIF
-       
-    ELSEIF ( psolver == 'sor'  .AND.  intermediate_timestep_count <= 1 )  THEN
-
-!
-!--    Since p is later used to hold the weighted average of the substeps, it
-!--    cannot be used in the iterative solver. Therefore, its initial value is
-!--    stored on p_loc, which is then iteratively advanced in every substep.
-       p_loc = p
-
-    ENDIF
-
-!
-!-- Conserve the volume flow at the outflow in case of non-cyclic lateral
-!-- boundary conditions
-!-- WARNING: so far, this conservation does not work at the left/south
-!--          boundary if the topography at the inflow differs from that at the
-!--          outflow! For this case, volume_flow_area needs adjustment!
-!
-!-- Left/right
-    IF ( conserve_volume_flow  .AND.  ( outflow_l .OR. outflow_r ) )  THEN
-
-       volume_flow(1)   = 0.0_wp
-       volume_flow_l(1) = 0.0_wp
-
-       IF ( outflow_l )  THEN
-          i = 0
-       ELSEIF ( outflow_r )  THEN
-          i = nx+1
-       ENDIF
-
-       DO  j = nys, nyn
-!
-!--       Sum up the volume flow through the south/north boundary
-          DO  k = nzb+1, nzt
-             volume_flow_l(1) = volume_flow_l(1) + u(k,j,i) * dzw(k)           &
-                                     * MERGE( 1.0_wp, 0.0_wp,                  &
-                                              BTEST( wall_flags_0(k,j,i), 1 )  &
-                                            )
-          ENDDO
-       ENDDO
-
-#if defined( __parallel )   
-       IF ( collective_wait )  CALL MPI_BARRIER( comm1dy, ierr )
-       CALL MPI_ALLREDUCE( volume_flow_l(1), volume_flow(1), 1, MPI_REAL, &
-                           MPI_SUM, comm1dy, ierr )   
-#else
-       volume_flow = volume_flow_l  
-#endif
-       volume_flow_offset(1) = ( volume_flow_initial(1) - volume_flow(1) ) &
-                               / volume_flow_area(1)
-
-       DO  j = nysg, nyng
-          DO  k = nzb+1, nzt
-             u(k,j,i) = u(k,j,i) + volume_flow_offset(1)                       &
-                                     * MERGE( 1.0_wp, 0.0_wp,                  &
-                                              BTEST( wall_flags_0(k,j,i), 1 )  &
-                                            )
-          ENDDO
-       ENDDO
-
-    ENDIF
-
-!
-!-- South/north
-    IF ( conserve_volume_flow  .AND.  ( outflow_n .OR. outflow_s ) )  THEN
-
-       volume_flow(2)   = 0.0_wp
-       volume_flow_l(2) = 0.0_wp
-
-       IF ( outflow_s )  THEN
-          j = 0
-       ELSEIF ( outflow_n )  THEN
-          j = ny+1
-       ENDIF
-
-       DO  i = nxl, nxr
-!
-!--       Sum up the volume flow through the south/north boundary
-          DO  k = nzb+1, nzt
-             volume_flow_l(2) = volume_flow_l(2) + v(k,j,i) * dzw(k)           &
-                                     * MERGE( 1.0_wp, 0.0_wp,                  &
-                                              BTEST( wall_flags_0(k,j,i), 2 )  &
-                                            )
-          ENDDO
-       ENDDO
-
-#if defined( __parallel )   
-       IF ( collective_wait )  CALL MPI_BARRIER( comm1dx, ierr )
-       CALL MPI_ALLREDUCE( volume_flow_l(2), volume_flow(2), 1, MPI_REAL, &
-                           MPI_SUM, comm1dx, ierr )   
-#else
-       volume_flow = volume_flow_l  
-#endif
-       volume_flow_offset(2) = ( volume_flow_initial(2) - volume_flow(2) )    &
-                               / volume_flow_area(2)
-
-       DO  i = nxlg, nxrg
-          DO  k = nzb+1, nzt
-             v(k,j,i) = v(k,j,i) + volume_flow_offset(2)                       &
-                                     * MERGE( 1.0_wp, 0.0_wp,                  &
-                                              BTEST( wall_flags_0(k,j,i), 2 )  &
-                                            )
-          ENDDO
-       ENDDO
-
-    ENDIF
-
-!
 !-- Remove mean vertical velocity in case that Neumann conditions are
 !-- used both at bottom and top boundary, and if not a nested domain in a 
 !-- normal nesting run. In case of vertical nesting, this must be done.
@@ -375,11 +246,6 @@
 !-- nvn stands for non-vertical nesting. 
 !-- This cannot be done before the first initial time step because ngp_2dh_outer
 !-- is not yet known then.
-    nest_domain_nvn = nest_domain
-    IF ( nest_domain .AND. nesting_mode == 'vertical' )  THEN
-       nest_domain_nvn = .FALSE.
-    ENDIF
-
     IF ( ibc_p_b == 1  .AND.  ibc_p_t == 1  .AND.                               &
          .NOT. nest_domain_nvn  .AND. intermediate_timestep_count /= 0 )        &
     THEN
@@ -415,21 +281,9 @@
           ENDDO
        ENDDO
     ENDIF
-
 !
 !-- Compute the divergence of the provisional velocity field.
     CALL cpu_log( log_point_s(1), 'divergence', 'start' )
-
-    IF ( psolver(1:9) == 'multigrid' )  THEN
-       !$OMP PARALLEL DO SCHEDULE( STATIC ) PRIVATE (i,j,k)
-       DO  i = nxl-1, nxr+1
-          DO  j = nys-1, nyn+1
-             DO  k = nzb, nzt+1
-                d(k,j,i) = 0.0_wp
-             ENDDO
-          ENDDO
-       ENDDO
-    ELSE
        !$OMP PARALLEL DO SCHEDULE( STATIC ) PRIVATE (i,j,k)
        DO  i = nxl, nxr
           DO  j = nys, nyn
@@ -438,7 +292,6 @@
              ENDDO
           ENDDO
        ENDDO
-    ENDIF
 
     localsum  = 0.0_wp
     threadsum = 0.0_wp
@@ -494,7 +347,6 @@
        ENDDO
     ENDDO
     !$OMP END PARALLEL
-
 !
 !-- Compute possible PE-sum of divergences for flow_statistics. Carry out
 !-- computation only at last Runge-Kutta substep.
@@ -526,8 +378,6 @@
 
 !
 !-- Compute the pressure perturbation solving the Poisson equation
-    IF ( psolver == 'poisfft' )  THEN
-
 !
 !--    Solve Poisson equation via FFT and solution of tridiagonal matrices
        CALL poisfft( d )
@@ -593,7 +443,6 @@
           ENDDO
 
        ENDIF
-
 !
 !--    Top boundary
        IF ( ibc_p_t == 1 )  THEN
@@ -621,57 +470,7 @@
 !
 !--    Exchange boundaries for p
        CALL exchange_horiz( tend, nbgp )
-      
-    ELSEIF ( psolver == 'sor' )  THEN
 
-!
-!--    Solve Poisson equation for perturbation pressure using SOR-Red/Black
-!--    scheme
-       CALL sor( d, ddzu_pres, ddzw, p_loc )
-       tend = p_loc
-
-    ELSEIF ( psolver(1:9) == 'multigrid' )  THEN
-
-!
-!--    Solve Poisson equation for perturbation pressure using Multigrid scheme,
-!--    array tend is used to store the residuals.
-
-!--    If the number of grid points of the gathered grid, which is collected
-!--    on PE0, is larger than the number of grid points of an PE, than array
-!--    tend will be enlarged. 
-       IF ( gathered_size > subdomain_size )  THEN
-          DEALLOCATE( tend )
-          ALLOCATE( tend(nzb:nzt_mg(mg_switch_to_pe0_level)+1,nys_mg(          &
-                    mg_switch_to_pe0_level)-1:nyn_mg(mg_switch_to_pe0_level)+1,&
-                    nxl_mg(mg_switch_to_pe0_level)-1:nxr_mg(                   &
-                    mg_switch_to_pe0_level)+1) )
-       ENDIF
-
-       IF ( psolver == 'multigrid' )  THEN
-          CALL poismg( tend )
-       ELSE
-          CALL poismg_noopt( tend )
-       ENDIF
-
-       IF ( gathered_size > subdomain_size )  THEN
-          DEALLOCATE( tend )
-          ALLOCATE( tend(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-       ENDIF
-
-!
-!--    Restore perturbation pressure on tend because this array is used
-!--    further below to correct the velocity fields
-       DO  i = nxl-1, nxr+1
-          DO  j = nys-1, nyn+1
-             DO  k = nzb, nzt+1
-                tend(k,j,i) = p_loc(k,j,i)
-             ENDDO
-          ENDDO
-       ENDDO
-
-    ENDIF
-
-!
 !-- Store perturbation pressure on array p, used for pressure data output.
 !-- Ghost layers are added in the output routines (except sor-method: see below)
     IF ( intermediate_timestep_count <= 1 )  THEN
@@ -702,18 +501,6 @@
 
     ENDIF
        
-!
-!-- SOR-method needs ghost layers for the next timestep
-    IF ( psolver == 'sor' )  CALL exchange_horiz( p, nbgp )
-
-!
-!-- Correction of the provisional velocities with the current perturbation 
-!-- pressure just computed
-    IF ( conserve_volume_flow  .AND.  ( bc_lr_cyc .OR. bc_ns_cyc ) )  THEN
-       volume_flow_l(1) = 0.0_wp
-       volume_flow_l(2) = 0.0_wp
-    ENDIF
-
     !$OMP PARALLEL PRIVATE (i,j,k)
     !$OMP DO
     DO  i = nxl, nxr   
@@ -750,96 +537,6 @@
     ENDDO
     !$OMP END PARALLEL
 
-!
-!-- The vertical velocity is not set to zero at nzt + 1 for nested domains
-!-- Instead it is set to the values of nzt (see routine vnest_boundary_conds 
-!-- or pmci_interp_tril_t) BEFORE calling the pressure solver. To avoid jumps
-!-- while plotting profiles w at the top has to be set to the values in the 
-!-- height nzt after above modifications. Hint: w level nzt+1 does not impact
-!-- results. 
-    IF (nest_domain .OR. coupling_mode == 'vnested_fine') THEN
-       w(nzt+1,:,:) = w(nzt,:,:)
-    ENDIF
-
-!
-!-- Sum up the volume flow through the right and north boundary
-    IF ( conserve_volume_flow  .AND.  bc_lr_cyc  .AND.  bc_ns_cyc  .AND.       &
-         nxr == nx )  THEN
-
-       !$OMP PARALLEL PRIVATE (j,k)
-       !$OMP DO
-       DO  j = nys, nyn
-          !$OMP CRITICAL
-          DO  k = nzb+1, nzt
-             volume_flow_l(1) = volume_flow_l(1) + u(k,j,nxr) * dzw(k)         &
-                                     * MERGE( 1.0_wp, 0.0_wp,                  &
-                                              BTEST( wall_flags_0(k,j,nxr), 1 )&
-                                            )
-          ENDDO
-          !$OMP END CRITICAL
-       ENDDO
-       !$OMP END PARALLEL
-
-    ENDIF
-
-    IF ( conserve_volume_flow  .AND.  bc_ns_cyc  .AND.  bc_lr_cyc  .AND.       &
-         nyn == ny )  THEN
-
-       !$OMP PARALLEL PRIVATE (i,k)
-       !$OMP DO
-       DO  i = nxl, nxr
-          !$OMP CRITICAL
-          DO  k = nzb+1, nzt
-             volume_flow_l(2) = volume_flow_l(2) + v(k,nyn,i) * dzw(k)         &
-                                     * MERGE( 1.0_wp, 0.0_wp,                  &
-                                              BTEST( wall_flags_0(k,nyn,i), 2 )&
-                                            )
-           ENDDO
-          !$OMP END CRITICAL
-       ENDDO
-       !$OMP END PARALLEL
-
-    ENDIF
-    
-!
-!-- Conserve the volume flow
-    IF ( conserve_volume_flow  .AND.  ( bc_lr_cyc  .AND.  bc_ns_cyc ) )  THEN
-
-#if defined( __parallel )   
-       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-       CALL MPI_ALLREDUCE( volume_flow_l(1), volume_flow(1), 2, MPI_REAL, &
-                           MPI_SUM, comm2d, ierr )  
-#else
-       volume_flow = volume_flow_l  
-#endif   
-
-       volume_flow_offset(1:2) = ( volume_flow_initial(1:2) - volume_flow(1:2) ) / &
-                            volume_flow_area(1:2)
-
-       !$OMP PARALLEL PRIVATE (i,j,k)
-       !$OMP DO
-       DO  i = nxl, nxr
-          DO  j = nys, nyn
-             DO  k = nzb+1, nzt
-                u(k,j,i) = u(k,j,i) + volume_flow_offset(1)                    &
-                                     * MERGE( 1.0_wp, 0.0_wp,                  &
-                                              BTEST( wall_flags_0(k,j,i), 1 )  &
-                                            )
-             ENDDO
-             DO  k = nzb+1, nzt
-                v(k,j,i) = v(k,j,i) + volume_flow_offset(2)                    &
-                                     * MERGE( 1.0_wp, 0.0_wp,                  &
-                                              BTEST( wall_flags_0(k,j,i), 2 )  &
-                                            )
-             ENDDO
-          ENDDO
-       ENDDO
-
-       !$OMP END PARALLEL
-
-    ENDIF
-
-!
 !-- Exchange of boundaries for the velocities
     CALL exchange_horiz( u, nbgp )
     CALL exchange_horiz( v, nbgp )
@@ -855,9 +552,6 @@
        sums_divnew_l = 0.0_wp
 
 !
-!--    d must be reset to zero because it can contain nonzero values below the
-!--    topography
-       IF ( topography /= 'flat' )  d = 0.0_wp
 
        localsum  = 0.0_wp
        threadsum = 0.0_wp

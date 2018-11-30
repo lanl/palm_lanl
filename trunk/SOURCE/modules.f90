@@ -1099,7 +1099,7 @@
     CHARACTER (LEN=12)   ::  user_interface_current_revision = ' '        !< revision number of the currently used user-interface (must match user_interface_required_revision)
     CHARACTER (LEN=12)   ::  user_interface_required_revision = ' '       !< required user-interface revision number
     CHARACTER (LEN=16)   ::  conserve_volume_flow_mode = 'default'        !< namelist parameter
-    CHARACTER (LEN=16)   ::  loop_optimization = 'cache'                  !< namelist parameter
+    CHARACTER (LEN=16)   ::  loop_optimization = 'vector'                  !< namelist parameter
     CHARACTER (LEN=16)   ::  momentum_advec = 'ws-scheme'                 !< namelist parameter
     CHARACTER (LEN=16)   ::  psolver = 'poisfft'                          !< namelist parameter
     CHARACTER (LEN=16)   ::  scalar_advec = 'ws-scheme'                   !< namelist parameter

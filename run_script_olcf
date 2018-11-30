@@ -4,17 +4,17 @@
 #PBS  -j oe
 #PBS  -m ae
 #PBS -A cli127
-#PBS -l nodes=16
+#PBS -l nodes=1
 #PBS -q debug
 #PBS -l walltime=01:00:00
 
 #TODO: if threads, need a way to pass to PALM
 
-exec_path="/path/to/case/directory"
+exec_path="/lustre/atlas1/cli127/proj-shared/vanroek/palm/jobs/smallLES/"
 
 cd $PBS_O_WORKDIR
 export PATH="/ccs/home/vanroek/palm/current_version/trunk/SCRIPTS:${PATH}"
-module load cray-netcdf-hdf5parallel/4.4.1.1 
+module load cray-netcdf/4.4.1.1 
 source $MODULESHOME/init/bash # May already be included if using modules
 
 #Calculate Walltime in seconds from PBS commands for palm run command
@@ -34,4 +34,4 @@ NN=$((NP/NNODES))
 echo "n_tasks_per_node= $NN"
 
 #Run PALM
-palm_simple_run -b ifort.titan.nc4 -w $exec_path -c aprun -s test_oceanml -n $NN -p $NP -t 1 -T $WTIME 
+palm_simple_run -b ifort.titan -w $exec_path -c aprun -s test_oceanml -n $NN -p $NP -t 1 -T $WTIME 

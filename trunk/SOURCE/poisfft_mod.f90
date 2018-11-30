@@ -260,7 +260,6 @@
        REAL(wp), DIMENSION(:,:,:),   ALLOCATABLE ::  f_out_y  !<
        REAL(wp), DIMENSION(:,:,:),   ALLOCATABLE ::  f_out_z  !<
 
-
        CALL cpu_log( log_point_s(3), 'poisfft', 'start' )
 
        IF ( .NOT. poisfft_initialized )  CALL poisfft_init

@@ -138,7 +138,7 @@
        USE kinds
 
        USE surface_mod,                                                        &
-           ONLY :  surf_def_v, surf_lsm_v, surf_usm_v
+           ONLY :  surf_def_v
 
        IMPLICIT NONE
 
@@ -231,28 +231,6 @@
                 ENDDO   
              ENDDO
 !
-!--          Natural-type surfaces
-             DO  l = 0, 1
-                surf_s = surf_lsm_v(l)%start_index(j,i)
-                surf_e = surf_lsm_v(l)%end_index(j,i)
-                DO  m = surf_s, surf_e
-                   k           = surf_lsm_v(l)%k(m)
-                   tend(k,j,i) = tend(k,j,i) +                                 &
-                                     surf_lsm_v(l)%mom_flux_w(m) * ddy
-                ENDDO   
-             ENDDO
-!
-!--          Urban-type surfaces
-             DO  l = 0, 1
-                surf_s = surf_usm_v(l)%start_index(j,i)
-                surf_e = surf_usm_v(l)%end_index(j,i)
-                DO  m = surf_s, surf_e
-                   k           = surf_usm_v(l)%k(m)
-                   tend(k,j,i) = tend(k,j,i) +                                 &
-                                     surf_usm_v(l)%mom_flux_w(m) * ddy
-                ENDDO   
-             ENDDO
-!
 !--          Add horizontal momentum flux u'w' at east- (l=2) and west-facing (l=3)
 !--          surface.
 !--          Default-type surfaces
@@ -265,29 +243,6 @@
                                      surf_def_v(l)%mom_flux_w(m) * ddx
                 ENDDO   
              ENDDO
-!
-!--          Natural-type surfaces
-             DO  l = 2, 3
-                surf_s = surf_lsm_v(l)%start_index(j,i)
-                surf_e = surf_lsm_v(l)%end_index(j,i)
-                DO  m = surf_s, surf_e
-                   k           = surf_lsm_v(l)%k(m)
-                   tend(k,j,i) = tend(k,j,i) +                                 &
-                                     surf_lsm_v(l)%mom_flux_w(m) * ddx
-                ENDDO   
-             ENDDO
-!
-!--          Urban-type surfaces
-             DO  l = 2, 3
-                surf_s = surf_usm_v(l)%start_index(j,i)
-                surf_e = surf_usm_v(l)%end_index(j,i)
-                DO  m = surf_s, surf_e
-                   k           = surf_usm_v(l)%k(m)
-                   tend(k,j,i) = tend(k,j,i) +                                 &
-                                     surf_usm_v(l)%mom_flux_w(m) * ddx
-                ENDDO   
-             ENDDO
-
           ENDDO
        ENDDO
 
@@ -316,7 +271,7 @@
        USE kinds
 
        USE surface_mod,                                                        &
-           ONLY :  surf_def_v, surf_lsm_v, surf_usm_v
+           ONLY :  surf_def_v
 
        IMPLICIT NONE
 
@@ -397,28 +352,6 @@
           ENDDO   
        ENDDO
 !
-!--    Natural-type surfaces
-       DO  l = 0, 1
-          surf_s = surf_lsm_v(l)%start_index(j,i)
-          surf_e = surf_lsm_v(l)%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k           = surf_lsm_v(l)%k(m)
-             tend(k,j,i) = tend(k,j,i) +                                       &
-                                     surf_lsm_v(l)%mom_flux_w(m) * ddy
-          ENDDO   
-       ENDDO
-!
-!--    Urban-type surfaces
-       DO  l = 0, 1
-          surf_s = surf_usm_v(l)%start_index(j,i)
-          surf_e = surf_usm_v(l)%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k           = surf_usm_v(l)%k(m)
-             tend(k,j,i) = tend(k,j,i) +                                       &
-                                     surf_usm_v(l)%mom_flux_w(m) * ddy
-          ENDDO   
-       ENDDO
-!
 !--    Add horizontal momentum flux u'w' at east- (l=2) and west-facing (l=3)
 !--    surfaces. 
 !--    Default-type surfaces
@@ -432,28 +365,6 @@
           ENDDO   
        ENDDO
 !
-!--    Natural-type surfaces
-       DO  l = 2, 3
-          surf_s = surf_lsm_v(l)%start_index(j,i)
-          surf_e = surf_lsm_v(l)%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k           = surf_lsm_v(l)%k(m)
-             tend(k,j,i) = tend(k,j,i) +                                       &
-                                     surf_lsm_v(l)%mom_flux_w(m) * ddx
-          ENDDO   
-       ENDDO
-!
-!--    Urban-type surfaces
-       DO  l = 2, 3
-          surf_s = surf_usm_v(l)%start_index(j,i)
-          surf_e = surf_usm_v(l)%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k           = surf_usm_v(l)%k(m)
-             tend(k,j,i) = tend(k,j,i) +                                       &
-                                     surf_usm_v(l)%mom_flux_w(m) * ddx
-          ENDDO   
-       ENDDO
-
 
     END SUBROUTINE diffusion_w_ij
 

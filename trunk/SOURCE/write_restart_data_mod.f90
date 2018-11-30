@@ -99,57 +99,21 @@
        USE date_and_time_mod,                                                  &
            ONLY:  day_of_year_init, time_utc_init
 
-       USE flight_mod,                                                         &
-           ONLY:  flight_wrd_global
-
        USE grid_variables,                                                     &
            ONLY:  dx, dy
-
-       USE gust_mod,                                                           &
-           ONLY :  gust_module_enabled, gust_wrd_global
 
        USE indices,                                                            &
            ONLY:  nx, ny, nz
 
-       USE microphysics_mod,                                                   &
-           ONLY:  c_sedimentation, cloud_water_sedimentation,                  &
-                  collision_turbulence, limiter_sedimentation, nc_const,       &
-                  ventilation_effect
-
-       USE model_1d_mod,                                                       &
-           ONLY:  damp_level_1d, dt_pr_1d, dt_run_control_1d, end_time_1d
-
        USE netcdf_interface,                                                   &
            ONLY:  netcdf_precision, output_for_t0
-
-       USE particle_attributes,                                                &
-           ONLY:  curvature_solution_effects
 
        USE pegrid,                                                             &
            ONLY:  hor_index_bounds, collective_wait                                
 
-       USE radiation_model_mod,                                                &
-           ONLY:  time_radiation
-
-       USE spectra_mod,                                                        &
-           ONLY:  average_count_sp, spectrum_x, spectrum_y
-
-       USE synthetic_turbulence_generator_mod,                                 &
-           ONLY:  stg_wrd_global
-
        USE statistics,                                                         &
            ONLY:  statistic_regions, hom, hom_sum, u_max, u_max_ijk, v_max,    &
                   v_max_ijk, w_max, w_max_ijk, z_i
-
-       USE user_write_restart_data_mod,                                        &
-           ONLY:  user_wrd_global 
-
-       USE vertical_nesting_mod,                                               &
-           ONLY:  vnest_init
-
-       USE wind_turbine_model_mod,                                             &
-           ONLY:  wtm_wrd_global
-     
 
        IMPLICIT NONE
 
@@ -193,9 +157,6 @@
 
        CALL wrd_write_string( 'average_count_pr' ) 
        WRITE ( 14 )  average_count_pr
-
-       CALL wrd_write_string( 'average_count_sp' ) 
-       WRITE ( 14 )  average_count_sp
 
        CALL wrd_write_string( 'average_count_3d' ) 
        WRITE ( 14 )  average_count_3d
@@ -269,9 +230,6 @@
        CALL wrd_write_string( 'building_wall_south' ) 
        WRITE ( 14 )  building_wall_south
 
-       CALL wrd_write_string( 'c_sedimentation' ) 
-       WRITE ( 14 )  c_sedimentation
-
        CALL wrd_write_string( 'call_psolver_at_all_substeps' ) 
        WRITE ( 14 )  call_psolver_at_all_substeps
 
@@ -305,14 +263,8 @@
        CALL wrd_write_string( 'cloud_top_radiation' ) 
        WRITE ( 14 )  cloud_top_radiation
 
-       CALL wrd_write_string( 'cloud_water_sedimentation' ) 
-       WRITE ( 14 )  cloud_water_sedimentation
-
        CALL wrd_write_string( 'collective_wait' ) 
        WRITE ( 14 )  collective_wait
-
-       CALL wrd_write_string( 'collision_turbulence' ) 
-       WRITE ( 14 )  collision_turbulence
 
        CALL wrd_write_string( 'conserve_volume_flow' ) 
        WRITE ( 14 )  conserve_volume_flow
@@ -329,14 +281,8 @@
        CALL wrd_write_string( 'current_timestep_number' ) 
        WRITE ( 14 )  current_timestep_number
 
-       CALL wrd_write_string( 'curvature_solution_effects' ) 
-       WRITE ( 14 )  curvature_solution_effects
-
        CALL wrd_write_string( 'cycle_mg' ) 
        WRITE ( 14 )  cycle_mg
-
-       CALL wrd_write_string( 'damp_level_1d' ) 
-       WRITE ( 14 )  damp_level_1d
 
        CALL wrd_write_string( 'day_of_year_init' ) 
        WRITE ( 14 )  day_of_year_init
@@ -371,15 +317,6 @@
        CALL wrd_write_string( 'dt_3d' ) 
        WRITE ( 14 )  dt_3d
 
-       CALL wrd_write_string( 'dt_pr_1d' ) 
-       WRITE ( 14 )  dt_pr_1d
-
-       CALL wrd_write_string( 'dt_run_control_1d' ) 
-       WRITE ( 14 )  dt_run_control_1d
-
-       CALL wrd_write_string( 'dvrp_filecount' ) 
-       WRITE ( 14 )  dvrp_filecount
-
        CALL wrd_write_string( 'dx' ) 
        WRITE ( 14 )  dx
 
@@ -409,9 +346,6 @@
        
        CALL wrd_write_string( 'e_min' ) 
        WRITE ( 14 )  e_min
-
-       CALL wrd_write_string( 'end_time_1d' ) 
-       WRITE ( 14 )  end_time_1d
 
        CALL wrd_write_string( 'fft_method' ) 
        WRITE ( 14 )  fft_method
@@ -460,9 +394,6 @@
        CALL wrd_write_string( 'latitude' ) 
        WRITE ( 14 )  latitude
 
-       CALL wrd_write_string( 'limiter_sedimentation' ) 
-       WRITE ( 14 )  limiter_sedimentation
-
        CALL wrd_write_string( 'longitude' )
        WRITE ( 14 )  longitude 
 
@@ -491,9 +422,6 @@
 
        CALL wrd_write_string( 'most_method' ) 
        WRITE ( 14 )  most_method
-
-       CALL wrd_write_string( 'nc_const' ) 
-       WRITE ( 14 )  nc_const
 
        CALL wrd_write_string( 'netcdf_precision' ) 
        WRITE ( 14 )  netcdf_precision
@@ -669,13 +597,6 @@
        CALL wrd_write_string( 'simulated_time' ) 
        WRITE ( 14 )  simulated_time
 
-       IF ( ALLOCATED( spectrum_x ) )  THEN
-          CALL wrd_write_string( 'spectrum_x' ) 
-          WRITE ( 14 )  spectrum_x
-          CALL wrd_write_string( 'spectrum_y' ) 
-          WRITE ( 14 )  spectrum_y
-       ENDIF
-
        CALL wrd_write_string( 'spinup_time ' ) 
        WRITE ( 14 )  spinup_time 
 
@@ -696,15 +617,6 @@
 
        CALL wrd_write_string( 'time_disturb' ) 
        WRITE ( 14 )  time_disturb
-
-       CALL wrd_write_string( 'time_do2d_xy' ) 
-       WRITE ( 14 )  time_do2d_xy
-
-       CALL wrd_write_string( 'time_do2d_xz' ) 
-       WRITE ( 14 )  time_do2d_xz
-
-       CALL wrd_write_string( 'time_do2d_yz' ) 
-       WRITE ( 14 )  time_do2d_yz
 
        CALL wrd_write_string( 'time_do3d' ) 
        WRITE ( 14 )  time_do3d
@@ -738,9 +650,6 @@
 
        CALL wrd_write_string( 'time_dvrp' ) 
        WRITE ( 14 )  time_dvrp
-
-       CALL wrd_write_string( 'time_radiation' ) 
-       WRITE ( 14 )  time_radiation
 
        CALL wrd_write_string( 'time_restart' ) 
        WRITE ( 14 )  time_restart
@@ -780,21 +689,6 @@
 
        CALL wrd_write_string( 'tsc' ) 
        WRITE ( 14 )  tsc
-
-       CALL wrd_write_string( 'tunnel_height' ) 
-       WRITE ( 14 )  tunnel_height
-
-       CALL wrd_write_string( 'tunnel_length' ) 
-       WRITE ( 14 )  tunnel_length
-
-       CALL wrd_write_string( 'tunnel_wall_depth' ) 
-       WRITE ( 14 )  tunnel_wall_depth
-
-       CALL wrd_write_string( 'tunnel_width_x' ) 
-       WRITE ( 14 )  tunnel_width_x
-
-       CALL wrd_write_string( 'tunnel_width_y' ) 
-       WRITE ( 14 )  tunnel_width_y
 
        CALL wrd_write_string( 'turbulence_closure' ) 
        WRITE ( 14 )  turbulence_closure
@@ -853,9 +747,6 @@
        CALL wrd_write_string( 'v_max_ijk' ) 
        WRITE ( 14 )  v_max_ijk
 
-       CALL wrd_write_string( 'ventilation_effect' ) 
-       WRITE ( 14 )  ventilation_effect
-
        CALL wrd_write_string( 'vg' ) 
        WRITE ( 14 )  vg
 
@@ -870,12 +761,6 @@
 
        CALL wrd_write_string( 'vg_vertical_gradient_level_ind' ) 
        WRITE ( 14 )  vg_vertical_gradient_level_ind
-
-       CALL wrd_write_string( 'virtual_flight' ) 
-       WRITE ( 14 )  virtual_flight
-
-       CALL wrd_write_string( 'vnest_init' ) 
-       WRITE ( 14 )  vnest_init
 
        CALL wrd_write_string( 'volume_flow_area' ) 
        WRITE ( 14 )  volume_flow_area
@@ -929,30 +814,6 @@
        WRITE ( 14 )  z_i
 
 
-!    
-!-- The order of the calls can be different as in read_restart_data_mod where
-!-- the restart data will be read 
-!
-!-- If required, write restart data for wind turbine model.
-       IF ( wind_turbine )  CALL wtm_wrd_global
-
-!
-!-- If required, write restart data for virtual measurements.
-       IF ( virtual_flight )  CALL flight_wrd_global
-
-!
-!-- If required, write restart data for turbulence generator.
-       IF ( syn_turb_gen )  CALL stg_wrd_global
-
-!
-!-- If required, write restart data for gust module.
-       IF ( gust_module_enabled )  CALL gust_wrd_global
-
-!
-!-- Write restart data for user data.
-       CALL user_wrd_global
-
-
     END SUBROUTINE wrd_global
 
 
@@ -974,24 +835,9 @@
         
        USE averaging
 
-       USE chemistry_model_mod,                                                &
-           ONLY:  chem_wrd_local
-
-       USE gust_mod,                                                           &
-           ONLY :  gust_module_enabled, gust_wrd_local
-                
-       USE indices,                                                            &
+      USE indices,                                                            &
            ONLY:  nxl, nxr, nys, nyn, nzb, nzt
 
-       USE land_surface_model_mod,                                             &
-           ONLY:  lsm_wrd_local
-        
-       USE particle_attributes,                                                &
-           ONLY:  iran_part
-
-       USE radiation_model_mod,                                                &
-           ONLY:  radiation, radiation_wrd_local
-    
        USE random_function_mod,                                                &
            ONLY:  random_iv, random_iy
 
@@ -1000,13 +846,6 @@
 
        USE surface_mod,                                                        &
            ONLY :  surface_wrd_local
-
-       USE urban_surface_mod,                                                  &
-           ONLY:  usm_wrd_local    
-
-       USE user_write_restart_data_mod,                                        &
-           ONLY:  user_wrd_local 
-
 
        IMPLICIT NONE
 
@@ -1036,7 +875,7 @@
        ENDIF
 
        CALL wrd_write_string( 'iran' ) 
-       WRITE ( 14 )  iran, iran_part 
+       WRITE ( 14 )  iran
 
        CALL wrd_write_string( 'kh' ) 
        WRITE ( 14 )  kh
@@ -1416,41 +1255,6 @@
 !
 !-- Write surface-related restart data.
        CALL surface_wrd_local
-
-!
-!-- If required, write restart data for urban surface model.
-       IF ( urban_surface )  THEN
-          CALL usm_wrd_local
-       ENDIF
-
-!
-!-- If required, write restart data for land surface model.
-       IF ( land_surface )  THEN
-          CALL lsm_wrd_local
-       ENDIF
-
-!
-!-- If required, write restart data for radiation model.
-       IF ( radiation )  THEN
-          CALL radiation_wrd_local
-       ENDIF
-
-!
-!-- If required, write restart data for chemistry model.
-       IF ( air_chemistry )  THEN
-          CALL chem_wrd_local
-       ENDIF
-
-!
-!-- If required, write restart data for gust module.
-       IF ( gust_module_enabled )  THEN
-          CALL gust_wrd_local
-       ENDIF
-
-!
-!-- Write user-related restart data.
-       CALL user_wrd_local
-
 !--    Write end label.
        CALL wrd_write_string( '*** end ***' )
 

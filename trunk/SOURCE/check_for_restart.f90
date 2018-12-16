@@ -96,9 +96,6 @@
 
     USE pegrid
 
-    USE pmc_interface,                                                         &
-        ONLY:  comm_world_nesting, cpl_id, nested_run
-
     IMPLICIT NONE
 
     INTEGER ::  global_communicator       !< global communicator to be used here

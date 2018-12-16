@@ -188,9 +188,6 @@
                v, vg, v_init, v_m_l, v_m_n, v_m_r, v_m_s, v_p,                 &
                w, w_p, w_m_l, w_m_n, w_m_r, w_m_s, pt_init
 
-    USE chemistry_model_mod,                                                   &
-        ONLY:  chem_boundary_conds 
-              
     USE control_parameters,                                                    &
         ONLY:  air_chemistry, bc_pt_t_val, bc_q_t_val, bc_s_t_val,             &
                constant_diffusion, cloud_physics, coupling_mode, dt_3d,        &
@@ -213,9 +210,6 @@
     USE kinds
 
     USE pegrid
-
-    USE pmc_interface,                                                         &
-        ONLY : nesting_mode, rans_mode_parent
 
     USE surface_mod,                                                           &
         ONLY :  bc_h

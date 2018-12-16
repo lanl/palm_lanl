@@ -99,10 +99,6 @@
     
     USE pegrid
 
-    USE pmc_interface,                                                         &
-        ONLY : nesting_mode
-
-
     IMPLICIT NONE
 
 

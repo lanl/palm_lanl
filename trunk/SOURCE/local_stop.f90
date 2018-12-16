@@ -83,10 +83,6 @@
 
     USE pegrid
 
-    USE pmc_interface,                                                         &
-        ONLY:  nested_run
-
-
 #if defined( __parallel )
          IF ( abort_mode == 1 )  THEN
              CALL MPI_FINALIZE( ierr )

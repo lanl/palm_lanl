@@ -763,6 +763,7 @@ netcdf_data_input_mod.o: \
 	surface_mod.o
 netcdf_interface_mod.o: \
 	mod_kinds.o \
+	turbulence_closure_mod.o \
 	modules.o
 outflow_turbulence.o: \
 	cpulog_mod.o \
@@ -864,6 +865,7 @@ sum_up_3d_data.o: \
 	cpulog_mod.o \
 	mod_kinds.o \
 	modules.o \
+	turbulence_closure_mod.o \
 	surface_mod.o
 surface_coupler.o: \
 	cpulog_mod.o \
@@ -925,7 +927,6 @@ tridia_solver_mod.o: \
 turbulence_closure_mod.o: \
 	advec_ws.o \
 	cpulog_mod.o \
-	microphysics_mod.o \
 	mod_kinds.o \
 	modules.o \
 	stokes_drift_mod.o \

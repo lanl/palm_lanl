@@ -486,45 +486,17 @@
 
     USE arrays_3d
 
-    USE chemistry_model_mod,                                                   &
-        ONLY:  chem_emissions
-
-    USE cloud_parameters,                                                      &
-        ONLY:  cp, l_v, r_d
-
     USE constants,                                                             &
         ONLY:  pi
     
     USE control_parameters
     
-    USE flight_mod,                                                            &
-        ONLY:  flight_init
-    
     USE grid_variables,                                                        &
         ONLY:  dx, dy, ddx2_mg, ddy2_mg
 
-    USE gust_mod,                                                              &
-        ONLY:  gust_init, gust_init_arrays, gust_module_enabled
-    
     USE indices
 
-    USE lpm_init_mod,                                                          &
-        ONLY:  lpm_init
-    
     USE kinds
-
-    USE land_surface_model_mod,                                                &
-        ONLY:  lsm_init, lsm_init_arrays
-  
-    USE lsf_nudging_mod,                                                       &
-        ONLY:  lsf_init, ls_forcing_surf, nudge_init
-
-    USE microphysics_mod,                                                      &
-        ONLY:  collision_turbulence, microphysics_init
-
-    USE model_1d_mod,                                                          &
-        ONLY:  e1d, init_1d_model, kh1d, km1d, l1d, rif1d, u1d, us1d, usws1d,  &
-               v1d, vsws1d 
 
     USE netcdf_interface,                                                      &
         ONLY:  dots_max, dots_num, dots_unit, dots_label
@@ -532,24 +504,7 @@
     USE netcdf_data_input_mod,                                                 &
         ONLY:  init_3d, netcdf_data_input_interpolate, netcdf_data_input_init_3d
     
-    USE particle_attributes,                                                   &
-        ONLY:  particle_advection, use_sgs_for_particles, wang_kernel
-    
     USE pegrid
-    
-    USE plant_canopy_model_mod,                                                &
-        ONLY:  pcm_init
-
-    USE pmc_interface,                                                         &
-        ONLY:  nested_run
-
-    USE radiation_model_mod,                                                   &
-        ONLY:  average_radiation,                                              &
-               radiation_init, radiation, radiation_scheme,                    &
-               radiation_calc_svf, radiation_write_svf,                        &
-               radiation_interaction, radiation_interactions,                  &
-               radiation_interaction_init, radiation_read_svf,                 &
-               radiation_presimulate_solar_pos, radiation_interactions_on
     
     USE random_function_mod 
     
@@ -565,29 +520,17 @@
                sums_l_l, sums_wsts_bc_l, ts_value,                             &
                weight_pres, weight_substep
 
-    USE synthetic_turbulence_generator_mod,                                    &
-        ONLY:  stg_init, use_syn_turb_gen
-
     USE surface_layer_fluxes_mod,                                              &
         ONLY:  init_surface_layer_fluxes
 
     USE surface_mod,                                                           &
-        ONLY :  init_surface_arrays, init_surfaces, surf_def_h, surf_lsm_h,    &
-                surf_usm_h, get_topography_top_index_ji, vertical_surfaces_exist
+        ONLY :  init_surface_arrays, init_surfaces, surf_def_h,     &
+                get_topography_top_index_ji, vertical_surfaces_exist
    
     USE transpose_indices
 
     USE turbulence_closure_mod,                                                &
         ONLY:  tcm_init_arrays, tcm_init
-
-    USE urban_surface_mod,                                                     &
-        ONLY:  usm_init_urban_surface, usm_allocate_surface
-
-    USE uv_exposure_model_mod,                                                 &
-        ONLY:  uvem_init, uvem_init_arrays
-
-    USE wind_turbine_model_mod,                                                &
-        ONLY:  wtm_init, wtm_init_arrays
 
     IMPLICIT NONE
 
@@ -754,20 +697,12 @@
             heatflux_input_conversion(k)      = rho_air_zw(k)
             waterflux_input_conversion(k)     = rho_air_zw(k)
             momentumflux_input_conversion(k)  = rho_air_zw(k)
-        ELSEIF ( TRIM( flux_input_mode ) == 'dynamic' ) THEN
-            heatflux_input_conversion(k)      = 1.0_wp / cp
-            waterflux_input_conversion(k)     = 1.0_wp / l_v
-            momentumflux_input_conversion(k)  = 1.0_wp
         ENDIF
 
         IF ( TRIM( flux_output_mode ) == 'kinematic' )  THEN
             heatflux_output_conversion(k)     = drho_air_zw(k)
             waterflux_output_conversion(k)    = drho_air_zw(k)
             momentumflux_output_conversion(k) = drho_air_zw(k)
-        ELSEIF ( TRIM( flux_output_mode ) == 'dynamic' ) THEN
-            heatflux_output_conversion(k)     = cp
-            waterflux_output_conversion(k)    = l_v
-            momentumflux_output_conversion(k) = 1.0_wp
         ENDIF
 
         IF ( .NOT. humidity ) THEN
@@ -1065,21 +1000,6 @@
                    mean_surface_level_height_l(sr) =                           &
                                        mean_surface_level_height_l(sr) + zw(k-1)
                 ENDIF
-                IF ( surf_lsm_h%start_index(j,i) <=                            &
-                     surf_lsm_h%end_index(j,i) )  THEN
-                   m = surf_lsm_h%start_index(j,i)
-                   k = surf_lsm_h%k(m)
-                   mean_surface_level_height_l(sr) =                           &
-                                       mean_surface_level_height_l(sr) + zw(k-1)
-                ENDIF
-                IF ( surf_usm_h%start_index(j,i) <=                            &
-                     surf_usm_h%end_index(j,i) )  THEN
-                   m = surf_usm_h%start_index(j,i)
-                   k = surf_usm_h%k(m)
-                   mean_surface_level_height_l(sr) =                           &
-                                       mean_surface_level_height_l(sr) + zw(k-1)
-                ENDIF
-
                 k_surf = k - 1
 
                 DO  k = nzb, nzt+1

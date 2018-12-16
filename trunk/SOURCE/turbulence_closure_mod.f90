@@ -146,14 +146,8 @@
 
     USE pegrid
 
-    USE plant_canopy_model_mod,                                                &
-        ONLY:  pcm_tendency
-
     USE statistics,                                                            &
         ONLY:  hom, hom_sum, statistic_regions
-
-    USE user_actions_mod,                                                      &
-        ONLY:  user_actions
 
     USE stokes_force_mod,                                                      &
         ONLY:  stokes_force_s, stokes_production_e
@@ -2163,11 +2157,6 @@
        CALL diffusion_diss
 
 !
-!--    Additional sink term for flows through plant canopies
-!        IF ( plant_canopy )  CALL pcm_tendency( ? )                            !> @query what to do with this?
-
-!        CALL user_actions( 'diss-tendency' )                                   !> @todo not yet implemented
-
 !
 !--    Prognostic equation for TKE dissipation.
 !--    Eliminate negative dissipation values, which can occur due to numerical
@@ -2419,11 +2408,6 @@
        dum_dif = tend(:,j,i) - dum_adv - dum_pro                                !> @todo remove later
 
 !
-!--    Additional sink term for flows through plant canopies
-!        IF ( plant_canopy )  CALL pcm_tendency( i, j, ? )                      !> @todo not yet implemented
-
-!        CALL user_actions( i, j, 'diss-tendency' )                             !> @todo not yet implemented
-
 !
 !--    Prognostic equation for TKE dissipation
 !--    Eliminate negative dissipation values, which can occur due to

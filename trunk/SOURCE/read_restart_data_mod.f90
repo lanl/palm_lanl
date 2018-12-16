@@ -962,9 +962,6 @@
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point_s
 
-    USE gust_mod,                                                           &
-        ONLY :  gust_rrd_local
-
     USE indices,                                                               &
         ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, nx_on_file, ny, nys, nysg, nyn, &
                nyng, ny_on_file, nzb, nzt

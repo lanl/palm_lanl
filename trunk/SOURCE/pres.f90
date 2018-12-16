@@ -182,9 +182,6 @@
 
     USE pegrid
     
-    USE pmc_interface,                                                         &
-        ONLY:  nesting_mode 
-
     USE poisfft_mod,                                                           &
         ONLY:  poisfft
 

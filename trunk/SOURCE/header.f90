@@ -382,78 +382,22 @@
     USE date_and_time_mod,                                                     &
         ONLY:  day_of_year_init, time_utc_init
 
-    USE dvrp_variables,                                                        &
-        ONLY:  use_seperate_pe_for_dvrp_output
-        
-    USE flight_mod,                                                            &
-        ONLY:  flight_header
-        
     USE grid_variables,                                                        &
         ONLY:  dx, dy
 
-    USE gust_mod,                                                              &
-        ONLY: gust_header, gust_module_enabled
-        
     USE indices,                                                               &
         ONLY:  mg_loc_ind, nnx, nny, nnz, nx, ny, nxl_mg, nxr_mg, nyn_mg,      &
                nys_mg, nzt, nzt_mg
         
     USE kinds
  
-    USE land_surface_model_mod,                                                &
-        ONLY: lsm_header
-
-    USE lsf_nudging_mod,                                                       &
-        ONLY:  lsf_nudging_header
-
-    USE microphysics_mod,                                                      &
-        ONLY:  cloud_water_sedimentation, collision_turbulence,                &
-               c_sedimentation, limiter_sedimentation, nc_const,               &
-               ventilation_effect
-
-    USE model_1d_mod,                                                          &
-        ONLY:  damp_level_ind_1d, dt_pr_1d, dt_run_control_1d, end_time_1d
-
     USE netcdf_interface,                                                      &
         ONLY:  netcdf_data_format, netcdf_data_format_string, netcdf_deflate
 
-    USE particle_attributes,                                                   &
-        ONLY:  bc_par_b, bc_par_lr, bc_par_ns, bc_par_t, collision_kernel,     &
-               curvature_solution_effects,                                     &
-               density_ratio, dissipation_classes, dt_min_part, dt_prel,       &
-               dt_write_particle_data, end_time_prel,                          &
-               number_of_particle_groups, particle_advection,                  &
-               particle_advection_start,                                       &
-               particles_per_point, pdx, pdy, pdz,  psb, psl, psn, psr, pss,   &
-               pst, radius, radius_classes, random_start_position,             &
-               seed_follows_topography,                                        &
-               total_number_of_particles, use_sgs_for_particles,               &
-               vertical_particle_advection, write_particle_statistics
-        
     USE pegrid
-
-    USE plant_canopy_model_mod,                                                &
-        ONLY:  pcm_header
-
-#if defined( __parallel )
-    USE pmc_handle_communicator,                                               &
-        ONLY:  pmc_get_model_info
-#endif
-
-    USE pmc_interface,                                                         &
-        ONLY:  nested_run, nesting_datatransfer_mode, nesting_mode
-
-    USE radiation_model_mod,                                                   &
-        ONLY:  radiation, radiation_header
-    
-    USE spectra_mod,                                                           &
-        ONLY:  calculate_spectra, spectra_header
 
     USE surface_mod,                                                           &
         ONLY:  surf_def_h, get_topography_top_index_ji
-
-    USE synthetic_turbulence_generator_mod,                                    &
-        ONLY:  stg_header
 
     USE turbulence_closure_mod,                                                &
         ONLY:  rans_const_c, rans_const_sigma
@@ -584,7 +528,6 @@
     ELSEIF ( pdims(1) == 1 )  THEN
        WRITE ( io, 107 )  'y'
     ENDIF
-    IF ( use_seperate_pe_for_dvrp_output )  WRITE ( io, 105 )
     IF ( numprocs /= maximum_parallel_io_streams )  THEN
        WRITE ( io, 108 )  maximum_parallel_io_streams
     ENDIF
@@ -1463,7 +1406,6 @@
               ')',1X,A)
 104 FORMAT (' Number of PEs:',10X,I6,4X,'Tasks:',I4,'   threads per task:',I4/ &
               35X,'Processor grid (x,y): (',I4,',',I4,')',1X,A)
-105 FORMAT (35X,'One additional PE is used to handle'/37X,'the dvrp output!')
 107 FORMAT (35X,'A 1d-decomposition along ',A,' is used')
 108 FORMAT (35X,'Max. # of parallel I/O streams is ',I5)
 109 FORMAT (35X,'Precursor run for coupled atmos-ocean run'/ &
@@ -1689,25 +1631,6 @@
 352 FORMAT  (/'       Number of output time levels allowed: ',I3 /)
 353 FORMAT  (/'       Number of output time levels allowed: unlimited' /)
 354 FORMAT ('       Output format: ',A, '   compressed with level: ',I1/)
-#if defined( __dvrp_graphics )
-360 FORMAT ('    Plot-Sequence with dvrp-software:'/ &
-            '       Output every      ',F7.1,' s'/ &
-            '       Output mode:      ',A/ &
-            '       Host / User:      ',A,' / ',A/ &
-            '       Directory:        ',A// &
-            '       The sequence contains:')
-361 FORMAT (/'       Isosurface of "',A,'"    Threshold value: ', E12.3/ &
-            '          Isosurface color: (',F4.2,',',F4.2,',',F4.2,') (R,G,B)')
-362 FORMAT (/'       Slicer plane ',A/ &
-            '       Slicer limits: [',F6.2,',',F6.2,']')
-365 FORMAT (/'       Groundplate color: (',F4.2,',',F4.2,',',F4.2,') (R,G,B)'/ &
-            '       Superelevation along (x,y,z): (',F4.1,',',F4.1,',',F4.1, &
-                     ')'/ &
-            '       Clipping limits: from x = ',F9.1,' m to x = ',F9.1,' m'/ &
-            '                        from y = ',F9.1,' m to y = ',F9.1,' m')
-366 FORMAT (/'       Topography color: (',F4.2,',',F4.2,',',F4.2,') (R,G,B)')
-367 FORMAT ('       Polygon reduction for topography: cluster_size = ', I1)
-#endif
 400 FORMAT (//' Physical quantities:'/ &
               ' -------------------'/)
 410 FORMAT ('    Geograph. latitude  :   latitude  = ',F4.1,' degr'/   &

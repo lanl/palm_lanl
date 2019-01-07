@@ -1,0 +1,9 @@
+#!/bin/bash
+
+exec_path="/MPAS/palm_jobs/test/"
+
+repo_path="/MPAS/palm/"
+export PATH="$repo_path/trunk/SCRIPTS:$PATH"
+
+#Run PALM
+palm_simple_run -b gfortran -w $exec_path -c mpirun -s test_oceanml -n 1 -p 1 -t 1 

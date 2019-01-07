@@ -224,14 +224,14 @@
 !> @todo create routine last_actions instead of calling lsm_last_actions etc.
 !> @todo move chem_init call to init_3d_model or to check_parameters
 !------------------------------------------------------------------------------!
- PROGRAM palm
- 
+ PROGRAM palm!(T_mpas,S_mpas,U_mpas,V_mpas,wt,ws,uw,v,zmid_mpas,zedge_mpas, &
+            ! wtflux,wsflux,uwflux,vwflux,zuLES)
 
     USE arrays_3d
 
     USE control_parameters,                                                    &
-        ONLY:  constant_diffusion, do3d_at_begin,               &
-               initializing_actions, io_blocks, io_group,                      &
+        ONLY:  data_output, data_output_pr,constant_diffusion, do3d_at_begin,               &
+               section_xy, initializing_actions, io_blocks, io_group,                      &
                message_string, runnr, simulated_time, simulated_time_chr,      &
                time_since_reference_point, write_binary
 
@@ -252,8 +252,44 @@
     USE write_restart_data_mod,                                                &
         ONLY:  wrd_global, wrd_local
 
-
     IMPLICIT NONE
+
+!
+! -- Variables from MPAS
+   integer(iwp) :: nVertLevels, i, j, k
+   Real(wp),allocatable,dimension(:)   :: T_mpas, S_mpas, U_mpas, V_mpas
+   Real(wp),allocatable,dimension(:)   :: wt, ws, uw, vw, zmid_mpas, zedge_mpas
+   Real(wp) :: wtflux, wsflux, uwflux, vwflux, zuLES
+
+   nVertLevels = 20
+   allocate(T_mpas(nVertLevels),S_mpas(nVertLevels),U_mpas(nVertLevels),V_mpas(nVertLevels))
+   allocate(zmid_mpas(nVertLevels),zedge_mpas(nVertLevels+1))
+   allocate(wt(nVertLevels),ws(nVertLevels),uw(nVertLevels),vw(nVertLevels))
+
+   wtflux = 1.78e-5
+   wsflux = 0.0
+   uwflux = 0.0
+   vwflux = 0.0
+
+   zmid_mpas(1) = 0.0_wp
+   zedge_mpas(1) = -5.0_wp
+
+   do i=2,nVertLevels
+      zmid_mpas(i) = zmid_mpas(i-1) - 10.0_wp
+      zedge_mpas(i) = zedge_mpas(i-1) - 10.0_wp
+   enddo
+
+   zedge_mpas(nVertLevels+1) = zedge_mpas(nVertLevels) - 10.0_wp
+
+   U_mpas(:) = 0.0_wp
+   V_mpas(:) = 0.0_wp
+   S_mpas(:) = 34.0_wp
+   do i=1,nVertLevels
+      T_mpas(i) = 293.15 + 0.005*zmid_mpas(i)
+   enddo
+
+   ! will need to interpolate profiles to an LES grid, or maybe assume the same???
+   ! at end assign fluxes tot mpas variables and end routine.
 
 !
 !-- Local variables
@@ -277,6 +313,13 @@
 !
 #endif
 
+!TODO add check for right / acceptable range. 
+    top_momentumflux_u = uwflux
+    top_momentumflux_v = vwflux
+    top_heatflux = wtflux
+    top_salinityflux = = wsflux 
+   
+    !TODO ooverride the LES setting from a namelist
 !
 !-- Initialize measuring of the CPU-time remaining to the run
     CALL local_tremain_ini
@@ -285,25 +328,89 @@
 !-- Start of total CPU time measuring.
     CALL cpu_log( log_point(1), 'total', 'start' )
     CALL cpu_log( log_point(2), 'initialisation', 'start' )
-
-!
 !
 !-- Read control parameters from NAMELIST files and read environment-variables
     CALL parin
 !
+
+    zu(nz+2) = 0.5
+    do i = nz+1,1,-1
+      zu(i) = zu(i+1) - 1.0
+    enddo
+
+!
+!-- Set netcdf output fields -- not sure how or if to do this once hooked to MPAS
+!
+    section_xy(1) = 8
+
+    data_output(1) = 'shf*_xy'
+    data_output(2) = 'e'
+    data_output(3) = 'pt'
+    data_output(4) = 'sa'
+    data_output(5) = 'u'
+    data_output(6) = 'v'
+    data_output(7) = 'w'
+    data_output(8) = 'rho_ocean'
+    data_output(9) = 'alpha_T'
+
+    data_output_pr(1) = 'e'
+    data_output_pr(2) = 'e*'
+    data_output_pr(3) = '#pt'
+    data_output_pr(4) = '#sa'
+    data_output_pr(5) = 'p'
+    data_output_pr(6) = 'hyp'
+    data_output_pr(7) = 'km'
+    data_output_pr(8) = 'kh'
+    data_output_pr(9) = 'l'
+    data_output_pr(10) = '#u'
+    data_output_pr(11) = '#v'
+    data_output_pr(12) = 'w'
+    data_output_pr(13) = 'prho'
+    data_output_pr(14) = 'w"u"'
+    data_output_pr(15) = 'w*u*'
+    data_output_pr(16) = 'w"v"'
+    data_output_pr(17) = 'w*v*'
+    data_output_pr(18) = 'w"pt"'
+    data_output_pr(19) = 'w*pt*'
+    data_output_pr(20) = 'w"sa"'
+    data_output_pr(21) = 'w*sa*'
+    data_output_pr(22) = 'w*e*'
+    data_output_pr(23) = 'u*2'
+    data_output_pr(24) = 'v*2'
+    data_output_pr(25) = 'w*2'
+    data_output_pr(26) = 'pt*2'
+    data_output_pr(27) = 'w*3'
+    data_output_pr(28) = 'Sw'
+    data_output_pr(29) = 'w*2pt*'
+    data_output_pr(30) = 'w*pt*2'
+    data_output_pr(31) = 'w*u*u*:dz'
+    data_output_pr(32) = 'w*p*:dz'
+    data_output_pr(33) = 'rho_ocean'
+    data_output_pr(34) = 'alpha_T'
+
 !-- Determine processor topology and local array indices
     CALL init_pegrid
-!
+
 !-- Check if input file according to input-data standard exists
     CALL netcdf_data_input_inquire_file
-!
+    !
 !-- Generate grid parameters, initialize generic topography and further process
 !-- topography information if required
     CALL init_grid
-!
+
+    ! interpolate S, T, U, V profiles to the LES grid
+!    i=2
+!    do j=1,nz
+       !interpolate position j
+       ! if zu(j) > zmid_mpas(i) 
+       ! increase i
+!    end do
+
+
+    !
 !-- Read global attributes if available.  
     CALL netcdf_data_input_init 
-!
+    !
 !-- Read surface classification data, e.g. vegetation and soil types, water 
 !-- surfaces, etc., if available. Some of these data is required before 
 !-- check parameters is invoked.     
@@ -311,11 +418,12 @@
 
 !-- Check control parameters and deduce further quantities
     CALL check_parameters
-
+! interpolate mpas data to les and send to init variable
 !
 !-- Initialize all necessary variables
     CALL init_3d_model
-!
+
+    !
 !-- Output of program header
     IF ( myid == 0 )  CALL header
 
@@ -325,7 +433,6 @@
 !-- Set start time in format hh:mm:ss
     simulated_time_chr = time_to_string( time_since_reference_point )
 
-!
     IF ( do3d_at_begin )  THEN
        CALL data_output_3d( 0 )
     ENDIF
@@ -334,43 +441,6 @@
 !-- Integration of the model equations using timestep-scheme
     CALL time_integration
 
-!
-!-- If required, write binary data for restart runs
-    IF ( write_binary )  THEN
-
-       CALL cpu_log( log_point(22), 'wrd_local', 'start' )
-
-       CALL location_message( 'writing restart data', .FALSE. )
-
-       DO  i = 0, io_blocks-1
-          IF ( i == io_group )  THEN
-
-!
-!--          Open binary file 
-             CALL check_open( 14 )
-!
-!--          Write control parameters and other global variables for restart.
-             IF ( myid == 0 )  CALL wrd_global
-!
-!--          Write processor specific flow field data for restart runs
-             CALL wrd_local
-!
-!--          Close binary file 
-             CALL close_file( 14 )
-
-          ENDIF
-#if defined( __parallel )
-          CALL MPI_BARRIER( comm2d, ierr )
-#endif
-       ENDDO
-
-       CALL location_message( 'finished', .TRUE. )
-
-       CALL cpu_log( log_point(22), 'wrd_local', 'stop' )
-
-   ENDIF
-
-!
 !-- If required, repeat output of header including the required CPU-time
     IF ( myid == 0 )  CALL header
 !
@@ -379,7 +449,7 @@
 !-- in wrd_local but it is closed here, to allow writing on this
 !-- unit in routine user_last_actions.
     CALL cpu_log( log_point(4), 'last actions', 'start' )
-          
+
     CALL close_file( 0 )
 
     CALL cpu_log( log_point(4), 'last actions', 'stop' )

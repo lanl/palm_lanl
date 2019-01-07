@@ -1110,17 +1110,17 @@
     CHARACTER (LEN=20)   ::  bc_lr = 'cyclic'                             !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_ns = 'cyclic'                             !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_p_b = 'neumann'                           !< namelist parameter
-    CHARACTER (LEN=20)   ::  bc_p_t = 'dirichlet'                         !< namelist parameter
-    CHARACTER (LEN=20)   ::  bc_pt_b = 'dirichlet'                        !< namelist parameter
-    CHARACTER (LEN=20)   ::  bc_pt_t = 'initial_gradient'                 !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_p_t = 'neumann'                         !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_pt_b = 'neumann'                        !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_pt_t = 'neumann'                 !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_q_b = 'dirichlet'                         !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_q_t = 'neumann'                           !< namelist parameter
-    CHARACTER (LEN=20)   ::  bc_s_b = 'dirichlet'                         !< namelist parameter
-    CHARACTER (LEN=20)   ::  bc_s_t = 'initial_gradient'                  !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_s_b = 'initial_gradient'                         !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_s_t = 'neumann'                  !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_sa_t = 'neumann'                          !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_sa_b = 'neumann'                          !< namelist parameter
-    CHARACTER (LEN=20)   ::  bc_uv_b = 'dirichlet'                        !< namelist parameter
-    CHARACTER (LEN=20)   ::  bc_uv_t = 'dirichlet'                        !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_uv_b = 'neumann'                        !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_uv_t = 'neumann'                        !< namelist parameter
     CHARACTER (LEN=20)   ::  aerosol_bulk = 'nacl'                        !< namelist parameter
     CHARACTER (LEN=20)   ::  cloud_scheme = 'saturation_adjust'           !< namelist parameter
     CHARACTER (LEN=20)   ::  coupling_mode = 'uncoupled'                  !< coupling mode for atmosphere-ocean coupling
@@ -1136,12 +1136,12 @@
     CHARACTER (LEN=64)   ::  host = '????'                                !< hostname on which PALM is running, ENVPAR namelist parameter provided by mrun
     CHARACTER (LEN=80)   ::  log_message                                  !< user-defined message for debugging (sse data_log.f90)
     CHARACTER (LEN=80)   ::  run_identifier                               !< run identifier as given by mrun option -d, ENVPAR namelist parameter provided by mrun
-    CHARACTER (LEN=100)  ::  initializing_actions = ' '                   !< namelist parameter
+    CHARACTER (LEN=100)  ::  initializing_actions = 'set_constant_profiles'                   !< namelist parameter
     CHARACTER (LEN=100)  ::  restart_string = ' '                         !< for storing strings in case of writing/reading restart data
     CHARACTER (LEN=210)  ::  run_description_header                       !< string containing diverse run informations as run identifier, coupling mode, host, ensemble number, run date and time
     CHARACTER (LEN=1000) ::  message_string = ' '                         !< dynamic string for error message output
 
-    CHARACTER (LEN=varnamelength), DIMENSION(500) ::  data_output = ' '       !< namelist parameter
+    CHARACTER (LEN=varnamelength), DIMENSION(500) ::  data_output = ' ' 
     CHARACTER (LEN=varnamelength), DIMENSION(500) ::  data_output_user = ' '  !< namelist parameter
     CHARACTER (LEN=varnamelength), DIMENSION(500) ::  doav = ' '              !< label array for multi-dimensional,
                                                                               !< averaged output quantities
@@ -1149,7 +1149,7 @@
     CHARACTER (LEN=varnamelength), DIMENSION(max_masks,100) ::  data_output_masks = ' '       !< namelist parameter
     CHARACTER (LEN=varnamelength), DIMENSION(max_masks,100) ::  data_output_masks_user = ' '  !< namelist parameter
 
-    CHARACTER (LEN=varnamelength), DIMENSION(300) ::  data_output_pr = ' '  !< namelist parameter
+    CHARACTER (LEN=varnamelength), DIMENSION(300) ::  data_output_pr = ' ' 
 
     CHARACTER (LEN=varnamelength), DIMENSION(200) ::  data_output_pr_user = ' '  !< namelist parameter
 
@@ -1296,10 +1296,10 @@
     LOGICAL ::  complex_terrain = .FALSE.                        !< namelist parameter
     LOGICAL ::  conserve_volume_flow = .FALSE.                   !< namelist parameter
     LOGICAL ::  constant_diffusion = .FALSE.                     !< diffusion coefficient constant?
-    LOGICAL ::  constant_flux_layer = .TRUE.                     !< namelist parameter
+    LOGICAL ::  constant_flux_layer = .FALSE.                     !< namelist parameter
     LOGICAL ::  constant_heatflux = .TRUE.                       !< heat flux at all surfaces constant?
     LOGICAL ::  constant_top_heatflux = .TRUE.                   !< heat flux at domain top constant?
-    LOGICAL ::  constant_top_momentumflux = .FALSE.              !< momentum flux at domain topconstant?
+    LOGICAL ::  constant_top_momentumflux = .TRUE.              !< momentum flux at domain topconstant?
     LOGICAL ::  constant_top_salinityflux = .TRUE.               !< salinity flux at ocean domain top?
     LOGICAL ::  constant_bottom_salinityflux = .TRUE.            !< salinity flux at ocean domain bottom?
     LOGICAL ::  constant_top_scalarflux = .TRUE.                 !< passive-scalar flux at domain top constant?
@@ -1351,7 +1351,7 @@
     LOGICAL ::  nest_domain  = .FALSE.                           !< domain is nested into a parent domain?
     LOGICAL ::  neutral = .FALSE.                                !< namelist parameter
     LOGICAL ::  nudging = .FALSE.                                !< namelist parameter
-    LOGICAL ::  ocean = .FALSE.                                  !< namelist parameter
+    LOGICAL ::  ocean = .TRUE.                                  !< namelist parameter
     LOGICAL ::  linear_eqnOfState = .FALSE.                      !< namelist parmaeter for linear equation of state in ocean
     REAL(wp) :: rho_ref = 1000.0_wp                              !< reference density for linear eos
     LOGICAL ::  fixed_alpha = .TRUE.                             !< use fixed thermal and haline expansion coefficients
@@ -1399,7 +1399,7 @@
     LOGICAL ::  use_single_reference_value = .FALSE.             !< use of single value as reference state?
     LOGICAL ::  use_subsidence_tendencies = .FALSE.              !< namelist parameter
     LOGICAL ::  use_surface_fluxes = .FALSE.                     !< namelist parameter
-    LOGICAL ::  use_top_fluxes = .FALSE.                         !< namelist parameter
+    LOGICAL ::  use_top_fluxes = .TRUE.                         !< namelist parameter
     LOGICAL ::  use_ug_for_galilei_tr = .TRUE.                   !< namelist parameter
     LOGICAL ::  use_upstream_for_tke = .FALSE.                   !< namelist parameter
     LOGICAL ::  uv_exposure = .FALSE.                            !< switch for uv exposure model
@@ -1456,10 +1456,10 @@
     REAL(wp) ::  dt_averaging_input = 0.0_wp                   !< namelist parameter
     REAL(wp) ::  dt_averaging_input_pr = 9999999.9_wp          !< namelist parameter
     REAL(wp) ::  dt_coupling = 9999999.9_wp                    !< namelist parameter
-    REAL(wp) ::  dt_data_output = 9999999.9_wp                 !< namelist parameter
-    REAL(wp) ::  dt_data_output_av = 9999999.9_wp              !< namelist parameter
-    REAL(wp) ::  dt_disturb = 9999999.9_wp                     !< namelist parameter
-    REAL(wp) ::  dt_dopr = 9999999.9_wp                        !< namelist parameter
+    REAL(wp) ::  dt_data_output = 3600.0_wp                 !< namelist parameter
+    REAL(wp) ::  dt_data_output_av = 3600.0_wp              !< namelist parameter
+    REAL(wp) ::  dt_disturb = 20.0_wp                     !< namelist parameter
+    REAL(wp) ::  dt_dopr = 3600.0_wp                        !< namelist parameter
     REAL(wp) ::  dt_dopr_listing = 9999999.9_wp                !< namelist parameter
     REAL(wp) ::  dt_dopts = 9999999.9_wp                       !< namelist parameter
     REAL(wp) ::  dt_dots = 9999999.9_wp                        !< namelist parameter
@@ -1470,7 +1470,7 @@
     REAL(wp) ::  dt_dvrp = 9999999.9_wp                        !< namelist parameter
     REAL(wp) ::  dt_max = 20.0_wp                              !< namelist parameter
     REAL(wp) ::  dt_restart = 9999999.9_wp                     !< namelist parameter
-    REAL(wp) ::  dt_run_control = 60.0_wp                      !< namelist parameter
+    REAL(wp) ::  dt_run_control = 0.0_wp                      !< namelist parameter
     REAL(wp) ::  dt_spinup = 60.0_wp                           !< namelist parameter
     REAL(wp) ::  dt_3d = 0.01_wp                               !< time step
     REAL(wp) ::  dz_max = 1000.0_wp                            !< namelist parameter
@@ -1478,7 +1478,7 @@
     REAL(wp) ::  dz_stretch_level = -9999999.9_wp              !< namelist parameter
     REAL(wp) ::  e_init = 0.0_wp                               !< namelist parameter
     REAL(wp) ::  e_min = 0.0_wp                                !< namelist parameter
-    REAL(wp) ::  end_time = 0.0_wp                             !< namelist parameter
+    REAL(wp) ::  end_time = 10800.0_wp                             !< namelist parameter
     REAL(wp) ::  f = 0.0_wp                                    !< Coriolis parameter
     REAL(wp) ::  fs = 0.0_wp                                   !< Coriolis parameter
     REAL(wp) ::  g = 9.81_wp                                   !< gravitational acceleration
@@ -1486,7 +1486,7 @@
     REAL(wp) ::  inflow_damping_width = 9999999.9_wp           !< namelist parameter
     REAL(wp) ::  kappa = 0.4_wp                                !< von Karman constant
     REAL(wp) ::  km_constant = -1.0_wp                         !< namelist parameter
-    REAL(wp) ::  latitude = 55.0_wp                            !< namelist parameter
+    REAL(wp) ::  latitude = 55.6_wp                            !< namelist parameter
     REAL(wp) ::  longitude = 0.0_wp                            !< namelist parameter
     REAL(wp) ::  mask_scale_x = 1.0_wp                         !< namelist parameter
     REAL(wp) ::  mask_scale_y = 1.0_wp                         !< namelist parameter
@@ -1506,7 +1506,7 @@
     REAL(wp) ::  pt_reference = 9999999.9_wp                   !< namelist parameter
     REAL(wp) ::  pt_slope_offset = 0.0_wp                      !< temperature difference between left and right
                                                                !< boundary of total domain
-    REAL(wp) ::  pt_surface = 300.0_wp                         !< namelist parameter
+    REAL(wp) ::  pt_surface = 293.0_wp                         !< namelist parameter
     REAL(wp) ::  pt_surface_initial_change = 0.0_wp            !< namelist parameter
     REAL(wp) ::  q_surface = 0.0_wp                            !< namelist parameter
     REAL(wp) ::  q_surface_initial_change = 0.0_wp             !< namelist parameter
@@ -1558,10 +1558,10 @@
     REAL(wp) ::  time_restart = 9999999.9_wp                   !< time at which run shall be terminated and restarted
     REAL(wp) ::  time_run_control = 0.0_wp                     !< time since last RUN_CONTROL output
     REAL(wp) ::  time_since_reference_point = 0.0_wp           !< time after atmosphere-ocean coupling has been activated, or time after spinup phase of LSM has been finished
-    REAL(wp) ::  top_heatflux = 9999999.9_wp                   !< namelist parameter
-    REAL(wp) ::  top_momentumflux_u = 9999999.9_wp             !< namelist parameter
-    REAL(wp) ::  top_momentumflux_v = 9999999.9_wp             !< namelist parameter
-    REAL(wp) ::  top_salinityflux = 9999999.9_wp               !< namelist parameter
+    REAL(wp) ::  top_heatflux = 5e-5_wp                   !< namelist parameter
+    REAL(wp) ::  top_momentumflux_u = 0.0_wp             !< namelist parameter
+    REAL(wp) ::  top_momentumflux_v = 0.0_wp             !< namelist parameter
+    REAL(wp) ::  top_salinityflux = 0.0_wp               !< namelist parameter
     REAL(wp) ::  top_scalarflux = 9999999.9_wp                 !< namelist parameter
     REAL(wp) ::  tunnel_height = 9999999.9_wp                  !< namelist parameter
     REAL(wp) ::  tunnel_length = 9999999.9_wp                  !< namelist parameter
@@ -1586,18 +1586,19 @@
     REAL(wp) ::  dpdxy(1:2) = 0.0_wp                               !< namelist parameter
     REAL(wp) ::  dt_domask(max_masks) = 9999999.9_wp               !< namelist parameter
     REAL(wp) ::  dz(10) = -1.0_wp                                  !< namelist parameter
+    REAL(wp) ::  dzconst = 2.5_wp
     REAL(wp) ::  dz_stretch_level_start(9) = -9999999.9_wp         !< namelist parameter
     REAL(wp) ::  dz_stretch_level_end(9) = 9999999.9_wp            !< namelist parameter
     REAL(wp) ::  dz_stretch_factor_array(9) = 1.08_wp              !< namelist parameter
     REAL(wp) ::  mask_scale(3)                                     !< collective array for mask_scale_x/y/z
-    REAL(wp) ::  pt_vertical_gradient(10) = 0.0_wp                 !< namelist parameter
-    REAL(wp) ::  pt_vertical_gradient_level(10) = -999999.9_wp   !< namelist parameter
+    REAL(wp) ::  pt_vertical_gradient(10) = 1.0_wp                 !< namelist parameter
+    REAL(wp) ::  pt_vertical_gradient_level(10) = 0.0_wp   !< namelist parameter
     REAL(wp) ::  q_vertical_gradient(10) = 0.0_wp                  !< namelist parameter
     REAL(wp) ::  q_vertical_gradient_level(10) = -999999.9_wp    !< namelist parameter
     REAL(wp) ::  s_vertical_gradient(10) = 0.0_wp                  !< namelist parameter
     REAL(wp) ::  s_vertical_gradient_level(10) = -999999.9_wp    !< namelist parameter
     REAL(wp) ::  sa_vertical_gradient(10) = 0.0_wp                 !< namelist parameter
-    REAL(wp) ::  sa_vertical_gradient_level(10) = -999999.9_wp   !< namelist parameter
+    REAL(wp) ::  sa_vertical_gradient_level(10) = 0.0_wp   !< namelist parameter
     REAL(wp) ::  skip_time_domask(max_masks) = 9999999.9_wp        !< namelist parameter
     REAL(wp) ::  threshold(20) = 0.0_wp                            !< namelist parameter
     REAL(wp) ::  time_domask(max_masks) = 0.0_wp                   !< namelist parameter
@@ -1776,11 +1777,11 @@
 
     REAL(wp) ::  ddx          !< 1/dx
     REAL(wp) ::  ddx2         !< 1/dx2
-    REAL(wp) ::  dx = 1.0_wp  !< horizontal grid size (along x-direction)
+    REAL(wp) ::  dx = 2.5_wp  !< horizontal grid size (along x-direction)
     REAL(wp) ::  dx2          !< dx*dx
     REAL(wp) ::  ddy          !< 1/dy
     REAL(wp) ::  ddy2         !< 1/dy2
-    REAL(wp) ::  dy = 1.0_wp  !< horizontal grid size (along y-direction)
+    REAL(wp) ::  dy = 2.5_wp  !< horizontal grid size (along y-direction)
     REAL(wp) ::  dy2          !< dy*dy
 
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  ddx2_mg  !< 1/dx_l**2 (dx_l: grid spacing along x on different multigrid level)
@@ -1807,7 +1808,7 @@
     INTEGER(iwp) ::  ngp_sums       !< number of vertical profile grid points time number of output profiles - used for allreduce statements in MPI calls
     INTEGER(iwp) ::  ngp_sums_ls    !< number of vertical profile grid points time number of large-scale forcing profiles - used for allreduce statements in MPI calls
     INTEGER(iwp) ::  nnx            !< number of subdomain grid points in x-direction
-    INTEGER(iwp) ::  nx = 0         !< nx+1 = total number of grid points in x-direction
+    INTEGER(iwp) ::  nx = 31         !< nx+1 = total number of grid points in x-direction
     INTEGER(iwp) ::  nx_a           !< in coupled atmosphere-ocean runs: total number of grid points along x (atmosphere)
     INTEGER(iwp) ::  nx_o           !< in coupled atmosphere-ocean runs: total number of grid points along x (ocean)
     INTEGER(iwp) ::  nxl            !< left-most grid index of subdomain (excluding ghost points)
@@ -1817,7 +1818,7 @@
     INTEGER(iwp) ::  nxrg           !< right-most grid index of subdomain (including ghost points)
     INTEGER(iwp) ::  nx_on_file     !< nx of previous run in job chain
     INTEGER(iwp) ::  nny            !< number of subdomain grid points in y-direction
-    INTEGER(iwp) ::  ny = 0         !< ny+1 = total number of grid points in y-direction
+    INTEGER(iwp) ::  ny = 31         !< ny+1 = total number of grid points in y-direction
     INTEGER(iwp) ::  ny_a           !< in coupled atmosphere-ocean runs: total number of grid points along y (atmosphere)
     INTEGER(iwp) ::  ny_o           !< in coupled atmosphere-ocean runs: total number of grid points along y (ocean)
     INTEGER(iwp) ::  nyn            !< north-most grid index of subdomain (excluding ghost points)
@@ -1827,7 +1828,7 @@
     INTEGER(iwp) ::  nysv           !< =nys+1 (at south domain boundary with inflow from south), else =nys (used for v-velocity component)
     INTEGER(iwp) ::  ny_on_file     !< ny of previous run in job chain
     INTEGER(iwp) ::  nnz            !< number of subdomain grid points in z-direction
-    INTEGER(iwp) ::  nz = 0         !< total number of grid points in z-direction
+    INTEGER(iwp) ::  nz = 32         !< total number of grid points in z-direction
     INTEGER(iwp) ::  nzb            !< bottom grid index of computational domain
     INTEGER(iwp) ::  nzb_diff       !< will be removed
     INTEGER(iwp) ::  nzb_max        !< vertical index of topography top

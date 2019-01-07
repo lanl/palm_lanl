@@ -721,7 +721,13 @@
 !-- At first, check static and dynamic input for consistency
     CALL netcdf_data_input_check_dynamic
     CALL netcdf_data_input_check_static
-!
+
+!    ALLOCATE( pt_init(0:nz+1), q_init(0:nz+1), s_init(0:nz+1),        &
+!                       ref_state(0:nz+1), sa_init(0:nz+1), ug(0:nz+1),         &
+!                       u_init(0:nz+1), v_init(0:nz+1), vg(0:nz+1),             &
+!                       hom(0:nz+1,2,pr_palm+max_pr_user,0:statistic_regions),  &
+!                       hom_sum(0:nz+1,pr_palm+max_pr_user,0:statistic_regions) )
+    !
 !-- Check for overlap combinations, which are not realized yet
     IF ( transpose_compute_overlap )  THEN
        IF ( numprocs == 1 )  STOP '+++ transpose-compute-overlap not implemented for single PE runs'
@@ -944,12 +950,12 @@
 !
 !-- Check for Stokes drift settings if Stokes forcing in ocean mode is used
     IF ( ocean .AND. stokes_force ) CALL stokes_drift_check_parameters
-!
+    !
 !-- In case of no model continuation run, check initialising parameters and
 !-- deduce further quantities
     IF ( TRIM( initializing_actions ) /= 'read_restart_data' )  THEN
 
-!
+      !
 !--    Initial profiles for 1D and 3D model, respectively (u,v further below)
        pt_init = pt_surface
        sa_init = sa_surface
@@ -1015,7 +1021,6 @@
                 vg(k) = vg(k+1)
              ENDIF
           ENDDO
-
 !
 !--    In case of no given gradients for vg, choose a zero gradient
        IF ( vg_vertical_gradient_level(1) == -9999999.9_wp )  THEN
@@ -1306,7 +1311,6 @@
        CALL message( 'check_parameters', 'PA0061', 1, 2, 0, 6, 0 )
     ENDIF
 
-!
       IF ( bc_pt_b == 'dirichlet' )  THEN
           ibc_pt_b = 0
        ELSEIF ( bc_pt_b == 'neumann' )  THEN

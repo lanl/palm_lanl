@@ -336,7 +336,7 @@
                dp_level_ind_b, dz, dz_max, dz_stretch_factor,                  &   
                dz_stretch_factor_array, dz_stretch_level, dz_stretch_level_end,&
                dz_stretch_level_end_index, dz_stretch_level_start_index,       &
-               dz_stretch_level_start, grid_level,                             &
+               dz_stretch_level_start, grid_level,dzconst,                     &
                force_bound_l, force_bound_r, force_bound_n, force_bound_s,     &
                ibc_uv_b, inflow_l, inflow_n, inflow_r, inflow_s,               &
                masking_method, maximum_grid_level, message_string,             &
@@ -402,6 +402,8 @@
     ALLOCATE( ddzu(1:nzt+1), ddzw(1:nzt+1), dd2zu(1:nzt), dzu(1:nzt+1),        &
               dzw(1:nzt+1), zu(nzb:nzt+1), zw(nzb:nzt+1) )
 
+    dz(1) = dzconst
+
 !
 !-- Compute height of u-levels from constant grid length and dz stretch factors
     IF ( dz(1) == -1.0_wp )  THEN
@@ -412,184 +414,8 @@
        CALL message( 'init_grid', 'PA0201', 1, 2, 0, 6, 0 )
     ENDIF
 
-!
-!-- Initialize dz_stretch_level_start with the value of dz_stretch_level
-!-- if it was set by the user
-    IF ( dz_stretch_level /= -9999999.9_wp ) THEN
-       dz_stretch_level_start(1) = dz_stretch_level
-    ENDIF
-       
-!
-!-- Determine number of dz values and stretching levels specified by the
-!-- user to allow right controlling of the stretching mechanism and to
-!-- perform error checks
-    number_dz = COUNT( dz /= -1.0_wp )
-    number_stretch_level_start = COUNT( dz_stretch_level_start /=              &
-                                       -9999999.9_wp )
-    number_stretch_level_end = COUNT( dz_stretch_level_end /=                  &
-                                      9999999.9_wp )
-
-!
-!-- The number of specified end levels +1 has to be the same than the number 
-!-- of specified dz values
-    IF ( number_dz /= number_stretch_level_end + 1 ) THEN
-       WRITE( message_string, * ) 'The number of values for dz = ',         &
-                                   number_dz, 'has to be the same than& ',  &
-                                   'the number of values for ',             &
-                                   'dz_stretch_level_end + 1 = ',           &
-                                   number_stretch_level_end+1
-          CALL message( 'init_grid', 'PA0156', 1, 2, 0, 6, 0 )
-    ENDIF
-    
-!
-!--    The number of specified start levels has to be the same or one less than 
-!--    the number of specified dz values
-    IF ( number_dz /= number_stretch_level_start + 1 .AND.                  &
-         number_dz /= number_stretch_level_start ) THEN
-       WRITE( message_string, * ) 'The number of values for dz = ',         &
-                                   number_dz, 'has to be the same or one ', &
-                                   'more than& the number of values for ',  &
-                                   'dz_stretch_level_start = ',             &
-                                   number_stretch_level_start
-          CALL message( 'init_grid', 'PA0211', 1, 2, 0, 6, 0 )
-    ENDIF
-    
-!--    The number of specified start levels has to be the same or one more than 
-!--    the number of specified end levels
-    IF ( number_stretch_level_start /= number_stretch_level_end + 1 .AND.   &
-         number_stretch_level_start /= number_stretch_level_end ) THEN
-       WRITE( message_string, * ) 'The number of values for ',              &
-                                  'dz_stretch_level_start = ',              &
-                                   dz_stretch_level_start, 'has to be the ',&
-                                   'same or one more than& the number of ', &
-                                   'values for dz_stretch_level_end = ',    &
-                                   number_stretch_level_end
-          CALL message( 'init_grid', 'PA0216', 1, 2, 0, 6, 0 )
-    ENDIF
-
-!
-!-- Initialize dz for the free atmosphere with the value of dz_max
-    IF ( dz(number_stretch_level_start+1) == -1.0_wp .AND.                     &
-         number_stretch_level_start /= 0 ) THEN 
-       dz(number_stretch_level_start+1) = dz_max
-    ENDIF
-       
-!
-!-- Initialize the stretching factor if (infinitely) stretching in the free 
-!-- atmosphere is desired (dz_stretch_level_end was not specified for the 
-!-- free atmosphere)
-    IF ( number_stretch_level_start == number_stretch_level_end + 1 ) THEN 
-       dz_stretch_factor_array(number_stretch_level_start) =                   &
-       dz_stretch_factor
-    ENDIF
-    
-!
-!-- Allocation of arrays for stretching
-    ALLOCATE( min_dz_stretch_level_end(number_stretch_level_start) )
-
-!
-!--    The stretching region has to be large enough to allow for a smooth
-!--    transition between two different grid spacings
-       DO n = 1, number_stretch_level_start
-          min_dz_stretch_level_end(n) = dz_stretch_level_start(n) -            &
-                                        4 * MAX( dz(n),dz(n+1) )
-       ENDDO
-       
-       IF ( ANY( min_dz_stretch_level_end (1:number_stretch_level_start) <     &
-                 dz_stretch_level_end(1:number_stretch_level_start) ) ) THEN
-             message_string= 'Eeach dz_stretch_level_end has to be less ' //   &
-                             'than its corresponding value for &' //           &
-                             'dz_stretch_level_start - 4*MAX(dz(n),dz(n+1)) '//&
-                             'to allow for smooth grid stretching'
-             CALL message( 'init_grid', 'PA0224', 1, 2, 0, 6, 0 )
-       ENDIF
-       
-!
-!--    Stretching must not be applied close to the surface (last two grid 
-!--    points). For the default case dz_stretch_level_start is negative. 
-       IF ( ANY( dz_stretch_level_start > - dz(1) * 1.5_wp ) ) THEN
-          WRITE( message_string, * ) 'Eeach dz_stretch_level_start has to be ',&
-                                     'less than ', dz(1) * 1.5
-             CALL message( 'init_grid', 'PA0226', 1, 2, 0, 6, 0 )
-       ENDIF
-
-!
-!--    The stretching has to start and end on a grid level. Therefore 
-!--    user-specified values have to ''interpolate'' to the next highest level
-       IF ( number_stretch_level_start /= 0 ) THEN
-          dz_stretch_level_start(1) = INT( (dz_stretch_level_start(1) +        &
-                                            dz(1)/2.0) / dz(1) )               &
-                                      * dz(1) - dz(1)/2.0
-       ENDIF
-       
-       IF ( number_stretch_level_start > 1 ) THEN
-          DO n = 2, number_stretch_level_start
-             dz_stretch_level_start(n) = INT( dz_stretch_level_start(n) /      &
-                                              dz(n) ) * dz(n)
-          ENDDO
-       ENDIF
-       
-       IF ( number_stretch_level_end /= 0 ) THEN
-          DO n = 1, number_stretch_level_end
-             dz_stretch_level_end(n) = INT( dz_stretch_level_end(n) /          &
-                                            dz(n+1) ) * dz(n+1)
-          ENDDO
-       ENDIF
-       
-!
-!--    Determine stretching factor if necessary
-       IF ( number_stretch_level_end >= 1 ) THEN 
-          CALL calculate_stretching_factor( number_stretch_level_end )
-       ENDIF
-
-!
-!--    Grid for ocean with free water surface is at k=nzt (w-grid).
-!--    In case of neumann bc at the ground the first first u-level (k=0) lies
-!--    below the first w-level (k=0). In case of dirichlet bc the first u- and
-!--    w-level are defined at same height, but staggered from the second level.
-!--    The second u-level (k=1) corresponds to the top of the Prandtl-layer.
-!--    z values are negative starting from z=0 (surface)
-       zu(nzt+1) =   dz(1) * 0.5_wp
-       zu(nzt)   = - dz(1) * 0.5_wp
-
-!
-!--    Determine u and v height levels considering the possibility of grid
-!--    stretching in several heights.
-       n = 1
-       dz_stretch_level_start_index = 0
-       dz_stretch_level_end_index = 0
-       dz_stretched = dz(1)
-
-       DO  k = nzt-1, 0, -1
-          
-          IF ( dz_stretch_level_start(n) >= zu(k+1) ) THEN
-             dz_stretched = dz_stretched * dz_stretch_factor_array(n)
-
-             IF ( dz(n) > dz(n+1) ) THEN
-                dz_stretched = MAX( dz_stretched, dz(n+1) ) !Restrict dz_stretched to the user-specified (higher) dz
-             ELSE
-                dz_stretched = MIN( dz_stretched, dz(n+1) ) !Restrict dz_stretched to the user-specified (lower) dz
-             ENDIF
-             
-             IF ( dz_stretch_level_start_index(n) == 0 )                             &
-             dz_stretch_level_start_index(n) = k+1
-             
-          ENDIF
-          
-          zu(k) = zu(k+1) - dz_stretched
-          
-!
-!--       Make sure that the stretching ends exactly at dz_stretch_level_end 
-          dz_level_end = ABS( zu(k) - dz_stretch_level_end(n) ) 
-          
-          IF ( dz_level_end  < dz(n+1)/3.0 ) THEN
-             zu(k) = dz_stretch_level_end(n)
-             dz_stretched = dz(n+1)
-             dz_stretch_level_end_index(n) = k
-             n = n + 1             
-          ENDIF
-       ENDDO
-       
+     
+      !overwrite zu with whatever MPAS says and then compute from there
 !
 !--    Compute the w-levels. They are always staggered half-way between the 
 !--    corresponding u-levels, except in case of dirichlet bc for u and v

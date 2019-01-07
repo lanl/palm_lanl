@@ -400,7 +400,7 @@
 !
 !-- Allocate grid arrays
     ALLOCATE( ddzu(1:nzt+1), ddzw(1:nzt+1), dd2zu(1:nzt), dzu(1:nzt+1),        &
-              dzw(1:nzt+1), zu(nzb:nzt+1), zw(nzb:nzt+1) )
+              dzw(1:nzt+1), zw(nzb:nzt+1) )
 
     dz(1) = dzconst
 

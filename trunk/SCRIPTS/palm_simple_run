@@ -272,14 +272,14 @@ fi
 
 # Check if combine_plot_fields.x has been installed and copy executable into the run
 # directory
-if [[ ! -f ${build_dir}/combine_plot_fields.x ]]
-then
-   echo "+++ ERROR: combine_plot_fields.x executable does not exist."
-   echo "           Please run \"palm_simple_install\"."
-   exit 1
-else
-   cp  ${build_dir}/combine_plot_fields.x  ${execution_dir}/combine_plot_fields.x
-fi
+#if [[ ! -f ${build_dir}/combine_plot_fields.x ]]
+#then
+#   echo "+++ ERROR: combine_plot_fields.x executable does not exist."
+#   echo "           Please run \"palm_simple_install\"."
+#   exit 1
+#else
+#   cp  ${build_dir}/combine_plot_fields.x  ${execution_dir}/combine_plot_fields.x
+#fi
 
 
 # Check, if parameter file exists and copy into the run directory

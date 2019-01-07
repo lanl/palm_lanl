@@ -1828,7 +1828,7 @@
     INTEGER(iwp) ::  nysv           !< =nys+1 (at south domain boundary with inflow from south), else =nys (used for v-velocity component)
     INTEGER(iwp) ::  ny_on_file     !< ny of previous run in job chain
     INTEGER(iwp) ::  nnz            !< number of subdomain grid points in z-direction
-    INTEGER(iwp) ::  nz = 32         !< total number of grid points in z-direction
+    INTEGER(iwp) ::  nz = 256         !< total number of grid points in z-direction
     INTEGER(iwp) ::  nzb            !< bottom grid index of computational domain
     INTEGER(iwp) ::  nzb_diff       !< will be removed
     INTEGER(iwp) ::  nzb_max        !< vertical index of topography top

@@ -3,4 +3,4 @@
 repo_path=$PWD
 
 export PATH="$repo_path/trunk/SCRIPTS:$PATH"
-palm_simple_build -D -x -b gfortran -w "/MPAS/palm_jobs/test/"
+palm_simple_build -x -b gfortran -w "/home/lvanroekel/palm_jobs/test/"

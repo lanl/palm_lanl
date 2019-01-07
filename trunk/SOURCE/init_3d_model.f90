@@ -904,7 +904,7 @@
 !    THEN
 
 !       CALL location_message( 'initializing in case of restart / cyclic_fill', &
-                              .FALSE. )
+!                              .FALSE. )
 !
 !--    Initialize surface elements and its attributes, e.g. heat- and 
 !--    momentumfluxes, roughness, scaling parameters. As number of surface 

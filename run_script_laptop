@@ -1,8 +1,8 @@
 #!/bin/bash
 
-exec_path="/MPAS/palm_jobs/test/"
+exec_path="/home/lvanroekel/palm_jobs/test/"
 
-repo_path="/MPAS/palm/"
+repo_path=$PWD
 export PATH="$repo_path/trunk/SCRIPTS:$PATH"
 
 #Run PALM

@@ -657,7 +657,6 @@
     maximum_parallel_io_streams = 1
     batch_job = .TRUE.
     write_binary = .FALSE.
-    local_dvrserver_running = .FALSE.
     maximum_cpu_time_allowed = 999999.
 
 !

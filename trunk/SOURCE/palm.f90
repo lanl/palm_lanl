@@ -233,13 +233,14 @@
         ONLY:  data_output, data_output_pr,constant_diffusion, do3d_at_begin,               &
                section_xy, initializing_actions, io_blocks, io_group,                      &
                message_string, runnr, simulated_time, simulated_time_chr,      &
-               time_since_reference_point, write_binary
+               time_since_reference_point, write_binary, top_heatflux,     &
+               top_momentumflux_u, top_momentumflux_v, top_salinityflux
 
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point, log_point_s, cpu_statistics
 
     USE indices,                                                               &
-        ONLY:  nbgp
+        ONLY:  nbgp, nz, nzt, nzb
 
     USE netcdf_data_input_mod,                                                 &
         ONLY:  netcdf_data_input_inquire_file, netcdf_data_input_init,         &
@@ -260,6 +261,13 @@
    Real(wp),allocatable,dimension(:)   :: T_mpas, S_mpas, U_mpas, V_mpas
    Real(wp),allocatable,dimension(:)   :: wt, ws, uw, vw, zmid_mpas, zedge_mpas
    Real(wp) :: wtflux, wsflux, uwflux, vwflux, zuLES
+!
+!-- Local variables
+    CHARACTER(LEN=9)  ::  time_to_string  !<
+    CHARACTER(LEN=10) ::  env_string      !< to store string of environment var
+    INTEGER(iwp)      ::  env_stat        !< to hold status of GET_ENV
+    INTEGER(iwp)      ::  myid_openmpi    !< OpenMPI local rank for CUDA aware MPI
+   Real(wp) :: coeff1, coeff2
 
    nVertLevels = 20
    allocate(T_mpas(nVertLevels),S_mpas(nVertLevels),U_mpas(nVertLevels),V_mpas(nVertLevels))
@@ -267,17 +275,19 @@
    allocate(wt(nVertLevels),ws(nVertLevels),uw(nVertLevels),vw(nVertLevels))
 
    wtflux = 1.78e-5
-   wsflux = 0.0
+   wsflux = 1e-4 
    uwflux = 0.0
    vwflux = 0.0
 
-   zmid_mpas(1) = 0.0_wp
-   zedge_mpas(1) = -5.0_wp
+
+   zedge_mpas(1) = 0.0_wp
+   zmid_mpas(1) = -5.0_wp
 
    do i=2,nVertLevels
       zmid_mpas(i) = zmid_mpas(i-1) - 10.0_wp
       zedge_mpas(i) = zedge_mpas(i-1) - 10.0_wp
    enddo
+
 
    zedge_mpas(nVertLevels+1) = zedge_mpas(nVertLevels) - 10.0_wp
 
@@ -290,14 +300,6 @@
 
    ! will need to interpolate profiles to an LES grid, or maybe assume the same???
    ! at end assign fluxes tot mpas variables and end routine.
-
-!
-!-- Local variables
-    CHARACTER(LEN=9)  ::  time_to_string  !<
-    CHARACTER(LEN=10) ::  env_string      !< to store string of environment var
-    INTEGER(iwp)      ::  env_stat        !< to hold status of GET_ENV
-    INTEGER(iwp)      ::  i               !<
-    INTEGER(iwp)      ::  myid_openmpi    !< OpenMPI local rank for CUDA aware MPI
 
 #if defined( __parallel )
 !
@@ -317,7 +319,7 @@
     top_momentumflux_u = uwflux
     top_momentumflux_v = vwflux
     top_heatflux = wtflux
-    top_salinityflux = = wsflux 
+    top_salinityflux = wsflux 
    
     !TODO ooverride the LES setting from a namelist
 !
@@ -328,15 +330,10 @@
 !-- Start of total CPU time measuring.
     CALL cpu_log( log_point(1), 'total', 'start' )
     CALL cpu_log( log_point(2), 'initialisation', 'start' )
-!
+
+    !
 !-- Read control parameters from NAMELIST files and read environment-variables
     CALL parin
-!
-
-    zu(nz+2) = 0.5
-    do i = nz+1,1,-1
-      zu(i) = zu(i+1) - 1.0
-    enddo
 
 !
 !-- Set netcdf output fields -- not sure how or if to do this once hooked to MPAS
@@ -391,6 +388,13 @@
 !-- Determine processor topology and local array indices
     CALL init_pegrid
 
+    allocate(zu(nzb:nzt+1))
+
+    zu(nzt+1) = 0.5
+    do i = nzt,nzb,-1
+      zu(i) = zu(i+1) - 1.0
+    enddo
+
 !-- Check if input file according to input-data standard exists
     CALL netcdf_data_input_inquire_file
     !
@@ -398,16 +402,7 @@
 !-- topography information if required
     CALL init_grid
 
-    ! interpolate S, T, U, V profiles to the LES grid
-!    i=2
-!    do j=1,nz
-       !interpolate position j
-       ! if zu(j) > zmid_mpas(i) 
-       ! increase i
-!    end do
-
-
-    !
+!
 !-- Read global attributes if available.  
     CALL netcdf_data_input_init 
     !
@@ -422,6 +417,37 @@
 !
 !-- Initialize all necessary variables
     CALL init_3d_model
+    i = 1
+    do while (i < nVertLevels-1)
+      do j=nzt,nzb,-1
+         if(zu(j) < zmid_mpas(i+1)) then
+           i = i+1
+           i = min(i,nVertLevels-1) 
+         endif
+
+         coeff2 = (T_mpas(i) - T_mpas(i+1)) / (zmid_mpas(i) - zmid_mpas(i+1))
+         coeff1 = T_mpas(i+1) - coeff2*zmid_mpas(i+1)
+         pt(j,:,:) = coeff2*zu(j) + coeff1
+
+         coeff2 = (S_mpas(i) - S_mpas(i+1)) / (zmid_mpas(i) - zmid_mpas(i+1))
+         coeff1 = S_mpas(i+1) - coeff2*zmid_mpas(i+1)
+         sa(j,:,:) = coeff2*zu(j) + coeff1
+
+         coeff2 = (U_mpas(i) - U_mpas(i+1)) / (zmid_mpas(i) - zmid_mpas(i+1))
+         coeff1 = U_mpas(i+1) - coeff2*zmid_mpas(i+1)
+         u(j,:,:) = coeff2*zu(j) + coeff1
+
+         coeff2 = (V_mpas(i) - V_mpas(i+1)) / (zmid_mpas(i) - zmid_mpas(i+1))
+         coeff1 = V_mpas(i+1) - coeff2*zmid_mpas(i+1)
+         v(j,:,:) = coeff2*zu(j) + coeff1
+
+      enddo
+    enddo
+
+    pt(nzt+1,:,:) = pt(nzt,:,:)
+    sa(nzt+1,:,:) = sa(nzt,:,:)
+    u(nzt+1,:,:) = u(nzt,:,:)
+    v(nzt+1,:,:) = v(nzt,:,:)
 
     !
 !-- Output of program header

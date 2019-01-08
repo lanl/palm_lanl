@@ -224,8 +224,8 @@
 !> @todo create routine last_actions instead of calling lsm_last_actions etc.
 !> @todo move chem_init call to init_3d_model or to check_parameters
 !------------------------------------------------------------------------------!
- PROGRAM palm!(T_mpas,S_mpas,U_mpas,V_mpas,wt,ws,uw,v,zmid_mpas,zedge_mpas, &
-            ! wtflux,wsflux,uwflux,vwflux,zuLES)
+ SUBROUTINE palm(T_mpas,S_mpas,U_mpas,V_mpas,wt,ws,uw,vw,zmid_mpas,zedge_mpas, &
+             wtflux,wsflux,uwflux,vwflux,zuLES)
 
     USE arrays_3d
 
@@ -489,4 +489,4 @@
     CALL MPI_FINALIZE( ierr )
 #endif
 
- END PROGRAM palm
+ END SUBROUTINE palm

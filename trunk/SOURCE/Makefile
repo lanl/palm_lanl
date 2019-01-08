@@ -433,6 +433,8 @@
 # shellscript "mrun"
 #------------------------------------------------------------------------------!
 
+OS := $(shell uname -s)
+
 PROG =  palm
 
 SOURCES = \
@@ -534,7 +536,7 @@ LDFLAGS =
 
 
 # The following line is needed for palm_simple_install, don't remove it!
-#to_be_replaced_by_include
+include MAKE.inc
 
 
 .SUFFIXES:
@@ -545,6 +547,17 @@ all: $(PROG)
 
 $(PROG): $(OBJS)
 	$(F90) $(F90FLAGS) -o $(PROG) $(OBJS) $(LDFLAGS)
+
+libs: libLES.a
+
+libLES.a: $(OBJS)
+ifeq ($(OS),Linux)
+	ar cr -o libLES.a *.o 
+endif
+ifeq ($(OS),Darwin)
+	libtool -static -o libLES.a *.o
+endif
+	ranlib libLES.a
 
 clean:
 	rm -f $(PROG) $(OBJS) *.mod *.i *.lst
@@ -930,6 +943,7 @@ turbulence_closure_mod.o: \
 	mod_kinds.o \
 	modules.o \
 	stokes_drift_mod.o \
+	stokes_force_mod.o \
 	surface_mod.o
 wrd_write_string.o: \
 	mod_kinds.o

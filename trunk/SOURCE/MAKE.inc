@@ -1,8 +1,0 @@
-# Contents of this file are included in palm's makefile if the simple build
-# process (palm_simple_build) is used.
-# Please adjust compiling parameters as required for your system.
-
-F90=mpif90
-COPT= -cpp -DMPI_REAL=MPI_DOUBLE_PRECISION -DMPI_2REAL=MPI_2DOUBLE_PRECISION -D__netcdf -D__parallel
-F90FLAGS= -Ofast -ffree-line-length-none -I /usr/local/include
-LDFLAGS= -lnetcdff

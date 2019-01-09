@@ -19,107 +19,107 @@
 !
 ! Current revisions:
 ! -----------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: palm.f90 2977 2018-04-17 10:27:57Z kanani $
-! Deduct spinup_time from RUN_CONTROL output of main 3d run 
+! Deduct spinup_time from RUN_CONTROL output of main 3d run
 ! (use time_since_reference_point instead of simulated_time)
-! 
+!
 ! 2951 2018-04-06 09:05:08Z kanani
 ! Add log_point_s for pmci_init
-! 
+!
 ! 2903 2018-03-16 08:17:06Z hellstea
 ! Nesting-related calls to pmci_ensure_nest_mass_conservation and pres after
 ! the nest initialization are removed as they may create unwanted initial
 ! perturbation in some cases.
-! 
+!
 ! 2894 2018-03-15 09:17:58Z Giersch
-! Modified todo list, _write_restart_data/_last_actions has been renamed to 
+! Modified todo list, _write_restart_data/_last_actions has been renamed to
 ! _wrd_local, unit 14 will be opened now for each io_group
-! write_3d_binary is called wrd_local now, wrd_global moved from wrd_local to 
+! write_3d_binary is called wrd_local now, wrd_global moved from wrd_local to
 ! palm.f90, unit 14 is closed directly after the wrd_local call, Module related
 ! routines for writing restart data have been moved to wrd_local
-! 
+!
 ! 2801 2018-02-14 16:01:55Z suehring
 ! Changed lpm from subroutine to module.
 ! Introduce particle transfer in nested models.
-! 
+!
 ! 2766 2018-01-22 17:17:47Z kanani
 ! Removed preprocessor directive __chem
-! 
+!
 ! 2720 2018-01-02 16:27:15Z kanani
 ! Version update to 5.0
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 ! Implementation of chemistry module (FK)
 ! Introduce input-data standard
 ! Rename lsm_last_actions into lsm_write_restart_data
 ! Move usm_write_restart_data into io_blocks loop (MS)
-! 
+!
 ! 2512 2017-10-04 08:26:59Z raasch
 ! user interface required revision updated
-! 
+!
 ! 2320 2017-07-21 12:47:43Z suehring
 ! Modularize large-scale forcing and nudging
-! 
+!
 ! 2298 2017-06-29 09:28:18Z raasch
 ! type of write_binary changed from CHARACTER to LOGICAL,
 ! user interface required revision updated, MPI2 related part removed
-! 
+!
 ! 2296 2017-06-28 07:53:56Z maronga
 ! Added call to new spinup routine
-! 
+!
 ! 2292 2017-06-20 09:51:42Z schwenkel
-! Implementation of new microphysic scheme: cloud_scheme = 'morrison' 
-! includes two more prognostic equations for cloud drop concentration (nc)  
-! and cloud water content (qc). 
-! 
+! Implementation of new microphysic scheme: cloud_scheme = 'morrison'
+! includes two more prognostic equations for cloud drop concentration (nc)
+! and cloud water content (qc).
+!
 ! 2261 2017-06-08 14:25:57Z raasch
 ! output of run number for mrun to create unified cycle numbers
-! 
+!
 ! 2233 2017-05-30 18:08:54Z suehring
 !
 ! 2232 2017-05-30 17:47:52Z suehring
-! Renamed wall_flags_0 and wall_flags_00 into advc_flags_1 and advc_flags_2, 
-! respectively, within copyin statement. Moreover, introduced further flag 
-! array wall_flags_0. 
+! Renamed wall_flags_0 and wall_flags_00 into advc_flags_1 and advc_flags_2,
+! respectively, within copyin statement. Moreover, introduced further flag
+! array wall_flags_0.
 ! Remove unused variables from ONLY list.
-! 
+!
 ! 2178 2017-03-17 11:07:39Z hellstea
 ! Calls for pmci_ensure_nest_mass_conservation and pres are added after
 ! the nest initialization
 !
 ! 2118 2017-01-17 16:38:49Z raasch
 ! OpenACC directives and related code removed
-! 
+!
 ! 2011 2016-09-19 17:29:57Z kanani
 ! Flag urban_surface is now defined in module control_parameters.
-! 
+!
 ! 2007 2016-08-24 15:47:17Z kanani
 ! Temporarily added CALL for writing of restart data for urban surface model
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1976 2016-07-27 13:28:04Z maronga
-! Added call to radiation_last_actions for binary output of land surface model 
+! Added call to radiation_last_actions for binary output of land surface model
 ! data
-! 
+!
 ! 1972 2016-07-26 07:52:02Z maronga
 ! Added call to lsm_last_actions for binary output of land surface model data
-! 
+!
 ! 1960 2016-07-12 16:34:24Z suehring
 ! Separate humidity and passive scalar
-! 
+!
 ! 1834 2016-04-07 14:34:20Z raasch
-! Initial version of purely vertical nesting introduced. 
-! 
+! Initial version of purely vertical nesting introduced.
+!
 ! 1833 2016-04-07 14:23:03Z raasch
 ! required user interface version changed
 !
@@ -145,7 +145,7 @@
 ! OpenACC-adjustment for new surface layer parameterization
 !
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
+! Code annotations made doxygen readable
 !
 ! 1668 2015-09-23 13:45:36Z raasch
 ! warning replaced by abort in case of failed user interface check
@@ -158,10 +158,10 @@
 !
 ! 1468 2014-09-24 14:06:57Z maronga
 ! Adapted for use on up to 6-digit processor cores
-! 
+!
 ! 1402 2014-05-09 14:25:13Z raasch
 ! location messages added
-! 
+!
 ! 1374 2014-04-25 12:55:07Z raasch
 ! bugfix: various modules added
 !
@@ -214,32 +214,30 @@
 !
 ! Description:
 ! ------------
-!> Large-Eddy Simulation (LES) model for the convective boundary layer, 
+!> Large-Eddy Simulation (LES) model for the convective boundary layer,
 !> optimized for use on parallel machines (implementation realized using the
 !> Message Passing Interface (MPI)). The model can also be run on vector machines
-!> (less well optimized) and workstations. Versions for the different types of 
+!> (less well optimized) and workstations. Versions for the different types of
 !> machines are controlled via cpp-directives.
 !> Model runs are only feasible using the ksh-script mrun.
 !>
 !> @todo create routine last_actions instead of calling lsm_last_actions etc.
 !> @todo move chem_init call to init_3d_model or to check_parameters
 !------------------------------------------------------------------------------!
- SUBROUTINE palm(T_mpas,S_mpas,U_mpas,V_mpas,wt,ws,uw,vw,lt_mpas, &
-             f_mpas,wtflux,wsflux,uwflux,vwflux,dzLES)
+ subroutine palm(T_mpas,S_mpas,U_mpas,V_mpas,lt_mpas, &
+             f_mpas,wtflux,wsflux,uwflux,vwflux,dzLES,nzLES)
 
-          TODO: 
-          1) construct zmid and zedge from layer thickness
-          2) construct les from zedge span and a dz, stop short at bottom
-          3) interpolate wt, ws, uw, vw back to MPAS grid at end and send back
 
     USE arrays_3d
 
-    USE control_parameters,                                                    &
-        ONLY:  data_output, data_output_pr,constant_diffusion, do3d_at_begin,               &
-               section_xy, initializing_actions, io_blocks, io_group,                      &
-               message_string, runnr, simulated_time, simulated_time_chr,      &
-               time_since_reference_point, write_binary, top_heatflux,     &
-               top_momentumflux_u, top_momentumflux_v, top_salinityflux
+    USE control_parameters,                                                     &
+        ONLY:  data_output, data_output_pr,constant_diffusion, do3d_at_begin,   &
+               section_xy, initializing_actions, io_blocks, io_group,           &
+               message_string, runnr, simulated_time, simulated_time_chr,       &
+               time_since_reference_point, write_binary, top_heatflux,          &
+               top_momentumflux_u, top_momentumflux_v, top_salinityflux, f,     &
+               end_time, dt_dopr, dt_data_output, dt_data_output_av, dt_disturb, &
+               dt_dots
 
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point, log_point_s, cpu_statistics
@@ -258,26 +256,46 @@
     USE write_restart_data_mod,                                                &
         ONLY:  wrd_global, wrd_local
 
+    use statistics, ONLY: hom, statistic_regions
+
     IMPLICIT NONE
 
 !
 ! -- Variables from MPAS
-   integer(iwp) :: nVertLevels, i, j, k
-   Real(wp),allocatable,dimension(:)   :: T_mpas, S_mpas, U_mpas, V_mpas
-   Real(wp),allocatable,dimension(:)   :: wt, ws, uw, vw, lt_mpas, zmid, zedge
-   Real(wp) :: wtflux, wsflux, uwflux, vwflux, dzLES
+   integer(iwp) :: nVertLevels, i, j, k, knt, nzLES, iz
+   Real(wp),allocatable,dimension(:),intent(inout)   :: T_mpas, S_mpas, U_mpas, V_mpas
+   Real(wp),allocatable,dimension(:)     :: lt_mpas
+   Real(wp),allocatable,dimension(:)   :: Tles, Sles, Ules, Vles, zmid, zedge
+   real(wp),allocatable,dimension(:)   :: zeLES, wtLES, wsLES, wuLES, wvLES
+   Real(wp) :: wtflux, wsflux, uwflux, vwflux, dzLES, z_fac, z_frst, z_cntr
+   real(wp) :: z_fac1, z_fac2, z_facn, tol, test, f_mpas
 !
 !-- Local variables
-    CHARACTER(LEN=9)  ::  time_to_string  !<
-    CHARACTER(LEN=10) ::  env_string      !< to store string of environment var
-    INTEGER(iwp)      ::  env_stat        !< to hold status of GET_ENV
-    INTEGER(iwp)      ::  myid_openmpi    !< OpenMPI local rank for CUDA aware MPI
+   CHARACTER(LEN=9)  ::  time_to_string  !<
+   CHARACTER(LEN=10) ::  env_string      !< to store string of environment var
+   INTEGER(iwp)      ::  env_stat        !< to hold status of GET_ENV
+   INTEGER(iwp)      ::  myid_openmpi    !< OpenMPI local rank for CUDA aware MPI
    Real(wp) :: coeff1, coeff2
 
-   allocate(T_mpas(nVertLevels),S_mpas(nVertLevels),U_mpas(nVertLevels),V_mpas(nVertLevels))
-   allocate(zmid_mpas(nVertLevels))
-   allocate(wt(nVertLevels),ws(nVertLevels),uw(nVertLevels),vw(nVertLevels))
+!more arguments to send
+! dt_data_output, dt_disturb, dt_data_output_av, dt_dopr
+! end_time
 
+   dt_data_output = 86400
+   dt_disturb = 120
+   dt_data_output_av = 86400
+   dt_dopr = 86400
+   end_time = 120
+   dt_dots = 86400
+
+  ! nVertLevels = 50
+  ! nzLES = 128
+   nz = nzLES
+  ! dzLES = 1.0_wp
+   allocate(T_mpas(nVertLevels),S_mpas(nVertLevels),U_mpas(nVertLevels),V_mpas(nVertLevels))
+   allocate(zmid(nVertLevels),zedge(nVertLevels+1),lt_mpas(nVertLevels))
+
+!   lt_mpas(:) = 50.0_wp
    zmid(1) = -0.5_wp*lt_mpas(1)
    zedge(1) = 0
 
@@ -288,12 +306,12 @@
 
    zedge(nvertLevels+1) = zedge(nVertLevels) - lt_mpas(nVertLevels)
 
-   U_mpas(:) = 0.0_wp
-   V_mpas(:) = 0.0_wp
-   S_mpas(:) = 34.0_wp
-   do i=1,nVertLevels
-      T_mpas(i) = 293.15 + 0.005*zmid_mpas(i)
-   enddo
+!   U_mpas(:) = 0.0_wp
+!   V_mpas(:) = 0.0_wp
+!   S_mpas(:) = 34.0_wp!
+!   do i=1,nVertLevels
+!      T_mpas(i) = 293.15 + 0.005*zmid(i)
+  ! enddo
 
    ! will need to interpolate profiles to an LES grid, or maybe assume the same???
    ! at end assign fluxes tot mpas variables and end routine.
@@ -312,18 +330,23 @@
 !
 #endif
 
-!TODO add check for right / acceptable range. 
+!   f_mpas = 1e-4
+!   uwflux = 0.0
+!   vwflux = 0.0
+!   wsflux = 1e-4
+!   wtflux = -1.78e-5
+
+!TODO add check for right / acceptable range.
     top_momentumflux_u = uwflux
     top_momentumflux_v = vwflux
     top_heatflux = wtflux
-    top_salinityflux = wsflux 
+    top_salinityflux = wsflux
     f = f_mpas
 
     !TODO ooverride the LES setting from a namelist
 !
 !-- Initialize measuring of the CPU-time remaining to the run
     CALL local_tremain_ini
-
 !
 !-- Start of total CPU time measuring.
     CALL cpu_log( log_point(1), 'total', 'start' )
@@ -386,15 +409,46 @@
 !-- Determine processor topology and local array indices
     CALL init_pegrid
 
-    allocate(zu(nzb:nzt+1))
+    allocate(zu(nzb:nzt+1),zeLES(nzb-1:nzt+1),Tles(0:nzLES+1),Sles(0:nzLES+1))
+    allocate(Ules(0:nzLES+1),Vles(0:nzLES+1))
 
-    nzt = abs(zedge(nVertLevels+1) - zedge(nVertLevels)) / dzLES
-    !probably want some type of stretched grid TODO
+    nzt = nzLES
+    ! construct a stretched stretched grid
+    z_cntr = zedge(nVertLevels+1)
+    z_frst = -dzLES
+    z_fac1 = z_cntr / z_frst
+    z_fac2 = 1.0_wp / float(nzt)
+    z_fac = 1.10_wp
+    tol = 1.0E-10_wp
+    test = 10.00_wp
+    knt = 0
 
-    zu(nzt+1) = dzLES*0.5_wp
-    do i = nzt,nzb,-1
-      zu(i) = zu(i+1) - dzLES
+    do while (test > tol)
+      knt = knt + 1
+      z_facn = (z_fac1*(z_fac - 1.0_wp) + 1.0_wp)**z_fac2
+      test = abs(1.0 - z_facn / z_fac)
+      if(knt .gt. 500) THEN
+        print *, 'cannot find stretching factor,'
+        print *, 'z_fac = ',z_fac, 'z_facn = ',z_facn, 'knt = ',knt
+        stop
+      ENDIF
+      z_fac = z_facn
     enddo
+
+    zeLES(nzt+1) = dzLES
+    zeLES(nzt) = 0.0_wp
+    zeLES(nzt-1) = -dzLES
+    iz = 2
+    do i = nzt-2,nzb,-1
+      zeLES(i) = zeLES(nzt-1)*(z_fac**(float(iz)) - 1.0_wp) / (z_fac - 1.0_wp)
+      iz = iz + 1
+    enddo
+    zeLES(nzb-1) = max(z_cntr,zeLES(nzb) - (zeLES(nzb+1) - zeLES(nzb)))
+
+    do i = nzt,nzb,-1
+      zu(i) = 0.5*(zeLES(i) + zeLES(i-1))
+    enddo
+    zu(nzt+1) = dzLES*0.5
 
 !-- Check if input file according to input-data standard exists
     CALL netcdf_data_input_inquire_file
@@ -404,12 +458,12 @@
     CALL init_grid
 
 !
-!-- Read global attributes if available.  
-    CALL netcdf_data_input_init 
+!-- Read global attributes if available.
+    CALL netcdf_data_input_init
     !
-!-- Read surface classification data, e.g. vegetation and soil types, water 
-!-- surfaces, etc., if available. Some of these data is required before 
-!-- check parameters is invoked.     
+!-- Read surface classification data, e.g. vegetation and soil types, water
+!-- surfaces, etc., if available. Some of these data is required before
+!-- check parameters is invoked.
     CALL netcdf_data_input_surface_data
 
 !-- Check control parameters and deduce further quantities
@@ -423,7 +477,7 @@
       do j=nzt,nzb,-1
          if(zu(j) < zmid(i+1)) then
            i = i+1
-           i = min(i,nVertLevels-1) 
+           i = min(i,nVertLevels-1)
          endif
 
          coeff2 = (T_mpas(i) - T_mpas(i+1)) / (zmid(i) - zmid(i+1))
@@ -487,8 +541,42 @@
     CALL cpu_statistics
 
     ! need tto interpolate back to mpas for fluxes, include sgs terms?
+    Tles = hom(:,1,4,statistic_regions) - 273.15
+    Sles = hom(:,1,23,statistic_regions)
+    Ules = hom(:,1,1,statistic_regions)
+    Vles = hom(:,1,2,statistic_regions)
+
+    i = nzt-1
+    do while (i > 1)
+      do j=1,nVertLevels
+         if(zmid(j) < zu(i)) then
+           do while (zmid(j) < zu(i))
+              i = i-1
+           enddo
+           i = max(i,nzb)
+         endif
+
+         coeff2 = (Tles(i+1) - Tles(i)) / (zu(i+1) - zu(i))
+         coeff1 = Tles(i+1) - coeff2*zu(i+1)
+         T_mpas(j) = coeff2*zmid(j) + coeff1
+
+         coeff2 = (Sles(i+1) - Sles(i)) / (zu(i+1) - zu(i))
+         coeff1 = Sles(i+1) - coeff2*zu(i+1)
+         S_mpas(j) = coeff2*zmid(j) + coeff1
+
+         coeff2 = (Ules(i+1) - Ules(i)) / (zu(i+1) - zu(i))
+         coeff1 = Ules(i+1) - coeff2*zu(i+1)
+         U_mpas(j) = coeff2*zmid(j) + coeff1
+
+         coeff2 = (Vles(i+1) - Vles(i)) / (zu(i+1) - zu(i))
+         coeff1 = Vles(i+1) - coeff2*zu(i+1)
+         V_mpas(j) = coeff2*zmid(j) + coeff1
+
+      enddo
+    enddo
+
 #if defined( __parallel )
     CALL MPI_FINALIZE( ierr )
 #endif
 
- END SUBROUTINE palm
+END subroutine palm

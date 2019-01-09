@@ -224,8 +224,13 @@
 !> @todo create routine last_actions instead of calling lsm_last_actions etc.
 !> @todo move chem_init call to init_3d_model or to check_parameters
 !------------------------------------------------------------------------------!
- SUBROUTINE palm(T_mpas,S_mpas,U_mpas,V_mpas,wt,ws,uw,vw,zmid_mpas,zedge_mpas, &
-             f_mpas,wtflux,wsflux,uwflux,vwflux,zuLES)
+ SUBROUTINE palm(T_mpas,S_mpas,U_mpas,V_mpas,wt,ws,uw,vw,lt_mpas, &
+             f_mpas,wtflux,wsflux,uwflux,vwflux,dzLES)
+
+          TODO: 
+          1) construct zmid and zedge from layer thickness
+          2) construct les from zedge span and a dz, stop short at bottom
+          3) interpolate wt, ws, uw, vw back to MPAS grid at end and send back
 
     USE arrays_3d
 
@@ -259,8 +264,8 @@
 ! -- Variables from MPAS
    integer(iwp) :: nVertLevels, i, j, k
    Real(wp),allocatable,dimension(:)   :: T_mpas, S_mpas, U_mpas, V_mpas
-   Real(wp),allocatable,dimension(:)   :: wt, ws, uw, vw, zmid_mpas, zedge_mpas
-   Real(wp) :: wtflux, wsflux, uwflux, vwflux, zuLES
+   Real(wp),allocatable,dimension(:)   :: wt, ws, uw, vw, lt_mpas, zmid, zedge
+   Real(wp) :: wtflux, wsflux, uwflux, vwflux, dzLES
 !
 !-- Local variables
     CHARACTER(LEN=9)  ::  time_to_string  !<
@@ -269,27 +274,19 @@
     INTEGER(iwp)      ::  myid_openmpi    !< OpenMPI local rank for CUDA aware MPI
    Real(wp) :: coeff1, coeff2
 
-   nVertLevels = 20
    allocate(T_mpas(nVertLevels),S_mpas(nVertLevels),U_mpas(nVertLevels),V_mpas(nVertLevels))
-   allocate(zmid_mpas(nVertLevels),zedge_mpas(nVertLevels+1))
+   allocate(zmid_mpas(nVertLevels))
    allocate(wt(nVertLevels),ws(nVertLevels),uw(nVertLevels),vw(nVertLevels))
 
-   wtflux = 1.78e-5
-   wsflux = 1e-4 
-   uwflux = 0.0
-   vwflux = 0.0
-
-
-   zedge_mpas(1) = 0.0_wp
-   zmid_mpas(1) = -5.0_wp
+   zmid(1) = -0.5_wp*lt_mpas(1)
+   zedge(1) = 0
 
    do i=2,nVertLevels
-      zmid_mpas(i) = zmid_mpas(i-1) - 10.0_wp
-      zedge_mpas(i) = zedge_mpas(i-1) - 10.0_wp
+      zmid(i) = zmid(i-1) - 0.5*(lt_mpas(i-1) + lt_mpas(i))
+      zedge(i) = zedge(i-1) - lt_mpas(i-1)
    enddo
 
-
-   zedge_mpas(nVertLevels+1) = zedge_mpas(nVertLevels) - 10.0_wp
+   zedge(nvertLevels+1) = zedge(nVertLevels) - lt_mpas(nVertLevels)
 
    U_mpas(:) = 0.0_wp
    V_mpas(:) = 0.0_wp
@@ -391,9 +388,12 @@
 
     allocate(zu(nzb:nzt+1))
 
-    zu(nzt+1) = 0.5
+    nzt = abs(zedge(nVertLevels+1) - zedge(nVertLevels)) / dzLES
+    !probably want some type of stretched grid TODO
+
+    zu(nzt+1) = dzLES*0.5_wp
     do i = nzt,nzb,-1
-      zu(i) = zu(i+1) - 1.0
+      zu(i) = zu(i+1) - dzLES
     enddo
 
 !-- Check if input file according to input-data standard exists
@@ -421,25 +421,25 @@
     i = 1
     do while (i < nVertLevels-1)
       do j=nzt,nzb,-1
-         if(zu(j) < zmid_mpas(i+1)) then
+         if(zu(j) < zmid(i+1)) then
            i = i+1
            i = min(i,nVertLevels-1) 
          endif
 
-         coeff2 = (T_mpas(i) - T_mpas(i+1)) / (zmid_mpas(i) - zmid_mpas(i+1))
-         coeff1 = T_mpas(i+1) - coeff2*zmid_mpas(i+1)
+         coeff2 = (T_mpas(i) - T_mpas(i+1)) / (zmid(i) - zmid(i+1))
+         coeff1 = T_mpas(i+1) - coeff2*zmid(i+1)
          pt(j,:,:) = coeff2*zu(j) + coeff1
 
-         coeff2 = (S_mpas(i) - S_mpas(i+1)) / (zmid_mpas(i) - zmid_mpas(i+1))
-         coeff1 = S_mpas(i+1) - coeff2*zmid_mpas(i+1)
+         coeff2 = (S_mpas(i) - S_mpas(i+1)) / (zmid(i) - zmid(i+1))
+         coeff1 = S_mpas(i+1) - coeff2*zmid(i+1)
          sa(j,:,:) = coeff2*zu(j) + coeff1
 
-         coeff2 = (U_mpas(i) - U_mpas(i+1)) / (zmid_mpas(i) - zmid_mpas(i+1))
-         coeff1 = U_mpas(i+1) - coeff2*zmid_mpas(i+1)
+         coeff2 = (U_mpas(i) - U_mpas(i+1)) / (zmid(i) - zmid(i+1))
+         coeff1 = U_mpas(i+1) - coeff2*zmid(i+1)
          u(j,:,:) = coeff2*zu(j) + coeff1
 
-         coeff2 = (V_mpas(i) - V_mpas(i+1)) / (zmid_mpas(i) - zmid_mpas(i+1))
-         coeff1 = V_mpas(i+1) - coeff2*zmid_mpas(i+1)
+         coeff2 = (V_mpas(i) - V_mpas(i+1)) / (zmid(i) - zmid(i+1))
+         coeff1 = V_mpas(i+1) - coeff2*zmid(i+1)
          v(j,:,:) = coeff2*zu(j) + coeff1
 
       enddo
@@ -486,6 +486,7 @@
     CALL cpu_log( log_point(1), 'total', 'stop' )
     CALL cpu_statistics
 
+    ! need tto interpolate back to mpas for fluxes, include sgs terms?
 #if defined( __parallel )
     CALL MPI_FINALIZE( ierr )
 #endif

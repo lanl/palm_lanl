@@ -225,7 +225,7 @@
 !> @todo move chem_init call to init_3d_model or to check_parameters
 !------------------------------------------------------------------------------!
  SUBROUTINE palm(T_mpas,S_mpas,U_mpas,V_mpas,wt,ws,uw,vw,zmid_mpas,zedge_mpas, &
-             wtflux,wsflux,uwflux,vwflux,zuLES)
+             f_mpas,wtflux,wsflux,uwflux,vwflux,zuLES)
 
     USE arrays_3d
 
@@ -320,7 +320,8 @@
     top_momentumflux_v = vwflux
     top_heatflux = wtflux
     top_salinityflux = wsflux 
-   
+    f = f_mpas
+
     !TODO ooverride the LES setting from a namelist
 !
 !-- Initialize measuring of the CPU-time remaining to the run

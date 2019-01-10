@@ -122,10 +122,7 @@ CFLAGS = -O
 
 # The following line is needed for palm_simple_install, don't remove it!
 
-F90=mpif90
 COPT= -cpp -DMPI_REAL=MPI_DOUBLE_PRECISION -DMPI_2REAL=MPI_2DOUBLE_PRECISION -D__netcdf -D__parallel
-F90FLAGS= -Ofast -ffree-line-length-none -I /usr/include
-LDFLAGS= -lnetcdff
 
 .SUFFIXES:
 .SUFFIXES: .o .f90
@@ -148,7 +145,7 @@ endif
 	ranlib libLES.a
 
 clean:
-	rm -f $(PROG) $(OBJS) *.mod *.i *.lst
+	rm -f libLES.a $(PROG) $(OBJS) *.mod *.i *.lst
 
 .f90.o:
 	$(F90) $(F90FLAGS) $(COPT) -c $<

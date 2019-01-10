@@ -1359,7 +1359,7 @@
     REAL(wp) :: beta_const = 8.0E-4                              !< fixed beta_S value
     REAL(wp) :: pt_ref = 15.0_wp                                 !< potential temperature reference falue
     REAL(wp) :: sa_ref = 35.0_wp                                 !< salinity reerence value for fixed linear density equation
-    LOGICAL ::  idealized_diurnal = .FALSE.                      !< flag for diurnal cycle
+    LOGICAL ::  idealized_diurnal = .TRUE.                      !< flag for diurnal cycle
     REAL(wp) :: ideal_solar_division = 0.67_wp                   !< value for breakdown of double exponential
     REAL(wp) :: ideal_solar_efolding1 = 1.0_wp/1.0_wp            !< efolding depth for IR in solar (m^-1)
     REAL(wp) :: ideal_solar_efolding2 = 1.0_wp/17.0_wp           !< efolding depth for blue in solar (m^-1)

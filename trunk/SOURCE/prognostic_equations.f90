@@ -363,7 +363,7 @@
 
     USE coriolis_mod,                                                          &
         ONLY:  coriolis
-    
+
     USE diffusion_s_mod,                                                       &
         ONLY:  diffusion_s
 
@@ -563,23 +563,33 @@
              tend(:,j,i) = 0.0_wp
              IF ( timestep_scheme(1:5) == 'runge' )  THEN
                 IF ( ws_scheme_mom )  THEN
+                   CALL cpu_log( log_point(43), 'advec-u-ws', 'start' )
                    CALL advec_u_ws( i, j, i_omp_start, tn )
+                   CALL cpu_log( log_point(43), 'advec-u-ws', 'stop' )
                 ELSE
                    CALL advec_u_pw( i, j )
                 ENDIF
              ELSE
                 CALL advec_u_up( i, j )
              ENDIF
+             CALL cpu_log( log_point(44), 'diffusion-u', 'start' )
              CALL diffusion_u( i, j )
+             CALL cpu_log( log_point(44), 'diffusion-u', 'stop' )
+             CALL cpu_log( log_point(45), 'coriolis-u', 'start' )
              CALL coriolis( i, j, 1 )
+             CALL cpu_log( log_point(45), 'coriolis-u', 'stop' )
              IF ( sloping_surface  .AND.  .NOT. neutral )  THEN
+                CALL cpu_log( log_point(46), 'buoyancy-u', 'start' )
                 CALL buoyancy( i, j, pt, 1 )
+                CALL cpu_log( log_point(46), 'buoyancy-u', 'stop' )
              ENDIF
 
 !
 !--          If required, compute Stokes forces
              IF ( ocean .AND. stokes_force ) THEN
+                CALL cpu_log( log_point(47), 'stokes-u', 'start' )
                 CALL stokes_force_uvw( i, j, 1 )
+                CALL cpu_log( log_point(47), 'stokes-u', 'stop' )
              ENDIF
 
 !
@@ -606,17 +616,19 @@
 !
 !--          Prognostic equation for u-velocity component
              DO  k = nzb+1, nzt
+
                 u_p(k,j,i) = u(k,j,i) + ( dt_3d *                               &
                                             ( tsc(2) * tend(k,j,i) +            &
                                               tsc(3) * tu_m(k,j,i) )            &
                                             - tsc(5) * rdf(k)                   &
                                                      * ( u(k,j,i) - u_init(k) ) &
                                         ) * MERGE( 1.0_wp, 0.0_wp,              &
-                     BTEST( wall_flags_0(k,j,i), 1 )&
+                                                 BTEST( wall_flags_0(k,j,i), 1 )&
                                                  )
              ENDDO
 
-!!--          Calculate tendencies for the next Runge-Kutta step
+!
+!--          Calculate tendencies for the next Runge-Kutta step
              IF ( timestep_scheme(1:5) == 'runge' )  THEN
                 IF ( intermediate_timestep_count == 1 )  THEN
                    DO  k = nzb+1, nzt

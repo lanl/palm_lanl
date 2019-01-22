@@ -20,6 +20,8 @@
 ! Current revisions:
 ! ------------------
 !
+! 2019-01-22 cbegeman
+! Add timers to prognostic_equations_cache and to tcm_prognostic
 !
 ! Former revisions:
 ! -----------------
@@ -361,7 +363,7 @@
 
     USE coriolis_mod,                                                          &
         ONLY:  coriolis
-
+    
     USE diffusion_s_mod,                                                       &
         ONLY:  diffusion_s
 
@@ -506,6 +508,7 @@
          ( intermediate_timestep_count == 1  .OR.                              &
            call_microphysics_at_all_substeps ) )                               &
     THEN
+       CALL cpu_log( log_point(51), 'microphysics', 'start')
        !$OMP PARALLEL PRIVATE (i,j)
        !$OMP DO
        DO  i = nxlg, nxrg
@@ -514,6 +517,7 @@
            ENDDO
        ENDDO
        !$OMP END PARALLEL
+       CALL cpu_log( log_point(51), 'microphysics', 'stop' )
     ENDIF
 
 !
@@ -553,6 +557,7 @@
 !--       Tendency terms for u-velocity component. Please note, in case of
 !--       non-cyclic boundary conditions the grid point i=0 is excluded from
 !--       the prognostic equations for the u-component.
+          CALL cpu_log( log_point(5), 'u-equation', 'start' )
           IF ( i >= nxlu )  THEN
 
              tend(:,j,i) = 0.0_wp
@@ -601,19 +606,17 @@
 !
 !--          Prognostic equation for u-velocity component
              DO  k = nzb+1, nzt
-
                 u_p(k,j,i) = u(k,j,i) + ( dt_3d *                               &
                                             ( tsc(2) * tend(k,j,i) +            &
                                               tsc(3) * tu_m(k,j,i) )            &
                                             - tsc(5) * rdf(k)                   &
                                                      * ( u(k,j,i) - u_init(k) ) &
                                         ) * MERGE( 1.0_wp, 0.0_wp,              &
-                                                   BTEST( wall_flags_0(k,j,i), 1 )&
+                     BTEST( wall_flags_0(k,j,i), 1 )&
                                                  )
              ENDDO
 
-!
-!--          Calculate tendencies for the next Runge-Kutta step
+!!--          Calculate tendencies for the next Runge-Kutta step
              IF ( timestep_scheme(1:5) == 'runge' )  THEN
                 IF ( intermediate_timestep_count == 1 )  THEN
                    DO  k = nzb+1, nzt
@@ -629,10 +632,12 @@
              ENDIF
 
           ENDIF
+          CALL cpu_log( log_point(5), 'u-equation', 'stop' )
 !
 !--       Tendency terms for v-velocity component. Please note, in case of
 !--       non-cyclic boundary conditions the grid point j=0 is excluded from
 !--       the prognostic equations for the v-component. !--
+          CALL cpu_log( log_point(6), 'v-equation', 'start' )
           IF ( j >= nysv )  THEN
 
              tend(:,j,i) = 0.0_wp
@@ -705,9 +710,11 @@
              ENDIF
 
           ENDIF
+          CALL cpu_log( log_point(6), 'v-equation', 'stop' )
 
 !
 !--       Tendency terms for w-velocity component
+          CALL cpu_log( log_point(7), 'w-equation', 'start' )
           tend(:,j,i) = 0.0_wp
           IF ( timestep_scheme(1:5) == 'runge' )  THEN
              IF ( ws_scheme_mom )  THEN
@@ -775,10 +782,12 @@
                 ENDDO
              ENDIF
           ENDIF
+          CALL cpu_log( log_point(7), 'w-equation', 'stop' )
 
 !
 !--       If required, compute prognostic equation for potential temperature
           IF ( .NOT. neutral )  THEN
+             CALL cpu_log( log_point(13), 'pt-equation', 'start' )
 !
 !--          Tendency terms for potential temperature
              tend(:,j,i) = 0.0_wp
@@ -882,12 +891,15 @@
                 ENDIF
              ENDIF
 
+             CALL cpu_log( log_point(13), 'pt-equation', 'stop' )
+
           ENDIF
 
 !
 !--       If required, compute prognostic equation for salinity
           IF ( ocean )  THEN
 
+             CALL cpu_log( log_point(37), 'sa-equation', 'start' )
 !
 !--          Tendency-terms for salinity
              tend(:,j,i) = 0.0_wp
@@ -953,9 +965,12 @@
                 ENDIF
              ENDIF
 
+             CALL cpu_log( log_point(37), 'sa-equation', 'stop' )
 !
 !--          Calculate density by the equation of state for seawater
+             CALL cpu_log( log_point(38), 'eqns-seawater', 'start' )
              CALL eqn_state_seawater( i, j )
+             CALL cpu_log( log_point(38), 'eqns-seawater', 'stop' )
 
           ENDIF
 
@@ -963,6 +978,7 @@
 !--       If required, compute prognostic equation for total water content
           IF ( humidity )  THEN
 
+             CALL cpu_log( log_point(29), 'q-equation', 'start' )
 !
 !--          Tendency-terms for total water content / scalar
              tend(:,j,i) = 0.0_wp
@@ -1042,11 +1058,14 @@
                 ENDIF
              ENDIF
 
+             CALL cpu_log( log_point(29), 'q-equation', 'stop' )
 !
 !--          If required, calculate prognostic equations for cloud water content
 !--          and cloud drop concentration
              IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
 !
+                CALL cpu_log( log_point(67), 'qc-equation', 'start' )
+
 !--             Calculate prognostic equation for cloud water content
                 tend(:,j,i) = 0.0_wp
                 IF ( timestep_scheme(1:5) == 'runge' ) &
@@ -1102,6 +1121,8 @@
                    ENDIF
                 ENDIF
 
+                CALL cpu_log( log_point(67), 'qc-equation', 'stop' )
+                CALL cpu_log( log_point(68), 'nc-equation', 'start' )
 !
 !--             Calculate prognostic equation for cloud drop concentration.
                 tend(:,j,i) = 0.0_wp
@@ -1157,11 +1178,15 @@
                    ENDIF
                 ENDIF
 
+                CALL cpu_log( log_point(68), 'nc-equation', 'stop' )
+
              ENDIF
 !
 !--          If required, calculate prognostic equations for rain water content
 !--          and rain drop concentration
              IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
+
+                CALL cpu_log( log_point(52), 'qr-equation', 'start' )
 !
 !--             Calculate prognostic equation for rain water content
                 tend(:,j,i) = 0.0_wp
@@ -1218,6 +1243,8 @@
                    ENDIF
                 ENDIF
 
+                CALL cpu_log( log_point(52), 'qr-equation', 'stop' )
+                CALL cpu_log( log_point(53), 'nr-equation', 'start' )
 !
 !--             Calculate prognostic equation for rain drop concentration.
                 tend(:,j,i) = 0.0_wp
@@ -1273,6 +1300,8 @@
                    ENDIF
                 ENDIF
 
+                CALL cpu_log( log_point(53), 'nr-equation', 'stop' )
+
              ENDIF
 
           ENDIF
@@ -1280,6 +1309,8 @@
 !
 !--       If required, compute prognostic equation for scalar
           IF ( passive_scalar )  THEN
+       
+             CALL cpu_log( log_point(66), 's-equation', 'start' )
 !
 !--          Tendency-terms for total water content / scalar
              tend(:,j,i) = 0.0_wp
@@ -1369,10 +1400,14 @@
                 ENDIF
              ENDIF
 
+             CALL cpu_log( log_point(66), 's-equation', 'stop' )
+
           ENDIF
 !
 !--       Calculate prognostic equations for turbulence closure
+          CALL cpu_log( log_point(41), 'tcm-equation', 'start' )
           CALL tcm_prognostic( i, j, i_omp_start, tn )
+          CALL cpu_log( log_point(41), 'tcm-equation', 'stop' )
 
 !
 !--       If required, compute prognostic equation for chemical quantites
@@ -2566,7 +2601,9 @@
 
     ENDIF
 
+    CALL cpu_log( log_point(41), 'tcm-equation', 'start' )
     CALL tcm_prognostic()
+    CALL cpu_log( log_point(41), 'tcm-equation', 'stop' )
 
 !
 !-- If required, compute prognostic equation for chemical quantites

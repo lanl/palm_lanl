@@ -498,6 +498,9 @@
     USE constants,                                                             &
         ONLY:  pi, cpw
     
+    USE cpulog,                                                                &
+        ONLY: cpu_log, log_point
+        
     USE control_parameters
     
     USE cpulog,                                                                &
@@ -2398,11 +2401,12 @@
 !-- If required, initialize dvrp-software
     IF ( dt_dvrp /= 9999999.9_wp )  CALL init_dvrp
 
-    IF ( ocean ) THEN
-
-!--    Calculate the 3-d array of initial in-situ and potential density
-!--    based on the initial temperature and salinity profiles.
-       CALL eqn_state_seawater
+    IF ( ocean )  THEN
+       CALL cpu_log( log_point(42), 'init-ocean', 'start' )
+!
+!--    Initialize quantities needed for the ocean model
+       CALL init_ocean
+       CALL cpu_log( log_point(42), 'init-ocean', 'stop' )
 
     ELSE
 !

@@ -314,10 +314,11 @@
                ocean, outflow_l, outflow_s, passive_scalar, plant_canopy,      &
                prho_reference, pt_reference, pt_reference, pt_reference,       &
                scalar_advec, scalar_advec, simulated_time, sloping_surface,    &
-               rho_reference, timestep_scheme, tsc, use_single_reference_value,&
-               use_subsidence_tendencies, use_upstream_for_tke, wind_turbine,  &
-               ws_scheme_mom, ws_scheme_sca, urban_surface, land_surface,      &
-               wb_solar, stokes_force
+               rho_reference, time_prog_terms, timestep_scheme, tsc,           &
+               use_single_reference_value, use_subsidence_tendencies,          &
+               use_upstream_for_tke, wind_turbine, ws_scheme_mom,              &
+               ws_scheme_sca, urban_surface, land_surface, wb_solar,           &
+               stokes_force
 
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point, log_point_s
@@ -566,6 +567,7 @@
           CALL cpu_log( log_point(5), 'u-equation', 'start' )
           IF ( i >= nxlu )  THEN
 
+             IF ( time_prog_terms ) CALL cpu_log( log_point(43), 'advec-uvw', 'start' )
              tend(:,j,i) = 0.0_wp
 
              IF ( timestep_scheme(1:5) == 'runge' )  THEN
@@ -579,27 +581,31 @@
              ELSE
                 CALL advec_u_up( i, j )
              ENDIF
-             CALL cpu_log( log_point(44), 'diffusion-u', 'start' )
+             IF ( time_prog_terms ) CALL cpu_log( log_point(43), 'advec-uvw', 'stop' )
+             
+             IF ( time_prog_terms ) CALL cpu_log( log_point(44), 'diffusion', 'start' )
              CALL diffusion_u( i, j )
-             CALL cpu_log( log_point(44), 'diffusion-u', 'stop' )
-             CALL cpu_log( log_point(45), 'coriolis-u', 'start' )
+             IF ( time_prog_terms ) CALL cpu_log( log_point(44), 'diffusion', 'stop' )
+
+             IF ( time_prog_terms ) CALL cpu_log( log_point(45), 'coriolis', 'start' )
              CALL coriolis( i, j, 1 )
-             CALL cpu_log( log_point(45), 'coriolis-u', 'stop' )
+             IF ( time_prog_terms ) CALL cpu_log( log_point(45), 'coriolis', 'stop' )
+             
              IF ( sloping_surface  .AND.  .NOT. neutral )  THEN
-                CALL cpu_log( log_point(46), 'buoyancy-u', 'start' )
+                IF ( time_prog_terms ) CALL cpu_log( log_point(46), 'buoyancy', 'start' )
                 IF ( ocean ) THEN
                    CALL buoyancy( i, j, rho_ocean, 1 )
                 ELSE
                    CALL buoyancy( i, j, pt, 1 )
                 ENDIF
-                CALL cpu_log( log_point(46), 'buoyancy-u', 'stop' )
+                IF ( time_prog_terms ) CALL cpu_log( log_point(46), 'buoyancy', 'stop' )
              ENDIF
 !
 !--          If required, compute Stokes forces
              IF ( ocean .AND. stokes_force ) THEN
-                CALL cpu_log( log_point(47), 'stokes-u', 'start' )
+                IF ( time_prog_terms ) CALL cpu_log( log_point(47), 'stokes', 'start' )
                 CALL stokes_force_uvw( i, j, 1 )
-                CALL cpu_log( log_point(47), 'stokes-u', 'stop' )
+                IF ( time_prog_terms ) CALL cpu_log( log_point(47), 'stokes', 'stop' )
              ENDIF
 
 !
@@ -666,6 +672,7 @@
           CALL cpu_log( log_point(6), 'v-equation', 'start' )
           IF ( j >= nysv )  THEN
 
+             IF ( time_prog_terms ) CALL cpu_log( log_point(43), 'advec-uvw', 'start' )
              tend(:,j,i) = 0.0_wp
              IF ( timestep_scheme(1:5) == 'runge' )  THEN
                 IF ( ws_scheme_mom )  THEN
@@ -676,13 +683,22 @@
              ELSE
                 CALL advec_v_up( i, j )
              ENDIF
+             IF ( time_prog_terms ) CALL cpu_log( log_point(43), 'advec-uvw', 'stop' )
+             
+             IF ( time_prog_terms ) CALL cpu_log( log_point(44), 'diffusion', 'start' )
              CALL diffusion_v( i, j )
+             IF ( time_prog_terms ) CALL cpu_log( log_point(44), 'diffusion', 'stop' )
+             
+             IF ( time_prog_terms ) CALL cpu_log( log_point(45), 'coriolis', 'start' )
              CALL coriolis( i, j, 2 )
+             IF ( time_prog_terms ) CALL cpu_log( log_point(45), 'coriolis', 'stop' )
 
 !
 !--          If required, compute Stokes forces
              IF ( ocean .AND. stokes_force ) THEN
+                IF ( time_prog_terms ) CALL cpu_log( log_point(47), 'stokes', 'start' )
                 CALL stokes_force_uvw( i, j, 2 )
+                IF ( time_prog_terms ) CALL cpu_log( log_point(47), 'stokes', 'stop' )
              ENDIF
 
 !
@@ -744,6 +760,8 @@
 !
 !--       Tendency terms for w-velocity component
           CALL cpu_log( log_point(7), 'w-equation', 'start' )
+          
+          IF ( time_prog_terms ) CALL cpu_log( log_point(43), 'advec-uvw', 'start' )
           tend(:,j,i) = 0.0_wp
           IF ( timestep_scheme(1:5) == 'runge' )  THEN
              IF ( ws_scheme_mom )  THEN
@@ -754,10 +772,18 @@
           ELSE
              CALL advec_w_up( i, j )
           ENDIF
+          IF ( time_prog_terms ) CALL cpu_log( log_point(43), 'advec-uvw', 'stop' )
+          
+          IF ( time_prog_terms ) CALL cpu_log( log_point(44), 'diffusion', 'start' )
           CALL diffusion_w( i, j )
+          IF ( time_prog_terms ) CALL cpu_log( log_point(44), 'diffusion', 'stop' )
+          
+          IF ( time_prog_terms ) CALL cpu_log( log_point(45), 'coriolis', 'start' )
           CALL coriolis( i, j, 3 )
+          IF ( time_prog_terms ) CALL cpu_log( log_point(45), 'coriolis', 'stop' )
 
           IF ( .NOT. neutral )  THEN
+             IF ( time_prog_terms ) CALL cpu_log( log_point(46), 'buoyancy', 'start' )
              IF ( ocean )  THEN
                 CALL buoyancy( i, j, rho_ocean, 3 )
              ELSE
@@ -767,12 +793,15 @@
                    CALL buoyancy( i, j, vpt, 3 )
                 ENDIF
              ENDIF
+             IF ( time_prog_terms ) CALL cpu_log( log_point(46), 'buoyancy', 'stop' )
           ENDIF
 
 !
 !--       If required, compute Stokes forces
           IF ( ocean .AND. stokes_force ) THEN
+             IF ( time_prog_terms ) CALL cpu_log( log_point(47), 'stokes', 'start' )
              CALL stokes_force_uvw( i, j, 3 )
+             IF ( time_prog_terms ) CALL cpu_log( log_point(47), 'stokes', 'stop' )
           ENDIF
 
 !

@@ -20,6 +20,9 @@
 ! Current revisions:
 ! ------------------
 !
+! 2019-02-05 cbegeman
+! Add flag for activating additional timers: time_prog_terms
+!
 ! 2018-11-15 cbegeman
 ! Add bubble property variables
 !
@@ -1403,6 +1406,7 @@
     LOGICAL ::  stop_dt = .FALSE.                                !< internal switch to stop the time stepping
     LOGICAL ::  synchronous_exchange = .FALSE.                   !< namelist parameter
     LOGICAL ::  syn_turb_gen = .FALSE.                           !< flag for synthetic turbulence generator module
+    LOGICAL ::  time_prog_terms = .TRUE.                        !< flag for timing each term in the prognostic equation
     LOGICAL ::  terminate_run = .FALSE.                          !< terminate run (cpu-time limit, restarts)?
     LOGICAL ::  topo_no_distinct = .FALSE.                       !< flag controlling classification of topography surfaces
     LOGICAL ::  transpose_compute_overlap = .FALSE.              !< namelist parameter

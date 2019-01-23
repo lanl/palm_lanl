@@ -122,7 +122,7 @@ CFLAGS = -O
 
 # The following line is needed for palm_simple_install, don't remove it!
 
-COPT= -cpp -DMPI_REAL=MPI_DOUBLE_PRECISION -DMPI_2REAL=MPI_2DOUBLE_PRECISION -D__netcdf -D__parallel
+COPT= -cpp -D__netcdf
 
 .SUFFIXES:
 .SUFFIXES: .o .f90
@@ -373,7 +373,10 @@ palm.o: \
 	modules.o \
 	netcdf_data_input_mod.o \
 	surface_layer_fluxes_mod.o \
-	write_restart_data_mod.o
+	write_restart_data_mod.o \
+	init_3d_model.o \
+	tridia_solver_mod.o \
+	turbulence_closure_mod.o
 parin.o: \
 	cpulog_mod.o \
 	date_and_time_mod.o \

@@ -479,8 +479,7 @@
 !> or
 !> c) read values of a previous run
 !------------------------------------------------------------------------------!
- SUBROUTINE init_3d_model
- 
+ MODULE configure_3D_MODEL
 
     USE advec_ws
 
@@ -572,6 +571,61 @@
     INTEGER(iwp) ::  nz_w_shift_l !<
     INTEGER(iwp) ::  nz_s_shift_l !< 
 
+    public init_3d_model, deallocate_3d_variables
+    contains
+
+   subroutine deallocate_3d_variables
+
+    DEALLOCATE( mean_surface_level_height,         &
+              ngp_2dh, ngp_3d, ngp_3d_inner,          &
+              ngp_3d_inner_tmp, sums_divold_l, sums_divnew_l) 
+    DEALLOCATE( dp_smooth_factor, rdf, rdf_sc )
+    DEALLOCATE( ngp_2dh_outer, ngp_2dh_s_inner,                 &
+              rmask,sums, sums_wsts_bc_l,   &
+              ts_value )
+    DEALLOCATE( ptdf_x, ptdf_y, weight_pres, weight_substep )
+
+    DEALLOCATE( d, p, tend, sums_l, sums_l_l )
+
+#if defined( __nopointer )
+    DEALLOCATE( pt, pt_p, u, u_p, v, v_p, w, w_p, tpt_m, tu_m, tv_m, tw_m)
+#else
+    DEALLOCATE( pt_1, pt_2, pt_3, u_1, u_2, u_3, v_1,v_2, v_3, w_1, w_2, w_3)
+#endif
+
+!
+!-- Array for storing constant coeffficients of the tridiagonal solver
+    IF ( psolver == 'poisfft' )  THEN
+       DEALLOCATE( tri, tric)
+    ENDIF
+
+#if defined( __nopointer )
+       DEALLOCATE( prho, rho_ocean, alpha_T, beta_S, solar3d,                  &
+                 sa, sa_p, tsa_m )
+#else
+       DEALLOCATE( prho_1,rho_1,alpha_T_1, beta_S_1, solar3d_1, sa_1, sa_2, sa_3 )
+#endif
+
+!
+!-- Allocation of anelastic and Boussinesq approximation specific arrays
+    DEALLOCATE( p_hydrostatic )
+    DEALLOCATE( rho_air )
+    DEALLOCATE( rho_air_zw )
+    DEALLOCATE( drho_air )
+    DEALLOCATE( drho_air_zw )
+
+!
+!-- Allocation of flux conversion arrays
+    DEALLOCATE( heatflux_input_conversion )
+    DEALLOCATE( waterflux_input_conversion )
+    DEALLOCATE( momentumflux_input_conversion )
+    DEALLOCATE( heatflux_output_conversion )
+    DEALLOCATE( waterflux_output_conversion )
+    DEALLOCATE( momentumflux_output_conversion )
+
+   end subroutine deallocate_3d_variables
+
+   subroutine init_3d_model
     CALL location_message( 'allocating arrays', .FALSE. )
 
 !
@@ -1067,9 +1121,6 @@
                            ngp_3d_inner(:) )
     ngp_2dh_s_inner = MAX( 1, ngp_2dh_s_inner(:,:) ) 
 
-    DEALLOCATE( mean_surface_level_height_l, ngp_2dh_l, ngp_2dh_outer_l,       &
-                ngp_3d_inner_l, ngp_3d_inner_tmp )
-
 !-- Initialize quantities for special advections schemes
     CALL init_advec
 
@@ -1095,7 +1146,7 @@
 
 !--    Initialize quantities needed for the ocean model
        CALL init_ocean
-!
+
 !-- Initialize surface layer (done after LSM as roughness length are required
 !-- for initialization
     IF ( constant_flux_layer )  THEN
@@ -1244,6 +1295,10 @@
 !-- In case of nesting, put an barrier to assure that all parent and child 
 !-- domains finished initialization. 
 
+    Deallocate(mean_surface_level_height_l, ngp_2dh_l, ngp_3d_inner_l)
+    DEALLOCATE(ngp_2dh_outer_l, ngp_2dh_s_inner_l) 
     CALL location_message( 'leaving init_3d_model', .TRUE. )
 
  END SUBROUTINE init_3d_model
+
+ END MODULE configure_3D_MODEL

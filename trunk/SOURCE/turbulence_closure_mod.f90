@@ -230,6 +230,12 @@
     END INTERFACE tcm_init
 
 !
+!-- deallocate arrays
+    INTERFACE tcm_deallocate_arrays
+      MODULE PROCEDURE tcm_deallocate_arrays
+    END INTERFACE tcm_deallocate_arrays
+
+!
 !-- Initialization of arrays
     INTERFACE tcm_init_arrays
        MODULE PROCEDURE tcm_init_arrays
@@ -301,7 +307,8 @@
     PUBLIC production_e_init, tcm_3d_data_averaging, tcm_check_data_output,    &
            tcm_check_parameters, tcm_data_output_2d, tcm_data_output_3d,       &
            tcm_define_netcdf_grid, tcm_diffusivities, tcm_init,                &
-           tcm_init_arrays, tcm_prognostic, tcm_swap_timelevel
+           tcm_init_arrays, tcm_prognostic, tcm_swap_timelevel,                &
+           tcm_deallocate_arrays
 
 
  CONTAINS
@@ -991,6 +998,21 @@
 
  END SUBROUTINE tcm_data_output_3d
 
+
+ SUBROUTINE tcm_deallocate_arrays
+    IMPLICIT NONE
+
+    deallocate(kh, km, dummy1, dummy2, dummy3, diss_adve1)
+    deallocate(diss_adve2, diss_adve3, diss_prod1, diss_prod2)
+    deallocate(diss_prod3, diss_diff1, diss_diff2, diss_diff3)
+    deallocate(l_grid, l_wall) 
+#if defined( __nopointer )
+    deallocate(e,e_p,te_m)
+#else
+    deallocate(e_1,e_2,e_3)
+#endif
+
+ END SUBROUTINE tcm_deallocate_arrays
 
 !------------------------------------------------------------------------------!
 ! Description:

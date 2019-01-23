@@ -571,6 +571,8 @@
 
        ENDIF
 
+       DEALLOCATE( sum, pe_max, pe_min, pe_rms, pe_log_points )
+
        CALL location_message( 'finished', .TRUE. )
 
    100 FORMAT (A/11('-')//'CPU measures for ',I5,' PEs (',I5,'(x) * ',I5,'(y', &

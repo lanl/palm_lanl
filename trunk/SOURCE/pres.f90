@@ -244,7 +244,7 @@
 !-- This cannot be done before the first initial time step because ngp_2dh_outer
 !-- is not yet known then.
     IF ( ibc_p_b == 1  .AND.  ibc_p_t == 1  .AND.                               &
-         .NOT. nest_domain_nvn  .AND. intermediate_timestep_count /= 0 )        &
+         intermediate_timestep_count /= 0 )        &
     THEN
        w_l = 0.0_wp;  w_l_l = 0.0_wp
        DO  i = nxl, nxr
@@ -344,7 +344,8 @@
        ENDDO
     ENDDO
     !$OMP END PARALLEL
-!
+
+    !
 !-- Compute possible PE-sum of divergences for flow_statistics. Carry out
 !-- computation only at last Runge-Kutta substep.
     IF ( intermediate_timestep_count == intermediate_timestep_count_max  .OR.  &

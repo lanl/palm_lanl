@@ -384,14 +384,26 @@
     CALL cpu_log( log_point(5), 'u-equation', 'start' )
 
     tend = 0.0_wp
+
+    call cpu_log( log_point(43), 'u advec', 'start')
     CALL advec_u_ws
+    call cpu_log( log_point(43), 'u advec', 'stop')
+
+    call cpu_log( log_point(44), 'u diffusion', 'start')
     CALL diffusion_u
+    call cpu_log( log_point(44), 'u diffusion', 'stop')
+
+    call cpu_log( log_point(45), 'u coriolis', 'start')
     CALL coriolis( 1 )
+    call cpu_log( log_point(45), 'u coriolis', 'stop')
+
+    call cpu_log( log_point(46), 'u stokes', 'start')
     !
 !-- If required, compute Stokes forces
     IF ( ocean .AND. stokes_force ) THEN
        CALL stokes_force_uvw( 1 )
     ENDIF
+    call cpu_log( log_point(46), 'u stokes', 'stop')
 !
 !-- External pressure gradient
     IF ( dp_external )  THEN
@@ -522,7 +534,9 @@
     CALL diffusion_w
     CALL coriolis( 3 )
 
+    call cpu_log( log_point(47), 'w buoy', 'start')
     CALL buoyancy( rho_ocean, 3 )
+    call cpu_log( log_point(47), 'w buoy', 'stop')
     !
 !-- If required, compute Stokes forces
     IF ( ocean .AND. stokes_force ) THEN
@@ -576,7 +590,9 @@
        sbt = tsc(2)
 !
        tend = 0.0_wp
+       call cpu_log( log_point(40), 'pt advection', 'start')
        CALL advec_s_ws( pt, 'pt' )
+       call cpu_log( log_point(40), 'pt advection', 'stop')
 
        k = nzt
        DO i = nxl, nxr
@@ -592,6 +608,8 @@
           enddo
        enddo
 
+       call cpu_log( log_point(41), 'pt diffusion' , 'start')
+
        CALL diffusion_s( pt,                                                   &
                          surf_def_h(0)%shf, surf_def_h(1)%shf,                 &
                          surf_def_h(2)%shf,                                    &
@@ -599,11 +617,17 @@
                          surf_def_v(2)%shf, surf_def_v(3)%shf,                 &
                          surf_def_h(2)%shf_sol )
 
+       call cpu_log( log_point(41), 'pt diffusion' , 'stop')
+
+       call cpu_log( log_point(42), 'pt stokes' ,'start')
 !
 !--    If required, compute Stokes-advection term
        IF ( ocean .AND. stokes_force ) THEN
           CALL stokes_force_s( pt )
        ENDIF
+
+       call cpu_log( log_point(42), 'pt stokes', 'stop' )
+
 !
 !--    Prognostic equation for potential temperature
        DO  i = nxl, nxr

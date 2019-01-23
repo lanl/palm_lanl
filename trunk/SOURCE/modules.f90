@@ -631,7 +631,7 @@
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  dex  !< exponential coefficient for the Bott-Chlond advection scheme
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  eex  !< exponential coefficient for the Bott-Chlond advection scheme
 
-    SAVE
+!    SAVE
 
  END MODULE advection
 
@@ -944,7 +944,7 @@
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  waterflux_output_conversion     !< conversion factor array for waterflux output
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  momentumflux_output_conversion  !< conversion factor array for momentumflux output
 
-    SAVE
+!    SAVE
 
  END MODULE arrays_3d
 
@@ -1037,7 +1037,7 @@
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt_d_t  !< ratio of potential and actual temperature
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  t_d_pt  !< ratio of actual and potential temperature
 
-    SAVE
+!    SAVE
 
  END MODULE cloud_parameters
 
@@ -1059,7 +1059,7 @@
     REAL(wp) ::  adv_sca_3            !< 1/12 - constant used in 5th-order advection scheme for scalar advection (3rd-order part)
     REAL(wp) ::  adv_sca_5            !< 1/60 - constant used in 5th-order advection scheme for scalar advection (5th-order part)
 
-    SAVE
+!    SAVE
 
  END MODULE constants
 
@@ -1277,6 +1277,7 @@
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  mask_j_global  !< global grid index of masked output point on y-dimension
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  mask_k_global  !< global grid index of masked output point on z-dimension
 
+    LOGICAL ::  poisfft_initialized = .FALSE.
     LOGICAL ::  aerosol_nacl =.TRUE.                             !< nacl aerosol for bulk scheme
     LOGICAL ::  aerosol_c3h4o4 =.FALSE.                          !< malonic acid aerosol for bulk scheme
     LOGICAL ::  aerosol_nh4no3 =.FALSE.                          !< malonic acid aerosol for bulk scheme
@@ -1642,7 +1643,7 @@
        REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  mask       !< collective array for mask_x/y/z
        REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  mask_loop  !< collective array for mask_x/y/z_loop
 
-    SAVE
+!    SAVE
 
  END MODULE control_parameters
 
@@ -1761,7 +1762,7 @@
 
     TYPE(steering), DIMENSION(:), ALLOCATABLE ::  steering_dvrp  !< internal dvr software variable
 
-    SAVE
+!    SAVE
 
  END MODULE dvrp_variables
 
@@ -1790,7 +1791,7 @@
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  zu_s_inner  !< height of topography top on scalar grid
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  zw_w_inner  !< height of topography top on w grid
 
-    SAVE
+!    SAVE
 
  END MODULE grid_variables
 
@@ -1879,7 +1880,7 @@
     INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE ::  advc_flags_2            !< flags used to degrade order of advection scheme
     INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE ::  wall_flags_0            !< flags to mask topography and surface-bounded grid points
 
-    SAVE
+!    SAVE
 
  END MODULE indices
 
@@ -1921,7 +1922,7 @@
 
     END INTERFACE
 
-    SAVE
+!    SAVE
 
  END MODULE interfaces
 
@@ -1955,7 +1956,7 @@
 
     END INTERFACE
 
-    SAVE
+!    SAVE
 
  END MODULE pointer_interfaces
 
@@ -2055,7 +2056,7 @@
     LOGICAL, DIMENSION(2) ::  remain_dims                     !< internal array used to determine sub-topologies for transpositions
 #endif
 
-    SAVE
+!    SAVE
 
  END MODULE pegrid
 
@@ -2095,7 +2096,8 @@
     INTEGER(iwp) ::  dopr_index(300) = 0                !< index number of respective profile quantity
     INTEGER(iwp) ::  dopr_initial_index(300) = 0        !< index number of initial profiles to be output
 
-    SAVE
+!    SAVE
+                 
 
  END MODULE profil_parameter
 
@@ -2159,7 +2161,7 @@
 
     REAL(wp), DIMENSION(:,:,:,:), ALLOCATABLE ::  hom  !< horizontal mean of various quantities (profiles/timeseries)
 
-    SAVE
+!    SAVE
 
  END MODULE statistics
 
@@ -2191,6 +2193,6 @@
     INTEGER(iwp) ::  nzt_y   !< internal index bound for transpositions
     INTEGER(iwp) ::  nzt_yd  !< internal index bound for transpositions
 
-    SAVE
+!    SAVE
 
  END MODULE transpose_indices

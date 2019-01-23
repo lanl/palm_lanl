@@ -722,11 +722,6 @@
     CALL netcdf_data_input_check_dynamic
     CALL netcdf_data_input_check_static
 
-!    ALLOCATE( pt_init(0:nz+1), q_init(0:nz+1), s_init(0:nz+1),        &
-!                       ref_state(0:nz+1), sa_init(0:nz+1), ug(0:nz+1),         &
-!                       u_init(0:nz+1), v_init(0:nz+1), vg(0:nz+1),             &
-!                       hom(0:nz+1,2,pr_palm+max_pr_user,0:statistic_regions),  &
-!                       hom_sum(0:nz+1,pr_palm+max_pr_user,0:statistic_regions) )
     !
 !-- Check for overlap combinations, which are not realized yet
     IF ( transpose_compute_overlap )  THEN

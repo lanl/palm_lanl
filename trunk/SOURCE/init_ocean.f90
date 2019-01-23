@@ -137,7 +137,7 @@
     hyp(nzt+1) = surface_pressure * 100.0_wp
 
     hyp(nzt)      = hyp(nzt+1) + rho_surface * g * 0.5_wp * dzu(nzt+1)
-    rho_ocean_init(nzt) = rho_surface
+    rho_ocean_init(nzt+1) = rho_surface
 
     DO  k = nzt-1, 1, -1
        hyp(k) = hyp(k+1) + rho_surface * g * dzu(k)
@@ -164,6 +164,7 @@
 
        rho_reference = rho_reference / ( zw(nzt) - zu(nzb) )
 
+    
        DO  k = nzt, 0, -1
           hyp(k) = hyp(k+1) + g * 0.5_wp * ( rho_ocean_init(k)                 &
                                            + rho_ocean_init(k+1) ) * dzu(k+1)
@@ -185,6 +186,7 @@
     ENDDO
 
     prho_reference = prho_reference / ( zu(nzt) - zu(nzb) )
+
 
 !
 !-- Calculate the 3d array of initial in situ and potential density,

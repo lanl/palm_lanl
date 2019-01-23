@@ -216,7 +216,7 @@ SUBROUTINE check_open( file_id )
     INTEGER(iwp) ::  j           !<
     INTEGER(iwp) ::  k           !<
     
-    LOGICAL ::  netcdf_extend    !<
+    LOGICAL ::  netcdf_extend, ISOPEN    !<
 
 !
 !-- Immediate return if file already open
@@ -352,8 +352,11 @@ SUBROUTINE check_open( file_id )
 
        CASE ( 18 )
 
-          OPEN ( 18, FILE='CPU_MEASURES'//TRIM( coupling_char ),               &
+          INQUIRE( UNIT=18, OPENED=ISOPEN )
+          if( .not. ISOPEN) THEN
+             OPEN ( 18, FILE='CPU_MEASURES'//TRIM( coupling_char ),               &
                      FORM='FORMATTED' )
+          endif
 
        CASE ( 19 )
 

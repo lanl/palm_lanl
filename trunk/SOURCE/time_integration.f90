@@ -344,7 +344,7 @@
 
 
     USE advec_ws,                                                              &
-        ONLY:  ws_statistics
+        ONLY:  ws_statistics, ws_finalize
 
     USE arrays_3d,                                                             &
         ONLY:  diss, diss_p, dzu, e, e_p, nc, nc_p, nr, nr_p, prho, pt, pt_p, pt_init, &
@@ -450,11 +450,13 @@
     CALL run_control
 !
     CALL location_message( 'starting timestep-sequence', .TRUE. )
-!
+
+    !
 !-- Start of the time loop
     DO  WHILE ( simulated_time < end_time  .AND.  .NOT. stop_dt  .AND. &
                 .NOT. terminate_run )
 
+        print *, 'time = ',simulated_time
        CALL cpu_log( log_point_s(10), 'timesteps', 'start' )
 !
 !--    Start of intermediate step loop
@@ -474,8 +476,9 @@
 !--          buoyancy terms (WARNING: only the respective last call of
 !--          calc_mean_profile defines the reference state!)
                 CALL calc_mean_profile( rho_ocean, 64 )
-                ref_state(:)  = hom(:,1,64,0)
 
+                ref_state(:)  = hom(:,1,64,0)
+                
 !--          Assure that ref_state does not become zero at any level
 !--          ( might be the case if a vertical level is completely occupied
 !--            with topography ).
@@ -615,7 +618,7 @@
 !--    Check, if restart is necessary (because cpu-time is expiring or
 !--    because it is forced by user) and set stop flag
 !--    This call is skipped if the remote model has already initiated a restart.
-       IF ( .NOT. terminate_run )  CALL check_for_restart
+!       IF ( .NOT. terminate_run )  CALL check_for_restart
 !
 !--    Set a flag indicating that so far no statistics have been created
 !--    for this time step
@@ -697,12 +700,14 @@
 
 !
 !--    Output elapsed simulated time in form of a progress bar on stdout
-       IF ( myid == 0 )  CALL output_progress_bar
+!       IF ( myid == 0 )  CALL output_progress_bar
 
        CALL cpu_log( log_point_s(10), 'timesteps', 'stop' )
 
 
     ENDDO   ! time loop
+
+    call ws_finalize
 
     IF ( myid == 0 )  CALL finish_progress_bar
     CALL location_message( 'finished time-stepping', .TRUE. )

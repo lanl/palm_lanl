@@ -177,7 +177,8 @@
        DO  i = nxl, nxr
           DO  j = nys, nyn
              DO  k = nzb+1, nzt
-!
+
+             !
 !--             Pressure is needed in dbar
                 p1 = hyp(k) * 1E-4_wp
                 p2 = p1 * p1
@@ -422,7 +423,6 @@
 
        sa15 = sa * SQRT( sa )
        sa2  = sa * sa
-
 
        eqn_state_seawater_func =                                               &
          ( nom(1)        + nom(2)*pt1       + nom(3)*pt2    + nom(4)*pt3     + &

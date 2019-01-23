@@ -79,7 +79,8 @@ MODULE random_generator_parallel
    
    PRIVATE
    PUBLIC random_number_parallel, random_seed_parallel, random_dummy,          &
-          id_random_array, seq_random_array, init_parallel_random_generator
+          id_random_array, seq_random_array, init_parallel_random_generator,   &
+          deallocate_random_generator
    
    INTEGER(isp), SAVE :: lenran=0             !< 
    INTEGER(isp), SAVE :: seq=0                !< 
@@ -107,7 +108,11 @@ MODULE random_generator_parallel
    REAL(wp), SAVE :: amm   !< 
    
    REAL(wp) :: random_dummy=0.0   !< 
-   
+  
+   INTERFACE deallocate_random_generator
+      MODULE PROCEDURE deallocate_random_generator
+   END INTERFACE
+
    INTERFACE init_parallel_random_generator
       MODULE PROCEDURE init_parallel_random_generator
    END INTERFACE
@@ -133,7 +138,12 @@ MODULE random_generator_parallel
    END INTERFACE
 
  CONTAINS
- 
+
+  subroutine deallocate_random_generator
+
+     deallocate(seq_random_array, id_random_array) 
+
+  end subroutine deallocate_random_generator 
 !------------------------------------------------------------------------------!
 ! Description:
 ! ------------

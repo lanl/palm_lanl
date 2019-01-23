@@ -168,8 +168,6 @@
 
     IMPLICIT NONE
 
-    LOGICAL, SAVE ::  poisfft_initialized = .FALSE.
-
     PRIVATE
 
     PUBLIC  poisfft, poisfft_init
@@ -197,6 +195,8 @@
 
        USE kinds
 
+       USE control_parameters, only: poisfft_initialized
+
        IMPLICIT NONE
 
        INTEGER(iwp) ::  k  !<
@@ -220,7 +220,7 @@
     SUBROUTINE poisfft( ar )
 
        USE control_parameters,                                                 &
-           ONLY:  fft_method, transpose_compute_overlap
+           ONLY:  fft_method, transpose_compute_overlap, poisfft_initialized
 
        USE cpulog,                                                             &
            ONLY:  cpu_log, cpu_log_nowait, log_point_s

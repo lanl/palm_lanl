@@ -127,10 +127,16 @@
        MODULE PROCEDURE tridia_substi_overlap
     END INTERFACE tridia_substi_overlap
 
-    PUBLIC  tridia_substi, tridia_substi_overlap, tridia_init, tridia_1dd
+    PUBLIC  tridia_substi, tridia_substi_overlap, tridia_init, tridia_1dd, &
+            tridia_deallocate
 
  CONTAINS
 
+    subroutine tridia_deallocate
+
+       deallocate(ddzuw)
+
+    end subroutine tridia_deallocate
 
 !------------------------------------------------------------------------------!
 ! Description:

@@ -470,6 +470,10 @@
 
     PRIVATE
 
+    INTERFACE deallocate_bc
+       MODULE PROCEDURE deallocate_bc
+    END INTERFACE deallocate_bc
+
     INTERFACE init_bc
        MODULE PROCEDURE init_bc
     END INTERFACE init_bc
@@ -507,7 +511,7 @@
 !
 !-- Public subroutines and functions
     PUBLIC get_topography_top_index, get_topography_top_index_ji, init_bc,     &
-           init_surfaces,                                                      &
+           init_surfaces, deallocate_bc,                                                     &
            init_surface_arrays, surface_rrd_local,                     & 
            surface_restore_elements, surface_wrd_local,               &
            surface_last_actions
@@ -515,6 +519,22 @@
 
  CONTAINS
 
+    SUBROUTINE deallocate_bc
+
+       DEALLOCATE( bc_h(0)%i )
+       DEALLOCATE( bc_h(0)%j )
+       DEALLOCATE( bc_h(0)%k )
+       DEALLOCATE( bc_h(0)%start_index )
+       DEALLOCATE( bc_h(0)%end_index )
+!
+!--    Downward facing
+       DEALLOCATE( bc_h(1)%i )
+       DeALLOCATE( bc_h(1)%j)
+       DEALLOCATE( bc_h(1)%k )
+       DEALLOCATE( bc_h(1)%start_index )
+       DEALLOCATE( bc_h(1)%end_index )
+
+    end subroutine deallocate_bc       
 !------------------------------------------------------------------------------!
 ! Description:
 ! ------------
@@ -560,7 +580,7 @@
 !
 !--    ALLOCATE data type variables
 !--    Upward facing
-       ALLOCATE( bc_h(0)%i(1:bc_h(0)%ns) )
+        ALLOCATE( bc_h(0)%i(1:bc_h(0)%ns) )
        ALLOCATE( bc_h(0)%j(1:bc_h(0)%ns) )
        ALLOCATE( bc_h(0)%k(1:bc_h(0)%ns) )
        ALLOCATE( bc_h(0)%start_index(nysg:nyng,nxlg:nxrg) )
@@ -1020,6 +1040,7 @@
        DEALLOCATE ( surfaces%shf )    
 !
 !--    surface temperature
+       DEALLOCATE ( surfaces%pt1 )
        DEALLOCATE ( surfaces%pt_surface ) 
        DEALLOCATE ( surfaces%sasws )
        DEALLOCATE ( surfaces%shf_sol )
@@ -1044,6 +1065,11 @@
        INTEGER(iwp) ::  nxr_l  !< east bound of local 2d array start/end_index, is equal to nyn, except for restart-array
 
        TYPE(surf_type) ::  surfaces  !< respective surface type
+
+       
+       IF ( ALLOCATED( surfaces%start_index ) )                      &
+           CALL deallocate_surface_attributes_h( surfaces )           
+
 
 !
 !--    Allocate arrays for start and end index of horizontal surface type 
@@ -1168,7 +1194,10 @@
        INTEGER(iwp) ::  nxr_l  !< east bound of local 2d array start/end_index, is equal to nyn, except for restart-array
 
        TYPE(surf_type) ::  surfaces !< respective surface type
-
+ 
+       IF ( ALLOCATED( surfaces%start_index ) )                      &
+           CALL deallocate_surface_attributes_h_top( surfaces ) 
+  
        ALLOCATE ( surfaces%start_index(nys_l:nyn_l,nxl_l:nxr_l) )
        ALLOCATE ( surfaces%end_index(nys_l:nyn_l,nxl_l:nxr_l)   )
        surfaces%start_index = 0
@@ -1271,7 +1300,7 @@
        DEALLOCATE ( surfaces%qv1 )
        DEALLOCATE ( surfaces%sasws )
        DEALLOCATE ( surfaces%shf_sol )
-
+       DEALLOCATE ( surfaces%pt_surface )
     END SUBROUTINE deallocate_surface_attributes_v
 
 
@@ -1291,6 +1320,9 @@
        INTEGER(iwp) ::  nxr_l  !< east bound of local 2d array start/end_index, is equal to nyn, except for restart-array
 
        TYPE(surf_type) ::  surfaces !< respective surface type
+
+       IF ( ALLOCATED( surfaces%start_index ) )                   &
+                      CALL deallocate_surface_attributes_v( surfaces )
 
 !
 !--    Allocate arrays for start and end index of vertical surface type 

@@ -156,6 +156,7 @@
 
 #endif
 
+
           DO  k = nzb, nzt+1
              IF ( ngp_2dh_s_inner(k,0) /= 0 )  THEN
                 hom(k,1,pr,0) = sums(k,pr) / ngp_2dh_s_inner(k,0)

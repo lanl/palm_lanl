@@ -1,0 +1,19 @@
+#!/bin/bash
+
+jobname='PALM_atm'
+NTASKS=64
+nnodes=2
+NN=$((NTASKS/nnodes))
+
+# on grizzly, max processes is 36
+#if [$NN -gt 36]; then
+#  NN=36
+#fi
+
+timestring='01:00:00'
+acct='w17_mpasles'
+
+module purge
+module load totalview
+
+salloc --account=$acct --job-name=$jobname --nodes=$nnodes --ntasks-per-node=$NN --time=$timestring --qos=interactive

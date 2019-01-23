@@ -212,12 +212,6 @@
         ONLY:  e, kh, nc, nr, pt, q, ql, qc, qr, s, u, v, vpt, w, zu, zw,      &
                drho_air_zw, rho_air_zw
 
-    USE chem_modules,                                                          &
-        ONLY:  constant_csflux, nvar
-
-    USE cloud_parameters,                                                      &
-        ONLY:  l_d_cp, pt_d_t
-
     USE constants,                                                             &
         ONLY:  pi
 
@@ -245,12 +239,8 @@
 
     USE pegrid
 
-    USE land_surface_model_mod,                                                &
-        ONLY:  aero_resist_kray, skip_time_do_lsm
-
     USE surface_mod,                                                           &
-        ONLY :  surf_def_h, surf_def_v, surf_lsm_h, surf_lsm_v, surf_type,     &
-                surf_usm_h, surf_usm_v
+        ONLY :  surf_def_h, surf_def_v, surf_type
         
 
     IMPLICIT NONE
@@ -324,35 +314,6 @@
              IF ( .NOT. neutral )  CALL calc_pt_surface
           ENDIF
        ENDDO
-!
-!--    Call for natural-type horizontal surfaces
-       IF ( surf_lsm_h%ns >= 1  )  THEN
-          surf => surf_lsm_h
-          CALL calc_pt_q
-       ENDIF
-
-!
-!--    Call for urban-type horizontal surfaces
-       IF ( surf_usm_h%ns >= 1  )  THEN
-          surf => surf_usm_h
-          CALL calc_pt_q
-       ENDIF
-
-!
-!--    Call for natural-type vertical surfaces
-       DO  l = 0, 3
-          IF ( surf_lsm_v(l)%ns >= 1  )  THEN
-             surf => surf_lsm_v(l)
-             CALL calc_pt_q
-          ENDIF
-
-!
-!--    Call for urban-type vertical surfaces
-          IF ( surf_usm_v(l)%ns >= 1  )  THEN
-             surf => surf_usm_v(l)
-             CALL calc_pt_q
-          ENDIF
-       ENDDO
 
 !
 !--    First, calculate the new Obukhov length, then new friction velocity,
@@ -378,27 +339,6 @@
              CALL calc_us
              CALL calc_surface_fluxes
           ENDIF
-!
-!--       Natural-type horizontal surfaces
-          IF ( surf_lsm_h%ns >= 1  )  THEN
-             surf => surf_lsm_h
-             CALL calc_scaling_parameters
-             CALL calc_uvw_abs
-             IF ( .NOT. neutral )  CALL calc_ol
-             CALL calc_us
-             CALL calc_surface_fluxes
-          ENDIF
-!
-!--       Urban-type horizontal surfaces
-          IF ( surf_usm_h%ns >= 1  )  THEN
-             surf => surf_usm_h
-             CALL calc_scaling_parameters
-             CALL calc_uvw_abs
-             IF ( .NOT. neutral )  CALL calc_ol
-             CALL calc_us
-             CALL calc_surface_fluxes
-          ENDIF
-!
 !--    Use either Newton iteration or a lookup table for the bulk Richardson
 !--    number to calculate the Obukhov length 
        ELSEIF ( most_method == 'newton'  .OR.  most_method == 'lookup' )  THEN
@@ -412,27 +352,6 @@
              CALL calc_scaling_parameters
              CALL calc_surface_fluxes
           ENDIF
-!
-!--       Natural-type horizontal surfaces
-          IF ( surf_lsm_h%ns >= 1  )  THEN
-             surf => surf_lsm_h
-             CALL calc_uvw_abs
-             IF ( .NOT. neutral )  CALL calc_ol
-             CALL calc_us
-             CALL calc_scaling_parameters
-             CALL calc_surface_fluxes
-          ENDIF
-!
-!--       Urban-type horizontal surfaces
-          IF ( surf_usm_h%ns >= 1  )  THEN
-             surf => surf_usm_h
-             CALL calc_uvw_abs
-             IF ( .NOT. neutral )  CALL calc_ol
-             CALL calc_us
-             CALL calc_scaling_parameters
-             CALL calc_surface_fluxes
-          ENDIF
-
        ENDIF
 !
 !--    Treat downward-facing horizontal surfaces. Note, so far, these are 
@@ -474,92 +393,7 @@
              CALL calc_surface_fluxes
           ENDIF
        ENDDO
-!
-!--    For natural-type surfaces. Please note, even though stability is not
-!--    considered for the calculation of momentum fluxes at vertical surfaces,
-!--    scaling parameters and Obukov length are calculated nevertheless in this
-!--    case. This is due to the requirement of ts in parameterization of heat
-!--    flux in land-surface model in case of aero_resist_kray is not true.
-       IF ( .NOT. aero_resist_kray )  THEN
-          IF ( most_method == 'circular' )  THEN
-             DO  l = 0, 1
-                IF ( surf_lsm_v(l)%ns >= 1  )  THEN
-                   surf => surf_lsm_v(l)
-!
-!--                Compute scaling parameters
-                   CALL calc_scaling_parameters
-!
-!--                Compute surface-parallel velocity
-                   CALL calc_uvw_abs_v_ugrid
-!
-!--                Compute Obukhov length
-                   IF ( .NOT. neutral )  CALL calc_ol
-!
-!--                Compute respective friction velocity on staggered grid
-                   CALL calc_us
-!
-!--                Compute respective surface fluxes for momentum and TKE
-                   CALL calc_surface_fluxes
-                ENDIF
-             ENDDO
-          ELSE
-             DO  l = 0, 1
-                IF ( surf_lsm_v(l)%ns >= 1  )  THEN
-                   surf => surf_lsm_v(l)
-!
-!--                Compute surface-parallel velocity
-                   CALL calc_uvw_abs_v_ugrid
-!
-!--                Compute Obukhov length
-                   IF ( .NOT. neutral )  CALL calc_ol
-!
-!--                Compute respective friction velocity on staggered grid
-                   CALL calc_us
-!
-!--                Compute scaling parameters
-                   CALL calc_scaling_parameters
-!
-!--                Compute respective surface fluxes for momentum and TKE
-                   CALL calc_surface_fluxes
-                ENDIF
-             ENDDO
-          ENDIF
-!
-!--    No ts is required, so scaling parameters and Obukhov length do not need
-!--    to be computed.
-       ELSE
-          DO  l = 0, 1
-             IF ( surf_lsm_v(l)%ns >= 1  )  THEN
-                surf => surf_lsm_v(l)
-!   
-!--             Compute surface-parallel velocity
-                CALL calc_uvw_abs_v_ugrid
-!
-!--             Compute respective friction velocity on staggered grid
-                CALL calc_us
-!
-!--             Compute respective surface fluxes for momentum and TKE
-                CALL calc_surface_fluxes
-             ENDIF
-          ENDDO
-       ENDIF
-!
-!--    For urban-type surfaces
-       DO  l = 0, 1
-          IF ( surf_usm_v(l)%ns >= 1  )  THEN
-             surf => surf_usm_v(l)
-!
-!--          Compute surface-parallel velocity
-             CALL calc_uvw_abs_v_ugrid
-!
-!--          Compute respective friction velocity on staggered grid
-             CALL calc_us
-!
-!--          Compute respective surface fluxes for momentum and TKE
-             CALL calc_surface_fluxes
-          ENDIF
-       ENDDO
-!
+
 !--    Calculate horizontal momentum fluxes at east- and west-facing 
 !--    surfaces (vsus).
 !--    For default-type surfaces
@@ -577,89 +411,7 @@
              CALL calc_surface_fluxes
           ENDIF
        ENDDO
-!
-!--    For natural-type surfaces. Please note, even though stability is not
-!--    considered for the calculation of momentum fluxes at vertical surfaces,
-!--    scaling parameters and Obukov length are calculated nevertheless in this
-!--    case. This is due to the requirement of ts in parameterization of heat
-!--    flux in land-surface model in case of aero_resist_kray is not true.
-       IF ( .NOT. aero_resist_kray )  THEN
-          IF ( most_method == 'circular' )  THEN
-             DO  l = 2, 3
-                IF ( surf_lsm_v(l)%ns >= 1  )  THEN
-                   surf => surf_lsm_v(l)
-!
-!--                Compute scaling parameters
-                   CALL calc_scaling_parameters
-!
-!--                Compute surface-parallel velocity
-                   CALL calc_uvw_abs_v_vgrid
-!
-!--                Compute Obukhov length
-                   IF ( .NOT. neutral )  CALL calc_ol
-!
-!--                Compute respective friction velocity on staggered grid
-                   CALL calc_us
-!
-!--                Compute respective surface fluxes for momentum and TKE
-                   CALL calc_surface_fluxes
-                ENDIF
-             ENDDO
-          ELSE
-             DO  l = 2, 3
-                IF ( surf_lsm_v(l)%ns >= 1  )  THEN
-                   surf => surf_lsm_v(l)
-!
-!--                Compute surface-parallel velocity
-                   CALL calc_uvw_abs_v_vgrid
-!
-!--                Compute Obukhov length
-                   IF ( .NOT. neutral )  CALL calc_ol
-!
-!--                Compute respective friction velocity on staggered grid
-                   CALL calc_us
-!
-!--                Compute scaling parameters
-                   CALL calc_scaling_parameters
-!
-!--                Compute respective surface fluxes for momentum and TKE
-                   CALL calc_surface_fluxes
-                ENDIF
-             ENDDO
-          ENDIF
-       ELSE
-          DO  l = 2, 3
-             IF ( surf_lsm_v(l)%ns >= 1  )  THEN
-                surf => surf_lsm_v(l)
-!   
-!--             Compute surface-parallel velocity
-                CALL calc_uvw_abs_v_vgrid
-!
-!--             Compute respective friction velocity on staggered grid
-                CALL calc_us
-!
-!--             Compute respective surface fluxes for momentum and TKE
-                CALL calc_surface_fluxes
-             ENDIF
-          ENDDO
-       ENDIF
-!
-!--    For urban-type surfaces
-       DO  l = 2, 3
-          IF ( surf_usm_v(l)%ns >= 1  )  THEN
-             surf => surf_usm_v(l)
-!
-!--          Compute surface-parallel velocity
-             CALL calc_uvw_abs_v_vgrid
-!
-!--          Compute respective friction velocity on staggered grid
-             CALL calc_us
-!
-!--          Compute respective surface fluxes for momentum and TKE
-             CALL calc_surface_fluxes
-          ENDIF
-       ENDDO
-       mom_uv = .FALSE.
+      mom_uv = .FALSE.
 !
 !--    Calculate horizontal momentum fluxes of w (wsus and wsvs) at vertial 
 !--    surfaces.
@@ -675,26 +427,7 @@
           ENDIF
        ENDDO 
 !
-!--    Natural-type surfaces
-       DO  l = 0, 3
-          IF ( surf_lsm_v(l)%ns >= 1  )  THEN
-             surf => surf_lsm_v(l)
-             CALL calc_uvw_abs_v_wgrid
-             CALL calc_us
-             CALL calc_surface_fluxes
-          ENDIF
-       ENDDO 
-!
-!--    Urban-type surfaces
-       DO  l = 0, 3
-          IF ( surf_usm_v(l)%ns >= 1  )  THEN
-             surf => surf_usm_v(l)
-             CALL calc_uvw_abs_v_wgrid
-             CALL calc_us
-             CALL calc_surface_fluxes
-          ENDIF
-       ENDDO 
-       mom_w = .FALSE.   
+      mom_w = .FALSE.   
 !
 !--    Calculate momentum fluxes usvs, vsus, wsus and wsvs at vertical 
 !--    surfaces for TKE production. Note, here, momentum fluxes are defined 
@@ -711,26 +444,7 @@
           ENDIF
        ENDDO 
 !
-!--    Natural-type surfaces
-       DO  l = 0, 3
-          IF ( surf_lsm_v(l)%ns >= 1  )  THEN
-             surf => surf_lsm_v(l)
-             CALL calc_uvw_abs_v_sgrid
-             CALL calc_us
-             CALL calc_surface_fluxes
-          ENDIF
-       ENDDO 
-!
-!--    Urban-type surfaces
-       DO  l = 0, 3
-          IF ( surf_usm_v(l)%ns >= 1  )  THEN
-             surf => surf_usm_v(l)
-             CALL calc_uvw_abs_v_sgrid
-             CALL calc_us
-             CALL calc_surface_fluxes
-          ENDIF
-       ENDDO 
-       mom_tke = .FALSE.
+      mom_tke = .FALSE.
   
 
     END SUBROUTINE surface_layer_fluxes
@@ -771,8 +485,6 @@
 !--    large value
        IF ( neutral )  THEN
           IF ( surf_def_h(0)%ns >= 1 )  surf_def_h(0)%ol = 1.0E10_wp
-          IF ( surf_lsm_h%ns    >= 1 )  surf_lsm_h%ol    = 1.0E10_wp
-          IF ( surf_usm_h%ns    >= 1 )  surf_usm_h%ol    = 1.0E10_wp
        ENDIF
 
        IF ( most_method == 'lookup' )  THEN
@@ -786,39 +498,6 @@
                 terminate_run_l = .TRUE.
              ENDIF
           ENDIF
-          IF ( surf_lsm_h%ns >= 1 )  THEN
-             IF ( MINVAL( surf_lsm_h%z0h ) /= MAXVAL( surf_lsm_h%z0h )  .OR.       &
-                  MINVAL( surf_lsm_h%z0  ) /= MAXVAL( surf_lsm_h%z0  ) )  THEN
-                terminate_run_l = .TRUE.
-             ENDIF
-          ENDIF
-          IF ( surf_usm_h%ns >= 1 )  THEN
-             IF ( MINVAL( surf_usm_h%z0h ) /= MAXVAL( surf_usm_h%z0h )  .OR.       &
-                  MINVAL( surf_usm_h%z0  ) /= MAXVAL( surf_usm_h%z0  ) )  THEN
-                terminate_run_l = .TRUE.
-             ENDIF
-          ENDIF
-!
-!--       Check roughness homogeneity between differt surface types. 
-          IF ( surf_lsm_h%ns >= 1  .AND.  surf_def_h(0)%ns >= 1 )  THEN
-             IF ( MINVAL( surf_lsm_h%z0h ) /= MAXVAL( surf_def_h(0)%z0h )  .OR.    &
-                  MINVAL( surf_lsm_h%z0  ) /= MAXVAL( surf_def_h(0)%z0  ) )  THEN
-                terminate_run_l = .TRUE.
-             ENDIF
-          ENDIF
-          IF ( surf_usm_h%ns >= 1  .AND.  surf_def_h(0)%ns >= 1 )  THEN
-             IF ( MINVAL( surf_usm_h%z0h ) /= MAXVAL( surf_def_h(0)%z0h )  .OR.    &
-                  MINVAL( surf_usm_h%z0  ) /= MAXVAL( surf_def_h(0)%z0  ) )  THEN
-                terminate_run_l = .TRUE.
-             ENDIF
-          ENDIF
-          IF ( surf_usm_h%ns >= 1  .AND.  surf_lsm_h%ns >= 1 )  THEN
-             IF ( MINVAL( surf_usm_h%z0h ) /= MAXVAL( surf_lsm_h%z0h )  .OR.       &
-                  MINVAL( surf_usm_h%z0  ) /= MAXVAL( surf_lsm_h%z0  ) )  THEN
-                terminate_run_l = .TRUE.
-             ENDIF
-          ENDIF
-
 
 #if defined( __parallel )
 !
@@ -878,12 +557,6 @@
           IF ( surf_def_h(0)%ns >= 1  )  THEN
              z0h_min = surf_def_h(0)%z0h(1)
              z0_min  = surf_def_h(0)%z0(1)
-          ELSEIF ( surf_lsm_h%ns >= 1 )  THEN
-             z0h_min = surf_lsm_h%z0h(1)
-             z0_min  = surf_lsm_h%z0(1)
-          ELSEIF ( surf_usm_h%ns >= 1 )  THEN
-             z0h_min = surf_usm_h%z0h(1)
-             z0_min  = surf_usm_h%z0(1)
           ENDIF         
 !
 !--       Calculate lookup table for the Richardson number versus Obukhov length
@@ -1567,20 +1240,12 @@
           j   = surf%j(m)
           k   = surf%k(m)
 
-          IF ( cloud_physics ) THEN
-             surf%pt1(m) = pt(k,j,i) + l_d_cp * pt_d_t(k) * ql(k,j,i)
-             surf%qv1(m) = q(k,j,i) - ql(k,j,i)
-          ELSEIF( cloud_droplets ) THEN
-             surf%pt1(m) = pt(k,j,i) + l_d_cp * pt_d_t(k) * ql(k,j,i)
-             surf%qv1(m) = q(k,j,i) 
-          ELSE
              surf%pt1(m) = pt(k,j,i)
              IF ( humidity )  THEN
                 surf%qv1(m) = q(k,j,i)
              ELSE
                 surf%qv1(m) = 0.0_wp
              ENDIF
-          ENDIF 
 
        ENDDO
 
@@ -1672,122 +1337,8 @@
           ENDDO
 
        ENDIF
-! 
-!--    Compute theta* at vertical surfaces. This is only required in case of 
-!--    land-surface model, in order to compute aerodynamical resistance.
-       IF ( surf_vertical )  THEN
-          !$OMP PARALLEL DO PRIVATE( i, j )
-          DO  m = 1, surf%ns 
-
-             i          =  surf%i(m)            
-             j          =  surf%j(m)
-             surf%ts(m) = -surf%shf(m) / ( surf%us(m) + 1E-30_wp )
-!
-!--          ts must be limited, because otherwise overflow may occur in case
-!--          of us=0 when computing ol further below
-             IF ( surf%ts(m) < -1.05E5_wp )  surf%ts(m) = -1.0E5_wp
-             IF ( surf%ts(m) >  1.0E5_wp  )  surf%ts(m) =  1.0E5_wp
-
-          ENDDO
-       ENDIF
-
-!
+!!
 !--    If required compute q* at horizontal surfaces
-       IF ( humidity )  THEN
-          IF ( constant_waterflux  .AND.  .NOT. surf_vertical )  THEN
-!
-!--          For a given water flux in the surface layer
-             !$OMP PARALLEL DO PRIVATE( i, j, k )
-             DO  m = 1, surf%ns  
-
-                i   = surf%i(m)            
-                j   = surf%j(m)
-                k   = surf%k(m)
-                surf%qs(m) = -surf%qsws(m) * drho_air_zw(k-1) /                &
-                                               ( surf%us(m) + 1E-30_wp )
-
-             ENDDO
-
-          ELSEIF ( .NOT. surf_vertical )  THEN 
-             coupled_run = ( coupling_mode == 'atmosphere_to_ocean'  .AND.     &
-                             run_coupled )
-
-             IF ( large_scale_forcing  .AND.  lsf_surf )  THEN
-                !$OMP PARALLEL DO PRIVATE( i, j, k )
-                DO  m = 1, surf%ns  
-
-                   i   = surf%i(m)           
-                   j   = surf%j(m)
-                   k   = surf%k(m)
-                   q(k-1,j,i) = q_surface
-                   
-                ENDDO
-             ENDIF
-
-!
-!--          Assume saturation for atmosphere coupled to ocean (but not
-!--          in case of precursor runs)
-             IF ( coupled_run )  THEN
-                !$OMP PARALLEL DO PRIVATE( i, j, k, e_s )
-                DO  m = 1, surf%ns   
-                   i   = surf%i(m)            
-                   j   = surf%j(m)
-                   k   = surf%k(m)
-                   e_s = 6.1_wp * &
-                              EXP( 0.07_wp * ( MIN(pt(k-1,j,i),pt(k,j,i))      &
-                                               - 273.15_wp ) )
-                   q(k-1,j,i) = 0.622_wp * e_s / ( surface_pressure - e_s )
-                ENDDO
-             ENDIF
-
-             IF ( cloud_physics  .OR.  cloud_droplets )  THEN
-               !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
-                DO  m = 1, surf%ns   
-
-                   i   = surf%i(m)            
-                   j   = surf%j(m)
-                   k   = surf%k(m)
-   
-                   z_mo = surf%z_mo(m)
-
-                   surf%qs(m) = kappa * ( surf%qv1(m) - q(k-1,j,i) )           &
-                                        / ( LOG( z_mo / surf%z0q(m) )          &
-                                            - psi_h( z_mo / surf%ol(m) )       &
-                                            + psi_h( surf%z0q(m) /             &
-                                                     surf%ol(m) ) )
-                ENDDO
-             ELSE
-                !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
-                DO  m = 1, surf%ns   
-
-                   i   = surf%i(m)            
-                   j   = surf%j(m)
-                   k   = surf%k(m)
-   
-                   z_mo = surf%z_mo(m)
-
-                   surf%qs(m) = kappa * ( q(k,j,i) - q(k-1,j,i) )              &
-                                        / ( LOG( z_mo / surf%z0q(m) )          &
-                                            - psi_h( z_mo / surf%ol(m) )       &
-                                            + psi_h( surf%z0q(m) /             &
-                                                     surf%ol(m) ) )
-                ENDDO
-             ENDIF
-          ENDIF
-! 
-!--       Compute q* at vertical surfaces
-          IF ( surf_vertical )  THEN
-             !$OMP PARALLEL DO PRIVATE( i, j )
-             DO  m = 1, surf%ns  
-
-                i          =  surf%i(m)            
-                j          =  surf%j(m)
-                surf%qs(m) = -surf%qsws(m) / ( surf%us(m) + 1E-30_wp )
-
-             ENDDO
-          ENDIF
-       ENDIF
-       
 !
 !--    If required compute s*
        IF ( passive_scalar )  THEN
@@ -1813,88 +1364,6 @@
                 surf%ss(m) = -surf%ssws(m) / ( surf%us(m) + 1E-30_wp )
              ENDDO
           ENDIF
-       ENDIF
-
-!
-!--    If required compute cs* (chemical species)
-       IF ( air_chemistry  )  THEN  
-!
-!--       At horizontal surfaces                             
-          DO  lsp = 1, nvar
-             IF ( constant_csflux(lsp)  .AND.  .NOT.  surf_vertical )  THEN
-!--             For a given chemical species' flux in the surface layer
-                !$OMP PARALLEL DO PRIVATE( i, j )
-                DO  m = 1, surf%ns  
-                   i   = surf%i(m)            
-                   j   = surf%j(m)
-                   surf%css(lsp,m) = -surf%cssws(lsp,m) / ( surf%us(m) + 1E-30_wp )
-                ENDDO
-             ENDIF
-          ENDDO
-!
-!--       At vertical surfaces
-          IF ( surf_vertical )  THEN
-             DO  lsp = 1, nvar
-                !$OMP PARALLEL DO PRIVATE( i, j )
-                DO  m = 1, surf%ns  
-                   i   = surf%i(m)            
-                   j   = surf%j(m)
-                   surf%css(lsp,m) = -surf%cssws(lsp,m) / ( surf%us(m) + 1E-30_wp )
-                ENDDO
-             ENDDO
-          ENDIF
-       ENDIF
-
-!
-!--    If required compute qc* and nc*
-       IF ( cloud_physics  .AND.  microphysics_morrison  .AND.                 &
-            .NOT. surf_vertical )  THEN
-          !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
-          DO  m = 1, surf%ns    
-
-             i    = surf%i(m)            
-             j    = surf%j(m)
-             k    = surf%k(m)
-
-             z_mo = surf%z_mo(m)
-
-             surf%qcs(m) = kappa * ( qc(k,j,i) - qc(k-1,j,i) )                 &
-                                 / ( LOG( z_mo / surf%z0q(m) )                 &
-                                 - psi_h( z_mo / surf%ol(m) )                  &
-                                 + psi_h( surf%z0q(m) / surf%ol(m) ) )
-
-             surf%ncs(m) = kappa * ( nc(k,j,i) - nc(k-1,j,i) )                 &
-                                 / ( LOG( z_mo / surf%z0q(m) )                 &
-                                 - psi_h( z_mo / surf%ol(m) )                  &
-                                 + psi_h( surf%z0q(m) / surf%ol(m) ) )
-          ENDDO
-
-       ENDIF
-
-!
-!--    If required compute qr* and nr*
-       IF ( cloud_physics  .AND.  microphysics_seifert  .AND.                  &
-            .NOT. surf_vertical )  THEN
-          !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
-          DO  m = 1, surf%ns    
-
-             i    = surf%i(m)            
-             j    = surf%j(m)
-             k    = surf%k(m)
-
-             z_mo = surf%z_mo(m)
-
-             surf%qrs(m) = kappa * ( qr(k,j,i) - qr(k-1,j,i) )                 &
-                                 / ( LOG( z_mo / surf%z0q(m) )                 &
-                                 - psi_h( z_mo / surf%ol(m) )                  &
-                                 + psi_h( surf%z0q(m) / surf%ol(m) ) )
-
-             surf%nrs(m) = kappa * ( nr(k,j,i) - nr(k-1,j,i) )                 &
-                                 / ( LOG( z_mo / surf%z0q(m) )                 &
-                                 - psi_h( z_mo / surf%ol(m) )                  &
-                                 + psi_h( surf%z0q(m) / surf%ol(m) ) )
-          ENDDO
-
        ENDIF
 
     END SUBROUTINE calc_scaling_parameters
@@ -2010,30 +1479,13 @@
           ENDIF
 !
 !--       Compute the vertical kinematic heat flux
-          IF (  .NOT.  constant_heatflux  .AND.  ( ( time_since_reference_point&
-               <=  skip_time_do_lsm  .AND. simulated_time > 0.0_wp ) .OR.      &
-               .NOT.  land_surface )  .AND.  .NOT. urban_surface  .AND.        &
-               .NOT. downward )  THEN
+          IF (  .NOT.  constant_heatflux  .AND.  .NOT. downward )  THEN
              !$OMP PARALLEL DO PRIVATE( i, j, k )
              DO  m = 1, surf%ns 
                 i    = surf%i(m)            
                 j    = surf%j(m)
                 k    = surf%k(m)
                 surf%shf(m) = -surf%ts(m) * surf%us(m) * rho_air_zw(k-1)
-             ENDDO
-          ENDIF
-!
-!--       Compute the vertical water flux
-          IF (  .NOT.  constant_waterflux  .AND.  humidity  .AND.              &
-               ( ( time_since_reference_point <= skip_time_do_lsm  .AND.       &
-               simulated_time > 0.0_wp ) .OR.  .NOT.  land_surface  )  .AND.   &
-               .NOT.  urban_surface  .AND.  .NOT. downward )  THEN
-             !$OMP PARALLEL DO PRIVATE( i, j, k )
-             DO  m = 1, surf%ns 
-                i    = surf%i(m)            
-                j    = surf%j(m)
-                k    = surf%k(m)
-                surf%qsws(m) = -surf%qs(m) * surf%us(m) * rho_air_zw(k-1)
              ENDDO
           ENDIF
 !
@@ -2049,49 +1501,6 @@
 
              ENDDO
           ENDIF   
-!
-!--       Compute the vertical chemical species' flux
-          DO  lsp = 1, nvar
-             IF (  .NOT.  constant_csflux(lsp)  .AND.  air_chemistry  .AND.    &
-                   .NOT.  downward )  THEN
-                !$OMP PARALLEL DO PRIVATE( i, j )
-                DO  m = 1, surf%ns   
-                   i     = surf%i(m)            
-                   j     = surf%j(m)
-                   surf%cssws(lsp,m) = -surf%css(lsp,m) * surf%us(m)
-                ENDDO
-             ENDIF   
-          ENDDO
-
-!
-!--       Compute (turbulent) fluxes of cloud water content and cloud drop conc.
-          IF ( cloud_physics  .AND.  microphysics_morrison  .AND.              &
-               .NOT. downward)  THEN
-             !$OMP PARALLEL DO PRIVATE( i, j )
-             DO  m = 1, surf%ns   
-
-                i    = surf%i(m)            
-                j    = surf%j(m)
-
-                surf%qcsws(m) = -surf%qcs(m) * surf%us(m)
-                surf%ncsws(m) = -surf%ncs(m) * surf%us(m)
-             ENDDO
-          ENDIF    
-!
-!--       Compute (turbulent) fluxes of rain water content and rain drop conc.
-          IF ( cloud_physics  .AND.  microphysics_seifert  .AND.               &
-               .NOT. downward)  THEN
-             !$OMP PARALLEL DO PRIVATE( i, j )
-             DO  m = 1, surf%ns   
-
-                i    = surf%i(m)            
-                j    = surf%j(m)
-
-                surf%qrsws(m) = -surf%qrs(m) * surf%us(m)
-                surf%nrsws(m) = -surf%nrs(m) * surf%us(m)
-             ENDDO
-          ENDIF
-
 !
 !--       Bottom boundary condition for the TKE. 
           IF ( ibc_e_b == 2 )  THEN

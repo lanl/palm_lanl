@@ -216,11 +216,15 @@
 
     PRIVATE
     PUBLIC   advec_s_ws, advec_u_ws, advec_v_ws, advec_w_ws, ws_init,          &
-             ws_init_flags, ws_statistics
+             ws_finalize, ws_init_flags, ws_statistics
 
     INTERFACE ws_init
        MODULE PROCEDURE ws_init
     END INTERFACE ws_init
+
+    INTERFACE ws_finalize
+       MODULE PROCEDURE ws_finalize
+    END INTERFACE ws_finalize
 
     INTERFACE ws_init_flags
        MODULE PROCEDURE ws_init_flags
@@ -328,30 +332,6 @@
           ALLOCATE( sums_wspts_ws_l(nzb:nzt+1,0:threads_per_task-1) )
           sums_wspts_ws_l = 0.0_wp
 
-          IF ( humidity  )  THEN
-             ALLOCATE( sums_wsqs_ws_l(nzb:nzt+1,0:threads_per_task-1) )
-             sums_wsqs_ws_l = 0.0_wp
-          ENDIF
-          
-          IF ( passive_scalar )  THEN
-             ALLOCATE( sums_wsss_ws_l(nzb:nzt+1,0:threads_per_task-1) )
-             sums_wsss_ws_l = 0.0_wp
-          ENDIF
-
-          IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
-             ALLOCATE( sums_wsqcs_ws_l(nzb:nzt+1,0:threads_per_task-1) )
-             ALLOCATE( sums_wsncs_ws_l(nzb:nzt+1,0:threads_per_task-1) )
-             sums_wsqcs_ws_l = 0.0_wp
-             sums_wsncs_ws_l = 0.0_wp
-          ENDIF
-
-          IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
-             ALLOCATE( sums_wsqrs_ws_l(nzb:nzt+1,0:threads_per_task-1) )
-             ALLOCATE( sums_wsnrs_ws_l(nzb:nzt+1,0:threads_per_task-1) )
-             sums_wsqrs_ws_l = 0.0_wp
-             sums_wsnrs_ws_l = 0.0_wp
-          ENDIF
-
           IF ( ocean )  THEN
              ALLOCATE( sums_wssas_ws_l(nzb:nzt+1,0:threads_per_task-1) )
              sums_wssas_ws_l = 0.0_wp
@@ -400,43 +380,6 @@
                 ALLOCATE( flux_l_diss(nzb+1:nzt,nys:nyn,0:threads_per_task-1), &
                           diss_l_diss(nzb+1:nzt,nys:nyn,0:threads_per_task-1) )
              ENDIF
-
-             IF ( humidity )  THEN
-                ALLOCATE( flux_s_q(nzb+1:nzt,0:threads_per_task-1),            &
-                          diss_s_q(nzb+1:nzt,0:threads_per_task-1) )
-                ALLOCATE( flux_l_q(nzb+1:nzt,nys:nyn,0:threads_per_task-1),    &
-                          diss_l_q(nzb+1:nzt,nys:nyn,0:threads_per_task-1) )
-             ENDIF
-             
-             IF ( passive_scalar )  THEN
-                ALLOCATE( flux_s_s(nzb+1:nzt,0:threads_per_task-1),            &
-                          diss_s_s(nzb+1:nzt,0:threads_per_task-1) )
-                ALLOCATE( flux_l_s(nzb+1:nzt,nys:nyn,0:threads_per_task-1),    &
-                          diss_l_s(nzb+1:nzt,nys:nyn,0:threads_per_task-1) )
-             ENDIF
-
-             IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
-                ALLOCATE( flux_s_qc(nzb+1:nzt,0:threads_per_task-1),           &
-                          diss_s_qc(nzb+1:nzt,0:threads_per_task-1),           &
-                          flux_s_nc(nzb+1:nzt,0:threads_per_task-1),           &
-                          diss_s_nc(nzb+1:nzt,0:threads_per_task-1) )
-                ALLOCATE( flux_l_qc(nzb+1:nzt,nys:nyn,0:threads_per_task-1),   &
-                          diss_l_qc(nzb+1:nzt,nys:nyn,0:threads_per_task-1),   &
-                          flux_l_nc(nzb+1:nzt,nys:nyn,0:threads_per_task-1),   &
-                          diss_l_nc(nzb+1:nzt,nys:nyn,0:threads_per_task-1) ) 
-             ENDIF                  
-
-             IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
-                ALLOCATE( flux_s_qr(nzb+1:nzt,0:threads_per_task-1),           &
-                          diss_s_qr(nzb+1:nzt,0:threads_per_task-1),           &
-                          flux_s_nr(nzb+1:nzt,0:threads_per_task-1),           &
-                          diss_s_nr(nzb+1:nzt,0:threads_per_task-1) )
-                ALLOCATE( flux_l_qr(nzb+1:nzt,nys:nyn,0:threads_per_task-1),   &
-                          diss_l_qr(nzb+1:nzt,nys:nyn,0:threads_per_task-1),   &
-                          flux_l_nr(nzb+1:nzt,nys:nyn,0:threads_per_task-1),   &
-                          diss_l_nr(nzb+1:nzt,nys:nyn,0:threads_per_task-1) ) 
-             ENDIF
-
              IF ( ocean )  THEN
                 ALLOCATE( flux_s_sa(nzb+1:nzt,0:threads_per_task-1),           &
                           diss_s_sa(nzb+1:nzt,0:threads_per_task-1) )
@@ -1132,17 +1075,7 @@
 
        IF ( ws_scheme_sca )  THEN
           sums_wspts_ws_l = 0.0_wp
-          IF ( humidity       )  sums_wsqs_ws_l = 0.0_wp
-          IF ( passive_scalar )  sums_wsss_ws_l = 0.0_wp
-          IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
-             sums_wsqcs_ws_l = 0.0_wp
-             sums_wsncs_ws_l = 0.0_wp
-          ENDIF
-          IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
-             sums_wsqrs_ws_l = 0.0_wp
-             sums_wsnrs_ws_l = 0.0_wp
-          ENDIF
-          IF ( ocean )  sums_wssas_ws_l = 0.0_wp
+          sums_wssas_ws_l = 0.0_wp
 
        ENDIF
 
@@ -1649,74 +1582,6 @@
                                 *   ABS( w(k,j,i) - hom(k,1,3,0)            )  &
                     ) * weight_substep(intermediate_timestep_count)
              ENDDO
-            
-          CASE ( 'q' )
-
-             DO  k = nzb, nzt
-                sums_wsqs_ws_l(k,tn)  = sums_wsqs_ws_l(k,tn) +                 &
-                    ( flux_t(k) / ( w(k,j,i) + SIGN( 1.0E-20_wp, w(k,j,i) ) )  &
-                                * ( w(k,j,i) - hom(k,1,3,0)                 )  &
-                    + diss_t(k) / ( ABS(w(k,j,i)) + 1.0E-20_wp              )  &
-                                *   ABS( w(k,j,i) - hom(k,1,3,0)            )  &
-                    ) * weight_substep(intermediate_timestep_count)
-             ENDDO
-
-          CASE ( 'qc' )
-
-             DO  k = nzb, nzt
-                sums_wsqcs_ws_l(k,tn)  = sums_wsqcs_ws_l(k,tn) +               &
-                    ( flux_t(k) / ( w(k,j,i) + SIGN( 1.0E-20_wp, w(k,j,i) ) )  &
-                                * ( w(k,j,i) - hom(k,1,3,0)                 )  &
-                    + diss_t(k) / ( ABS(w(k,j,i)) + 1.0E-20_wp              )  &
-                                *   ABS( w(k,j,i) - hom(k,1,3,0)            )  &
-                    ) * weight_substep(intermediate_timestep_count)
-             ENDDO
-
-
-          CASE ( 'qr' )
-
-             DO  k = nzb, nzt
-                sums_wsqrs_ws_l(k,tn)  = sums_wsqrs_ws_l(k,tn) +               &
-                    ( flux_t(k) / ( w(k,j,i) + SIGN( 1.0E-20_wp, w(k,j,i) ) )  &
-                                * ( w(k,j,i) - hom(k,1,3,0)                 )  &
-                    + diss_t(k) / ( ABS(w(k,j,i)) + 1.0E-20_wp              )  &
-                                *   ABS( w(k,j,i) - hom(k,1,3,0)            )  &
-                    ) * weight_substep(intermediate_timestep_count)
-             ENDDO
-
-          CASE ( 'nc' )
-
-             DO  k = nzb, nzt
-                sums_wsncs_ws_l(k,tn)  = sums_wsncs_ws_l(k,tn) +               &
-                    ( flux_t(k) / ( w(k,j,i) + SIGN( 1.0E-20_wp, w(k,j,i) ) )  &
-                                * ( w(k,j,i) - hom(k,1,3,0)                 )  &
-                    + diss_t(k) / ( ABS(w(k,j,i)) + 1.0E-20_wp              )  &
-                                *   ABS( w(k,j,i) - hom(k,1,3,0)            )  &
-                    ) * weight_substep(intermediate_timestep_count)
-             ENDDO
-
-          CASE ( 'nr' )
-
-             DO  k = nzb, nzt
-                sums_wsnrs_ws_l(k,tn)  = sums_wsnrs_ws_l(k,tn) +               &
-                    ( flux_t(k) / ( w(k,j,i) + SIGN( 1.0E-20_wp, w(k,j,i) ) )  &
-                                * ( w(k,j,i) - hom(k,1,3,0)                 )  &
-                    + diss_t(k) / ( ABS(w(k,j,i)) + 1.0E-20_wp              )  &
-                                *   ABS( w(k,j,i) - hom(k,1,3,0)            )  &
-                    ) * weight_substep(intermediate_timestep_count)
-             ENDDO
-             
-          CASE ( 's' )
-          
-             DO  k = nzb, nzt
-                sums_wsss_ws_l(k,tn)  = sums_wsss_ws_l(k,tn) +                 &
-                    ( flux_t(k) / ( w(k,j,i) + SIGN( 1.0E-20_wp, w(k,j,i) ) )  &
-                                * ( w(k,j,i) - hom(k,1,3,0)                 )  &
-                    + diss_t(k) / ( ABS(w(k,j,i)) + 1.0E-20_wp              )  &
-                                *   ABS( w(k,j,i) - hom(k,1,3,0)            )  &
-                    ) * weight_substep(intermediate_timestep_count)
-             ENDDO
-
          END SELECT
          
     END SUBROUTINE advec_s_ws_ij
@@ -3687,74 +3552,6 @@
                                 *   ABS(w(k,j,i) - hom(k,1,3,0)             )  &
                             ) * weight_substep(intermediate_timestep_count)
                     ENDDO
-                 CASE ( 'q' )
-                    DO  k = nzb, nzt
-                       sums_wsqs_ws_l(k,tn)  = sums_wsqs_ws_l(k,tn)            &
-                          + ( flux_t(k)                                        &
-                                / ( w(k,j,i) + SIGN( 1.0E-20_wp, w(k,j,i) ) )  &
-                                * ( w(k,j,i) - hom(k,1,3,0)                 )  &
-                            + diss_t(k)                                        &
-                                / ( ABS(w(k,j,i)) + 1.0E-20_wp              )  &
-                                *   ABS(w(k,j,i) - hom(k,1,3,0)             )  &
-                            ) * weight_substep(intermediate_timestep_count)
-                    ENDDO
-                 CASE ( 'qc' )
-                    DO  k = nzb, nzt
-                       sums_wsqcs_ws_l(k,tn)  = sums_wsqcs_ws_l(k,tn)          &
-                          + ( flux_t(k)                                        &
-                                / ( w(k,j,i) + SIGN( 1.0E-20_wp, w(k,j,i) ) )  &
-                                * ( w(k,j,i) - hom(k,1,3,0)                 )  &
-                            + diss_t(k)                                        &
-                                / ( ABS(w(k,j,i)) + 1.0E-20_wp              )  &
-                                *   ABS(w(k,j,i) - hom(k,1,3,0)             )  &
-                            ) * weight_substep(intermediate_timestep_count)
-                    ENDDO
-                 CASE ( 'qr' )
-                    DO  k = nzb, nzt
-                       sums_wsqrs_ws_l(k,tn)  = sums_wsqrs_ws_l(k,tn)          &
-                          + ( flux_t(k)                                        &
-                                / ( w(k,j,i) + SIGN( 1.0E-20_wp, w(k,j,i) ) )  &
-                                * ( w(k,j,i) - hom(k,1,3,0)                 )  &
-                            + diss_t(k)                                        &
-                                / ( ABS(w(k,j,i)) + 1.0E-20_wp              )  &
-                                *   ABS(w(k,j,i) - hom(k,1,3,0)             )  &
-                            ) * weight_substep(intermediate_timestep_count)
-                    ENDDO
-                 CASE ( 'nc' )
-                    DO  k = nzb, nzt
-                       sums_wsncs_ws_l(k,tn)  = sums_wsncs_ws_l(k,tn)          &
-                          + ( flux_t(k)                                        &
-                                / ( w(k,j,i) + SIGN( 1.0E-20_wp, w(k,j,i) ) )  &
-                                * ( w(k,j,i) - hom(k,1,3,0)                 )  &
-                            + diss_t(k)                                        &
-                                / ( ABS(w(k,j,i)) + 1.0E-20_wp              )  &
-                                *   ABS(w(k,j,i) - hom(k,1,3,0)             )  &
-                            ) * weight_substep(intermediate_timestep_count)
-                    ENDDO
-                 CASE ( 'nr' )
-                    DO  k = nzb, nzt
-                       sums_wsnrs_ws_l(k,tn)  = sums_wsnrs_ws_l(k,tn)          &
-                          + ( flux_t(k)                                        &
-                                / ( w(k,j,i) + SIGN( 1.0E-20_wp, w(k,j,i) ) )  &
-                                * ( w(k,j,i) - hom(k,1,3,0)                 )  &
-                            + diss_t(k)                                        &
-                                / ( ABS(w(k,j,i)) + 1.0E-20_wp              )  &
-                                *   ABS(w(k,j,i) - hom(k,1,3,0)             )  &
-                            ) * weight_substep(intermediate_timestep_count)
-                    ENDDO
-                 CASE ( 's' )
-                    DO  k = nzb, nzt
-                       sums_wsss_ws_l(k,tn)  = sums_wsss_ws_l(k,tn)            &
-                          + ( flux_t(k)                                        &
-                                / ( w(k,j,i) + SIGN( 1.0E-20_wp, w(k,j,i) ) )  &
-                                * ( w(k,j,i) - hom(k,1,3,0)                 )  &
-                            + diss_t(k)                                        &
-                                / ( ABS(w(k,j,i)) + 1.0E-20_wp              )  &
-                                *   ABS(w(k,j,i) - hom(k,1,3,0)             )  &
-                            ) * weight_substep(intermediate_timestep_count)
-                    ENDDO   
-                                   
-
               END SELECT
 
          ENDDO
@@ -5240,5 +5037,98 @@
        ENDDO
 
     END SUBROUTINE advec_w_ws
+    SUBROUTINE ws_finalize
+
+       USE arrays_3d,                                                          &
+           ONLY:  diss_l_diss, diss_l_e, diss_l_nc, diss_l_nr, diss_l_pt,      &
+                  diss_l_q, diss_l_qc, diss_l_qr, diss_l_s, diss_l_sa,         &
+                  diss_l_u, diss_l_v, diss_l_w, flux_l_diss, flux_l_e,         & 
+                  flux_l_nc, flux_l_nr, flux_l_pt, flux_l_q, flux_l_qc,        &
+                  flux_l_qr, flux_l_s, flux_l_sa, flux_l_u, flux_l_v,          &
+                  flux_l_w, diss_s_diss, diss_s_e, diss_s_nc,  diss_s_nr,      &
+                  diss_s_pt, diss_s_q, diss_s_qc, diss_s_qr, diss_s_s,         &
+                  diss_s_sa, diss_s_u, diss_s_v,  diss_s_w, flux_s_diss,       &
+                  flux_s_e, flux_s_nc, flux_s_nr, flux_s_pt, flux_s_q,         &
+                  flux_s_qc, flux_s_qr, flux_s_s, flux_s_sa, flux_s_u,         &
+                  flux_s_v, flux_s_w
+
+       USE constants,                                                          &
+           ONLY:  adv_mom_1, adv_mom_3, adv_mom_5, adv_sca_1, adv_sca_3,       &
+                  adv_sca_5
+
+       USE control_parameters,                                                 &
+           ONLY:  cloud_physics, humidity, loop_optimization,                  &
+                  passive_scalar, microphysics_morrison, microphysics_seifert, &
+                  ocean, rans_tke_e, ws_scheme_mom, ws_scheme_sca
+
+       USE indices,                                                            &
+           ONLY:  nyn, nys, nzb, nzt
+
+       USE kinds
+       
+       USE pegrid
+
+       USE statistics,                                                         &
+           ONLY:  sums_us2_ws_l, sums_vs2_ws_l, sums_ws2_ws_l, sums_wsncs_ws_l,& 
+                  sums_wsnrs_ws_l,sums_wspts_ws_l, sums_wsqcs_ws_l,            &
+                  sums_wsqrs_ws_l, sums_wsqs_ws_l, sums_wsss_ws_l,             &
+                  sums_wssas_ws_l,  sums_wsss_ws_l, sums_wsus_ws_l,            &
+                  sums_wsvs_ws_l
+  
+!--    Arrays needed for statical evaluation of fluxes.
+       IF ( ws_scheme_mom )  THEN
+
+          DEALLOCATE( sums_wsus_ws_l, sums_wsvs_ws_l,            &
+                    sums_us2_ws_l, sums_vs2_ws_l,             &
+                    sums_ws2_ws_l )
+
+       ENDIF
+
+       IF ( ws_scheme_sca )  THEN
+
+          DEALLOCATE( sums_wspts_ws_l )
+
+          IF ( ocean )  THEN
+             DEALLOCATE( sums_wssas_ws_l )
+          ENDIF
+
+       ENDIF
+
+!
+!--    Arrays needed for reasons of speed optimization for cache version.
+!--    For the vector version the buffer arrays are not necessary,
+!--    because the the fluxes can swapped directly inside the loops of the 
+!--    advection routines.
+       IF ( loop_optimization /= 'vector' )  THEN
+
+          IF ( ws_scheme_mom )  THEN
+
+             DEALLOCATE( flux_s_u, flux_s_v, flux_s_w, diss_s_u,               &
+                       diss_s_v, diss_s_w )
+             DEALLOCATE( flux_l_u, flux_l_v, flux_l_w,       &
+                       diss_l_u, diss_l_v, diss_l_w )
+
+          ENDIF
+
+          IF ( ws_scheme_sca )  THEN
+
+             DEALLOCATE( flux_s_pt, flux_s_e, diss_s_pt, diss_s_e ) 
+             DEALLOCATE( flux_l_pt, flux_l_e, diss_l_pt, diss_l_e )
+
+             IF ( rans_tke_e )  THEN
+                DEALLOCATE( flux_s_diss, diss_s_diss )
+                DEALLOCATE( flux_l_diss, diss_l_diss )
+             ENDIF
+             IF ( ocean )  THEN
+                DEALLOCATE( flux_s_sa, diss_s_sa )
+                DEALLOCATE( flux_l_sa, diss_l_sa )
+             ENDIF
+
+          ENDIF
+
+       ENDIF
+
+    END SUBROUTINE ws_finalize
+
 
  END MODULE advec_ws

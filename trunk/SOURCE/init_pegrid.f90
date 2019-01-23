@@ -263,19 +263,9 @@
       
     USE pegrid
       
-    USE spectra_mod,                                                           &
-        ONLY:  calculate_spectra, dt_dosp
-
-    USE synthetic_turbulence_generator_mod,                                    &
-        ONLY:  id_stg_left, id_stg_north, id_stg_right, id_stg_south,          &
-               use_syn_turb_gen
-
     USE transpose_indices,                                                     &
         ONLY:  nxl_y, nxl_yd, nxl_z, nxr_y, nxr_yd, nxr_z, nyn_x, nyn_z, nys_x,&
                nys_z, nzb_x, nzb_y, nzb_yd, nzt_x, nzt_yd, nzt_y
-
-    USE vertical_nesting_mod,                                                  &
-        ONLY:  vnested, vnest_init_pegrid_domain, vnest_init_pegrid_rank
 
     IMPLICIT NONE
 
@@ -440,11 +430,6 @@
        ENDIF
     ENDIF
 !
-!-- Vertical nesting: store four lists that identify partner ranks to exchange 
-!-- data
-    IF ( vnested )  CALL vnest_init_pegrid_rank
-
-!
 !-- Determine sub-topologies for transpositions
 !-- Transposition from z to x:
     remain_dims(1) = .TRUE.
@@ -497,7 +482,6 @@
        nysf(j)   = j * nny
        nynf(j)   = ( j + 1 ) * nny - 1
     ENDDO
-
 !
 !-- Local array bounds of the respective PEs
     nxl = nxlf(pcoord(1))
@@ -525,7 +509,7 @@
 !
 !-- 1. transposition  z --> x
 !-- This transposition is not neccessary in case of a 1d-decomposition along x
-    IF ( psolver == 'poisfft'  .OR.  calculate_spectra )  THEN
+    IF ( psolver == 'poisfft' )  THEN
 
        IF ( pdims(2) /= 1 )  THEN
           IF ( MOD( nz , pdims(1) ) /= 0 )  THEN
@@ -600,25 +584,9 @@
        ENDIF
 
     ENDIF
-
 !
 !-- Indices for direct transpositions z --> y (used for calculating spectra)
-    IF ( calculate_spectra )  THEN
-       IF ( MOD( nz, pdims(2) ) /= 0 )  THEN
-          WRITE( message_string, * ) 'direct transposition z --> y (needed ',  &
-                    'for spectra): nz=',nz,' is not an integral divisor of ',  &
-                    'pdims(2)=',pdims(2)
-          CALL message( 'init_pegrid', 'PA0234', 1, 2, 0, 6, 0 )
-       ELSE
-          nxl_yd = nxl
-          nxr_yd = nxr
-          nzb_yd = 1 + myidy * ( nz / pdims(2) )
-          nzt_yd = ( myidy + 1 ) * ( nz / pdims(2) )
-          sendrecvcount_zyd = nnx * nny * ( nz / pdims(2) )
-       ENDIF
-    ENDIF
-
-    IF ( psolver == 'poisfft'  .OR.  calculate_spectra )  THEN
+    IF ( psolver == 'poisfft' )  THEN
 !
 !--    Indices for direct transpositions y --> x 
 !--    (they are only possible in case of a 1d-decomposition along x)
@@ -726,7 +694,6 @@
     ELSE
        nbgp = 1
     ENDIF 
-
 !
 !-- Create a new MPI derived datatype for the exchange of surface (xy) data,
 !-- which is needed for coupled atmosphere-ocean runs.
@@ -734,112 +701,6 @@
     ngp_xy  = ( nxr - nxl + 1 + 2 * nbgp ) * ( nyn - nys + 1 + 2 * nbgp )
     CALL MPI_TYPE_VECTOR( ngp_xy, 1, nzt-nzb+2, MPI_REAL, type_xy, ierr )
     CALL MPI_TYPE_COMMIT( type_xy, ierr )
-
-    IF ( TRIM( coupling_mode ) /= 'uncoupled' .AND. .NOT. vnested )  THEN
-   
-!
-!--    Pass the number of grid points of the atmosphere model to
-!--    the ocean model and vice versa
-       IF ( coupling_mode == 'atmosphere_to_ocean' )  THEN
-
-          nx_a = nx
-          ny_a = ny
-
-          IF ( myid == 0 )  THEN
-
-             CALL MPI_SEND( nx_a, 1, MPI_INTEGER, numprocs, 1, comm_inter,  &
-                            ierr )
-             CALL MPI_SEND( ny_a, 1, MPI_INTEGER, numprocs, 2, comm_inter,  &
-                            ierr )
-             CALL MPI_SEND( pdims, 2, MPI_INTEGER, numprocs, 3, comm_inter, &
-                            ierr )
-             CALL MPI_RECV( nx_o, 1, MPI_INTEGER, numprocs, 4, comm_inter,  &
-                            status, ierr )
-             CALL MPI_RECV( ny_o, 1, MPI_INTEGER, numprocs, 5, comm_inter,  &
-                            status, ierr )
-             CALL MPI_RECV( pdims_remote, 2, MPI_INTEGER, numprocs, 6,      &
-                            comm_inter, status, ierr )
-          ENDIF
-
-          CALL MPI_BCAST( nx_o, 1, MPI_INTEGER, 0, comm2d, ierr )
-          CALL MPI_BCAST( ny_o, 1, MPI_INTEGER, 0, comm2d, ierr ) 
-          CALL MPI_BCAST( pdims_remote, 2, MPI_INTEGER, 0, comm2d, ierr )
-       
-       ELSEIF ( coupling_mode == 'ocean_to_atmosphere' )  THEN
-
-          nx_o = nx
-          ny_o = ny 
-
-          IF ( myid == 0 ) THEN
-
-             CALL MPI_RECV( nx_a, 1, MPI_INTEGER, 0, 1, comm_inter, status, &
-                            ierr )
-             CALL MPI_RECV( ny_a, 1, MPI_INTEGER, 0, 2, comm_inter, status, &
-                            ierr )
-             CALL MPI_RECV( pdims_remote, 2, MPI_INTEGER, 0, 3, comm_inter, &
-                            status, ierr )
-             CALL MPI_SEND( nx_o, 1, MPI_INTEGER, 0, 4, comm_inter, ierr )
-             CALL MPI_SEND( ny_o, 1, MPI_INTEGER, 0, 5, comm_inter, ierr )
-             CALL MPI_SEND( pdims, 2, MPI_INTEGER, 0, 6, comm_inter, ierr )
-          ENDIF
-
-          CALL MPI_BCAST( nx_a, 1, MPI_INTEGER, 0, comm2d, ierr)
-          CALL MPI_BCAST( ny_a, 1, MPI_INTEGER, 0, comm2d, ierr) 
-          CALL MPI_BCAST( pdims_remote, 2, MPI_INTEGER, 0, comm2d, ierr) 
-
-       ENDIF
-  
-       ngp_a = ( nx_a+1 + 2 * nbgp ) * ( ny_a+1 + 2 * nbgp )
-       ngp_o = ( nx_o+1 + 2 * nbgp ) * ( ny_o+1 + 2 * nbgp )
-
-!
-!--    Determine if the horizontal grid and the number of PEs in ocean and
-!--    atmosphere is same or not
-       IF ( nx_o == nx_a  .AND.  ny_o == ny_a  .AND.  &
-            pdims(1) == pdims_remote(1) .AND. pdims(2) == pdims_remote(2) ) &
-       THEN
-          coupling_topology = 0
-       ELSE
-          coupling_topology = 1
-       ENDIF 
-
-!
-!--    Determine the target PEs for the exchange between ocean and
-!--    atmosphere (comm2d)
-       IF ( coupling_topology == 0 )  THEN
-!
-!--       In case of identical topologies, every atmosphere PE has exactly one
-!--       ocean PE counterpart and vice versa
-          IF ( TRIM( coupling_mode ) == 'atmosphere_to_ocean' ) THEN
-             target_id = myid + numprocs
-          ELSE
-             target_id = myid 
-          ENDIF
-
-       ELSE
-!
-!--       In case of nonequivalent topology in ocean and atmosphere only for
-!--       PE0 in ocean and PE0 in atmosphere a target_id is needed, since
-!--       data echxchange between ocean and atmosphere will be done only
-!--       between these PEs.    
-          IF ( myid == 0 )  THEN
-
-             IF ( TRIM( coupling_mode ) == 'atmosphere_to_ocean' )  THEN
-                target_id = numprocs 
-             ELSE
-                target_id = 0
-             ENDIF
-
-          ENDIF
-
-       ENDIF
-
-    ENDIF
-
-!
-!-- Store partner grid point co-ordinates as lists.
-!-- Create custom MPI vector datatypes for contiguous data transfer
-    IF ( vnested )  CALL vnest_init_pegrid_domain
 
 #else
 
@@ -1278,49 +1139,6 @@
        ENDIF
     ENDIF
 !
-!-- In case of synthetic turbulence geneartor determine ids. 
-!-- Please note, if no forcing or nesting is applied, the generator is applied
-!-- only at the left lateral boundary.
-    IF ( use_syn_turb_gen )  THEN
-       IF ( force_bound_l  .OR.  nest_bound_l  .OR.  inflow_l )  THEN
-          id_stg_left_l = myidx
-       ELSE
-          id_stg_left_l = 0
-       ENDIF
-       IF ( force_bound_r  .OR.  nest_bound_r )  THEN
-          id_stg_right_l = myidx
-       ELSE
-          id_stg_right_l = 0
-       ENDIF
-       IF ( force_bound_s  .OR.  nest_bound_s )  THEN
-          id_stg_south_l = myidy
-       ELSE
-          id_stg_south_l = 0
-       ENDIF
-       IF ( force_bound_n  .OR.  nest_bound_n )  THEN
-          id_stg_north_l = myidy
-       ELSE
-          id_stg_north_l = 0
-       ENDIF
-
-       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-       CALL MPI_ALLREDUCE( id_stg_left_l, id_stg_left,   1, MPI_INTEGER,       &
-                           MPI_SUM, comm1dx, ierr )
-
-       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-       CALL MPI_ALLREDUCE( id_stg_right_l, id_stg_right, 1, MPI_INTEGER,       &
-                           MPI_SUM, comm1dx, ierr )
-
-       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-       CALL MPI_ALLREDUCE( id_stg_south_l, id_stg_south, 1, MPI_INTEGER,       &
-                           MPI_SUM, comm1dy, ierr )
-
-       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-       CALL MPI_ALLREDUCE( id_stg_north_l, id_stg_north, 1, MPI_INTEGER,       &
-                           MPI_SUM, comm1dy, ierr )
-
-    ENDIF 
- 
 !
 !-- Broadcast the id of the inflow PE
     IF ( inflow_l )  THEN
@@ -1344,32 +1162,6 @@
     IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
     CALL MPI_ALLREDUCE( id_recycling_l, id_recycling, 1, MPI_INTEGER, MPI_SUM, &
                         comm1dx, ierr )
-
-!
-!-- Broadcast the id of the outflow PE and outflow-source plane
-    IF ( turbulent_outflow )  THEN
-
-       IF ( outflow_r )  THEN
-          id_outflow_l = myidx
-       ELSE
-          id_outflow_l = 0
-       ENDIF
-       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-       CALL MPI_ALLREDUCE( id_outflow_l, id_outflow, 1, MPI_INTEGER, MPI_SUM, &
-                           comm1dx, ierr )
-
-       IF ( NINT( outflow_source_plane / dx ) >= nxl  .AND. &
-            NINT( outflow_source_plane / dx ) <= nxr )  THEN
-          id_outflow_source_l = myidx
-       ELSE
-          id_outflow_source_l = 0
-       ENDIF
-       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-       CALL MPI_ALLREDUCE( id_outflow_source_l, id_outflow_source, 1, &
-                           MPI_INTEGER, MPI_SUM, comm1dx, ierr )
-
-    ENDIF
-
     CALL location_message( 'finished', .TRUE. )
 
 #else
@@ -1402,74 +1194,6 @@
        nysv = nys + 1
     ELSE
        nysv = nys
-    ENDIF
-
-!
-!-- Allocate wall flag arrays used in the multigrid solver
-    IF ( psolver(1:9) == 'multigrid' )  THEN
-
-       DO  i = maximum_grid_level, 1, -1
-
-           SELECT CASE ( i )
-
-              CASE ( 1 )
-                 ALLOCATE( wall_flags_1(nzb:nzt_mg(i)+1,         &
-                                        nys_mg(i)-1:nyn_mg(i)+1, &
-                                        nxl_mg(i)-1:nxr_mg(i)+1) )
-
-              CASE ( 2 )
-                 ALLOCATE( wall_flags_2(nzb:nzt_mg(i)+1,         &
-                                        nys_mg(i)-1:nyn_mg(i)+1, &
-                                        nxl_mg(i)-1:nxr_mg(i)+1) )
-
-              CASE ( 3 )
-                 ALLOCATE( wall_flags_3(nzb:nzt_mg(i)+1,         &
-                                        nys_mg(i)-1:nyn_mg(i)+1, &
-                                        nxl_mg(i)-1:nxr_mg(i)+1) )
-
-              CASE ( 4 )
-                 ALLOCATE( wall_flags_4(nzb:nzt_mg(i)+1,         &
-                                        nys_mg(i)-1:nyn_mg(i)+1, &
-                                        nxl_mg(i)-1:nxr_mg(i)+1) )
-
-              CASE ( 5 )
-                 ALLOCATE( wall_flags_5(nzb:nzt_mg(i)+1,         &
-                                        nys_mg(i)-1:nyn_mg(i)+1, &
-                                        nxl_mg(i)-1:nxr_mg(i)+1) )
-
-              CASE ( 6 )
-                 ALLOCATE( wall_flags_6(nzb:nzt_mg(i)+1,         &
-                                        nys_mg(i)-1:nyn_mg(i)+1, &
-                                        nxl_mg(i)-1:nxr_mg(i)+1) )
-
-              CASE ( 7 )
-                 ALLOCATE( wall_flags_7(nzb:nzt_mg(i)+1,         &
-                                        nys_mg(i)-1:nyn_mg(i)+1, &
-                                        nxl_mg(i)-1:nxr_mg(i)+1) )
-
-              CASE ( 8 )
-                 ALLOCATE( wall_flags_8(nzb:nzt_mg(i)+1,         &
-                                        nys_mg(i)-1:nyn_mg(i)+1, &
-                                        nxl_mg(i)-1:nxr_mg(i)+1) )
-
-              CASE ( 9 )
-                 ALLOCATE( wall_flags_9(nzb:nzt_mg(i)+1,         &
-                                        nys_mg(i)-1:nyn_mg(i)+1, &
-                                        nxl_mg(i)-1:nxr_mg(i)+1) )
-
-              CASE ( 10 )
-                 ALLOCATE( wall_flags_10(nzb:nzt_mg(i)+1,        &
-                                        nys_mg(i)-1:nyn_mg(i)+1, &
-                                        nxl_mg(i)-1:nxr_mg(i)+1) )
-
-              CASE DEFAULT
-                 message_string = 'more than 10 multigrid levels'
-                 CALL message( 'init_pegrid', 'PA0238', 1, 2, 0, 6, 0 )
-
-          END SELECT
-
-       ENDDO
-
     ENDIF
 
  END SUBROUTINE init_pegrid

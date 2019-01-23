@@ -137,9 +137,6 @@
 
     USE averaging
 
-    USE chemistry_model_mod,                                                   &
-        ONLY:  chem_3d_data_averaging
-
     USE control_parameters,                                                    &
         ONLY:  air_chemistry, average_count_3d, doav, doav_n, land_surface,    &
                urban_surface, varnamelength
@@ -147,26 +144,13 @@
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point
 
-    USE gust_mod,                                                              &
-        ONLY:  gust_3d_data_averaging, gust_module_enabled
-
     USE indices,                                                               &
         ONLY:  nbgp, nxl, nxlg, nxr, nxrg, nyn, nyng, nys, nysg, nzb, nzt
 
     USE kinds
 
-    USE land_surface_model_mod,                                                &
-        ONLY:  lsm_3d_data_averaging
-
-    USE radiation_model_mod,                                                   &
-        ONLY:  radiation, radiation_3d_data_averaging
-
     USE turbulence_closure_mod,                                                &
         ONLY:  tcm_3d_data_averaging
-
-    USE urban_surface_mod,                                                     &
-        ONLY:  usm_average_3d_data
-
 
 
 
@@ -630,40 +614,10 @@
                 ENDDO
                 CALL exchange_horiz_2d( z0q_av, nbgp )
              ENDIF
-
-!             
-!--       Block of urban surface model outputs   
-          CASE ( 'usm_output' )
-             CALL usm_average_3d_data( 'average', doav(ii) )
-
           CASE DEFAULT
 !
 !--          Turbulence closure module
              CALL tcm_3d_data_averaging( 'average', doav(ii) )
-
-!
-!--          Land surface quantity
-             IF ( land_surface )  THEN
-                CALL lsm_3d_data_averaging( 'average', doav(ii) )
-             ENDIF
-!
-!--          Radiation quantity
-             IF ( radiation )  THEN
-                CALL radiation_3d_data_averaging( 'average', doav(ii) )
-             ENDIF
-!
-!--          Gust module quantities
-             IF ( gust_module_enabled )  THEN
-                CALL gust_3d_data_averaging( 'average', doav(ii) )
-             ENDIF
-!
-!--          Chemistry quantity
-             IF ( air_chemistry )  THEN
-                CALL chem_3d_data_averaging( 'average', doav(ii) )
-             ENDIF
-!
-!--          User-defined quantity
-             CALL user_3d_data_averaging( 'average', doav(ii) )
 
        END SELECT
 

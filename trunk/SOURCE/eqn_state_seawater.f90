@@ -19,52 +19,52 @@
 !
 ! Current revisions:
 ! -----------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: eqn_state_seawater.f90 2718 2018-01-02 08:49:38Z maronga $
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 !
 ! 2369 2017-08-22 15:20:37Z suehring
 ! Bugfix, do not mask topography here, since density becomes zero, leading to
 ! division by zero in production_e
-! 
+!
 ! 2233 2017-05-30 18:08:54Z suehring
 !
 ! 2232 2017-05-30 17:47:52Z suehring
 ! Adjustments to new topography and surface concept
-! 
+!
 ! 2031 2016-10-21 15:11:58Z knoop
 ! renamed variable rho to rho_ocean
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1873 2016-04-18 14:50:06Z maronga
 ! Module renamed (removed _mod)
-! 
-! 
+!
+!
 ! 1850 2016-04-08 13:29:27Z maronga
 ! Module renamed
-! 
-! 
+!
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1353 2014-04-08 15:21:23Z heinze
-! REAL constants provided with KIND-attribute 
+! REAL constants provided with KIND-attribute
 !
 ! 1320 2014-03-20 08:40:49Z raasch
 ! ONLY-attribute added to USE-statements,
-! kind-parameters added to all INTEGER and REAL declaration statements, 
-! kinds are defined in new module kinds, 
+! kind-parameters added to all INTEGER and REAL declaration statements,
+! kinds are defined in new module kinds,
 ! revision history before 2012 removed,
 ! comment fields (!:) to be used for variable explanations added to
-! all variable declaration statements 
+! all variable declaration statements
 !
 ! 1036 2012-10-22 13:43:42Z raasch
 ! code put under GPL (PALM 3.9)
@@ -82,8 +82,8 @@
 !> eqn_state_seawater_func calculates density.
 !------------------------------------------------------------------------------!
  MODULE eqn_state_seawater_mod
- 
-    
+
+
     USE kinds
 
     IMPLICIT NONE
@@ -114,11 +114,11 @@
        MODULE PROCEDURE eqn_state_seawater
        MODULE PROCEDURE eqn_state_seawater_ij
     END INTERFACE eqn_state_seawater
- 
+
     INTERFACE eqn_state_seawater_func
        MODULE PROCEDURE eqn_state_seawater_func
     END INTERFACE eqn_state_seawater_func
- 
+
  CONTAINS
 
 
@@ -160,7 +160,7 @@
        REAL(wp) ::  dpdendT2 !<
        REAL(wp) ::  dpdendS2 !<
        REAL(wp) ::  dpnomdT2 !<
-       REAL(wp) ::  dpnomdS2 !< 
+       REAL(wp) ::  dpnomdS2 !<
        REAL(wp) ::  p1     !<
        REAL(wp) ::  p2     !<
        REAL(wp) ::  p3     !<
@@ -171,13 +171,14 @@
        REAL(wp) ::  sa1    !<
        REAL(wp) ::  sa15   !<
        REAL(wp) ::  sa2    !<
-       
-                       
+
+
 
        DO  i = nxl, nxr
           DO  j = nys, nyn
              DO  k = nzb+1, nzt
-!
+
+             !
 !--             Pressure is needed in dbar
                 p1 = hyp(k) * 1E-4_wp
                 p2 = p1 * p1
@@ -214,33 +215,33 @@
                        1.5*den(10)*pt2*sqrt(sa1)
 
 !--             Potential density (without pressure terms)
-                prho(k,j,i) = pnom / pden 
+                prho(k,j,i) = pnom / pden
 
                 pnom = pnom +             nom(8)*p1      + nom(9)*p1*pt2  +    &
                        nom(10)*p1*sa1   + nom(11)*p2     + nom(12)*p2*pt2
 
                 pden = pden +             den(11)*p1     + den(12)*p2*pt3 +    &
                        den(13)*p3*pt1
-                
+
                 dpnomdT2 = dpnomdT1     + 2.0*nom(9)*p1*pt1  + 2.0*nom(12)*p2*pt1
-                dpnomdS2 = dpnomdS1     + nom(10)*p1 
-          
+                dpnomdS2 = dpnomdS1     + nom(10)*p1
+
                 dpdendT2 = dpdendT1 + 3.0*den(12)*p2*pt2 + den(13)*p3
-                dpdendS2 = dpdendS1 
+                dpdendS2 = dpdendS1
 
 !
 !--             In-situ density
 
-                rho_ocean(k,j,i) = pnom / pden 
+                rho_ocean(k,j,i) = pnom / pden
 
                 alpha_T(k,j,i) = -1.0/rho_ocean(k,j,i)*((dpnomdT2*pden -         &
                                     pnom*dpdendT2) / (pden*pden))
-                beta_S(k,j,i) = (dpnomdS2*pden - pnom*dpdendS2) / (pden*pden)
-                rho_ocean(k,j,i) = pnom / pden 
+                beta_S(k,j,i) = 1.0/rho_ocean(k,j,i)*(dpnomdS2*pden - pnom*dpdendS2) / (pden*pden)
+                rho_ocean(k,j,i) = pnom / pden
 
                 if (linear_eqnOfState) THEN
                   if (fixed_alpha) THEN
-                    rho_ocean(k,j,i) = rho_ref*(1.0 - fixed_alpha*(pt1 - pt_ref) + &
+                    rho_ocean(k,j,i) = rho_ref*(1.0 - alpha_const*(pt1 - pt_ref) + &
                         beta_const*(sa1 - sa_ref))
                   ELSE
                     rho_ocean(k,j,i) = rho_ref*(1.0 - alpha_T(k,j,i)*(pt1 - pt_ref) + &
@@ -259,7 +260,7 @@
 !--    Neumann conditions at up/downward-facing surfaces
        !$OMP PARALLEL DO PRIVATE( i, j, k )
        DO  m = 1, bc_h(0)%ns
-          i = bc_h(0)%i(m)            
+          i = bc_h(0)%i(m)
           j = bc_h(0)%j(m)
           k = bc_h(0)%k(m)
           prho(k-1,j,i)      = prho(k,j,i)
@@ -269,7 +270,7 @@
 !--    Downward facing surfaces
        !$OMP PARALLEL DO PRIVATE( i, j, k )
        DO  m = 1, bc_h(1)%ns
-          i = bc_h(1)%i(m)            
+          i = bc_h(1)%i(m)
           j = bc_h(1)%j(m)
           k = bc_h(1)%k(m)
           prho(k+1,j,i)      = prho(k,j,i)
@@ -288,7 +289,7 @@
 
        USE arrays_3d,                                                          &
            ONLY:  hyp, prho, pt_p, rho_ocean, sa_p
-           
+
        USE indices,                                                            &
            ONLY:  nzb, nzt
 
@@ -346,7 +347,7 @@
                  den(10)*sa15*pt2
 !
 !--       Potential density (without pressure terms)
-          prho(k,j,i) = pnom / pden 
+          prho(k,j,i) = pnom / pden
 
           pnom = pnom +             nom(8)*p1      + nom(9)*p1*pt2  +          &
                  nom(10)*p1*sa1   + nom(11)*p2     + nom(12)*p2*pt2
@@ -355,14 +356,14 @@
 
 !
 !--       In-situ density
-          rho_ocean(k,j,i) = pnom / pden 
+          rho_ocean(k,j,i) = pnom / pden
 
 
        ENDDO
 !
 !--    Neumann conditions at up/downward-facing walls
-       surf_s = bc_h(0)%start_index(j,i)   
-       surf_e = bc_h(0)%end_index(j,i)   
+       surf_s = bc_h(0)%start_index(j,i)
+       surf_e = bc_h(0)%end_index(j,i)
        DO  m = surf_s, surf_e
           k                  = bc_h(0)%k(m)
           prho(k-1,j,i)      = prho(k,j,i)
@@ -370,8 +371,8 @@
        ENDDO
 !
 !--    Downward facing surfaces
-       surf_s = bc_h(1)%start_index(j,i)   
-       surf_e = bc_h(1)%end_index(j,i)   
+       surf_s = bc_h(1)%start_index(j,i)
+       surf_e = bc_h(1)%end_index(j,i)
        DO  m = surf_s, surf_e
           k                  = bc_h(1)%k(m)
           prho(k+1,j,i)      = prho(k,j,i)
@@ -422,7 +423,6 @@
 
        sa15 = sa * SQRT( sa )
        sa2  = sa * sa
-
 
        eqn_state_seawater_func =                                               &
          ( nom(1)        + nom(2)*pt1       + nom(3)*pt2    + nom(4)*pt3     + &

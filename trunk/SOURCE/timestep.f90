@@ -130,9 +130,7 @@
 
     USE control_parameters,                                                    &
         ONLY:  cfl_factor, coupling_mode, dt_3d, dt_fixed, dt_max,             &
-               galilei_transformation, old_dt, message_string, rans_mode,      &
-               stop_dt, terminate_coupled, terminate_coupled_remote,           &
-               timestep_reason, u_gtrans, use_ug_for_galilei_tr, v_gtrans
+               old_dt, message_string, stop_dt, timestep_reason
 
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point
@@ -147,22 +145,13 @@
 
     USE kinds
 
-    USE microphysics_mod,                                                      &
-        ONLY:  dt_precipitation
-
     USE pegrid
-
-    USE pmc_interface,                                                         &
-        ONLY:  nested_run
 
     USE statistics,                                                            &
         ONLY:  flow_statistics_called, hom, u_max, u_max_ijk, v_max, v_max_ijk,&
                w_max, w_max_ijk
 
-    USE vertical_nesting_mod,                                                  &
-        ONLY:  vnested, vnest_timestep_sync
-
-    IMPLICIT NONE
+   IMPLICIT NONE
 
     INTEGER(iwp) ::  i !< 
     INTEGER(iwp) ::  j !< 
@@ -183,18 +172,14 @@
     REAL(wp) ::  dt_w_l            !< 
     REAL(wp) ::  km_max            !< maximum of Km in entire domain
     REAL(wp) ::  kh_max            !< maximum of Kh in entire domain
-    REAL(wp) ::  u_gtrans_l        !< 
     REAL(wp) ::  u_max_l           !< 
     REAL(wp) ::  u_min_l           !< 
     REAL(wp) ::  value             !< 
-    REAL(wp) ::  v_gtrans_l        !< 
     REAL(wp) ::  v_max_l           !< 
     REAL(wp) ::  v_min_l           !< 
     REAL(wp) ::  w_max_l           !< 
     REAL(wp) ::  w_min_l           !< 
  
-    REAL(wp), DIMENSION(2)         ::  uv_gtrans   !< 
-    REAL(wp), DIMENSION(2)         ::  uv_gtrans_l !< 
     REAL(wp), DIMENSION(3)         ::  reduce      !< 
     REAL(wp), DIMENSION(3)         ::  reduce_l    !< 
     REAL(wp), DIMENSION(nzb+1:nzt) ::  dxyz2_min   !<  
@@ -204,55 +189,6 @@
 !
 !--    Save former time step as reference
        old_dt = dt_3d
-
-!
-!-- In case of Galilei-transform not using the geostrophic wind as translation
-!-- velocity, compute the volume-averaged horizontal velocity components, which
-!-- will then be subtracted from the horizontal wind for the time step and
-!-- horizontal advection routines.
-    IF ( galilei_transformation  .AND. .NOT.  use_ug_for_galilei_tr )  THEN
-       IF ( flow_statistics_called )  THEN
-!
-!--       Horizontal averages already existent, just need to average them 
-!--       vertically.
-          u_gtrans = 0.0_wp
-          v_gtrans = 0.0_wp
-          DO  k = nzb+1, nzt
-             u_gtrans = u_gtrans + hom(k,1,1,0)
-             v_gtrans = v_gtrans + hom(k,1,2,0)
-          ENDDO
-          u_gtrans = u_gtrans / REAL( nzt - nzb, KIND=wp )
-          v_gtrans = v_gtrans / REAL( nzt - nzb, KIND=wp )
-       ELSE
-!
-!--       Averaging over the entire model domain.
-          u_gtrans_l = 0.0_wp
-          v_gtrans_l = 0.0_wp
-          DO  i = nxl, nxr
-             DO  j = nys, nyn
-                DO  k = nzb+1, nzt
-                   u_gtrans_l = u_gtrans_l + u(k,j,i)
-                   v_gtrans_l = v_gtrans_l + v(k,j,i)
-                ENDDO
-             ENDDO
-          ENDDO
-          uv_gtrans_l(1) = u_gtrans_l /                                        &
-                           REAL( (nxr-nxl+1)*(nyn-nys+1)*(nzt-nzb), KIND=wp )
-          uv_gtrans_l(2) = v_gtrans_l /                                        &
-                           REAL( (nxr-nxl+1)*(nyn-nys+1)*(nzt-nzb), KIND=wp )
-#if defined( __parallel )
-          IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-          CALL MPI_ALLREDUCE( uv_gtrans_l, uv_gtrans, 2, MPI_REAL, MPI_SUM,    &
-                              comm2d, ierr )
-          u_gtrans = uv_gtrans(1) / REAL( numprocs, KIND=wp )
-          v_gtrans = uv_gtrans(2) / REAL( numprocs, KIND=wp )
-#else
-          u_gtrans = uv_gtrans_l(1)
-          v_gtrans = uv_gtrans_l(2)
-#endif
-       ENDIF
-    ENDIF
-
 !
 !-- Determine the maxima of the velocity components, including their
 !-- grid index positions.
@@ -275,9 +211,9 @@
           DO  j = nys, nyn
              DO  k = nzb+1, nzt
                 dt_u_l = MIN( dt_u_l, ( dx     /                               &
-                                 ( ABS( u(k,j,i) - u_gtrans ) + 1.0E-10_wp ) ) )
+                                 ( ABS( u(k,j,i) ) + 1.0E-10_wp ) ) )
                 dt_v_l = MIN( dt_v_l, ( dy     /                               &
-                                 ( ABS( v(k,j,i) - v_gtrans ) + 1.0E-10_wp ) ) )
+                                 ( ABS( v(k,j,i) ) + 1.0E-10_wp ) ) )
                 dt_w_l = MIN( dt_w_l, ( dzu(k) /                               &
                                  ( ABS( w(k,j,i) )            + 1.0E-10_wp ) ) )
              ENDDO
@@ -331,12 +267,8 @@
 !--    The time step is the minimum of the 3-4 components and the diffusion time
 !--    step minus a reduction (cfl_factor) to be on the safe side.
 !--    The time step must not exceed the maximum allowed value.
-       dt_3d = cfl_factor * MIN( dt_diff, dt_u, dt_v, dt_w, dt_precipitation )
+       dt_3d = cfl_factor * MIN( dt_diff, dt_u, dt_v, dt_w )
        dt_3d = MIN( dt_3d, dt_max )
-!
-!--    In RANS mode, the time step must not increase by more than a factor of 2
-       IF ( rans_mode )  dt_3d = MIN( dt_3d, dt_max, 2.0_wp * old_dt )
-
 !
 !--    Remember the restricting time step criterion for later output.
        IF ( MIN( dt_u, dt_v, dt_w ) < dt_diff )  THEN
@@ -376,37 +308,9 @@
                '&kh_max          = ', kh_max, ' m2/s2  k=', kh_max_ijk(1),     &
                 '  j=', kh_max_ijk(2), '  i=', kh_max_ijk(3)
           CALL message( 'timestep', 'PA0312', 0, 1, 0, 6, 0 )
-!
-!--       In case of coupled runs inform the remote model of the termination 
-!--       and its reason, provided the remote model has not already been 
-!--       informed of another termination reason (terminate_coupled > 0) before.
-#if defined( __parallel )
-          IF ( coupling_mode /= 'uncoupled' .AND. terminate_coupled == 0 )  THEN
-             terminate_coupled = 2
-             IF ( myid == 0 )  THEN
-                CALL MPI_SENDRECV( &
-                     terminate_coupled,        1, MPI_INTEGER, target_id,  0,  &
-                     terminate_coupled_remote, 1, MPI_INTEGER, target_id,  0,  &
-                     comm_inter, status, ierr )
-             ENDIF
-             CALL MPI_BCAST( terminate_coupled_remote, 1, MPI_INTEGER, 0,      &
-                             comm2d, ierr)
-          ENDIF
-#endif
-       ENDIF
+      ENDIF
 
 !
-!--    In case of nested runs all parent/child processes have to terminate if
-!--    one process has set the stop flag, i.e. they need to set the stop flag
-!--    too.
-       IF ( nested_run )  THEN
-          stop_dt_local = stop_dt
-#if defined( __parallel )
-          CALL MPI_ALLREDUCE( stop_dt_local, stop_dt, 1, MPI_LOGICAL, MPI_LOR, &
-                              MPI_COMM_WORLD, ierr )
-#endif
-       ENDIF
-
 !
 !--    Ensure a smooth value (two significant digits) of the timestep.
        div = 1000.0_wp
@@ -416,10 +320,6 @@
        dt_3d = NINT( dt_3d * 100.0_wp / div ) * div / 100.0_wp
 
     ENDIF
-
-!
-!-- Vertical nesting: coarse and fine grid timestep has to be identical    
-    IF ( vnested )  CALL vnest_timestep_sync
 
     CALL cpu_log( log_point(12), 'calculate_timestep', 'stop' )
 

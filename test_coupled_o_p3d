@@ -38,6 +38,7 @@
         bc_sa_t = 'neumann', /
 
 &runtime_parameters
+        dt_coupling = 600.0,
         end_time = 3600.0,
         create_disturbances = .T.,
         disturbance_energy_limit = 1.0e-2,

@@ -206,12 +206,6 @@
         
     USE averaging
         
-    USE chemistry_model_mod,                                                   &
-        ONLY:  chem_data_output_3d
-
-    USE cloud_parameters,                                                      &
-        ONLY:  l_d_cp, pt_d_t
-        
     USE control_parameters,                                                    &
         ONLY:  air_chemistry, cloud_physics, do3d, do3d_no, do3d_time_count,   &
                io_blocks, io_group, land_surface, message_string,              &
@@ -222,18 +216,12 @@
     USE cpulog,                                                                &
         ONLY:  log_point, cpu_log
 
-    USE gust_mod,                                                              &
-        ONLY: gust_data_output_3d, gust_module_enabled
-        
     USE indices,                                                               &
         ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, ny, nyn, nyng, nys, nysg, nzb,  &
                nzt, wall_flags_0
         
     USE kinds
     
-    USE land_surface_model_mod,                                                &
-        ONLY: lsm_data_output_3d, nzb_soil, nzt_soil
-
 #if defined( __netcdf )
     USE NETCDF
 #endif
@@ -242,24 +230,9 @@
         ONLY:  fill_value, id_set_3d, id_var_do3d, id_var_time_3d, nc_stat,    &
                netcdf_data_format, netcdf_handle_error
         
-    USE particle_attributes,                                                   &
-        ONLY:  grid_particles, number_of_particles, particles,                 &
-               particle_advection_start, prt_count
-        
     USE pegrid
-
-    USE plant_canopy_model_mod,                                                &
-        ONLY:  pcm_data_output_3d
-        
-    USE radiation_model_mod,                                                   &
-        ONLY:  nzub, nzut, radiation, radiation_data_output_3d
-
     USE turbulence_closure_mod,                                                &
         ONLY:  tcm_data_output_3d
-
-    USE urban_surface_mod,                                                     &
-        ONLY:  usm_data_output_3d
-
 
     IMPLICIT NONE
 
@@ -349,16 +322,9 @@
 !--    surface model (urban_surface_mod.f90), see also SELECT CASE ( trimvar ).
 !--    Store the array chosen on the temporary array.
        trimvar = TRIM( do3d(av,if) )
-       IF ( urban_surface  .AND.  trimvar(1:4) == 'usm_' )  THEN
-          trimvar = 'usm_output'
-          resorted = .TRUE.
-          nzb_do   = nzub
-          nzt_do   = nzut
-       ELSE
-          resorted = .FALSE.
+         resorted = .FALSE.
           nzb_do   = nzb
           nzt_do   = nz_do3d
-       ENDIF
 !
 !--    Set flag to steer output of radiation, land-surface, or user-defined
 !--    quantities
@@ -431,77 +397,6 @@
                 IF ( psolver /= 'sor' )  CALL exchange_horiz( p_av, nbgp )
                 to_be_resorted => p_av
              ENDIF
-
-          CASE ( 'pc' )  ! particle concentration (requires ghostpoint exchange)
-             IF ( av == 0 )  THEN
-                IF ( simulated_time >= particle_advection_start )  THEN
-                   tend = prt_count
-                ELSE
-                   tend = 0.0_wp
-                ENDIF
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb_do, nzt_do
-                         local_pf(i,j,k) = tend(k,j,i)
-                      ENDDO
-                   ENDDO
-                ENDDO
-                resorted = .TRUE.
-             ELSE
-                IF ( .NOT. ALLOCATED( pc_av ) ) THEN
-                   ALLOCATE( pc_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-                   pc_av = REAL( fill_value, KIND = wp )
-                ENDIF
-                to_be_resorted => pc_av
-             ENDIF
-
-          CASE ( 'pr' )  ! mean particle radius (effective radius)
-             IF ( av == 0 )  THEN
-                IF ( simulated_time >= particle_advection_start )  THEN
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                         DO  k = nzb_do, nzt_do
-                            number_of_particles = prt_count(k,j,i)
-                            IF (number_of_particles <= 0)  CYCLE
-                            particles => grid_particles(k,j,i)%particles(1:number_of_particles)
-                            s_r2 = 0.0_wp
-                            s_r3 = 0.0_wp
-                            DO  n = 1, number_of_particles
-                               IF ( particles(n)%particle_mask )  THEN
-                                  s_r2 = s_r2 + particles(n)%radius**2 * &
-                                         particles(n)%weight_factor
-                                  s_r3 = s_r3 + particles(n)%radius**3 * &
-                                         particles(n)%weight_factor
-                               ENDIF
-                            ENDDO
-                            IF ( s_r2 > 0.0_wp )  THEN
-                               mean_r = s_r3 / s_r2
-                            ELSE
-                               mean_r = 0.0_wp
-                            ENDIF
-                            tend(k,j,i) = mean_r
-                         ENDDO
-                      ENDDO
-                   ENDDO
-                ELSE
-                   tend = 0.0_wp
-                ENDIF
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb_do, nzt_do
-                         local_pf(i,j,k) = tend(k,j,i)
-                      ENDDO
-                   ENDDO
-                ENDDO
-                resorted = .TRUE.
-             ELSE
-                IF ( .NOT. ALLOCATED( pr_av ) ) THEN
-                   ALLOCATE( pr_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-                   pr_av = REAL( fill_value, KIND = wp )
-                ENDIF
-                to_be_resorted => pr_av
-             ENDIF
-
           CASE ( 'prr' )
              IF ( av == 0 )  THEN
                 DO  i = nxl, nxr
@@ -528,20 +423,7 @@
 
           CASE ( 'pt' )
              IF ( av == 0 )  THEN
-                IF ( .NOT. cloud_physics ) THEN
-                   to_be_resorted => pt
-                ELSE
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                         DO  k = nzb_do, nzt_do
-                            local_pf(i,j,k) = pt(k,j,i) + l_d_cp *             &
-                                                          pt_d_t(k) *          &
-                                                          ql(k,j,i)
-                         ENDDO
-                      ENDDO
-                   ENDDO
-                   resorted = .TRUE.
-                ENDIF
+                to_be_resorted => pt
              ELSE
                 IF ( .NOT. ALLOCATED( pt_av ) ) THEN
                    ALLOCATE( pt_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
@@ -604,45 +486,6 @@
                 ENDIF
                 to_be_resorted => ql_v_av
              ENDIF
-
-          CASE ( 'ql_vp' )
-             IF ( av == 0 )  THEN
-                IF ( simulated_time >= particle_advection_start )  THEN
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                         DO  k = nzb_do, nzt_do
-                            number_of_particles = prt_count(k,j,i)
-                            IF (number_of_particles <= 0)  CYCLE
-                            particles => grid_particles(k,j,i)%particles(1:number_of_particles)
-                            DO  n = 1, number_of_particles
-                               IF ( particles(n)%particle_mask )  THEN
-                                  tend(k,j,i) =  tend(k,j,i) +                 &
-                                                 particles(n)%weight_factor /  &
-                                                 prt_count(k,j,i)
-                               ENDIF
-                            ENDDO
-                         ENDDO
-                      ENDDO
-                   ENDDO
-                ELSE
-                   tend = 0.0_wp
-                ENDIF
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb_do, nzt_do
-                         local_pf(i,j,k) = tend(k,j,i)
-                      ENDDO
-                   ENDDO
-                ENDDO
-                resorted = .TRUE.
-             ELSE
-                IF ( .NOT. ALLOCATED( ql_vp_av ) ) THEN
-                   ALLOCATE( ql_vp_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-                   ql_vp_av = REAL( fill_value, KIND = wp )
-                ENDIF
-                to_be_resorted => ql_vp_av
-             ENDIF
-
           CASE ( 'qr' )
              IF ( av == 0 )  THEN
                 to_be_resorted => qr
@@ -786,87 +629,13 @@
                 ENDIF
                 to_be_resorted => w_av
              ENDIF
-!             
-!--       Block of urban surface model outputs   
-          CASE ( 'usm_output' )
-             CALL usm_data_output_3d( av, do3d(av,if), found, local_pf,     &
-                                         nzb_do, nzt_do )
 
           CASE DEFAULT
-
-!
-!--          Land surface quantity
-             IF ( land_surface )  THEN
-!
-!--             For soil model quantities, it is required to re-allocate local_pf
-                nzb_do = nzb_soil
-                nzt_do = nzt_soil
-
-                DEALLOCATE ( local_pf )
-                ALLOCATE( local_pf(nxl:nxr,nys:nyn,nzb_do:nzt_do) )
-                local_pf = fill_value
-
-                CALL lsm_data_output_3d( av, do3d(av,if), found, local_pf )
-                resorted = .TRUE.
-
-!
-!--             If no soil model variable was found, re-allocate local_pf
-                IF ( .NOT. found )  THEN
-                   nzb_do = nzb
-                   nzt_do = nz_do3d
-
-                   DEALLOCATE ( local_pf )
-                   ALLOCATE( local_pf(nxl:nxr,nys:nyn,nzb_do:nzt_do) )                 
-                ENDIF
-
-             ENDIF
-
              IF ( .NOT. found )  THEN
                 CALL tcm_data_output_3d( av, do3d(av,if), found, local_pf,     &
                                          nzb_do, nzt_do )
                 resorted = .TRUE.
              ENDIF
-
-!
-!--          Radiation quantity
-             IF ( .NOT. found  .AND.  radiation )  THEN
-                CALL radiation_data_output_3d( av, do3d(av,if), found,         &
-                                               local_pf, nzb_do, nzt_do )
-                resorted = .TRUE.
-             ENDIF
-
-!
-!--          Gust module quantities
-             IF ( .NOT. found  .AND.  gust_module_enabled )  THEN
-                CALL gust_data_output_3d( av, do3d(av,if), found, local_pf,    &
-                                          nzb_do, nzt_do )
-                resorted = .TRUE.
-             ENDIF
-
-!
-!--          Chemistry model output
-             IF ( .NOT. found  .AND.  air_chemistry )  THEN
-                CALL chem_data_output_3d( av, do3d(av,if), found,              &
-                                          local_pf, fill_value, nzb_do, nzt_do )
-                resorted = .TRUE.
-             ENDIF
-
-!
-!--          Plant canopy model output
-             IF ( .NOT. found  .AND.  plant_canopy )  THEN
-                CALL pcm_data_output_3d( av, do3d(av,if), found, local_pf,     &
-                                         fill_value, nzb_do, nzt_do )
-                resorted = .TRUE.
-             ENDIF
-
-!
-!--          User defined quantity
-             IF ( .NOT. found )  THEN
-                CALL user_data_output_3d( av, do3d(av,if), found, local_pf,    &
-                                          nzb_do, nzt_do )
-                resorted = .TRUE.
-             ENDIF
-
              IF ( .NOT. found )  THEN
                 message_string =  'no output available for: ' //               &
                                   TRIM( do3d(av,if) )

@@ -83,19 +83,8 @@
 
     USE pegrid
 
-    USE pmc_interface,                                                         &
-        ONLY:  nested_run
-
-
 #if defined( __parallel )
-    IF ( coupling_mode == 'uncoupled' )  THEN
-       IF ( nested_run )  THEN
-!
-!--       Workaround: If any of the nested model crashes, it aborts the whole
-!--       run with MPI_ABORT, regardless of the reason given by abort_mode
-          CALL MPI_ABORT( MPI_COMM_WORLD, 9999, ierr )
-       ELSE
-          IF ( abort_mode == 1 )  THEN
+         IF ( abort_mode == 1 )  THEN
              CALL MPI_FINALIZE( ierr )
              STOP
           ELSEIF ( abort_mode == 2 )  THEN
@@ -103,92 +92,6 @@
           ELSEIF ( abort_mode == 3 )  THEN
              CALL MPI_ABORT( MPI_COMM_WORLD, 9999, ierr )
           ENDIF
-       ENDIF
-    ELSEIF ( coupling_mode(1:8) == 'vnested_' )  THEN
-
-       PRINT*, '+++ local_stop:'
-       PRINT*, '     model "', TRIM( coupling_mode ), '" terminated'
-!
-!--    Abort both coarse and fine grid
-       CALL MPI_ABORT( MPI_COMM_WORLD, 9999, ierr )
-    ELSE
-
-       SELECT CASE ( terminate_coupled_remote )
-
-          CASE ( 0 )
-             IF ( myid == 0 )  THEN
-                PRINT*, '+++ local_stop:'
-                PRINT*, '    local model "', TRIM( coupling_mode ), &
-                     '" stops now'
-             ENDIF
-!
-!--          Inform the remote model of the termination and its reason, provided
-!--          the remote model has not already been informed of another 
-!--          termination reason (terminate_coupled > 0) before.
-             IF ( terminate_coupled == 0 )  THEN
-                terminate_coupled = 1
-                IF ( myid == 0 ) THEN
-                   CALL MPI_SENDRECV( &
-                        terminate_coupled,        1, MPI_INTEGER, target_id,  0, &
-                        terminate_coupled_remote, 1, MPI_INTEGER, target_id,  0, &
-                        comm_inter, status, ierr )
-                ENDIF
-                CALL MPI_BCAST( terminate_coupled_remote, 1, MPI_REAL, 0, comm2d, ierr)
-             ENDIF
-             CALL MPI_FINALIZE( ierr )
-             STOP
-
-          CASE ( 1 )
-             IF ( myid == 0 )  THEN
-                PRINT*, '+++ local_stop:'
-                PRINT*, '    remote model "', TRIM( coupling_mode_remote ), &
-                     '" stopped'
-             ENDIF
-             CALL MPI_FINALIZE( ierr )
-             STOP
-
-          CASE ( 2 )
-             IF ( myid == 0 )  THEN
-                PRINT*, '+++ local_stop:'
-                PRINT*, '    remote model "', TRIM( coupling_mode_remote ), &
-                     '" terminated'
-                PRINT*, '    with stop_dt = .T.'
-             ENDIF
-             stop_dt = .TRUE.
-
-          CASE ( 3 )
-             IF ( myid == 0 )  THEN
-                PRINT*, '+++ local_stop:'
-                PRINT*, '    remote model "', TRIM( coupling_mode_remote ), &
-                     '" terminated'
-                PRINT*, '    with terminate_run = .T. (CPU-time limit)'
-             ENDIF
-             terminate_run = .TRUE.
-
-          CASE ( 4 )
-             IF ( myid == 0 )  THEN
-                PRINT*, '+++ local_stop:'
-                PRINT*, '    remote model "', TRIM( coupling_mode_remote ), &
-                     '" terminated'
-                PRINT*, '    with terminate_run = .T. (restart)'
-             ENDIF
-             terminate_run = .TRUE.
-             time_restart = time_restart + dt_restart
-
-          CASE ( 5 )
-             IF ( myid == 0 )  THEN
-                PRINT*, '+++ local_stop:'
-                PRINT*, '    remote model "', TRIM( coupling_mode_remote ), &
-                     '" terminated'
-                PRINT*, '    with terminate_run = .T. (single restart)'
-             ENDIF
-             terminate_run = .TRUE.
-             time_restart = 9999999.9_wp
-
-       END SELECT
-
-    ENDIF
-
 #else
 
     STOP

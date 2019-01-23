@@ -20,6 +20,8 @@
 ! Current revisions:
 ! -----------------
 ! 
+! 2018-11-06 cbegeman
+! Fixed compiler warning message with MPI_ABORT
 ! 
 ! Former revisions:
 ! -----------------
@@ -1163,7 +1165,10 @@
 
 
        USE control_parameters,                                                 &
-           ONLY:  grid_level
+           ONLY:  grid_level, message_string
+
+       USE pegrid,                                                             &
+           ONLY: ierr
 
        USE indices,                                                            &
            ONLY:  nxl_mg, nxr_mg, nys_mg, nyn_mg, nzb, nzt_mg
@@ -1202,12 +1207,11 @@
                 tmp(ind) = i_mg(k,j,i)
              ENDDO
 !
-!++          ATTENTION: Check reason for this error. Remove it or replace WRITE
-!++                     by PALM message
 #if defined ( __parallel )
              IF ( ind /= ind_even_odd )  THEN
-                WRITE (0,*) 'ERROR ==> illegal ind_even_odd ',ind,ind_even_odd,l
-                CALL MPI_ABORT(MPI_COMM_WORLD,i,j)
+                WRITE (message_string,*) 'ERROR ==> illegal ind_even_odd ',ind,ind_even_odd,l
+                CALL location_message(adjustl(trim(message_string)),.TRUE.)
+                CALL MPI_ABORT(MPI_COMM_WORLD,9999,ierr)
              ENDIF
 #endif
 !

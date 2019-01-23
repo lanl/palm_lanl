@@ -105,8 +105,9 @@
 
 !
 !-- If required, do statistics
-    IF ( .NOT. flow_statistics_called )  CALL flow_statistics
-
+    IF ( .NOT. flow_statistics_called ) THEN
+           CALL flow_statistics
+    endif
 !
 !-- Flow_statistics has its own cpu-time measurement
     CALL cpu_log( log_point(11), 'run_control', 'start' )
@@ -122,10 +123,10 @@
 
 !
 !--    If required, write header
-       IF ( .NOT. run_control_header )  THEN
-          WRITE ( 15, 100 )
-          run_control_header = .TRUE.
-       ENDIF
+!       IF ( .NOT. run_control_header )  THEN
+!          WRITE ( 15, 100 )
+!          run_control_header = .TRUE.
+!       ENDIF
 
 !
 !--    If required, set disturbance flag
@@ -134,20 +135,20 @@
        ELSE
           disturb_chr = ' '
        ENDIF
-       WRITE ( 15, 101 )  runnr, current_timestep_number, simulated_time_chr,  &
-                          INT( ( simulated_time-INT( simulated_time ) ) * 100),&
-                          dt_3d, timestep_reason, u_max, disturb_chr,          &
-                          v_max, disturb_chr, w_max, hom(nzb,1,pr_palm,0),     &
-                          hom(nzb+8,1,pr_palm,0), hom(nzb+3,1,pr_palm,0),      &
-                          hom(nzb+6,1,pr_palm,0), hom(nzb+4,1,pr_palm,0),      &
-                          hom(nzb+5,1,pr_palm,0), hom(nzb+9,1,pr_palm,0),      &
-                          hom(nzb+10,1,pr_palm,0), u_max_ijk(1:3),             &
-                          v_max_ijk(1:3), w_max_ijk(1:3),                      &
-                          advected_distance_x/1000.0_wp,                       &
-                          advected_distance_y/1000.0_wp, mgcycles
+!       WRITE ( 15, 101 )  runnr, current_timestep_number, simulated_time_chr,  &
+!                          INT( ( simulated_time-INT( simulated_time ) ) * 100),&
+!                          dt_3d, timestep_reason, u_max, disturb_chr,          &
+!                          v_max, disturb_chr, w_max, hom(nzb,1,pr_palm,0),     &
+!                          hom(nzb+8,1,pr_palm,0), hom(nzb+3,1,pr_palm,0),      &
+!                          hom(nzb+6,1,pr_palm,0), hom(nzb+4,1,pr_palm,0),      &
+!                          hom(nzb+5,1,pr_palm,0), hom(nzb+9,1,pr_palm,0),      &
+!                          hom(nzb+10,1,pr_palm,0), u_max_ijk(1:3),             &
+!                          v_max_ijk(1:3), w_max_ijk(1:3),                      &
+!                          advected_distance_x/1000.0_wp,                       &
+!                          advected_distance_y/1000.0_wp, mgcycles
 !
 !--    Write buffer contents to disc immediately
-       FLUSH( 15 )
+!       FLUSH( 15 )
 
     ENDIF
 !

@@ -123,20 +123,17 @@
 !------------------------------------------------------------------------------!
     SUBROUTINE diffusion_s( s, s_flux_def_h_up,                       &
                                s_flux_def_h_down, s_flux_t,                    &
-                               s_flux_lsm_h_up,    s_flux_usm_h_up,            &
                                s_flux_def_v_north, s_flux_def_v_south,         &
                                s_flux_def_v_east,  s_flux_def_v_west,          &
-                               s_flux_lsm_v_north, s_flux_lsm_v_south,         &
-                               s_flux_lsm_v_east,  s_flux_lsm_v_west,          &
-                               s_flux_usm_v_north, s_flux_usm_v_south,         &
-                               s_flux_usm_v_east,  s_flux_usm_v_west )
+                               s_flux_solar_t)
 
        USE arrays_3d,                                                          &
-           ONLY:  dzw, ddzu, ddzw, kh, tend, drho_air, rho_air_zw
+           ONLY:  dzw, ddzu, ddzw, kh, tend, drho_air, rho_air_zw, solar3d
        
        USE control_parameters,                                                 & 
-           ONLY: use_surface_fluxes, use_top_fluxes
-       
+           ONLY: use_surface_fluxes, use_top_fluxes, ideal_solar_division,     &
+                 ideal_solar_efolding1, ideal_solar_efolding2
+ 
        USE grid_variables,                                                     &
            ONLY:  ddx, ddx2, ddy, ddy2
        
@@ -147,8 +144,7 @@
        USE kinds
 
        USE surface_mod,                                                        &
-           ONLY :  surf_def_h, surf_def_v, surf_lsm_h, surf_lsm_v, surf_usm_h, &
-                   surf_usm_v 
+           ONLY :  surf_def_h, surf_def_v
 
        IMPLICIT NONE
 
@@ -159,7 +155,10 @@
        INTEGER(iwp) ::  surf_e        !< End index of surface elements at (j,i)-gridpoint
        INTEGER(iwp) ::  surf_s        !< Start index of surface elements at (j,i)-gridpoint
 
-       REAL(wp) ::  flag              !< flag to mask topography grid points
+       REAL(wp) ::  zval              !< depth_variable for solar penetration
+       REAL(wp) ::  flux1             !< solar flux temp variable
+       REAL(wp) ::  flux2             !< solar flux temp variable
+       REAL(wp) ::  flag
        REAL(wp) ::  mask_bottom       !< flag to mask vertical upward-facing surface     
        REAL(wp) ::  mask_east         !< flag to mask vertical surface east of the grid point 
        REAL(wp) ::  mask_north        !< flag to mask vertical surface north of the grid point
@@ -173,16 +172,6 @@
        REAL(wp), DIMENSION(1:surf_def_v(3)%ns) ::  s_flux_def_v_west  !< flux at west-facing vertical default-type surfaces
        REAL(wp), DIMENSION(1:surf_def_h(0)%ns) ::  s_flux_def_h_up    !< flux at horizontal upward-facing default-type surfaces
        REAL(wp), DIMENSION(1:surf_def_h(1)%ns) ::  s_flux_def_h_down  !< flux at horizontal donwward-facing default-type surfaces 
-       REAL(wp), DIMENSION(1:surf_lsm_h%ns)    ::  s_flux_lsm_h_up    !< flux at horizontal upward-facing natural-type surfaces
-       REAL(wp), DIMENSION(1:surf_lsm_v(0)%ns) ::  s_flux_lsm_v_north !< flux at north-facing vertical natural-type surfaces
-       REAL(wp), DIMENSION(1:surf_lsm_v(1)%ns) ::  s_flux_lsm_v_south !< flux at south-facing vertical natural-type surfaces
-       REAL(wp), DIMENSION(1:surf_lsm_v(2)%ns) ::  s_flux_lsm_v_east  !< flux at east-facing vertical natural-type surfaces
-       REAL(wp), DIMENSION(1:surf_lsm_v(3)%ns) ::  s_flux_lsm_v_west  !< flux at west-facing vertical natural-type surfaces
-       REAL(wp), DIMENSION(1:surf_usm_h%ns)    ::  s_flux_usm_h_up    !< flux at horizontal upward-facing urban-type surfaces
-       REAL(wp), DIMENSION(1:surf_usm_v(0)%ns) ::  s_flux_usm_v_north !< flux at north-facing vertical urban-type surfaces
-       REAL(wp), DIMENSION(1:surf_usm_v(1)%ns) ::  s_flux_usm_v_south !< flux at south-facing vertical urban-type surfaces
-       REAL(wp), DIMENSION(1:surf_usm_v(2)%ns) ::  s_flux_usm_v_east  !< flux at east-facing vertical urban-type surfaces
-       REAL(wp), DIMENSION(1:surf_usm_v(3)%ns) ::  s_flux_usm_v_west  !< flux at west-facing vertical urban-type surfaces
        REAL(wp), DIMENSION(1:surf_def_h(2)%ns) ::  s_flux_t           !< flux at model top
 
 #if defined( __nopointer )
@@ -190,6 +179,8 @@
 #else
        REAL(wp), DIMENSION(:,:,:), POINTER ::  s  !< 
 #endif
+
+       REAL(wp), DIMENSION(1:surf_def_h(2)%ns),INTENT(IN),OPTIONAL :: s_flux_solar_t  !<solar flux at sfc
 
        DO  i = nxl, nxr
           DO  j = nys,nyn
@@ -261,73 +252,6 @@
                 tend(k,j,i) = tend(k,j,i) + s_flux_def_v_west(m) * ddx
              ENDDO
 !
-!--          Now, for natural-type surfaces.
-!--          North-facing
-             surf_s = surf_lsm_v(0)%start_index(j,i)
-             surf_e = surf_lsm_v(0)%end_index(j,i)
-             DO  m = surf_s, surf_e
-                k           = surf_lsm_v(0)%k(m)
-                tend(k,j,i) = tend(k,j,i) + s_flux_lsm_v_north(m) * ddy
-             ENDDO
-!
-!--          South-facing
-             surf_s = surf_lsm_v(1)%start_index(j,i)
-             surf_e = surf_lsm_v(1)%end_index(j,i)
-             DO  m = surf_s, surf_e
-                k           = surf_lsm_v(1)%k(m)
-                tend(k,j,i) = tend(k,j,i) + s_flux_lsm_v_south(m) * ddy
-             ENDDO
-!
-!--          East-facing
-             surf_s = surf_lsm_v(2)%start_index(j,i)
-             surf_e = surf_lsm_v(2)%end_index(j,i)
-             DO  m = surf_s, surf_e
-                k           = surf_lsm_v(2)%k(m)
-                tend(k,j,i) = tend(k,j,i) + s_flux_lsm_v_east(m) * ddx
-             ENDDO
-!
-!--          West-facing
-             surf_s = surf_lsm_v(3)%start_index(j,i)
-             surf_e = surf_lsm_v(3)%end_index(j,i)
-             DO  m = surf_s, surf_e
-                k           = surf_lsm_v(3)%k(m)
-                tend(k,j,i) = tend(k,j,i) + s_flux_lsm_v_west(m) * ddx
-             ENDDO
-!
-!--          Now, for urban-type surfaces.
-!--          North-facing
-             surf_s = surf_usm_v(0)%start_index(j,i)
-             surf_e = surf_usm_v(0)%end_index(j,i)
-             DO  m = surf_s, surf_e
-                k           = surf_usm_v(0)%k(m)
-                tend(k,j,i) = tend(k,j,i) + s_flux_usm_v_north(m) * ddy
-             ENDDO
-!
-!--          South-facing
-             surf_s = surf_usm_v(1)%start_index(j,i)
-             surf_e = surf_usm_v(1)%end_index(j,i)
-             DO  m = surf_s, surf_e
-                k           = surf_usm_v(1)%k(m)
-                tend(k,j,i) = tend(k,j,i) + s_flux_usm_v_south(m) * ddy
-             ENDDO
-!
-!--          East-facing
-             surf_s = surf_usm_v(2)%start_index(j,i)
-             surf_e = surf_usm_v(2)%end_index(j,i)
-             DO  m = surf_s, surf_e
-                k           = surf_usm_v(2)%k(m)
-                tend(k,j,i) = tend(k,j,i) + s_flux_usm_v_east(m) * ddx
-             ENDDO
-!
-!--          West-facing
-             surf_s = surf_usm_v(3)%start_index(j,i)
-             surf_e = surf_usm_v(3)%end_index(j,i)
-             DO  m = surf_s, surf_e
-                k           = surf_usm_v(3)%k(m)
-                tend(k,j,i) = tend(k,j,i) + s_flux_usm_v_west(m) * ddx
-             ENDDO
-
-!
 !--          Compute vertical diffusion. In case that surface fluxes have been
 !--          prescribed or computed at bottom and/or top, index k starts/ends at
 !--          nzb+2 or nzt-1, respectively. Model top is also mask if top flux
@@ -385,30 +309,27 @@
                                        * ddzw(k) * drho_air(k)
 
                 ENDDO
-!
-!--             Natural-type surfaces, upward-facing  
-                surf_s = surf_lsm_h%start_index(j,i)
-                surf_e = surf_lsm_h%end_index(j,i)
-                DO  m = surf_s, surf_e
+              ENDIF
+                !LPV adding solar forcing with depth
+                IF ( PRESENT(s_flux_solar_t )) THEN
+                  m = surf_def_h(2)%start_index(j,i)
 
-                   k   = surf_lsm_h%k(m)
-                   tend(k,j,i) = tend(k,j,i) + s_flux_lsm_h_up(m)              &
-                                       * ddzw(k) * drho_air(k)
+                  zval = 0.0_wp
+                  DO k = nzt,nzb+1,-1
+                      flux1 = (1.0_wp - ideal_solar_division)*exp(ideal_solar_efolding2*zval) + &
+                                ideal_solar_division*exp(ideal_solar_efolding1*zval)
+                      zval = zval - dzw(k)
+                      flux2 = (1.0_wp - ideal_solar_division)*exp(ideal_solar_efolding2*zval) + &
+                      ideal_solar_division*exp(ideal_solar_efolding1*zval)
 
-                ENDDO
-!
-!--             Urban-type surfaces, upward-facing     
-                surf_s = surf_usm_h%start_index(j,i)
-                surf_e = surf_usm_h%end_index(j,i)
-                DO  m = surf_s, surf_e
+                      tend(k,j,i) = tend(k,j,i) - s_flux_solar_t(m)*(flux1 - flux2) / dzw(k)
+                    
+                      solar3d(k,j,i) = -s_flux_solar_t(m)*(flux1 - flux2) / dzw(k)
+                  ENDDO
 
-                   k   = surf_usm_h%k(m)
-                   tend(k,j,i) = tend(k,j,i) + s_flux_usm_h_up(m)              &
-                                       * ddzw(k) * drho_air(k)
+                ENDIF
+ 
 
-                ENDDO
-
-             ENDIF
 !
 !--          Vertical diffusion at the last computational gridpoint along z-direction
              IF ( use_top_fluxes )  THEN
@@ -435,14 +356,9 @@
     SUBROUTINE diffusion_s_ij( i, j, s,                                        &
                                s_flux_def_h_up,    s_flux_def_h_down,          &
                                s_flux_t,                                       &
-                               s_flux_lsm_h_up,    s_flux_usm_h_up,            &
                                s_flux_def_v_north, s_flux_def_v_south,         &
                                s_flux_def_v_east,  s_flux_def_v_west,          &
-                               s_flux_lsm_v_north, s_flux_lsm_v_south,         &
-                               s_flux_lsm_v_east,  s_flux_lsm_v_west,          &
-                               s_flux_usm_v_north, s_flux_usm_v_south,         &
-                               s_flux_usm_v_east,  s_flux_usm_v_west,          &
-                               s_flux_solar_t)       
+                               s_flux_solar_t)
 
        USE arrays_3d,                                                          &
            ONLY:  dzw, ddzu, ddzw, kh, tend, drho_air, rho_air_zw, solar3d
@@ -460,8 +376,7 @@
        USE kinds
 
        USE surface_mod,                                                        &
-           ONLY :  surf_def_h, surf_def_v, surf_lsm_h, surf_lsm_v, surf_usm_h, &
-                   surf_usm_v 
+           ONLY :  surf_def_h, surf_def_v
 
        IMPLICIT NONE
 
@@ -489,17 +404,7 @@
        REAL(wp), DIMENSION(1:surf_def_v(3)%ns) ::  s_flux_def_v_west  !< flux at west-facing vertical default-type surfaces
        REAL(wp), DIMENSION(1:surf_def_h(0)%ns) ::  s_flux_def_h_up    !< flux at horizontal upward-facing default-type surfaces
        REAL(wp), DIMENSION(1:surf_def_h(1)%ns) ::  s_flux_def_h_down  !< flux at horizontal donwward-facing default-type surfaces 
-       REAL(wp), DIMENSION(1:surf_lsm_h%ns)    ::  s_flux_lsm_h_up    !< flux at horizontal upward-facing natural-type surfaces
-       REAL(wp), DIMENSION(1:surf_lsm_v(0)%ns) ::  s_flux_lsm_v_north !< flux at north-facing vertical urban-type surfaces
-       REAL(wp), DIMENSION(1:surf_lsm_v(1)%ns) ::  s_flux_lsm_v_south !< flux at south-facing vertical urban-type surfaces
-       REAL(wp), DIMENSION(1:surf_lsm_v(2)%ns) ::  s_flux_lsm_v_east  !< flux at east-facing vertical urban-type surfaces
-       REAL(wp), DIMENSION(1:surf_lsm_v(3)%ns) ::  s_flux_lsm_v_west  !< flux at west-facing vertical urban-type surfaces
-       REAL(wp), DIMENSION(1:surf_usm_h%ns)    ::  s_flux_usm_h_up    !< flux at horizontal upward-facing urban-type surfaces
-       REAL(wp), DIMENSION(1:surf_usm_v(0)%ns) ::  s_flux_usm_v_north !< flux at north-facing vertical urban-type surfaces
-       REAL(wp), DIMENSION(1:surf_usm_v(1)%ns) ::  s_flux_usm_v_south !< flux at south-facing vertical urban-type surfaces
-       REAL(wp), DIMENSION(1:surf_usm_v(2)%ns) ::  s_flux_usm_v_east  !< flux at east-facing vertical urban-type surfaces
-       REAL(wp), DIMENSION(1:surf_usm_v(3)%ns) ::  s_flux_usm_v_west  !< flux at west-facing vertical urban-type surfaces
-       REAL(wp), DIMENSION(1:surf_def_h(2)%ns) ::  s_flux_t           !< flux at model top
+      REAL(wp), DIMENSION(1:surf_def_h(2)%ns) ::  s_flux_t           !< flux at model top
 #if defined( __nopointer )
        REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  s !< 
 #else
@@ -577,73 +482,6 @@
           k           = surf_def_v(3)%k(m)
           tend(k,j,i) = tend(k,j,i) + s_flux_def_v_west(m) * ddx
        ENDDO
-!
-!--    Now, for natural-type surfaces
-!--    North-facing
-       surf_s = surf_lsm_v(0)%start_index(j,i)
-       surf_e = surf_lsm_v(0)%end_index(j,i)
-       DO  m = surf_s, surf_e
-          k           = surf_lsm_v(0)%k(m)
-          tend(k,j,i) = tend(k,j,i) + s_flux_lsm_v_north(m) * ddy
-       ENDDO
-!
-!--    South-facing
-       surf_s = surf_lsm_v(1)%start_index(j,i)
-       surf_e = surf_lsm_v(1)%end_index(j,i)
-       DO  m = surf_s, surf_e
-          k           = surf_lsm_v(1)%k(m)
-          tend(k,j,i) = tend(k,j,i) + s_flux_lsm_v_south(m) * ddy
-       ENDDO
-!
-!--    East-facing
-       surf_s = surf_lsm_v(2)%start_index(j,i)
-       surf_e = surf_lsm_v(2)%end_index(j,i)
-       DO  m = surf_s, surf_e
-          k           = surf_lsm_v(2)%k(m)
-          tend(k,j,i) = tend(k,j,i) + s_flux_lsm_v_east(m) * ddx
-       ENDDO
-!
-!--    West-facing
-       surf_s = surf_lsm_v(3)%start_index(j,i)
-       surf_e = surf_lsm_v(3)%end_index(j,i)
-       DO  m = surf_s, surf_e
-          k           = surf_lsm_v(3)%k(m)
-          tend(k,j,i) = tend(k,j,i) + s_flux_lsm_v_west(m) * ddx
-       ENDDO
-!
-!--    Now, for urban-type surfaces
-!--    North-facing
-       surf_s = surf_usm_v(0)%start_index(j,i)
-       surf_e = surf_usm_v(0)%end_index(j,i)
-       DO  m = surf_s, surf_e
-          k           = surf_usm_v(0)%k(m)
-          tend(k,j,i) = tend(k,j,i) + s_flux_usm_v_north(m) * ddy
-       ENDDO
-!
-!--    South-facing
-       surf_s = surf_usm_v(1)%start_index(j,i)
-       surf_e = surf_usm_v(1)%end_index(j,i)
-       DO  m = surf_s, surf_e
-          k           = surf_usm_v(1)%k(m)
-          tend(k,j,i) = tend(k,j,i) + s_flux_usm_v_south(m) * ddy
-       ENDDO
-!
-!--    East-facing
-       surf_s = surf_usm_v(2)%start_index(j,i)
-       surf_e = surf_usm_v(2)%end_index(j,i)
-       DO  m = surf_s, surf_e
-          k           = surf_usm_v(2)%k(m)
-          tend(k,j,i) = tend(k,j,i) + s_flux_usm_v_east(m) * ddx
-       ENDDO
-!
-!--    West-facing
-       surf_s = surf_usm_v(3)%start_index(j,i)
-       surf_e = surf_usm_v(3)%end_index(j,i)
-       DO  m = surf_s, surf_e
-          k           = surf_usm_v(3)%k(m)
-          tend(k,j,i) = tend(k,j,i) + s_flux_usm_v_west(m) * ddx
-       ENDDO
-
 
 !
 !--    Compute vertical diffusion. In case that surface fluxes have been
@@ -703,26 +541,6 @@
              k   = surf_def_h(1)%k(m)
 
              tend(k,j,i) = tend(k,j,i) + s_flux_def_h_down(m)                  &
-                                       * ddzw(k) * drho_air(k)
-          ENDDO
-!
-!--       Natural-type surfaces, upward-facing
-          surf_s = surf_lsm_h%start_index(j,i)
-          surf_e = surf_lsm_h%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k   = surf_lsm_h%k(m)
-
-             tend(k,j,i) = tend(k,j,i) + s_flux_lsm_h_up(m)                    &
-                                       * ddzw(k) * drho_air(k)
-          ENDDO
-!
-!--       Urban-type surfaces, upward-facing
-          surf_s = surf_usm_h%start_index(j,i)
-          surf_e = surf_usm_h%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k   = surf_usm_h%k(m)
-
-             tend(k,j,i) = tend(k,j,i) + s_flux_usm_h_up(m)                    &
                                        * ddzw(k) * drho_air(k)
           ENDDO
        ENDIF

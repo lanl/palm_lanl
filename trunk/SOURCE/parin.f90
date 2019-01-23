@@ -19,65 +19,70 @@
 !
 ! Current revisions:
 ! -----------------
-! 
-! 
+!
+! 2018-11-01 cbegeman
+! Add parameters for bubble initial conditions
+!
+! 2018-10-25 cbegeman
+! Add dirichlet bottom boundary conditions for salinity
+!
 ! Former revisions:
 ! -----------------
 ! $Id: parin.f90 3083 2018-06-19 14:03:12Z gronemeier $
 ! Added rans_const_c and rans_const_sigma as input parameters (TG)
-! 
+!
 ! 3065 2018-06-12 07:03:02Z Giersch
 ! New initialization parameters added
-! 
+!
 ! 3049 2018-05-29 13:52:36Z Giersch
 ! Error messages revised
-! 
+!
 ! 3045 2018-05-28 07:55:41Z Giersch
 ! z_max_do2d removed, error messages revised
-! 
+!
 ! 2995 2018-04-19 12:13:16Z Giersch
-! time_since_reference_point must be calculated/initialized before the first  
-! call of functions related to the radiation model which occur in 
+! time_since_reference_point must be calculated/initialized before the first
+! call of functions related to the radiation model which occur in
 ! time_integration_spinup or time_integration
-! 
+!
 ! 2980 2018-04-17 15:19:27Z suehring
 ! Revise message call
-! 
+!
 ! 2975 2018-04-16 15:22:20Z suehring
-! - Informative message when initializing_actions has been changed 
-!   to set_constant_profile in child domain 
+! - Informative message when initializing_actions has been changed
+!   to set_constant_profile in child domain
 ! - Change location in message call
-! 
+!
 ! 2967 2018-04-13 11:22:08Z raasch
 ! bugfix: missing parallel cpp-directives added
-! 
+!
 ! 2941 2018-04-03 11:54:58Z kanani
 ! Fix for spinup in case of restart run
-! 
+!
 ! 2938 2018-03-27 15:52:42Z suehring
 ! Change initialization in case child domain should be initialized with Inifor.
-! 
+!
 ! 2936 2018-03-27 14:49:27Z suehring
 ! inipar renamed to initialization_parameters.
 ! d3par renamed to runtime_parameters.
-! 
+!
 ! 2921 2018-03-22 15:05:23Z Giersch
 ! Activation of spinup has been moved from lsm/usm_parin to parin itself
-! 
+!
 ! 2906 2018-03-19 08:56:40Z Giersch
-! ENVIRONMENT variables read/write_svf has been added 
-! 
+! ENVIRONMENT variables read/write_svf has been added
+!
 ! 2894 2018-03-15 09:17:58Z Giersch
-! read_var_list has been renamed to rrd_global, all module related _parin 
+! read_var_list has been renamed to rrd_global, all module related _parin
 ! routines are called before reading the global restart data to overwrite them
 ! in case of restart runs
-! 
+!
 ! 2881 2018-03-13 16:24:40Z suehring
 ! Added flag for switching on/off calculation of soil moisture
-! 
+!
 ! 2849 2018-03-05 10:49:33Z Giersch
-! Position of d3par namelist in parameter file is unimportant now 
-! 
+! Position of d3par namelist in parameter file is unimportant now
+!
 ! 2826 2018-02-21 12:39:28Z Giersch
 ! Bugfix in setting the default boundary conditions for nest domains
 !
@@ -86,13 +91,13 @@
 !
 ! 2773 2018-01-30 14:12:54Z suehring
 ! Nesting for chemical species implemented
-! 
+!
 ! 2766 2018-01-22 17:17:47Z kanani
 ! Removed preprocessor directive __chem
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 ! Implementation of uv exposure model (FK)
@@ -100,118 +105,118 @@
 ! Implementation of chemistry module
 ! Sorting of USE list (FK)
 ! Forcing implemented, and initialization with inifor (MS)
-! 
+!
 ! 2600 2017-11-01 14:11:20Z raasch
 ! some comments added and variables renamed concerning r2599
-! 
+!
 ! 2599 2017-11-01 13:18:45Z hellstea
 ! The i/o grouping is updated to work correctly also in nested runs.
-! 
+!
 ! 2575 2017-10-24 09:57:58Z maronga
 ! Renamed phi -> latitude, added longitude
-! 
+!
 ! 2563 2017-10-19 15:36:10Z Giersch
 ! Changed position where restart files are closed.
-! 
+!
 ! 2550 2017-10-16 17:12:01Z boeske
 ! Added complex_terrain
-! 
+!
 ! 2544 2017-10-13 18:09:32Z maronga
 ! Moved day_of_year_init and time_utc_init to inipar.
-! 
+!
 ! 2397 2017-09-04 16:22:48Z suehring
-! Enable initialization of 3d model by user in the child domain. 
-! 
+! Enable initialization of 3d model by user in the child domain.
+!
 ! 2375 2017-08-29 14:10:28Z schwenkel
 ! Added aerosol initialization for bulk microphysics
-! 
+!
 ! 2372 2017-08-25 12:37:32Z sward
 ! y_shift added to namelist
-! 
+!
 ! 2365 2017-08-21 14:59:59Z kanani
 ! Vertical grid nesting: add vnest_start_time to d3par (SadiqHuq)
-! 
+!
 ! 2339 2017-08-07 13:55:26Z gronemeier
 ! corrected timestamp in header
-! 
+!
 ! 2338 2017-08-07 12:15:38Z gronemeier
 ! Modularize 1D model
-! 
+!
 ! 2310 2017-07-11 09:37:02Z gronemeier
 ! Bugfix: re-arranged call for error messages for ENVPAR file
-! 
+!
 ! 2304 2017-07-04 14:35:55Z suehring
 ! Bugfix, enable restarts for child domain.
-! 
+!
 ! 2298 2017-06-29 09:28:18Z raasch
 ! -return_addres, return_username in ENVPAR, -cross_ts_uymax, cross_ts_uymin in
 ! d3par
-! 
+!
 ! 2296 2017-06-28 07:53:56Z maronga
 ! Added parameters for model spinup
-! 
+!
 ! 2292 2017-06-20 09:51:42Z schwenkel
-! Implementation of new microphysic scheme: cloud_scheme = 'morrison' 
-! includes two more prognostic equations for cloud drop concentration (nc)  
-! and cloud water content (qc). 
-! 
+! Implementation of new microphysic scheme: cloud_scheme = 'morrison'
+! includes two more prognostic equations for cloud drop concentration (nc)
+! and cloud water content (qc).
+!
 ! 2267 2017-06-09 09:33:25Z gronemeier
 ! Bugfix: removed skipping of reading namelists in case of omitted d3par
-! 
+!
 ! 2259 2017-06-08 09:09:11Z gronemeier
 ! Implemented synthetic turbulence generator
 !
 ! 2233 2017-05-30 18:08:54Z suehring
-! 
+!
 ! 2232 2017-05-30 17:47:52Z suehring
 ! typo corrected
 ! +wall_salinityflux
-! +tunnel_height, tunnel_lenght, tunnel_width_x, tunnel_width_y, 
+! +tunnel_height, tunnel_lenght, tunnel_width_x, tunnel_width_y,
 !  tunnel_wall_depth
-! 
+!
 ! 2118 2017-01-17 16:38:49Z raasch
 ! -background_communication from inipar
-! 
+!
 ! 2050 2016-11-08 15:00:55Z gronemeier
 ! Implement turbulent outflow condition
-! 
+!
 ! 2037 2016-10-26 11:15:40Z knoop
 ! Anelastic approximation implemented
-! 
+!
 ! 2035 2016-10-24 15:06:17Z suehring
 ! Remove check for npex and npey in nesting case
-! 
+!
 ! 2011 2016-09-19 17:29:57Z kanani
-! Added flag lsf_exception to allow explicit enabling of large scale forcing 
+! Added flag lsf_exception to allow explicit enabling of large scale forcing
 ! together with buildings on flat terrain.
-! 
+!
 ! 2007 2016-08-24 15:47:17Z kanani
 ! Added call to urban surface model for reading of &urban_surface_par
-! 
+!
 ! 2004 2016-08-24 10:25:59Z suehring
 ! Humidity and passive scalar treated separately in nesting mode
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1992 2016-08-12 15:14:59Z suehring
 ! +top_scalarflux
-! 
+!
 ! 1960 2016-07-12 16:34:24Z suehring
 ! Allocation of s_init
-! 
+!
 ! 1957 2016-07-07 10:43:48Z suehring
 ! flight module added
-! 
+!
 ! 1955 2016-07-01 12:38:59Z hellstea
-! The parameter intializating_actions is set to 'set_constant_profiles for 
-! all nest domains in order to make sure that diagnostic variables are properly 
-! initialized for nest domains. Prognostic variables are later initialized by 
-! interpolation from the parent domain. 
+! The parameter intializating_actions is set to 'set_constant_profiles for
+! all nest domains in order to make sure that diagnostic variables are properly
+! initialized for nest domains. Prognostic variables are later initialized by
+! interpolation from the parent domain.
 !
 ! 1917 2016-05-27 14:28:12Z witha
 ! Initial version of purely vertical nesting introduced.
-! 
+!
 ! 1914 2016-05-26 14:44:07Z witha
 ! Added call to wind turbine model for reading of &wind_turbine_par
 !
@@ -220,7 +225,7 @@
 !
 ! 1833 2016-04-07 14:23:03Z raasch
 ! call of spectra_parin
-! 
+!
 ! 1831 2016-04-07 13:15:51Z hoffmann
 ! turbulence renamed collision_turbulence, drizzle renamed
 ! cloud_water_sedimentation
@@ -229,10 +234,10 @@
 ! 1826 2016-04-07 12:01:39Z maronga
 ! Added call to radiation model for reading of &radiation_par.
 ! Added call to plant canopy model for reading of &canopy_par.
-! 
+!
 ! 1817 2016-04-06 15:44:20Z maronga
 ! Added call to land surface model for reading of &lsm_par
-! 
+!
 ! 1804 2016-04-05 16:30:18Z maronga
 ! Removed code for parameter file check (__check)
 !
@@ -251,43 +256,43 @@
 !
 ! 1691 2015-10-26 16:17:44Z maronga
 ! Added parameter most_method. Renamed prandtl_layer to constant_flux_layer.
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1560 2015-03-06 10:48:54Z keck
 ! +recycling_yshift
-! 
+!
 ! 1496 2014-12-02 17:25:50Z maronga
 ! Renamed: "radiation -> "cloud_top_radiation"
-! 
+!
 ! 1484 2014-10-21 10:53:05Z kanani
 ! Changes due to new module structure of the plant canopy model:
-!   canopy-model related parameters moved to new package canopy_par in 
+!   canopy-model related parameters moved to new package canopy_par in
 !   subroutine package_parin
-! 
+!
 ! 1429 2014-07-15 12:53:45Z knoop
 ! +ensemble_member_nr to prepare the random_generator for ensemble runs
-! 
+!
 ! 1402 2014-05-09 14:25:13Z raasch
 ! location messages modified, batch_job included in envpar-NAMELIST
-! 
+!
 ! 1384 2014-05-02 14:31:06Z raasch
 ! location messages added
-! 
+!
 ! 1365 2014-04-22 15:03:56Z boeske
 ! Usage of large scale forcing enabled:
 ! +use_subsidence_tendencies
-! 
+!
 ! 1361 2014-04-16 15:17:48Z hoffmann
 ! +call_microphysics_at_all_substeps
-! 
+!
 ! 1359 2014-04-11 17:15:14Z hoffmann
-! REAL constants provided with KIND-attribute 
-! 
+! REAL constants provided with KIND-attribute
+!
 ! 1353 2014-04-08 15:21:23Z heinze
-! REAL constants provided with KIND-attribute 
-! 
+! REAL constants provided with KIND-attribute
+!
 ! 1327 2014-03-21 11:00:16Z raasch
 ! -data_output_format, do3d_compress, do3d_comp_prec
 !
@@ -336,10 +341,10 @@
 ! -mu_constant, mu_constant_value
 !
 ! 1053 2012-11-13 17:11:03Z hoffmann
-! necessary expansions according to the two new prognostic equations (nr, qr) 
+! necessary expansions according to the two new prognostic equations (nr, qr)
 ! of the two-moment cloud physics scheme and steering parameters:
-! +*_init, *_surface, *_surface_initial_change, *_vertical_gradient, 
-! +*_vertical_gradient_level, surface_waterflux_*, 
+! +*_init, *_surface, *_surface_initial_change, *_vertical_gradient,
+! +*_vertical_gradient_level, surface_waterflux_*,
 ! +cloud_scheme, drizzle, mu_constant, mu_constant_value, ventilation_effect
 !
 ! 1036 2012-10-22 13:43:42Z raasch
@@ -390,16 +395,11 @@
 !> This subroutine reads variables controling the run from the NAMELIST files
 !------------------------------------------------------------------------------!
  SUBROUTINE parin
- 
+
 
     USE arrays_3d,                                                             &
-        ONLY:  pt_init, q_init, ref_state, s_init, sa_init,                    &     
+        ONLY:  pt_init, q_init, ref_state, s_init, sa_init,                    &
                ug, u_init, v_init, vg
-
-    USE chemistry_model_mod,                                                   &
-        ONLY:  chem_parin
-        
-    USE chem_modules
 
     USE control_parameters
 
@@ -409,45 +409,17 @@
     USE date_and_time_mod,                                                     &
         ONLY:  day_of_year_init, time_utc_init
 
-    USE dvrp_variables,                                                        &
-        ONLY:  local_dvrserver_running
-
-    USE flight_mod,                                                            &
-        ONLY:  flight_parin
-
     USE grid_variables,                                                        &
         ONLY:  dx, dy
-
-    USE gust_mod,                                                              &
-        ONLY: gust_parin
 
     USE indices,                                                               &
         ONLY:  nx, ny, nz
 
     USE kinds
-
-    USE land_surface_model_mod,                                                &
-        ONLY: lsm_parin
-
-    USE microphysics_mod,                                                      &
-        ONLY:  c_sedimentation, cloud_water_sedimentation,                     &
-               collision_turbulence, curvature_solution_effects_bulk,          &
-               dry_aerosol_radius, limiter_sedimentation, na_init, nc_const,   &
-               sigma_bulk, ventilation_effect
-
-    USE model_1d_mod,                                                          &
-        ONLY:  damp_level_1d, dt_pr_1d, dt_run_control_1d, end_time_1d
-
     USE netcdf_interface,                                                      &
         ONLY:  netcdf_data_format, netcdf_deflate, netcdf_precision
 
     USE pegrid
-               
-    USE plant_canopy_model_mod,                                                &
-         ONLY: pcm_parin
-
-    USE pmc_interface,                                                         &
-        ONLY:  nested_run, nesting_mode
 
     USE profil_parameter,                                                      &
         ONLY:  cross_profiles, profile_columns, profile_rows
@@ -455,40 +427,19 @@
     USE progress_bar,                                                          &
         ONLY :  batch_job
 
-    USE radiation_model_mod,                                                   &
-        ONLY: radiation_parin
-
     USE read_restart_data_mod,                                                 &
-        ONLY:  rrd_global     
-
-    USE spectra_mod,                                                           &
-        ONLY :  spectra_parin
+        ONLY:  rrd_global
 
     USE statistics,                                                            &
         ONLY:  hom, hom_sum, pr_palm, region, statistic_regions
 
-    USE synthetic_turbulence_generator_mod,                                    &
-        ONLY:  stg_parin
-
     USE turbulence_closure_mod,                                                &
         ONLY:  rans_const_c, rans_const_sigma
-
-    USE urban_surface_mod,                                                     &
-        ONLY: usm_parin
-
-    USE uv_exposure_model_mod,                                                 &
-        ONLY:  uvem_parin
-
-    USE vertical_nesting_mod,                                                  &
-        ONLY:  vnest_start_time
-
-    USE wind_turbine_model_mod,                                                &
-        ONLY:  wtm_parin
 
 
     IMPLICIT NONE
 
-    CHARACTER (LEN=80) ::  line  !< dummy string that contains the current line of the parameter file 
+    CHARACTER (LEN=80) ::  line  !< dummy string that contains the current line of the parameter file
 
     INTEGER(iwp) ::  global_id      !< process id with respect to MPI_COMM_WORLD
     INTEGER(iwp) ::  global_procs   !< # of procs with respect to MPI_COMM_WORLD
@@ -497,42 +448,41 @@
 
     NAMELIST /inipar/  aerosol_bulk, alpha_surface, approximation, bc_e_b,     &
                        bc_lr, bc_ns, bc_p_b, bc_p_t, bc_pt_b, bc_pt_t, bc_q_b, &
-             bc_q_t,bc_s_b, bc_s_t, bc_sa_t, bc_uv_b, bc_uv_t,                 &
+             bc_q_t,bc_s_b, bc_s_t, bc_sa_b, bc_sa_t, bc_uv_b, bc_uv_t,        &
              bottom_salinityflux, building_height, building_length_x,          &
              building_length_y, building_wall_left, building_wall_south,       &
              calc_soil_moisture_during_spinup,                                 &
              call_psolver_at_all_substeps, call_microphysics_at_all_substeps,  &
              canyon_height,                                                    &
              canyon_width_x, canyon_width_y, canyon_wall_left,                 &
-             canyon_wall_south, c_sedimentation, cfl_factor, cloud_droplets,   &
+             canyon_wall_south, cfl_factor, cloud_droplets,   &
              cloud_physics, cloud_scheme, cloud_top_radiation,                 &
-             cloud_water_sedimentation,                                        &
-             collective_wait, collision_turbulence, complex_terrain,           &
+             collective_wait, complex_terrain,           &
              conserve_volume_flow,                                             &
              conserve_volume_flow_mode, constant_flux_layer,                   &
-             coupling_start_time, curvature_solution_effects_bulk,             &
-             cycle_mg, damp_level_1d,                                          &
+             coupling_start_time,              &
+             cycle_mg,                                           &
              data_output_during_spinup,                                        &
              day_of_year_init,                                                 &
-             dissipation_1d,                                                   &
-             dp_external, dp_level_b, dp_smooth, dpdxy, dry_aerosol_radius,    &
-             dt, dt_pr_1d, dt_run_control_1d, dt_spinup, dx, dy, dz, dz_max,   &
+             dp_external, dp_level_b, dp_smooth, dpdxy,     &
+             dt, dt_spinup, dx, dy, dz, dz_max,   &
              dz_stretch_factor, dz_stretch_level, dz_stretch_level_start,      &
-             dz_stretch_level_end, end_time_1d, ensemble_member_nr, e_init,    &
+             dz_stretch_level_end, d_stk,                                      &
+             ensemble_member_nr, e_init,                          &
              e_min, fft_method, flux_input_mode, flux_output_mode, forcing,    &
              galilei_transformation, humidity,                                 &
              inflow_damping_height, inflow_damping_width,                      &
              inflow_disturbance_begin, inflow_disturbance_end,                 &
              initializing_actions, km_constant,                                &
              large_scale_forcing, large_scale_subsidence, latitude,            &
-             limiter_sedimentation, longitude,                                 &
+             longitude,                                 &
              loop_optimization, lsf_exception, masking_method, mg_cycles,      &
-             mg_switch_to_pe0_level, mixing_length_1d, momentum_advec,         &
-             most_method, na_init, nc_const, netcdf_precision, neutral, ngsrb, &
+             mg_switch_to_pe0_level, momentum_advec,         &
+             most_method, netcdf_precision, neutral, ngsrb, &
              nsor, nsor_ini, nudging, nx, ny, nz, ocean, idealized_diurnal,    &
              linear_eqnOfState, rho_ref, fixed_alpha, alpha_const,             &
-             beta_const, pt_ref, sa_ref,                                       & 
-             omega, omega_sor,     &
+             beta_const, pt_ref, sa_ref,                                       &
+             omega, omega_sor, wb_solar,                                       &
              outflow_source_plane, passive_scalar,                             &
              prandtl_number, precipitation, psolver, pt_damping_factor,        &
              pt_damping_width, pt_reference, pt_surface,                       &
@@ -546,9 +496,10 @@
              reference_state, residual_limit,                                  &
              roughness_length, sa_surface,                                     &
              sa_vertical_gradient, sa_vertical_gradient_level, scalar_advec,   &
-             scalar_rayleigh_damping, sigma_bulk,                              &
+             scalar_rayleigh_damping,                               &
              spinup_time, spinup_pt_amplitude, spinup_pt_mean,                 &
-             statistic_regions, subs_vertical_gradient,                        &
+             statistic_regions, stokes_force, stokes_drift_method,             &
+             subs_vertical_gradient,                                           &
              subs_vertical_gradient_level, surface_heatflux, surface_pressure, &
              surface_scalarflux, surface_waterflux,                            &
              s_surface, s_surface_initial_change, s_vertical_gradient,         &
@@ -559,54 +510,59 @@
              tunnel_height, tunnel_length, tunnel_width_x, tunnel_width_y,     &
              tunnel_wall_depth, turbulence_closure,                            &
              turbulent_inflow, turbulent_outflow,                              &
+             u0_stk,                                                           &
              use_subsidence_tendencies, ug_surface, ug_vertical_gradient,      &
              ug_vertical_gradient_level, use_surface_fluxes, use_cmax,         &
              use_top_fluxes, use_ug_for_galilei_tr, use_upstream_for_tke,      &
-             uv_heights, u_bulk, u_profile, vg_surface, vg_vertical_gradient,  &
-             vg_vertical_gradient_level, v_bulk, v_profile, ventilation_effect,&
+             uv_heights, u_bulk, u_profile,                                    &
+             v0_stk, vg_surface, vg_vertical_gradient,                         &
+             vg_vertical_gradient_level, v_bulk, v_profile, &
              wall_adjustment, wall_heatflux, wall_humidityflux,                &
-             wall_salinityflux, wall_scalarflux, y_shift, zeta_max, zeta_min,  &
+             wall_salinityflux, wall_scalarflux,                               &
+             wave_age, wind_dir, wind_speed,                                   &
+             y_shift, zeta_max, zeta_min,                                      &
              z0h_factor
 
     NAMELIST /initialization_parameters/  aerosol_bulk, alpha_surface,         &
              approximation, bc_e_b,                                            &
              bc_lr, bc_ns, bc_p_b, bc_p_t, bc_pt_b, bc_pt_t, bc_q_b,           &
-             bc_q_t,bc_s_b, bc_s_t, bc_sa_t, bc_uv_b, bc_uv_t,                 &
-             bottom_salinityflux, building_height, building_length_x,          &
+             bc_q_t,bc_s_b, bc_s_t, bc_sa_b, bc_sa_t, bc_uv_b, bc_uv_t,        &
+             bottom_salinityflux, bubble_center_x, bubble_center_y,            &
+             bubble_center_z, bubble_radius, bubble_pt, bubble_sa,             &
+             building_height, building_length_x,                               &
              building_length_y, building_wall_left, building_wall_south,       &
              calc_soil_moisture_during_spinup,                                 &
              call_psolver_at_all_substeps, call_microphysics_at_all_substeps,  &
              canyon_height,                                                    &
              canyon_width_x, canyon_width_y, canyon_wall_left,                 &
-             canyon_wall_south, c_sedimentation, cfl_factor, cloud_droplets,   &
+             canyon_wall_south, cfl_factor, cloud_droplets,   &
              cloud_physics, cloud_scheme, cloud_top_radiation,                 &
-             cloud_water_sedimentation,                                        &
-             collective_wait, collision_turbulence, complex_terrain,           &
+             collective_wait, complex_terrain,           &
              conserve_volume_flow,                                             &
              conserve_volume_flow_mode, constant_flux_layer,                   &
-             coupling_start_time, curvature_solution_effects_bulk,             &
-             cycle_mg, damp_level_1d,                                          &
+             coupling_start_time,              &
+             cycle_mg,                                           &
              data_output_during_spinup,                                        &
              day_of_year_init,                                                 &
-             dissipation_1d,                                                   &
-             dp_external, dp_level_b, dp_smooth, dpdxy, dry_aerosol_radius,    &
-             dt, dt_pr_1d, dt_run_control_1d, dt_spinup, dx, dy, dz, dz_max,   &
+             dp_external, dp_level_b, dp_smooth, dpdxy,     &
+             dt, dt_spinup, dx, dy, dz, dz_max,   &
              dz_stretch_factor, dz_stretch_level, dz_stretch_level_start,      &
-             dz_stretch_level_end, end_time_1d, ensemble_member_nr, e_init,    &
+             dz_stretch_level_end, d_stk,                                      &
+             ensemble_member_nr, e_init,                          &
              e_min, fft_method, flux_input_mode, flux_output_mode, forcing,    &
              galilei_transformation, humidity,                                 &
              inflow_damping_height, inflow_damping_width,                      &
              inflow_disturbance_begin, inflow_disturbance_end,                 &
              initializing_actions, km_constant,                                &
              large_scale_forcing, large_scale_subsidence, latitude,            &
-             limiter_sedimentation, longitude,                                 &
+             longitude,                                 &
              loop_optimization, lsf_exception, masking_method, mg_cycles,      &
-             mg_switch_to_pe0_level, mixing_length_1d, momentum_advec,         &
-             most_method, na_init, nc_const, netcdf_precision, neutral, ngsrb, &
+             mg_switch_to_pe0_level, momentum_advec,         &
+             most_method, netcdf_precision, neutral, ngsrb, &
              nsor, nsor_ini, nudging, nx, ny, nz, ocean, idealized_diurnal,    &
              linear_eqnOfState, rho_ref, fixed_alpha, alpha_const,             &
              beta_const, pt_ref, sa_ref,                                       &
-             omega, omega_sor,     &
+             omega, omega_sor, wb_solar,                                       &
              outflow_source_plane, passive_scalar,                             &
              prandtl_number, precipitation, psolver, pt_damping_factor,        &
              pt_damping_width, pt_reference, pt_surface,                       &
@@ -620,9 +576,10 @@
              reference_state, residual_limit,                                  &
              roughness_length, sa_surface,                                     &
              sa_vertical_gradient, sa_vertical_gradient_level, scalar_advec,   &
-             scalar_rayleigh_damping, sigma_bulk,                              &
+             scalar_rayleigh_damping,                               &
              spinup_time, spinup_pt_amplitude, spinup_pt_mean,                 &
-             statistic_regions, subs_vertical_gradient,                        &
+             statistic_regions, stokes_force, stokes_drift_method,             &
+             subs_vertical_gradient,                                           &
              subs_vertical_gradient_level, surface_heatflux, surface_pressure, &
              surface_scalarflux, surface_waterflux,                            &
              s_surface, s_surface_initial_change, s_vertical_gradient,         &
@@ -633,19 +590,23 @@
              tunnel_height, tunnel_length, tunnel_width_x, tunnel_width_y,     &
              tunnel_wall_depth, turbulence_closure,                            &
              turbulent_inflow, turbulent_outflow,                              &
+             u0_stk,                                                           &
              use_subsidence_tendencies, ug_surface, ug_vertical_gradient,      &
              ug_vertical_gradient_level, use_surface_fluxes, use_cmax,         &
              use_top_fluxes, use_ug_for_galilei_tr, use_upstream_for_tke,      &
-             uv_heights, u_bulk, u_profile, vg_surface, vg_vertical_gradient,  &
-             vg_vertical_gradient_level, v_bulk, v_profile, ventilation_effect,&
+             uv_heights, u_bulk, u_profile,                                    &
+             v0_stk,  vg_surface, vg_vertical_gradient,                        &
+             vg_vertical_gradient_level, v_bulk, v_profile, &
              wall_adjustment, wall_heatflux, wall_humidityflux,                &
-             wall_salinityflux, wall_scalarflux, y_shift, zeta_max, zeta_min,  &
+             wall_salinityflux, wall_scalarflux,                               &
+             wave_age, wind_dir, wind_speed,                                   &
+             y_shift, zeta_max, zeta_min,                                      &
              z0h_factor
-             
+
     NAMELIST /d3par/  averaging_interval, averaging_interval_pr,               &
              cpu_log_barrierwait, create_disturbances,                         &
-             cross_profiles, data_output, data_output_masks,                   &
-             data_output_pr, data_output_2d_on_each_pe, disturbance_amplitude, &
+             cross_profiles, data_output,                   &
+             data_output_pr,disturbance_amplitude, &
              disturbance_energy_limit, disturbance_level_b,                    &
              disturbance_level_t, do2d_at_begin, do3d_at_begin,                &
              dt, dt_averaging_input, dt_averaging_input_pr,                    &
@@ -661,12 +622,12 @@
              skip_time_data_output, skip_time_data_output_av, skip_time_dopr,  &
              skip_time_do2d_xy, skip_time_do2d_xz, skip_time_do2d_yz,          &
              skip_time_do3d, skip_time_domask, synchronous_exchange,           &
-             termination_time_needed, vnest_start_time
+             termination_time_needed
 
     NAMELIST /runtime_parameters/  averaging_interval, averaging_interval_pr,  &
              cpu_log_barrierwait, create_disturbances,                         &
-             cross_profiles, data_output, data_output_masks,                   &
-             data_output_pr, data_output_2d_on_each_pe, disturbance_amplitude, &
+             cross_profiles, data_output,                   &
+             data_output_pr, disturbance_amplitude, &
              disturbance_energy_limit, disturbance_level_b,                    &
              disturbance_level_t, do2d_at_begin, do3d_at_begin,                &
              dt, dt_averaging_input, dt_averaging_input_pr,                    &
@@ -682,40 +643,49 @@
              skip_time_data_output, skip_time_data_output_av, skip_time_dopr,  &
              skip_time_do2d_xy, skip_time_do2d_xz, skip_time_do2d_yz,          &
              skip_time_do3d, skip_time_domask, synchronous_exchange,           &
-             termination_time_needed, vnest_start_time
+             termination_time_needed
 
-    NAMELIST /envpar/  batch_job, host, local_dvrserver_running,               &
+    NAMELIST /envpar/  batch_job, host,                &
                        maximum_cpu_time_allowed, maximum_parallel_io_streams,  &
                        read_svf, revision, run_identifier, tasks_per_node,     &
                        write_binary, write_svf
 
+    host = 'localhost'
+    run_identifier = 'test_run'
+    revision = 'Rev: '
+    tasks_per_node = 1
+    maximum_parallel_io_streams = 1
+    batch_job = .TRUE.
+    write_binary = .FALSE.
+    maximum_cpu_time_allowed = 999999.
+
 !
 !-- First read values of environment variables (this NAMELIST file is
 !-- generated by palmrun)
-    CALL location_message( 'reading environment parameters from ENVPAR', .FALSE. )
+!    CALL location_message( 'reading environment parameters from ENVPAR', .FALSE. )
 
-    OPEN ( 90, FILE='ENVPAR', STATUS='OLD', FORM='FORMATTED', IOSTAT=ioerr )
+!    OPEN ( 90, FILE='ENVPAR', STATUS='OLD', FORM='FORMATTED', IOSTAT=ioerr )
 
-    IF ( ioerr /= 0 )  THEN
-       message_string = 'local file ENVPAR not found' //                       &
-                        '&some variables for steering may not be properly set'
-       CALL message( 'parin', 'PA0276', 0, 1, 0, 6, 0 )
-    ELSE
-       READ ( 90, envpar, IOSTAT=ioerr )
-       IF ( ioerr < 0 )  THEN
-          message_string = 'no envpar-NAMELIST found in local file '  //       &
-                           'ENVPAR& or some variables for steering may '  //   &
-                           'not be properly set'
-          CALL message( 'parin', 'PA0278', 0, 1, 0, 6, 0 )
-       ELSEIF ( ioerr > 0 )  THEN
-          message_string = 'errors in local file ENVPAR' //                    &
-                           '&some variables for steering may not be properly set'
-          CALL message( 'parin', 'PA0277', 0, 1, 0, 6, 0 )
-       ENDIF
-       CLOSE ( 90 )
-    ENDIF
+!    IF ( ioerr /= 0 )  THEN
+!       message_string = 'local file ENVPAR not found' //                       &
+!                        '&some variables for steering may not be properly set'
+!       CALL message( 'parin', 'PA0276', 0, 1, 0, 6, 0 )
+!    ELSE
+!       READ ( 90, envpar, IOSTAT=ioerr )
+!       IF ( ioerr < 0 )  THEN
+!          message_string = 'no envpar-NAMELIST found in local file '  //       &
+!                           'ENVPAR& or some variables for steering may '  //   &
+!                           'not be properly set'
+!          CALL message( 'parin', 'PA0278', 0, 1, 0, 6, 0 )
+!       ELSEIF ( ioerr > 0 )  THEN
+!          message_string = 'errors in local file ENVPAR' //                    &
+!                           '&some variables for steering may not be properly set'
+!          CALL message( 'parin', 'PA0277', 0, 1, 0, 6, 0 )
+!       ENDIF
+!       CLOSE ( 90 )
+!    ENDIF
 
-    CALL location_message( 'finished', .TRUE. )
+!    CALL location_message( 'finished', .TRUE. )
 !
 !-- Calculate the number of groups into which parallel I/O is split.
 !-- The default for files which are opened by all PEs (or where each
@@ -746,7 +716,7 @@
 !-- for all PEs belonging to the same group.
     io_blocks = global_procs / maximum_parallel_io_streams
     io_group  = MOD( global_id+1, io_blocks )
-    
+
     CALL location_message( 'reading NAMELIST parameters from PARIN', .FALSE. )
 !
 !-- Data is read in parallel by groups of PEs
@@ -755,126 +725,77 @@
 
 !
 !--       Open the NAMELIST-file which is send with this job
-          CALL check_open( 11 )
+!          CALL check_open( 11 )
 
 !
 !--       Read the control parameters for initialization.
 !--       The namelist "inipar" must be provided in the NAMELIST-file.
-          READ ( 11, initialization_parameters, ERR=10, END=11 )
+!          READ ( 11, initialization_parameters, ERR=10, END=11 )
 
-          GOTO 12
+!          GOTO 12
 
- 10       message_string = 'errors in initialization_parameters & or no ' //  &
-                           'initialization_parameters-namelist ' //           &
-                           'found (CRAY-machines only)'
-          CALL message( 'parin', 'PA0271', 1, 2, 0, 6, 0 )
+! 10       message_string = 'errors in initialization_parameters & or no ' //  &
+!                           'initialization_parameters-namelist ' //           &
+!                           'found (CRAY-machines only)'
+!          CALL message( 'parin', 'PA0271', 1, 2, 0, 6, 0 )
 
- 11       REWIND ( 11 )
-          READ ( 11, inipar, ERR=13, END=14 )
- 
-          message_string = 'namelist inipar is deprecated and will be ' //    &
-                          'removed in near future. & Please use namelist ' // &
-                          'initialization_parameters instead'
-          CALL message( 'parin', 'PA0017', 0, 1, 0, 6, 0 )
- 
-          GOTO 12
- 
- 13       message_string = 'errors in inipar & or no inipar-namelist ' //      &
-                           'found (CRAY-machines only)'
-          CALL message( 'parin', 'PA0271', 1, 2, 0, 6, 0 )
-          
- 14       message_string = 'no initialization_parameters-namelist found'
-          CALL message( 'parin', 'PA0272', 1, 2, 0, 6, 0 )
+! 11       REWIND ( 11 )
+!          READ ( 11, inipar, ERR=13, END=14 )
 
+!          message_string = 'namelist inipar is deprecated and will be ' //    &
+!                          'removed in near future. & Please use namelist ' // &
+!                          'initialization_parameters instead'
+!          CALL message( 'parin', 'PA0017', 0, 1, 0, 6, 0 )
+
+!          GOTO 12
+
+! 13       message_string = 'errors in inipar & or no inipar-namelist ' //      &
+!                           'found (CRAY-machines only)'
+!          CALL message( 'parin', 'PA0271', 1, 2, 0, 6, 0 )
+
+! 14       message_string = 'no initialization_parameters-namelist found'
+!          CALL message( 'parin', 'PA0272', 1, 2, 0, 6, 0 )
+!
 !
 !--       Try to read runtime parameters given by the user for this run
-!--       (namelist "runtime_parameters"). The namelist "runtime_parmeters"    
-!--       can be omitted. In that case default values are used for the         
+!--       (namelist "runtime_parameters"). The namelist "runtime_parmeters"
+!--       can be omitted. In that case default values are used for the
 !--       parameters.
- 12       line = ' '
+! 12       line = ' '
 
-          REWIND ( 11 )
-          line = ' '
-          DO   WHILE ( INDEX( line, '&runtime_parameters' ) == 0 )
-             READ ( 11, '(A)', END=20 )  line
-          ENDDO
-          BACKSPACE ( 11 )
+!          REWIND ( 11 )
+!          line = ' '
+!          DO   WHILE ( INDEX( line, '&runtime_parameters' ) == 0 )
+!             READ ( 11, '(A)', END=20 )  line
+!          ENDDO
+!          BACKSPACE ( 11 )
 
+          
 !
 !--       Read namelist
-          READ ( 11, runtime_parameters )
+!          READ ( 11, runtime_parameters )
 
-          GOTO 21
-          
- 20       REWIND ( 11 )
-          line = ' '
-          DO   WHILE ( INDEX( line, '&d3par' ) == 0 )
-             READ ( 11, '(A)', END=21 )  line
-          ENDDO
-          BACKSPACE ( 11 )
- 
+!          GOTO 21
+
+! 20       REWIND ( 11 )
+!          line = ' '
+!          DO   WHILE ( INDEX( line, '&d3par' ) == 0 )
+!             READ ( 11, '(A)', END=21 )  line
+!          ENDDO
+!          BACKSPACE ( 11 )
+
  !
 !--       Read namelist
-          READ ( 11, d3par )
- 
-          message_string = 'namelist d3par is deprecated and will be ' //      &
-                          'removed in near future. &Please use namelist ' //   &
-                          'runtime_parameters instead'
-          CALL message( 'parin', 'PA0487', 0, 1, 0, 6, 0 )
-          
- 21       CONTINUE
+!          READ ( 11, d3par )
 
-!
-!--       Check if land surface model is used and read &lsm_par if required
-          CALL lsm_parin
+!message_string = 'namelist d3par is deprecated and will be ' //      &
+!                          'removed in near future. &Please use namelist ' //   &
+!                          'runtime_parameters instead'
+!          CALL message( 'parin', 'PA0487', 0, 1, 0, 6, 0 )
 
-!
-!--       Check if urban surface model is used and read &urban_surface_par if required
-          CALL usm_parin
+! 21       CONTINUE
 
-!
-!--       Check if spectra shall be calculated and read spectra_par if required
-          CALL spectra_parin
 
-!
-!--       Check if radiation model is used and read &radiation_par if required
-          CALL radiation_parin
-
-!
-!--       Check if gust module is used and read &gust_par if required
-          CALL gust_parin
- 
- 
-!--       Check if plant canopy model is used and read &canopy_par if required
-          CALL pcm_parin
- 
-!
-!--       Read control parameters for optionally used model software packages
-          CALL package_parin
-
-!
-!--       Check if wind turbine model is used and read &wind_turbine_par if
-!--       required
-          CALL wtm_parin
-!
-!--       Check if virtual flights should be carried out and read &flight_par
-!--       if required
-          CALL flight_parin
-!
-!--       Check if synthetic turbulence generator is used and read stg_par if
-!--       required
-          CALL stg_parin
-!
-!--       Read chemistry variables
-          CALL chem_parin
-!
-!--       Check if uv exposure model is used and read &uvexposure_par
-          CALL uvem_parin
-!
-!--       Read user-defined variables
-          CALL user_parin
-
-!
 !--       If required, read control parameters from restart file (produced by
 !--       a prior run). All PEs are reading from file created by PE0 (see
 !--       check_open)
@@ -886,59 +807,6 @@
              runnr = runnr + 1
           ENDIF
 
-!
-!--       Activate spinup
-          IF ( land_surface .OR. urban_surface )  THEN
-             IF ( spinup_time > 0.0_wp )  THEN
-                coupling_start_time = spinup_time
-                time_since_reference_point = simulated_time - coupling_start_time
-                IF ( spinup_pt_mean == 9999999.9_wp )  THEN
-                   spinup_pt_mean = pt_surface
-                ENDIF
-                end_time = end_time + spinup_time
-                IF ( TRIM( initializing_actions ) /= 'read_restart_data' )     &
-                   spinup = .TRUE.
-             ENDIF
-          ENDIF
-
-!
-!--       In case of nested runs, explicitly set nesting boundary conditions. 
-!--       This will overwrite the user settings and basic defaults.
-!--       bc_lr and bc_ns always need to be cyclic for vertical nesting.
-          IF ( nested_run )  THEN
-             IF ( nesting_mode == 'vertical' )  THEN
-                IF (bc_lr /= 'cyclic' .OR. bc_ns /= 'cyclic' )  THEN
-                   WRITE ( message_string, *) 'bc_lr and bc_ns were set to ,', &
-                        'cyclic for vertical nesting'
-                   CALL message( 'parin', 'PA0428', 0, 0, 0, 6, 0 )
-                   bc_lr   = 'cyclic'
-                   bc_ns   = 'cyclic'
-                ENDIF
-                IF ( nest_domain )  THEN
-                   bc_uv_t  = 'nested'
-                   bc_pt_t  = 'nested'
-                   bc_q_t   = 'nested'
-                   bc_s_t   = 'nested'
-                   bc_cs_t  = 'nested'
-                   bc_p_t   = 'neumann'  
-                ENDIF
-!
-!--          For other nesting modes only set boundary conditions for 
-!--          nested domains.
-             ELSE 
-                IF ( nest_domain )  THEN
-                   bc_lr    = 'nested'
-                   bc_ns    = 'nested'
-                   bc_uv_t  = 'nested'
-                   bc_pt_t  = 'nested'
-                   bc_q_t   = 'nested'
-                   bc_s_t   = 'nested'
-                   bc_cs_t  = 'nested'
-                   bc_p_t   = 'neumann'
-                ENDIF
-             ENDIF
-          ENDIF
-
           IF ( forcing )  THEN
              bc_lr    = 'forcing'
              bc_ns    = 'forcing'
@@ -946,31 +814,9 @@
              bc_pt_t  = 'forcing'
              bc_q_t   = 'forcing'
              bc_s_t   = 'forcing'  ! scalar boundary condition is not clear
-             bc_cs_t  = 'forcing'  ! same for chemical species
              bc_p_t   = 'neumann'
           ENDIF
 
-!         
-!--       In case of nested runs, make sure that initializing_actions =
-!--       'set_constant_profiles' even though the constant-profiles 
-!--       initializations for the prognostic variables will be overwritten 
-!--       by pmci_child_initialize and pmci_parent_initialize. This is, 
-!--       however, important e.g. to make sure that diagnostic variables 
-!--       are set properly. An exception is made in case of restart runs and
-!--       if user decides to do everything by its own.
-          IF ( nest_domain  .AND.  .NOT. (                                     &
-               TRIM( initializing_actions ) == 'read_restart_data'      .OR.   &
-               TRIM( initializing_actions ) == 'set_constant_profiles'  .OR.   &
-               TRIM( initializing_actions ) == 'by_user' ) )  THEN
-             message_string = 'initializing_actions = ' //                     &
-                              TRIM( initializing_actions ) // ' has been ' //  &
-                              'changed to set_constant_profiles in child ' //  &
-                              'domain.' 
-             CALL message( 'parin', 'PA0492', 0, 0, 0, 6, 0 )
-
-             initializing_actions = 'set_constant_profiles'
-          ENDIF
-            
 !
 !--       Check validity of lateral boundary conditions. This has to be done
 !--       here because they are already used in init_pegrid and init_grid and

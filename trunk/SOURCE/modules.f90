@@ -19,76 +19,82 @@
 !
 ! Current revisions:
 ! ------------------
-! 
-! 
+!
+! 2018-11-15 cbegeman
+! Add bubble property variables
+!
 ! Former revisions:
 ! -----------------
+!
+! 2018-10-25 cbegeman
+! Add dirichlet bottom boundary conditions for salinity
+!
 ! $Id: modules.f90 3083 2018-06-19 14:03:12Z gronemeier $
 ! set dt_3d = 0.01
-! 
+!
 ! 3065 2018-06-12 07:03:02Z Giersch
 ! Variables concerning stretching introduced or revised
-! 
+!
 ! 3045 2018-05-28 07:55:41Z Giersch
 ! z_max_do2d removed
-! 
+!
 ! 3026 2018-05-22 10:30:53Z schwenkel
 ! Changed the name specific humidity to mixing ratio, since we are computing
 ! mixing ratios.
-! 
+!
 ! 3014 2018-05-09 08:42:38Z maronga
 ! Added default values of u_max, v_max, and w_max to avoid floating invalid
 ! during spinup
-! 
+!
 ! 3004 2018-04-27 12:33:25Z Giersch
 ! precipitation_rate removed
-! 
+!
 ! 3003 2018-04-23 10:22:58Z Giersch
-! The inversion height is defined as a global variable now which belongs to the 
-! module statistics 
-! 
+! The inversion height is defined as a global variable now which belongs to the
+! module statistics
+!
 ! 2968 2018-04-13 11:52:24Z suehring
 ! +topo_min_level
-! 
+!
 ! 2964 2018-04-12 16:04:03Z raasch
 ! *_time_count variables are all initialized with zero now
-! 
+!
 ! 2918 2018-03-21 15:52:14Z gronemeier
 ! -l_grid, -l_wall
-! 
+!
 ! 2906 2018-03-19 08:56:40Z Giersch
-! Module control_parameters has been extended with ENVIRONMENT variables 
-! read/write_svf 
-! 
+! Module control_parameters has been extended with ENVIRONMENT variables
+! read/write_svf
+!
 ! 2894 2018-03-15 09:17:58Z Giersch
 ! _prerun flags were removed, Control paramters restart_string and length have
 ! been added
-! 
+!
 ! 2881 2018-03-13 16:24:40Z suehring
 ! Added flag for switching on/off calculation of soil moisture
-! 
+!
 ! 2797 2018-02-08 13:24:35Z suehring
 ! +ghf_av
-! 
+!
 ! 2776 2018-01-31 10:44:42Z Giersch
 ! Variable synthetic_turbulence_generator has been abbreviated and _prerun flags
 ! for skipping module related restart data has beed introduced
-! 
+!
 ! 2765 2018-01-22 11:34:58Z maronga
 ! Set initial value for time_since_reference_point
-! 
+!
 ! 2746 2018-01-15 12:06:04Z suehring
 ! +plant_canopy
-! 
+!
 ! 2742 2018-01-12 14:59:47Z suehring
 ! +tsurf_av
-! 
+!
 ! 2735 2018-01-11 12:01:27Z suehring
 ! +r_a_av
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 ! Implementation of uv exposure model (FK)
@@ -98,60 +104,60 @@
 ! Implementation of chemistry module (FK)
 ! -lod
 ! +topo_distinct (MS)
-! 
+!
 ! 2669 2017-12-06 16:03:27Z raasch
 ! CONTIGUOUS-attribut added to 3d pointer arrays,
 ! coupling_char extended to LEN=8
-! 
+!
 ! 2575 2017-10-24 09:57:58Z maronga
 ! Renamed phi -> latitude, moved longitude from radiation model to modules
-! 
+!
 ! 2563 2017-10-19 15:36:10Z Giersch
 ! Variable wind_turbine was added to control_parameters
-! 
+!
 ! 2550 2017-10-16 17:12:01Z boeske
 ! complex_terrain namelist parameter added
-! 
+!
 ! 2508 2017-10-02 08:57:09Z suehring
 ! Change default value for pt/q/s/sa_vertical_gradient_level
-! 
+!
 ! 2499 2017-09-22 16:47:58Z kanani
 ! Default changed to fft_method = 'temperton-algorithm'
-! 
+!
 ! 2408 2017-09-05 15:47:53Z gronemeier
 ! Changed default value of mg_cycles from -1 to 4.
-! 
+!
 ! 2375 2017-08-29 14:10:28Z schwenkel
 ! Moved mass_of_solute, molecular_weight_of_solute, molecular_weight_of_water,
 ! vanthoff back from particle attributes because they can now also be used in
-! bulk microphysics. 
+! bulk microphysics.
 ! Added aerosol_bulk, aerosol_nacl, aerosol_c3h4o4, aerosol_nh4no3
-! 
+!
 ! 2372 2017-08-25 12:37:32Z sward
 ! y_shift namelist parameter added
-! 
+!
 ! 2339 2017-08-07 13:55:26Z gronemeier
 ! corrected timestamp in header
-! 
+!
 ! 2338 2017-08-07 12:15:38Z gronemeier
 ! moved 1d-model varaibles to own module model_1d_mod
-! 
+!
 ! 2337 2017-08-07 08:59:53Z gronemeier
 ! -old_dt_1d
 ! +l1d_diss
-! 
+!
 ! 2326 2017-08-01 07:23:24Z gronemeier
 ! Updated variable descriptions
-! 
+!
 ! 2320 2017-07-21 12:47:43Z suehring
 ! -ptnudge, qnudge, tnudge, td_lsa_lpt, td_lsa_q, td_sub_lpt, td_sub_q, ug_vert,
 !  vg_vert, unudge, vnudge, wsubs_vert, shf_surf, p_surf, pt_surf, q_surt,
 !  qsws_surf, tmp_tnudge, timenudge, time_surf, time_vert
-! 
+!
 ! 2300 2017-06-29 13:31:14Z raasch
 ! default value for host changed to '????', default value for loop_optimization
 ! changed to 'cache', default value for termination_time_needed set to 35.0
-! 
+!
 ! 2298 2017-06-29 09:28:18Z raasch
 ! missing variable descriptions have been added,
 ! type of write_binary changed from CHARACTER to LOGICAL
@@ -160,105 +166,105 @@
 ! port_name, profile_number, cross_ts_numbers, cross_ts_number_count,
 ! dots_crossindex, dots_index, cross_ts_uymax, cross_ts_uymax_computed,
 ! cross_ts_uymin, cross_ts_uymin_computed
-! 
+!
 ! 2296 2017-06-28 07:53:56Z maronga
 ! Added parameters for model spinup
-! 
+!
 ! 2292 2017-06-20 09:51:42Z schwenkel
-! Implementation of new microphysic scheme: cloud_scheme = 'morrison' 
-! includes two more prognostic equations for cloud drop concentration (nc)  
-! and cloud water content (qc). 
-! 
+! Implementation of new microphysic scheme: cloud_scheme = 'morrison'
+! includes two more prognostic equations for cloud drop concentration (nc)
+! and cloud water content (qc).
+!
 ! 2277 2017-06-12 10:47:51Z kanani
 ! Added doxygen comments for variables/parameters,
-! removed unused variables dissipation_control, do2d_xy_n, do2d_xz_n, do2d_yz_n, 
-! do3d_avs_n, lptnudge, lqnudge, lunudge, lvnudge, lwnudge, skip_do_avs, 
+! removed unused variables dissipation_control, do2d_xy_n, do2d_xz_n, do2d_yz_n,
+! do3d_avs_n, lptnudge, lqnudge, lunudge, lvnudge, lwnudge, skip_do_avs,
 ! sums_up_fraction_l.
-! 
+!
 ! 2259 2017-06-08 09:09:11Z gronemeier
 ! Implemented synthetic turbulence generator
 !
 ! 2256 2017-06-07 13:58:08Z suehring
 ! Change default value of zeta_min to -20
-! Increase dimension for wall_heatflux, etc. 
-! 
+! Increase dimension for wall_heatflux, etc.
+!
 ! 2233 2017-05-30 18:08:54Z suehring
 !
 ! 2232 2017-05-30 17:47:52Z suehring
-! Renamed wall_flags_0 and wall_flags_00 into advc_flags_1 and advc_flags_2, 
-! respectively. Moreover, introduced further flag array wall_flags_0. 
+! Renamed wall_flags_0 and wall_flags_00 into advc_flags_1 and advc_flags_2,
+! respectively. Moreover, introduced further flag array wall_flags_0.
 !
 ! Adjustments for new topography concept:
-!   -fwxm, fwxp, fwym, fwyp, fxm, fxp, fym, fyp, rif_wall, wall_e_x, wall_e_y, 
-!   -wall_v, wall_u, wall_w_x, wall_w_y, wall_qflux, wall_sflux, wall_nrflux, 
+!   -fwxm, fwxp, fwym, fwyp, fxm, fxp, fym, fyp, rif_wall, wall_e_x, wall_e_y,
+!   -wall_v, wall_u, wall_w_x, wall_w_y, wall_qflux, wall_sflux, wall_nrflux,
 !   -wall_qrflux
 !
 ! Adjustments for new surface concept:
 !   +land_surface
-!   -z0, z0h, z0q, us, ts, qs, qsws, nrs, nrsws, qrs, qrsws, ssws, ss, saswsb 
+!   -z0, z0h, z0q, us, ts, qs, qsws, nrs, nrsws, qrs, qrsws, ssws, ss, saswsb
 !   -nzb_diff_u, nzb_diff_v, nzt_diff
 !   -uswst, vswst, tswst, sswst, saswst, qswst, qrswst, nrswst, qswst_remote
 !
 ! Generic tunnel setup:
-!   +tunnel_height, tunnel_length, tunnel_width_x, tunnel_width_y, 
+!   +tunnel_height, tunnel_length, tunnel_width_x, tunnel_width_y,
 !   +tunnel_wall_depth
 !
 ! Topography input via netcdf
 !   +lod
-! 
+!
 ! 2200 2017-04-11 11:37:51Z suehring
 ! -monotonic_adjustment
-! 
+!
 ! 2174 2017-03-13 08:18:57Z maronga
 ! Changed default values for most_method to 'newton'
-! 
+!
 ! 2118 2017-01-17 16:38:49Z raasch
 ! -acc_rank, background_communication, i_left, i_right, j_south, j_north,
 !  num_acc_per_node, on_device
-! 
+!
 ! 2107 2017-01-09 12:21:49Z kanani
 ! Preparation for doxygen comments (Giersch)
-! 
+!
 ! 2050 2016-11-08 15:00:55Z gronemeier
 ! Implement turbulent outflow condition
-! 
+!
 ! 2037 2016-10-26 11:15:40Z knoop
 ! Anelastic approximation implemented
-! 
+!
 ! 2031 2016-10-21 15:11:58Z knoop
 ! renamed variable rho to rho_ocean and rho_av to rho_ocean_av
-! 
+!
 ! 2011 2016-09-19 17:29:57Z kanani
 ! +urban_surface, +lsf_exception, +varnamelength
-! 
+!
 ! 2007 2016-08-24 15:47:17Z kanani
 ! Increased DIMENSION of data_output, data_output_user, do2d, do3d
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1992 2016-08-12 15:14:59Z suehring
 ! +constant_top_scalarflux, top_scalarflux
 ! default of bc_s_t adjusted
-! 
+!
 ! 1968 2016-07-18 12:01:49Z suehring
 ! Changed dimension for MPI-datatypes type_x_int and type_y_int
-! 
+!
 ! 1960 2016-07-12 16:34:24Z suehring
 ! Separate humidity and passive scalar
-! +bc_s_t_val, diss_s_s, diss_l_s, flux_s_s, flux_l_s, s, sp, s1, s2, s3, ssws_av, 
+! +bc_s_t_val, diss_s_s, diss_l_s, flux_s_s, flux_l_s, s, sp, s1, s2, s3, ssws_av,
 !  s_init, s_surf, sums_wsss_ws_l, ss, ssws, sswst, ts_m, wall_sflux
 ! +constant_scalarflux, ibc_s_b, ibc_s_t, s_vertical_gradient_level_ind
 !
 ! Unused variables removed
 ! -gamma_x, gamma_y, gamma_z, var_x, var_y, var_z
 !
-! Change initial values (in order to unify gradient calculation): 
+! Change initial values (in order to unify gradient calculation):
 ! pt_vertical_gradient_level, sa_vertical_gradient_level
 !
 ! 1957 2016-07-07 10:43:48Z suehring
 ! +fl_max, num_leg, num_var_fl, num_var_fl_user, var_fl_max, virtual_flight
-! 
+!
 ! 1918 2016-05-27 14:35:57Z raasch
 ! default timestep switched from -1.0 to +1.0 in order to avoid wrong sign of
 ! initially calculated divergence
@@ -280,7 +286,7 @@
 !
 ! 1831 2016-04-07 13:15:51Z hoffmann
 ! curvature_solution_effects removed
-! turbulence renamed collision_turbulence, drizzle renamed 
+! turbulence renamed collision_turbulence, drizzle renamed
 ! cloud_water_sedimentation
 !
 ! 1822 2016-04-07 07:49:42Z hoffmann
@@ -295,7 +301,7 @@
 !
 ! 1804 2016-04-05 16:30:18Z maronga
 ! Removed code for parameter file check (__check)
-! 
+!
 ! 1788 2016-03-10 11:01:04Z maronga
 ! Added roughness length for moisture (z0q)
 !
@@ -319,85 +325,85 @@
 !
 ! 1695 2015-10-27 10:03:11Z maronga
 ! Removed rif (forgotten in last revision)
-! 
+!
 ! 1693 2015-10-27 08:35:45Z maronga
 ! Renamed zp -> z_mo
-! 
+!
 ! 1691 2015-10-26 16:17:44Z maronga
-! Renamed Obukhov length. Added ol, removed rif. Increased number of profiles 
-! (pr_palm). Changed default values for dissipation_1d to 'detering' and 
+! Renamed Obukhov length. Added ol, removed rif. Increased number of profiles
+! (pr_palm). Changed default values for dissipation_1d to 'detering' and
 ! (mixing_length_1d to 'blackadar'. Added most_method. rif_min and rif_max
 ! renamed to zeta_min and zeta_max and new values assigned.
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1677 2015-10-02 13:25:23Z boeske
 ! +ngp_yz_int, type_xz_int, type_yz_int
-! 
+!
 ! 1666 2015-09-23 07:31:10Z raasch
 ! +user_interface_current_revision, user_interface_required_revision in
 ! control_parameters
 !
 ! 1639 2015-08-31 14:46:48Z knoop
-! Bugfix: string 'unknown' extended to match LEN=13 
+! Bugfix: string 'unknown' extended to match LEN=13
 !
 ! 1575 2015-03-27 09:56:27Z raasch
 ! +ngp_xz
 !
 ! 1560 2015-03-06 10:48:54Z keck
 ! +recycling_yshift
-! 
+!
 ! 1557 2015-03-05 16:43:04Z suehring
 ! +monotonic_adjustment
-! 
+!
 ! 1551 2015-03-03 14:18:16Z maronga
 ! Increased pr_palm to 120. Increased length of dots_unit and dots_label to 13
 ! digits. Increased length of domask, do2d, and do3d to 20 digits.
-! 
+!
 ! 1496 2014-12-02 17:25:50Z maronga
 ! Renamed "radiation" -> "cloud_top_radiation"
-! 
+!
 ! 1484 2014-10-21 10:53:05Z kanani
 ! Changes due to new module structure of the plant canopy model:
-!   canopy-model related parameters/variables moved to module 
+!   canopy-model related parameters/variables moved to module
 !   plant_canopy_model_mod
-! 
+!
 ! 1468 2014-09-24 14:06:57Z maronga
 ! Adapted for use on up to 6-digit processor cores.
 ! Increased identifier string length for user-defined quantities to 20.
-! 
+!
 ! 1450 2014-08-21 07:31:51Z heinze
 ! ntnudge from 100 to 1000 increased to allow longer simulations
-! 
+!
 ! 1431 2014-07-15 14:47:17Z suehring
 ! +var_d
-! 
+!
 ! 1429 2014-07-15 12:53:45Z knoop
 ! +ensemble_member_nr to prepare the random_generator for ensemble runs
 !
 ! 1382 2014-04-30 12:15:41Z boeske
 ! Renamed variables which store large scale forcing tendencies
-! pt_lsa -> td_lsa_lpt, pt_subs -> td_sub_lpt, 
+! pt_lsa -> td_lsa_lpt, pt_subs -> td_sub_lpt,
 ! q_lsa  -> td_lsa_q,   q_subs  -> td_sub_q
-! 
+!
 ! 1365 2014-04-22 15:03:56Z boeske
 ! Usage of large scale forcing enabled:
 ! increase pr_palm from 90 to 100 to allow for more standard profiles
-! + ngp_sums_ls, pt_lsa, pt_subs, q_lsa, q_subs, tmp_tnudge, sums_ls_l, 
+! + ngp_sums_ls, pt_lsa, pt_subs, q_lsa, q_subs, tmp_tnudge, sums_ls_l,
 ! use_subsidence_tendencies
-! 
+!
 ! 1361 2014-04-16 15:17:48Z hoffmann
 ! tend_* removed
 ! call_microphysics_at_all_substeps added
 ! default of drizzle set to true
-! 
+!
 ! 1359 2014-04-11 17:15:14Z hoffmann
 ! particle_attributes moved to mod_particle_attributes.f90
-! 
+!
 ! 1353 2014-04-08 15:21:23Z heinze
 ! REAL constants provided with KIND-attribute
-! 
+!
 ! 1327 2014-03-21 11:00:16Z raasch
 ! REAL constants defined as wp-kind
 ! -avs_output, data_output_format, do3d_compress, iso2d_output, netcdf_output
@@ -416,7 +422,7 @@
 ! interface for cpu_log removed
 !
 ! 1314 2014-03-14 18:25:17Z suehring
-! + log_z_z0, number_of_sublayers, z0_av_global 
+! + log_z_z0, number_of_sublayers, z0_av_global
 ! 1308 2014-03-13 14:58:42Z fricke
 ! +ntdim_2d_xy, ntdim_2d_xz, ntdim_2d_yz, ntdim_3d
 !
@@ -425,7 +431,7 @@
 ! u|v|w_max_ijk
 !
 ! 1241 2013-10-30 11:36:58Z heinze
-! Usage of nudging enabled 
+! Usage of nudging enabled
 ! +nudging, ntnudge, ptnudge, qnudge, tnudge, unudge, vnudge, wnudge
 ! increase pr_palm from 80 to 90 to allow for more standard profiles
 !
@@ -477,22 +483,22 @@
 ! character length in some derived type changed for better alignment
 !
 ! 1065 2012-11-22 17:42:36Z hoffmann
-! + c_sedimentation, limiter_sedimentation, turbulence, a_1, a_2, a_3, b_1, b_2, 
+! + c_sedimentation, limiter_sedimentation, turbulence, a_1, a_2, a_3, b_1, b_2,
 ! + b_3, c_1, c_2, c_3, beta_cc
 !
 ! bottom boundary condition of qr, nr changed from Dirichlet to Neumann
 !
 ! 1053 2012-11-13 17:11:03Z hoffmann
-! necessary expansions according to the two new prognostic equations (nr, qr) 
+! necessary expansions according to the two new prognostic equations (nr, qr)
 ! of the two-moment cloud physics scheme:
 ! +*_init, flux_l_*, diss_l_*, flux_s_*, diss_s_*, *sws, *swst, tend_*, *, *_p
-! +t*_m, *_1, *_2, *_3, *_av, bc_*_b, bc_*_t, ibc_*_b, ibc_*_t, bc_*_t_val, 
-! +*_vertical_gradient, *_surface_initial_change, *_vertical_gradient_level, 
-! +*_vertical_gradient_level_ind, *_surface, constant_waterflux_*,  
+! +t*_m, *_1, *_2, *_3, *_av, bc_*_b, bc_*_t, ibc_*_b, ibc_*_t, bc_*_t_val,
+! +*_vertical_gradient, *_surface_initial_change, *_vertical_gradient_level,
+! +*_vertical_gradient_level_ind, *_surface, constant_waterflux_*,
 ! +cloud_scheme, icloud_scheme, surface_waterflux_*, sums_ws*s_ws_l, wall_*flux
 !
 ! constants for the two-moment scheme:
-! +a_vent, a_term, b_vent, b_term, c_evap, c_term, cof, eps_sb, k_cc, k_cr, k_rr, 
+! +a_vent, a_term, b_vent, b_term, c_evap, c_term, cof, eps_sb, k_cc, k_cr, k_rr,
 ! +k_br, kappa_rr, kin_vis_air, mu_constant_value, nc, pirho_l, dpirho_l, rho_1,
 ! +schmidt, schmidt_p_1d3, stp, x0, xmin, xmax, dt_precipitation, w_precipitation
 !
@@ -528,7 +534,7 @@
 ! +bc_lr_dirneu, bc_lr_neudir, bc_ns_dirneu, bc_ns_neudir
 ! -km_damp_x, km_damp_y, km_damp_max, outflow_damping_width
 ! +z0h, z0h_av, z0h_factor, z0h1d
-! +ptdf_x, ptdf_y, pt_damping_width, pt_damping_factor 
+! +ptdf_x, ptdf_y, pt_damping_width, pt_damping_factor
 !
 ! 964 2012-07-26 09:14:24Z raasch
 ! -cross_linecolors, cross_linestyles, cross_normalized_x, cross_normx_factor,
@@ -584,7 +590,7 @@
 !
 ! 807 2012-01-25 11:53:51Z maronga
 ! New cpp directive "__check" implemented which is used by check_namelist_files.
-! New parameter check_restart has been defined which is needed by 
+! New parameter check_restart has been defined which is needed by
 ! check_namelist_files only.
 !
 ! 805 2012-01-17 15:53:28Z franke
@@ -617,15 +623,15 @@
 !> Definition of variables for special advection schemes.
 !------------------------------------------------------------------------------!
  MODULE advection
- 
+
     USE kinds
 
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  aex  !< exponential coefficient for the Bott-Chlond advection scheme
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  bex  !< exponential coefficient for the Bott-Chlond advection scheme
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  dex  !< exponential coefficient for the Bott-Chlond advection scheme
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  eex  !< exponential coefficient for the Bott-Chlond advection scheme
-    
-    SAVE
+
+!    SAVE
 
  END MODULE advection
 
@@ -645,22 +651,22 @@
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  c_v_m_l                !< mean phase velocity at outflow for v-component used in radiation boundary condition (local subdomain value)
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  c_w_m                  !< mean phase velocity at outflow for w-component used in radiation boundary condition
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  c_w_m_l                !< mean phase velocity at outflow for w-component used in radiation boundary condition (local subdomain value)
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  ddzu                   !< 1/dzu 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  ddzu_pres              !< modified ddzu for pressure solver 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dd2zu                  !< 1/(dzu(k)+dzu(k+1)) 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dzu                    !< vertical grid size (u-grid) 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  ddzw                   !< 1/dzw 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dzw                    !< vertical grid size (w-grid) 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  hyp                    !< hydrostatic pressure 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  inflow_damping_factor  !< used for turbulent inflow (non-cyclic boundary conditions) 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  ptdf_x                 !< damping factor for potential temperature in x-direction 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  ptdf_y                 !< damping factor for potential temperature in y-direction 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt_init                !< initial profile of potential temperature 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  q_init                 !< initial profile of total water mixing ratio 
-                                                                   !< (or total water content with active cloud physics) 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  rdf                    !< rayleigh damping factor for velocity components 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  rdf_sc                 !< rayleigh damping factor for scalar quantities 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  ref_state              !< reference state of potential temperature 
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  ddzu                   !< 1/dzu
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  ddzu_pres              !< modified ddzu for pressure solver
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dd2zu                  !< 1/(dzu(k)+dzu(k+1))
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dzu                    !< vertical grid size (u-grid)
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  ddzw                   !< 1/dzw
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dzw                    !< vertical grid size (w-grid)
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  hyp                    !< hydrostatic pressure
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  inflow_damping_factor  !< used for turbulent inflow (non-cyclic boundary conditions)
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  ptdf_x                 !< damping factor for potential temperature in x-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  ptdf_y                 !< damping factor for potential temperature in y-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt_init                !< initial profile of potential temperature
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  q_init                 !< initial profile of total water mixing ratio
+                                                                   !< (or total water content with active cloud physics)
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  rdf                    !< rayleigh damping factor for velocity components
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  rdf_sc                 !< rayleigh damping factor for scalar quantities
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  ref_state              !< reference state of potential temperature
                                                                    !< (and density in case of ocean simulation)
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  s_init                 !< initial profile of passive scalar concentration
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  sa_init                !< initial profile of salinity (ocean)
@@ -669,6 +675,10 @@
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  vg                     !< geostrophic wind component in y-direction
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  v_init                 !< initial profile of horizontal velocity component v
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  w_subs                 !< subsidence/ascent velocity
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  u_stk                  !< Stokes dirft in x-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  v_stk                  !< Stokes dirft in y-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  u_stk_zw               !< Stokes dirft in x-direction, at w-levels
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  v_stk_zw               !< Stokes dirft in y-direction, at w-levels
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  zu                     !< vertical grid coordinate of u-grid (in m)
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  zw                     !< vertical grid coordinate of w-grid (in m)
 
@@ -677,12 +687,12 @@
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  c_w                   !< phase speed of w-velocity component
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  diss_s_diss           !< artificial numerical dissipation flux at south face of grid box - TKE dissipation
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  diss_s_e              !< artificial numerical dissipation flux at south face of grid box - subgrid-scale TKE
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  diss_s_nc             !< artificial numerical dissipation flux at south face of grid box - clouddrop-number concentration    
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  diss_s_nr             !< artificial numerical dissipation flux at south face of grid box - raindrop-number concentration    
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  diss_s_pt             !< artificial numerical dissipation flux at south face of grid box - potential temperature 
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  diss_s_q              !< artificial numerical dissipation flux at south face of grid box - mixing ratio 
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  diss_s_qc             !< artificial numerical dissipation flux at south face of grid box - cloudwater 
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  diss_s_qr             !< artificial numerical dissipation flux at south face of grid box - rainwater 
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  diss_s_nc             !< artificial numerical dissipation flux at south face of grid box - clouddrop-number concentration
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  diss_s_nr             !< artificial numerical dissipation flux at south face of grid box - raindrop-number concentration
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  diss_s_pt             !< artificial numerical dissipation flux at south face of grid box - potential temperature
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  diss_s_q              !< artificial numerical dissipation flux at south face of grid box - mixing ratio
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  diss_s_qc             !< artificial numerical dissipation flux at south face of grid box - cloudwater
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  diss_s_qr             !< artificial numerical dissipation flux at south face of grid box - rainwater
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  diss_s_s              !< artificial numerical dissipation flux at south face of grid box - passive scalar
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  diss_s_sa             !< artificial numerical dissipation flux at south face of grid box - salinity
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  diss_s_u              !< artificial numerical dissipation flux at south face of grid box - u-component
@@ -692,10 +702,10 @@
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  dzw_mg                !< vertical grid size (w-grid) for multigrid pressure solver
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  flux_s_diss           !< 6th-order advective flux at south face of grid box - TKE dissipation
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  flux_s_e              !< 6th-order advective flux at south face of grid box - subgrid-scale TKE
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  flux_s_nc             !< 6th-order advective flux at south face of grid box - clouddrop-number concentration 
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  flux_s_nr             !< 6th-order advective flux at south face of grid box - raindrop-number concentration 
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  flux_s_pt             !< 6th-order advective flux at south face of grid box - potential temperature 
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  flux_s_q              !< 6th-order advective flux at south face of grid box - mixing ratio 
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  flux_s_nc             !< 6th-order advective flux at south face of grid box - clouddrop-number concentration
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  flux_s_nr             !< 6th-order advective flux at south face of grid box - raindrop-number concentration
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  flux_s_pt             !< 6th-order advective flux at south face of grid box - potential temperature
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  flux_s_q              !< 6th-order advective flux at south face of grid box - mixing ratio
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  flux_s_qc             !< 6th-order advective flux at south face of grid box - cloudwater
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  flux_s_qr             !< 6th-order advective flux at south face of grid box - rainwater
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  flux_s_s              !< 6th-order advective flux at south face of grid box - passive scalar
@@ -708,11 +718,11 @@
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  f3_mg                 !< grid factor used in right hand side of Gauss-Seidel equation (multigrid)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  mean_inflow_profiles  !< used for turbulent inflow (non-cyclic boundary conditions)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  precipitation_amount  !< precipitation amount due to gravitational settling (bulk microphysics)
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  pt_slope_ref          !< potential temperature in rotated coordinate system 
-                                                                    !< (in case of sloped surface) 
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  pt_slope_ref          !< potential temperature in rotated coordinate system
+                                                                    !< (in case of sloped surface)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  total_2d_a            !< horizontal array to store the total domain data, used for atmosphere-ocean coupling (atmosphere data)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  total_2d_o            !< horizontal array to store the total domain data, used for atmosphere-ocean coupling (ocean data)
-    
+
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  d           !< divergence
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  de_dx       !< gradient of sgs tke in x-direction (lpm)
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  de_dy       !< gradient of sgs tke in y-direction (lpm)
@@ -743,7 +753,7 @@
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  flux_l_u    !< 6th-order advective flux at south face of grid box - u-component
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  flux_l_v    !< 6th-order advective flux at south face of grid box - v-component
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  flux_l_w    !< 6th-order advective flux at south face of grid box - w-component
-    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  kh          !< eddy diffusivity for heat 
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  kh          !< eddy diffusivity for heat
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  km          !< eddy diffusivity for momentum
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  prr         !< rain rate
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  p_loc       !< local array in multigrid/sor solver containing the pressure which is iteratively advanced in each iteration step
@@ -775,18 +785,18 @@
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  prho       !< potential density
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  pt         !< potential temperature
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  pt_p       !< prognostic value of potential temperature
-    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  q          !< mixing ratio  
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  q          !< mixing ratio
                                                                    !< (or total water content with active cloud physics)
-    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  q_p        !< prognostic value of mixing ratio 
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  q_p        !< prognostic value of mixing ratio
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  qc         !< cloud water content
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  qc_p       !< cloud water content
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  ql         !< liquid water content
-    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  ql_c       !< change in liquid water content due to 
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  ql_c       !< change in liquid water content due to
                                                                    !< condensation/evaporation during last time step
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  ql_v       !< volume of liquid water
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  ql_vp      !< liquid water weighting factor
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  qr         !< rain water content
-    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  qr_p       !< prognostic value of rain water content 
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  qr_p       !< prognostic value of rain water content
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  rho_ocean  !< density of ocean
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  alpha_T    !< drhodT
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  beta_S     !< drhodS
@@ -825,10 +835,10 @@
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  p       !< pointer: perturbation pressure
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  prho_1  !< pointer for swapping of timelevels for respective quantity
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  nc_1    !< pointer for swapping of timelevels for respective quantity
-    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  nc_2    !< pointer for swapping of timelevels for respective quantity 
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  nc_2    !< pointer for swapping of timelevels for respective quantity
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  nc_3    !< pointer for swapping of timelevels for respective quantity
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  nr_1    !< pointer for swapping of timelevels for respective quantity
-    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  nr_2    !< pointer for swapping of timelevels for respective quantity 
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  nr_2    !< pointer for swapping of timelevels for respective quantity
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  nr_3    !< pointer for swapping of timelevels for respective quantity
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  pt_1    !< pointer for swapping of timelevels for respective quantity
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  pt_2    !< pointer for swapping of timelevels for respective quantity
@@ -847,6 +857,9 @@
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  qr_2    !< pointer for swapping of timelevels for respective quantity
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  qr_3    !< pointer for swapping of timelevels for respective quantity
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  rho_1   !< pointer for swapping of timelevels for respective quantity
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  solar3d_1
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  alpha_T_1
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  beta_S_1
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  s_1     !< pointer for swapping of timelevels for respective quantity
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  s_2     !< pointer for swapping of timelevels for respective quantity
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  s_3     !< pointer for swapping of timelevels for respective quantity
@@ -931,7 +944,7 @@
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  waterflux_output_conversion     !< conversion factor array for waterflux output
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  momentumflux_output_conversion  !< conversion factor array for momentumflux output
 
-    SAVE
+!    SAVE
 
  END MODULE arrays_3d
 
@@ -942,7 +955,7 @@
 !> Definition of variables needed for time-averaging of 2d/3d data.
 !------------------------------------------------------------------------------!
  MODULE averaging
- 
+
     USE kinds
 
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  ghf_av                 !< avg. ground heat flux
@@ -975,8 +988,8 @@
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  q_av          !< avg. mixing ratio
                                                                       !< (or total water content with active cloud physics)
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  qc_av         !< avg. cloud water content
-    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  ql_av         !< avg. liquid water content 
-    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  ql_c_av       !< avg. change in liquid water content due to 
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  ql_av         !< avg. liquid water content
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  ql_c_av       !< avg. change in liquid water content due to
                                                                       !< condensation/evaporation during last time step
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  ql_v_av       !< avg. volume of liquid water
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  ql_vp_av      !< avg. liquid water weighting factor
@@ -988,11 +1001,11 @@
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  solar3d_av    !< avg. 3d solar tendency
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  s_av          !< avg. passive scalar
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  sa_av         !< avg. salinity
-    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  u_av          !< avg. horizontal velocity component u 
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  u_av          !< avg. horizontal velocity component u
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  v_av          !< avg. horizontal velocity component v
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  vpt_av        !< avg. virtual potential temperature
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE, TARGET ::  w_av          !< avg. vertical velocity component
-  
+
  END MODULE averaging
 
 
@@ -1002,14 +1015,14 @@
 !> Definition of variables and constants for cloud physics.
 !------------------------------------------------------------------------------!
  MODULE cloud_parameters
- 
+
     USE kinds
 
     REAL(wp) ::  cp = 1005.0_wp                            !< heat capacity of dry air (J kg-1 K-1)
     REAL(wp) ::  l_v = 2.5E+06_wp                          !< latent heat of vaporization (J kg-1)
     REAL(wp) ::  l_d_cp                                    !< l_v / cp
     REAL(wp) ::  l_d_r                                     !< l_v / r_d
-    REAL(wp) ::  l_d_rv                                    !< l_v / r_v    
+    REAL(wp) ::  l_d_rv                                    !< l_v / r_v
     REAL(wp) ::  molecular_weight_of_solute = 0.05844_wp   !< mol. m. NaCl (kg mol-1)
     REAL(wp) ::  molecular_weight_of_water = 0.01801528_wp !< mol. m. H2O (kg mol-1)
     REAL(wp) ::  rho_l = 1.0E3_wp                          !< density of water (kg m-3)
@@ -1020,11 +1033,11 @@
 
 
 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  hyrho   !< density of air calculated with hydrostatic pressure 
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  hyrho   !< density of air calculated with hydrostatic pressure
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt_d_t  !< ratio of potential and actual temperature
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  t_d_pt  !< ratio of actual and potential temperature
 
-    SAVE
+!    SAVE
 
  END MODULE cloud_parameters
 
@@ -1035,7 +1048,7 @@
 !> Definition of general constants.
 !------------------------------------------------------------------------------!
  MODULE constants
- 
+
     USE kinds
 
     REAL(wp) ::  pi = 3.141592654_wp  !< PI
@@ -1045,12 +1058,12 @@
     REAL(wp) ::  adv_sca_1            !< 1/2 - constant used in 5th-order advection scheme for scalar advection (1st-order part)
     REAL(wp) ::  adv_sca_3            !< 1/12 - constant used in 5th-order advection scheme for scalar advection (3rd-order part)
     REAL(wp) ::  adv_sca_5            !< 1/60 - constant used in 5th-order advection scheme for scalar advection (5th-order part)
-    
-    SAVE
+
+!    SAVE
 
  END MODULE constants
 
- 
+
 !------------------------------------------------------------------------------!
 ! Description:
 ! ------------
@@ -1064,7 +1077,7 @@
        LOGICAL ::  opened         !< file is currently open
        LOGICAL ::  opened_before  !< file is currently closed, but has been openend before
     END TYPE file_status
-    
+
     INTEGER, PARAMETER      ::  mask_xyz_dimension = 100  !< limit of mask dimensions (100 points in each direction)
     INTEGER, PARAMETER      ::  max_masks = 50            !< maximum number of masks
     INTEGER(iwp), PARAMETER ::  varnamelength = 30        !< length of output variable names
@@ -1086,7 +1099,7 @@
     CHARACTER (LEN=12)   ::  user_interface_current_revision = ' '        !< revision number of the currently used user-interface (must match user_interface_required_revision)
     CHARACTER (LEN=12)   ::  user_interface_required_revision = ' '       !< required user-interface revision number
     CHARACTER (LEN=16)   ::  conserve_volume_flow_mode = 'default'        !< namelist parameter
-    CHARACTER (LEN=16)   ::  loop_optimization = 'cache'                  !< namelist parameter
+    CHARACTER (LEN=16)   ::  loop_optimization = 'vector'                  !< namelist parameter
     CHARACTER (LEN=16)   ::  momentum_advec = 'ws-scheme'                 !< namelist parameter
     CHARACTER (LEN=16)   ::  psolver = 'poisfft'                          !< namelist parameter
     CHARACTER (LEN=16)   ::  scalar_advec = 'ws-scheme'                   !< namelist parameter
@@ -1097,57 +1110,58 @@
     CHARACTER (LEN=20)   ::  bc_lr = 'cyclic'                             !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_ns = 'cyclic'                             !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_p_b = 'neumann'                           !< namelist parameter
-    CHARACTER (LEN=20)   ::  bc_p_t = 'dirichlet'                         !< namelist parameter
-    CHARACTER (LEN=20)   ::  bc_pt_b = 'dirichlet'                        !< namelist parameter
-    CHARACTER (LEN=20)   ::  bc_pt_t = 'initial_gradient'                 !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_p_t = 'neumann'                         !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_pt_b = 'neumann'                        !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_pt_t = 'neumann'                 !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_q_b = 'dirichlet'                         !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_q_t = 'neumann'                           !< namelist parameter
-    CHARACTER (LEN=20)   ::  bc_s_b = 'dirichlet'                         !< namelist parameter
-    CHARACTER (LEN=20)   ::  bc_s_t = 'initial_gradient'                  !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_s_b = 'initial_gradient'                         !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_s_t = 'neumann'                  !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_sa_t = 'neumann'                          !< namelist parameter
-    CHARACTER (LEN=20)   ::  bc_uv_b = 'dirichlet'                        !< namelist parameter
-    CHARACTER (LEN=20)   ::  bc_uv_t = 'dirichlet'                        !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_sa_b = 'neumann'                          !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_uv_b = 'neumann'                        !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_uv_t = 'neumann'                        !< namelist parameter
     CHARACTER (LEN=20)   ::  aerosol_bulk = 'nacl'                        !< namelist parameter
     CHARACTER (LEN=20)   ::  cloud_scheme = 'saturation_adjust'           !< namelist parameter
-    CHARACTER (LEN=20)   ::  coupling_mode = 'uncoupled'                  !< coupling mode for atmosphere-ocean coupling  
+    CHARACTER (LEN=20)   ::  coupling_mode = 'uncoupled'                  !< coupling mode for atmosphere-ocean coupling
     CHARACTER (LEN=20)   ::  coupling_mode_remote = 'uncoupled'           !< coupling mode of the remote process in case of coupled atmosphere-ocean runs
     CHARACTER (LEN=20)   ::  dissipation_1d = 'detering'                  !< namelist parameter
     CHARACTER (LEN=20)   ::  fft_method = 'temperton-algorithm'           !< namelist parameter
     CHARACTER (LEN=20)   ::  mixing_length_1d = 'blackadar'               !< namelist parameter
     CHARACTER (LEN=20)   ::  random_generator = 'random-parallel'         !< namelist parameter
-    CHARACTER (LEN=20)   ::  reference_state = 'initial_profile'          !< namelist parameter  
-    CHARACTER (LEN=20)   ::  timestep_scheme = 'runge-kutta-3'            !< namelist parameter       
+    CHARACTER (LEN=20)   ::  reference_state = 'initial_profile'          !< namelist parameter
+    CHARACTER (LEN=20)   ::  timestep_scheme = 'runge-kutta-3'            !< namelist parameter
     CHARACTER (LEN=20)   ::  turbulence_closure = 'Moeng_Wyngaard'        !< namelist parameter
-    CHARACTER (LEN=40)   ::  topography = 'flat'                          !< namelist parameter 
+    CHARACTER (LEN=40)   ::  topography = 'flat'                          !< namelist parameter
     CHARACTER (LEN=64)   ::  host = '????'                                !< hostname on which PALM is running, ENVPAR namelist parameter provided by mrun
     CHARACTER (LEN=80)   ::  log_message                                  !< user-defined message for debugging (sse data_log.f90)
     CHARACTER (LEN=80)   ::  run_identifier                               !< run identifier as given by mrun option -d, ENVPAR namelist parameter provided by mrun
-    CHARACTER (LEN=100)  ::  initializing_actions = ' '                   !< namelist parameter
+    CHARACTER (LEN=100)  ::  initializing_actions = 'set_constant_profiles'                   !< namelist parameter
     CHARACTER (LEN=100)  ::  restart_string = ' '                         !< for storing strings in case of writing/reading restart data
     CHARACTER (LEN=210)  ::  run_description_header                       !< string containing diverse run informations as run identifier, coupling mode, host, ensemble number, run date and time
     CHARACTER (LEN=1000) ::  message_string = ' '                         !< dynamic string for error message output
 
-    CHARACTER (LEN=varnamelength), DIMENSION(500) ::  data_output = ' '       !< namelist parameter
+    CHARACTER (LEN=varnamelength), DIMENSION(500) ::  data_output = ' ' 
     CHARACTER (LEN=varnamelength), DIMENSION(500) ::  data_output_user = ' '  !< namelist parameter
-    CHARACTER (LEN=varnamelength), DIMENSION(500) ::  doav = ' '              !< label array for multi-dimensional, 
+    CHARACTER (LEN=varnamelength), DIMENSION(500) ::  doav = ' '              !< label array for multi-dimensional,
                                                                               !< averaged output quantities
-                                            
+
     CHARACTER (LEN=varnamelength), DIMENSION(max_masks,100) ::  data_output_masks = ' '       !< namelist parameter
     CHARACTER (LEN=varnamelength), DIMENSION(max_masks,100) ::  data_output_masks_user = ' '  !< namelist parameter
 
-    CHARACTER (LEN=varnamelength), DIMENSION(300) ::  data_output_pr = ' '  !< namelist parameter
-    
+    CHARACTER (LEN=varnamelength), DIMENSION(300) ::  data_output_pr = ' ' 
+
     CHARACTER (LEN=varnamelength), DIMENSION(200) ::  data_output_pr_user = ' '  !< namelist parameter
-    
-    CHARACTER (LEN=varnamelength), DIMENSION(max_masks,0:1,100) ::  domask = ' ' !< label array for multi-dimensional, 
+
+    CHARACTER (LEN=varnamelength), DIMENSION(max_masks,0:1,100) ::  domask = ' ' !< label array for multi-dimensional,
                                                                                  !< masked output quantities
-    
+
     CHARACTER (LEN=varnamelength), DIMENSION(0:1,500) ::  do2d = ' '  !< label array for 2d output quantities
     CHARACTER (LEN=varnamelength), DIMENSION(0:1,500) ::  do3d = ' '  !< label array for 3d output quantities
 
     INTEGER(iwp), PARAMETER ::  fl_max = 100     !< maximum number of virtual-flight measurements
     INTEGER(iwp), PARAMETER ::  var_fl_max = 20  !< maximum number of different sampling variables in virtual flight measurements
-    
+
     INTEGER(iwp) ::  abort_mode = 1                    !< abort condition (nested runs)
     INTEGER(iwp) ::  average_count_pr = 0              !< number of samples in vertical-profile output
     INTEGER(iwp) ::  average_count_3d = 0              !< number of samples in 3d output
@@ -1177,6 +1191,7 @@
     INTEGER(iwp) ::  ibc_s_b                           !< integer flag for bc_s_b
     INTEGER(iwp) ::  ibc_s_t                           !< integer flag for bc_s_t
     INTEGER(iwp) ::  ibc_sa_t                          !< integer flag for bc_sa_t
+    INTEGER(iwp) ::  ibc_sa_b                          !< integer flag for bc_sa_b
     INTEGER(iwp) ::  ibc_uv_b                          !< integer flag for bc_uv_b
     INTEGER(iwp) ::  ibc_uv_t                          !< integer flag for bc_uv_t
     INTEGER(iwp) ::  inflow_disturbance_begin = -1     !< namelist parameter
@@ -1215,7 +1230,7 @@
     INTEGER(iwp) ::  terminate_coupled_remote = 0      !< switch for steering termination in case of coupled runs (condition of the remote model)
     INTEGER(iwp) ::  timestep_count = 0                !< number of timesteps carried out since the beginning of the initial run
     INTEGER(iwp) ::  y_shift = 0                       !< namelist parameter
-    
+
     INTEGER(iwp) ::  dist_nxl(0:1)                               !< left boundary of disturbance region
     INTEGER(iwp) ::  dist_nxr(0:1)                               !< right boundary of disturbance region
     INTEGER(iwp) ::  dist_nyn(0:1)                               !< north boundary of disturbance region
@@ -1235,7 +1250,7 @@
     INTEGER(iwp) ::  mask_start_l(max_masks,3) = -1              !< subdomain start index of mask array (for netcdf output)
     INTEGER(iwp) ::  pt_vertical_gradient_level_ind(10) = -9999  !< grid index values of pt_vertical_gradient_level(s)
     INTEGER(iwp) ::  q_vertical_gradient_level_ind(10) = -9999   !< grid index values of q_vertical_gradient_level(s)
-    INTEGER(iwp) ::  s_vertical_gradient_level_ind(10) = -9999   !< grid index values of s_vertical_gradient_level(s)   
+    INTEGER(iwp) ::  s_vertical_gradient_level_ind(10) = -9999   !< grid index values of s_vertical_gradient_level(s)
     INTEGER(iwp) ::  sa_vertical_gradient_level_ind(10) = -9999  !< grid index values of sa_vertical_gradient_level(s)
     INTEGER(iwp) ::  section(100,3)                              !< collective array for section_xy/xz/yz
     INTEGER(iwp) ::  section_xy(100) = -9999                     !< namelist parameter
@@ -1244,6 +1259,9 @@
     INTEGER(iwp) ::  ug_vertical_gradient_level_ind(10) = -9999  !< grid index values of ug_vertical_gradient_level(s)
     INTEGER(iwp) ::  vg_vertical_gradient_level_ind(10) = -9999  !< grid index values of vg_vertical_gradient_level(s)
     INTEGER(iwp) ::  subs_vertical_gradient_level_i(10) = -9999  !< grid index values of subs_vertical_gradient_level(s)
+    INTEGER(iwp) ::  stokes_drift_method = -9999                 !< method to compute Stokes drift
+                                                                 !<  1: exponential profile
+                                                                 !<  2: use empirical wave spectrum of Donelan et al., 1985
 
     INTEGER(iwp), DIMENSION(0:1) ::  ntdim_2d_xy  !< number of output intervals for 2d data (xy)
     INTEGER(iwp), DIMENSION(0:1) ::  ntdim_2d_xz  !< number of output intervals for 2d data (xz)
@@ -1259,6 +1277,7 @@
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  mask_j_global  !< global grid index of masked output point on y-dimension
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  mask_k_global  !< global grid index of masked output point on z-dimension
 
+    LOGICAL ::  poisfft_initialized = .FALSE.
     LOGICAL ::  aerosol_nacl =.TRUE.                             !< nacl aerosol for bulk scheme
     LOGICAL ::  aerosol_c3h4o4 =.FALSE.                          !< malonic acid aerosol for bulk scheme
     LOGICAL ::  aerosol_nh4no3 =.FALSE.                          !< malonic acid aerosol for bulk scheme
@@ -1278,11 +1297,12 @@
     LOGICAL ::  complex_terrain = .FALSE.                        !< namelist parameter
     LOGICAL ::  conserve_volume_flow = .FALSE.                   !< namelist parameter
     LOGICAL ::  constant_diffusion = .FALSE.                     !< diffusion coefficient constant?
-    LOGICAL ::  constant_flux_layer = .TRUE.                     !< namelist parameter
+    LOGICAL ::  constant_flux_layer = .FALSE.                     !< namelist parameter
     LOGICAL ::  constant_heatflux = .TRUE.                       !< heat flux at all surfaces constant?
     LOGICAL ::  constant_top_heatflux = .TRUE.                   !< heat flux at domain top constant?
-    LOGICAL ::  constant_top_momentumflux = .FALSE.              !< momentum flux at domain topconstant?
+    LOGICAL ::  constant_top_momentumflux = .TRUE.              !< momentum flux at domain topconstant?
     LOGICAL ::  constant_top_salinityflux = .TRUE.               !< salinity flux at ocean domain top?
+    LOGICAL ::  constant_bottom_salinityflux = .TRUE.            !< salinity flux at ocean domain bottom?
     LOGICAL ::  constant_top_scalarflux = .TRUE.                 !< passive-scalar flux at domain top constant?
     LOGICAL ::  constant_scalarflux = .TRUE.                     !< passive-scalar flux at surfaces constant?
     LOGICAL ::  constant_waterflux = .TRUE.                      !< water flux at all surfaces constant?
@@ -1304,7 +1324,7 @@
     LOGICAL ::  force_bound_n = .FALSE.                          !< flag indicating domain boundary on north side to set forcing boundary conditions
     LOGICAL ::  force_bound_r = .FALSE.                          !< flag indicating domain boundary on right side to set forcing boundary conditions
     LOGICAL ::  force_bound_s = .FALSE.                          !< flag indicating domain boundary on south side to set forcing boundary conditions
-    LOGICAL ::  forcing = .FALSE.                                !< flag controlling forcing from large-scale model     
+    LOGICAL ::  forcing = .FALSE.                                !< flag controlling forcing from large-scale model
     LOGICAL ::  galilei_transformation = .FALSE.                 !< namelist parameter
     LOGICAL ::  humidity = .FALSE.                               !< namelist parameter
     LOGICAL ::  humidity_remote = .FALSE.                        !< switch for receiving near-surface humidity flux (atmosphere-ocean coupling)
@@ -1332,7 +1352,7 @@
     LOGICAL ::  nest_domain  = .FALSE.                           !< domain is nested into a parent domain?
     LOGICAL ::  neutral = .FALSE.                                !< namelist parameter
     LOGICAL ::  nudging = .FALSE.                                !< namelist parameter
-    LOGICAL ::  ocean = .FALSE.                                  !< namelist parameter
+    LOGICAL ::  ocean = .TRUE.                                  !< namelist parameter
     LOGICAL ::  linear_eqnOfState = .FALSE.                      !< namelist parmaeter for linear equation of state in ocean
     REAL(wp) :: rho_ref = 1000.0_wp                              !< reference density for linear eos
     LOGICAL ::  fixed_alpha = .TRUE.                             !< use fixed thermal and haline expansion coefficients
@@ -1340,10 +1360,11 @@
     REAL(wp) :: beta_const = 8.0E-4                              !< fixed beta_S value
     REAL(wp) :: pt_ref = 15.0_wp                                 !< potential temperature reference falue
     REAL(wp) :: sa_ref = 35.0_wp                                 !< salinity reerence value for fixed linear density equation
-    LOGICAL ::  idealized_diurnal = .FALSE.                      !< flag for diurnal cycle
+    LOGICAL ::  idealized_diurnal = .TRUE.                      !< flag for diurnal cycle
     REAL(wp) :: ideal_solar_division = 0.67_wp                   !< value for breakdown of double exponential
     REAL(wp) :: ideal_solar_efolding1 = 1.0_wp/1.0_wp            !< efolding depth for IR in solar (m^-1)
     REAL(wp) :: ideal_solar_efolding2 = 1.0_wp/17.0_wp           !< efolding depth for blue in solar (m^-1)
+    REAL(wp) :: wb_solar = 0.0_wp
     LOGICAL ::  outflow_l = .FALSE.                              !< left domain boundary has non-cyclic outflow?
     LOGICAL ::  outflow_n = .FALSE.                              !< north domain boundary has non-cyclic outflow?
     LOGICAL ::  outflow_r = .FALSE.                              !< right domain boundary has non-cyclic outflow?
@@ -1362,6 +1383,7 @@
     LOGICAL ::  scalar_rayleigh_damping = .TRUE.                 !< namelist parameter
     LOGICAL ::  sloping_surface = .FALSE.                        !< use sloped surface? (namelist parameter alpha_surface)
     LOGICAL ::  spinup = .FALSE.                                 !< perform model spinup without atmosphere code?
+    LOGICAL ::  stokes_force = .FALSE.                           !< switch for use of Stokes forces
     LOGICAL ::  stop_dt = .FALSE.                                !< internal switch to stop the time stepping
     LOGICAL ::  synchronous_exchange = .FALSE.                   !< namelist parameter
     LOGICAL ::  syn_turb_gen = .FALSE.                           !< flag for synthetic turbulence generator module
@@ -1378,7 +1400,7 @@
     LOGICAL ::  use_single_reference_value = .FALSE.             !< use of single value as reference state?
     LOGICAL ::  use_subsidence_tendencies = .FALSE.              !< namelist parameter
     LOGICAL ::  use_surface_fluxes = .FALSE.                     !< namelist parameter
-    LOGICAL ::  use_top_fluxes = .FALSE.                         !< namelist parameter
+    LOGICAL ::  use_top_fluxes = .TRUE.                         !< namelist parameter
     LOGICAL ::  use_ug_for_galilei_tr = .TRUE.                   !< namelist parameter
     LOGICAL ::  use_upstream_for_tke = .FALSE.                   !< namelist parameter
     LOGICAL ::  uv_exposure = .FALSE.                            !< switch for uv exposure model
@@ -1394,12 +1416,12 @@
     LOGICAL ::  data_output_xz(0:1) = .FALSE.                !< output of xz cross-section data?
     LOGICAL ::  data_output_yz(0:1) = .FALSE.                !< output of yz cross-section data?
 
-    REAL(wp) ::  advected_distance_x = 0.0_wp                  !< advected distance of model domain along x 
-                                                               !< (galilei transformation) 
-    REAL(wp) ::  advected_distance_y = 0.0_wp                  !< advected distance of model domain along y 
+    REAL(wp) ::  advected_distance_x = 0.0_wp                  !< advected distance of model domain along x
+                                                               !< (galilei transformation)
+    REAL(wp) ::  advected_distance_y = 0.0_wp                  !< advected distance of model domain along y
                                                                !< (galilei transformation)
     REAL(wp) ::  alpha_surface = 0.0_wp                        !< namelist parameter
-    REAL(wp) ::  atmos_ocean_sign = 1.0_wp                     !< vertical-grid conversion factor 
+    REAL(wp) ::  atmos_ocean_sign = 1.0_wp                     !< vertical-grid conversion factor
                                                                !< (=1.0 in atmosphere, =-1.0 in ocean)
     REAL(wp) ::  averaging_interval = 0.0_wp                   !< namelist parameter
     REAL(wp) ::  averaging_interval_pr = 9999999.9_wp          !< namelist parameter
@@ -1407,6 +1429,12 @@
     REAL(wp) ::  bc_q_t_val                                    !< vertical gradient of humidity near domain top
     REAL(wp) ::  bc_s_t_val                                    !< vertical gradient of passive scalar near domain top
     REAL(wp) ::  bottom_salinityflux = 0.0_wp                  !< namelist parameter
+    REAL(wp) ::  bubble_center_x = 9999999.9_wp                !< namelist parameter
+    REAL(wp) ::  bubble_center_y = 9999999.9_wp                !< namelist parameter
+    REAL(wp) ::  bubble_center_z = 9999999.9_wp                !< namelist parameter
+    REAL(wp) ::  bubble_radius = 9999999.9_wp                  !< namelist parameter
+    REAL(wp) ::  bubble_pt = 9999999.9_wp                      !< namelist parameter
+    REAL(wp) ::  bubble_sa = 9999999.9_wp                      !< namelist parameter
     REAL(wp) ::  building_height = 50.0_wp                     !< namelist parameter
     REAL(wp) ::  building_length_x = 50.0_wp                   !< namelist parameter
     REAL(wp) ::  building_length_y = 50.0_wp                   !< namelist parameter
@@ -1429,10 +1457,10 @@
     REAL(wp) ::  dt_averaging_input = 0.0_wp                   !< namelist parameter
     REAL(wp) ::  dt_averaging_input_pr = 9999999.9_wp          !< namelist parameter
     REAL(wp) ::  dt_coupling = 9999999.9_wp                    !< namelist parameter
-    REAL(wp) ::  dt_data_output = 9999999.9_wp                 !< namelist parameter
-    REAL(wp) ::  dt_data_output_av = 9999999.9_wp              !< namelist parameter
-    REAL(wp) ::  dt_disturb = 9999999.9_wp                     !< namelist parameter
-    REAL(wp) ::  dt_dopr = 9999999.9_wp                        !< namelist parameter
+    REAL(wp) ::  dt_data_output = 3600.0_wp                 !< namelist parameter
+    REAL(wp) ::  dt_data_output_av = 3600.0_wp              !< namelist parameter
+    REAL(wp) ::  dt_disturb = 20.0_wp                     !< namelist parameter
+    REAL(wp) ::  dt_dopr = 3600.0_wp                        !< namelist parameter
     REAL(wp) ::  dt_dopr_listing = 9999999.9_wp                !< namelist parameter
     REAL(wp) ::  dt_dopts = 9999999.9_wp                       !< namelist parameter
     REAL(wp) ::  dt_dots = 9999999.9_wp                        !< namelist parameter
@@ -1443,7 +1471,7 @@
     REAL(wp) ::  dt_dvrp = 9999999.9_wp                        !< namelist parameter
     REAL(wp) ::  dt_max = 20.0_wp                              !< namelist parameter
     REAL(wp) ::  dt_restart = 9999999.9_wp                     !< namelist parameter
-    REAL(wp) ::  dt_run_control = 60.0_wp                      !< namelist parameter
+    REAL(wp) ::  dt_run_control = 0.0_wp                      !< namelist parameter
     REAL(wp) ::  dt_spinup = 60.0_wp                           !< namelist parameter
     REAL(wp) ::  dt_3d = 0.01_wp                               !< time step
     REAL(wp) ::  dz_max = 1000.0_wp                            !< namelist parameter
@@ -1451,7 +1479,7 @@
     REAL(wp) ::  dz_stretch_level = -9999999.9_wp              !< namelist parameter
     REAL(wp) ::  e_init = 0.0_wp                               !< namelist parameter
     REAL(wp) ::  e_min = 0.0_wp                                !< namelist parameter
-    REAL(wp) ::  end_time = 0.0_wp                             !< namelist parameter
+    REAL(wp) ::  end_time = 10800.0_wp                             !< namelist parameter
     REAL(wp) ::  f = 0.0_wp                                    !< Coriolis parameter
     REAL(wp) ::  fs = 0.0_wp                                   !< Coriolis parameter
     REAL(wp) ::  g = 9.81_wp                                   !< gravitational acceleration
@@ -1459,7 +1487,7 @@
     REAL(wp) ::  inflow_damping_width = 9999999.9_wp           !< namelist parameter
     REAL(wp) ::  kappa = 0.4_wp                                !< von Karman constant
     REAL(wp) ::  km_constant = -1.0_wp                         !< namelist parameter
-    REAL(wp) ::  latitude = 55.0_wp                            !< namelist parameter
+    REAL(wp) ::  latitude = 55.6_wp                            !< namelist parameter
     REAL(wp) ::  longitude = 0.0_wp                            !< namelist parameter
     REAL(wp) ::  mask_scale_x = 1.0_wp                         !< namelist parameter
     REAL(wp) ::  mask_scale_y = 1.0_wp                         !< namelist parameter
@@ -1477,9 +1505,9 @@
     REAL(wp) ::  pt_damping_factor = 0.0_wp                    !< namelist parameter
     REAL(wp) ::  pt_damping_width = 0.0_wp                     !< namelist parameter
     REAL(wp) ::  pt_reference = 9999999.9_wp                   !< namelist parameter
-    REAL(wp) ::  pt_slope_offset = 0.0_wp                      !< temperature difference between left and right 
+    REAL(wp) ::  pt_slope_offset = 0.0_wp                      !< temperature difference between left and right
                                                                !< boundary of total domain
-    REAL(wp) ::  pt_surface = 300.0_wp                         !< namelist parameter
+    REAL(wp) ::  pt_surface = 293.0_wp                         !< namelist parameter
     REAL(wp) ::  pt_surface_initial_change = 0.0_wp            !< namelist parameter
     REAL(wp) ::  q_surface = 0.0_wp                            !< namelist parameter
     REAL(wp) ::  q_surface_initial_change = 0.0_wp             !< namelist parameter
@@ -1526,23 +1554,23 @@
     REAL(wp) ::  time_do2d_yz = 0.0_wp                         !< time since last yz cross-section output
     REAL(wp) ::  time_do3d = 0.0_wp                            !< time since last 3d output
     REAL(wp) ::  time_do_av = 0.0_wp                           !< time since last averaged-data output
-    REAL(wp) ::  time_do_sla = 0.0_wp                          !< time since last 
+    REAL(wp) ::  time_do_sla = 0.0_wp                          !< time since last
     REAL(wp) ::  time_dvrp = 0.0_wp                            !< time since last dvrp output
     REAL(wp) ::  time_restart = 9999999.9_wp                   !< time at which run shall be terminated and restarted
     REAL(wp) ::  time_run_control = 0.0_wp                     !< time since last RUN_CONTROL output
     REAL(wp) ::  time_since_reference_point = 0.0_wp           !< time after atmosphere-ocean coupling has been activated, or time after spinup phase of LSM has been finished
-    REAL(wp) ::  top_heatflux = 9999999.9_wp                   !< namelist parameter
-    REAL(wp) ::  top_momentumflux_u = 9999999.9_wp             !< namelist parameter
-    REAL(wp) ::  top_momentumflux_v = 9999999.9_wp             !< namelist parameter
-    REAL(wp) ::  top_salinityflux = 9999999.9_wp               !< namelist parameter
+    REAL(wp) ::  top_heatflux = 5e-5_wp                   !< namelist parameter
+    REAL(wp) ::  top_momentumflux_u = 0.0_wp             !< namelist parameter
+    REAL(wp) ::  top_momentumflux_v = 0.0_wp             !< namelist parameter
+    REAL(wp) ::  top_salinityflux = 0.0_wp               !< namelist parameter
     REAL(wp) ::  top_scalarflux = 9999999.9_wp                 !< namelist parameter
     REAL(wp) ::  tunnel_height = 9999999.9_wp                  !< namelist parameter
     REAL(wp) ::  tunnel_length = 9999999.9_wp                  !< namelist parameter
     REAL(wp) ::  tunnel_width_x = 9999999.9_wp                 !< namelist parameter
     REAL(wp) ::  tunnel_width_y = 9999999.9_wp                 !< namelist parameter
     REAL(wp) ::  tunnel_wall_depth = 9999999.9_wp              !< namelist parameter
-    REAL(wp) ::  ug_surface = 0.0_wp                           !< namelist parameter 
-    REAL(wp) ::  u_bulk = 0.0_wp                               !< namelist parameter 
+    REAL(wp) ::  ug_surface = 0.0_wp                           !< namelist parameter
+    REAL(wp) ::  u_bulk = 0.0_wp                               !< namelist parameter
     REAL(wp) ::  u_gtrans = 0.0_wp                             !< transformed wind component (galilei transformation)
     REAL(wp) ::  vg_surface = 0.0_wp                           !< namelist parameter
     REAL(wp) ::  vpt_reference = 9999999.9_wp                  !< reference state of virtual potential temperature
@@ -1559,18 +1587,19 @@
     REAL(wp) ::  dpdxy(1:2) = 0.0_wp                               !< namelist parameter
     REAL(wp) ::  dt_domask(max_masks) = 9999999.9_wp               !< namelist parameter
     REAL(wp) ::  dz(10) = -1.0_wp                                  !< namelist parameter
+    REAL(wp) ::  dzconst = 2.5_wp
     REAL(wp) ::  dz_stretch_level_start(9) = -9999999.9_wp         !< namelist parameter
     REAL(wp) ::  dz_stretch_level_end(9) = 9999999.9_wp            !< namelist parameter
     REAL(wp) ::  dz_stretch_factor_array(9) = 1.08_wp              !< namelist parameter
     REAL(wp) ::  mask_scale(3)                                     !< collective array for mask_scale_x/y/z
-    REAL(wp) ::  pt_vertical_gradient(10) = 0.0_wp                 !< namelist parameter
-    REAL(wp) ::  pt_vertical_gradient_level(10) = -999999.9_wp   !< namelist parameter
+    REAL(wp) ::  pt_vertical_gradient(10) = 1.0_wp                 !< namelist parameter
+    REAL(wp) ::  pt_vertical_gradient_level(10) = 0.0_wp   !< namelist parameter
     REAL(wp) ::  q_vertical_gradient(10) = 0.0_wp                  !< namelist parameter
     REAL(wp) ::  q_vertical_gradient_level(10) = -999999.9_wp    !< namelist parameter
     REAL(wp) ::  s_vertical_gradient(10) = 0.0_wp                  !< namelist parameter
     REAL(wp) ::  s_vertical_gradient_level(10) = -999999.9_wp    !< namelist parameter
     REAL(wp) ::  sa_vertical_gradient(10) = 0.0_wp                 !< namelist parameter
-    REAL(wp) ::  sa_vertical_gradient_level(10) = -999999.9_wp   !< namelist parameter
+    REAL(wp) ::  sa_vertical_gradient_level(10) = 0.0_wp   !< namelist parameter
     REAL(wp) ::  skip_time_domask(max_masks) = 9999999.9_wp        !< namelist parameter
     REAL(wp) ::  threshold(20) = 0.0_wp                            !< namelist parameter
     REAL(wp) ::  time_domask(max_masks) = 0.0_wp                   !< namelist parameter
@@ -1589,26 +1618,32 @@
     REAL(wp) ::  wall_heatflux(0:5) = 0.0_wp                       !< namelist parameter
     REAL(wp) ::  wall_humidityflux(0:5) = 0.0_wp                   !< namelist parameter
     REAL(wp) ::  wall_salinityflux(0:5) = 0.0_wp                   !< namelist parameter
-    REAL(wp) ::  wall_scalarflux(0:5) = 0.0_wp                     !< namelist parameter 
-    REAL(wp) ::  subs_vertical_gradient(10) = 0.0_wp               !< namelist parameter 
+    REAL(wp) ::  wall_scalarflux(0:5) = 0.0_wp                     !< namelist parameter
+    REAL(wp) ::  subs_vertical_gradient(10) = 0.0_wp               !< namelist parameter
     REAL(wp) ::  subs_vertical_gradient_level(10) = -9999999.9_wp  !< namelist parameter
+    REAL(wp) ::  u0_stk = -9999999.9_wp                            !< surface Stokes drift in m/s, x-component
+    REAL(wp) ::  v0_stk = -9999999.9_wp                            !< surface Stokes drift in m/s, y-component
+    REAL(wp) ::  d_stk = -9999999.9_wp                             !< Stokes drift exponential decay depth scale in m
+    REAL(wp) ::  wind_speed = -9999999.9_wp                        !< 10-meter wind speed used to compute empirical wave spectra (m/s)
+    REAL(wp) ::  wind_dir = -9999999.9_wp                          !< wind direction used to compute empirical wave spectra, degree counter-clockwise from x-direction
+    REAL(wp) ::  wave_age = -9999999.9_wp                          !< wave age c_p/(U_{10}\cos\theta) used to compute empirical wave spectra
 
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  dp_smooth_factor  !< smoothing factor for external pressure gradient forcing
 
     REAL(wp), DIMENSION(max_masks,mask_xyz_dimension) ::  mask_x = -1.0_wp  !< namelist parameter
     REAL(wp), DIMENSION(max_masks,mask_xyz_dimension) ::  mask_y = -1.0_wp  !< namelist parameter
     REAL(wp), DIMENSION(max_masks,mask_xyz_dimension) ::  mask_z = -1.0_wp  !< namelist parameter
-    
+
     REAL(wp), DIMENSION(max_masks,3) ::  mask_x_loop = -1.0_wp  !< namelist parameter
     REAL(wp), DIMENSION(max_masks,3) ::  mask_y_loop = -1.0_wp  !< namelist parameter
     REAL(wp), DIMENSION(max_masks,3) ::  mask_z_loop = -1.0_wp  !< namelist parameter
-    
+
 !
 !--    internal mask arrays ("mask,dimension,selection")
        REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  mask       !< collective array for mask_x/y/z
        REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  mask_loop  !< collective array for mask_x/y/z_loop
 
-    SAVE
+!    SAVE
 
  END MODULE control_parameters
 
@@ -1727,7 +1762,7 @@
 
     TYPE(steering), DIMENSION(:), ALLOCATABLE ::  steering_dvrp  !< internal dvr software variable
 
-    SAVE
+!    SAVE
 
  END MODULE dvrp_variables
 
@@ -1743,20 +1778,20 @@
 
     REAL(wp) ::  ddx          !< 1/dx
     REAL(wp) ::  ddx2         !< 1/dx2
-    REAL(wp) ::  dx = 1.0_wp  !< horizontal grid size (along x-direction) 
+    REAL(wp) ::  dx = 2.5_wp  !< horizontal grid size (along x-direction)
     REAL(wp) ::  dx2          !< dx*dx
     REAL(wp) ::  ddy          !< 1/dy
     REAL(wp) ::  ddy2         !< 1/dy2
-    REAL(wp) ::  dy = 1.0_wp  !< horizontal grid size (along y-direction)
+    REAL(wp) ::  dy = 2.5_wp  !< horizontal grid size (along y-direction)
     REAL(wp) ::  dy2          !< dy*dy
 
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  ddx2_mg  !< 1/dx_l**2 (dx_l: grid spacing along x on different multigrid level)
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  ddy2_mg  !< 1/dy_l**2 (dy_l: grid spacing along y on different multigrid level)
 
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  zu_s_inner  !< height of topography top on scalar grid 
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  zw_w_inner  !< height of topography top on w grid 
-                                              
-    SAVE
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  zu_s_inner  !< height of topography top on scalar grid
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  zw_w_inner  !< height of topography top on w grid
+
+!    SAVE
 
  END MODULE grid_variables
 
@@ -1774,7 +1809,7 @@
     INTEGER(iwp) ::  ngp_sums       !< number of vertical profile grid points time number of output profiles - used for allreduce statements in MPI calls
     INTEGER(iwp) ::  ngp_sums_ls    !< number of vertical profile grid points time number of large-scale forcing profiles - used for allreduce statements in MPI calls
     INTEGER(iwp) ::  nnx            !< number of subdomain grid points in x-direction
-    INTEGER(iwp) ::  nx = 0         !< nx+1 = total number of grid points in x-direction
+    INTEGER(iwp) ::  nx = 31         !< nx+1 = total number of grid points in x-direction
     INTEGER(iwp) ::  nx_a           !< in coupled atmosphere-ocean runs: total number of grid points along x (atmosphere)
     INTEGER(iwp) ::  nx_o           !< in coupled atmosphere-ocean runs: total number of grid points along x (ocean)
     INTEGER(iwp) ::  nxl            !< left-most grid index of subdomain (excluding ghost points)
@@ -1784,7 +1819,7 @@
     INTEGER(iwp) ::  nxrg           !< right-most grid index of subdomain (including ghost points)
     INTEGER(iwp) ::  nx_on_file     !< nx of previous run in job chain
     INTEGER(iwp) ::  nny            !< number of subdomain grid points in y-direction
-    INTEGER(iwp) ::  ny = 0         !< ny+1 = total number of grid points in y-direction
+    INTEGER(iwp) ::  ny = 31         !< ny+1 = total number of grid points in y-direction
     INTEGER(iwp) ::  ny_a           !< in coupled atmosphere-ocean runs: total number of grid points along y (atmosphere)
     INTEGER(iwp) ::  ny_o           !< in coupled atmosphere-ocean runs: total number of grid points along y (ocean)
     INTEGER(iwp) ::  nyn            !< north-most grid index of subdomain (excluding ghost points)
@@ -1794,7 +1829,7 @@
     INTEGER(iwp) ::  nysv           !< =nys+1 (at south domain boundary with inflow from south), else =nys (used for v-velocity component)
     INTEGER(iwp) ::  ny_on_file     !< ny of previous run in job chain
     INTEGER(iwp) ::  nnz            !< number of subdomain grid points in z-direction
-    INTEGER(iwp) ::  nz = 0         !< total number of grid points in z-direction
+    INTEGER(iwp) ::  nz = 256         !< total number of grid points in z-direction
     INTEGER(iwp) ::  nzb            !< bottom grid index of computational domain
     INTEGER(iwp) ::  nzb_diff       !< will be removed
     INTEGER(iwp) ::  nzb_max        !< vertical index of topography top
@@ -1803,7 +1838,7 @@
 
     INTEGER(idp), DIMENSION(:), ALLOCATABLE ::  ngp_3d        !< number of grid points of the total domain
     INTEGER(idp), DIMENSION(:), ALLOCATABLE ::  ngp_3d_inner  !< ! need to have 64 bit for grids > 2E9
-                    
+
     INTEGER(iwp), DIMENSION(:), ALLOCATABLE ::  ngp_2dh  !< number of grid points of a horizontal cross section through the total domain
     INTEGER(iwp), DIMENSION(:), ALLOCATABLE ::  nxl_mg   !< left-most grid index of subdomain on different multigrid level
     INTEGER(iwp), DIMENSION(:), ALLOCATABLE ::  nxr_mg   !< right-most grid index of subdomain on different multigrid level
@@ -1830,22 +1865,22 @@
 
     INTEGER(iwp), DIMENSION(:,:,:), POINTER ::  flags  !< pointer to wall_flags_1-10
 
-    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_1   !< topograpyh masking flag on multigrid level 1 
-    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_2   !< topograpyh masking flag on multigrid level 2 
-    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_3   !< topograpyh masking flag on multigrid level 3 
-    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_4   !< topograpyh masking flag on multigrid level 4 
-    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_5   !< topograpyh masking flag on multigrid level 5 
-    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_6   !< topograpyh masking flag on multigrid level 6 
-    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_7   !< topograpyh masking flag on multigrid level 7 
-    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_8   !< topograpyh masking flag on multigrid level 8 
-    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_9   !< topograpyh masking flag on multigrid level 9 
-    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_10  !< topograpyh masking flag on multigrid level 10 
+    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_1   !< topograpyh masking flag on multigrid level 1
+    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_2   !< topograpyh masking flag on multigrid level 2
+    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_3   !< topograpyh masking flag on multigrid level 3
+    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_4   !< topograpyh masking flag on multigrid level 4
+    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_5   !< topograpyh masking flag on multigrid level 5
+    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_6   !< topograpyh masking flag on multigrid level 6
+    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_7   !< topograpyh masking flag on multigrid level 7
+    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_8   !< topograpyh masking flag on multigrid level 8
+    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_9   !< topograpyh masking flag on multigrid level 9
+    INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE,  TARGET ::  wall_flags_10  !< topograpyh masking flag on multigrid level 10
 
     INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE ::  advc_flags_1            !< flags used to degrade order of advection scheme
     INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE ::  advc_flags_2            !< flags used to degrade order of advection scheme
     INTEGER(iwp), DIMENSION(:,:,:), ALLOCATABLE ::  wall_flags_0            !< flags to mask topography and surface-bounded grid points
 
-    SAVE
+!    SAVE
 
  END MODULE indices
 
@@ -1887,7 +1922,7 @@
 
     END INTERFACE
 
-    SAVE
+!    SAVE
 
  END MODULE interfaces
 
@@ -1921,7 +1956,7 @@
 
     END INTERFACE
 
-    SAVE
+!    SAVE
 
  END MODULE pointer_interfaces
 
@@ -1946,7 +1981,7 @@
 #endif
     CHARACTER(LEN=2) ::  send_receive = 'al'     !<
     CHARACTER(LEN=7) ::  myid_char = ''          !< character string containing processor id number
-    
+
     INTEGER(iwp) ::  comm1dx                     !< communicator for domain decomposition along x
     INTEGER(iwp) ::  comm1dy                     !< communicator for domain decomposition along y
     INTEGER(iwp) ::  comm2d                      !< standard 2d (xy) communicator used in PALM for the process group the PE belongs to
@@ -1981,14 +2016,14 @@
     INTEGER(iwp) ::  target_id                   !< in atmosphere/ocean coupling: id of the ocean/atmosphere counterpart PE with whom the atmosphere/ocean PE exchanges data
     INTEGER(iwp) ::  tasks_per_node = -9999      !< MPI tasks per compute node
     INTEGER(iwp) ::  threads_per_task = 1        !< number of OPENMP threads per MPI task
-    INTEGER(iwp) ::  type_x                      !< derived MPI datatype for 2-D ghost-point exchange - north / south 
-    INTEGER(iwp) ::  type_xy                     !< derived MPI datatype for 2-D ghost-point exchange - north / south 
-    INTEGER(iwp) ::  type_y                      !< derived MPI datatype for 2-D exchange in atmosphere-ocean coupler 
+    INTEGER(iwp) ::  type_x                      !< derived MPI datatype for 2-D ghost-point exchange - north / south
+    INTEGER(iwp) ::  type_xy                     !< derived MPI datatype for 2-D ghost-point exchange - north / south
+    INTEGER(iwp) ::  type_y                      !< derived MPI datatype for 2-D exchange in atmosphere-ocean coupler
 
     INTEGER(iwp) ::  pdims(2) = 1  !< number of processors along x-y dimension
     INTEGER(iwp) ::  req(100)      !< MPI return variable indicating if send-receive operation is finished
 
-    INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  hor_index_bounds               !< horizontal index bounds 
+    INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  hor_index_bounds               !< horizontal index bounds
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  hor_index_bounds_previous_run  !< horizontal index bounds of previous run
 
     LOGICAL ::  collective_wait = .FALSE.          !< switch to set an explicit MPI barrier in front of all collective MPI calls
@@ -1997,9 +2032,9 @@
     INTEGER(iwp) ::  ibuf(12)                 !< internal buffer for calculating MPI settings
     INTEGER(iwp) ::  pcoord(2)                !< PE coordinates along x and y
     INTEGER(iwp) ::  status(MPI_STATUS_SIZE)  !< MPI status variable used in various MPI calls
-    
+
     INTEGER(iwp), DIMENSION(MPI_STATUS_SIZE,100) ::  wait_stat  !< MPI status variable used in various MPI calls
-    
+
     INTEGER(iwp), DIMENSION(:), ALLOCATABLE ::  ngp_xz      !< number of ghost points in xz-plane on different multigrid level
     INTEGER(iwp), DIMENSION(:), ALLOCATABLE ::  ngp_xz_int  !< number of ghost points in xz-plane on different multigrid level
     INTEGER(iwp), DIMENSION(:), ALLOCATABLE ::  ngp_yz      !< number of ghost points in yz-plane on different multigrid level
@@ -2008,7 +2043,7 @@
     INTEGER(iwp), DIMENSION(:), ALLOCATABLE ::  type_xz     !< derived MPI datatype for 3-D integer ghost-point exchange - north / south
     INTEGER(iwp), DIMENSION(:), ALLOCATABLE ::  type_xz_int !< derived MPI datatype for 3-D integer ghost-point exchange - north / south
     INTEGER(iwp), DIMENSION(:), ALLOCATABLE ::  type_y_int  !< derived MPI datatype for 2-D integer ghost-point exchange - left / right
-    INTEGER(iwp), DIMENSION(:), ALLOCATABLE ::  type_yz     !< derived MPI datatype for 3-D integer ghost-point exchange - left / right 
+    INTEGER(iwp), DIMENSION(:), ALLOCATABLE ::  type_yz     !< derived MPI datatype for 3-D integer ghost-point exchange - left / right
     INTEGER(iwp), DIMENSION(:), ALLOCATABLE ::  type_yz_int !< derived MPI datatype for 3-D integer ghost-point exchange - left / right
 
     LOGICAL ::  left_border_pe  = .FALSE.  !< = .TRUE. if PE is on left border of computational domain
@@ -2021,7 +2056,7 @@
     LOGICAL, DIMENSION(2) ::  remain_dims                     !< internal array used to determine sub-topologies for transpositions
 #endif
 
-    SAVE
+!    SAVE
 
  END MODULE pegrid
 
@@ -2060,8 +2095,9 @@
 
     INTEGER(iwp) ::  dopr_index(300) = 0                !< index number of respective profile quantity
     INTEGER(iwp) ::  dopr_initial_index(300) = 0        !< index number of initial profiles to be output
-                
-    SAVE
+
+!    SAVE
+                 
 
  END MODULE profil_parameter
 
@@ -2075,31 +2111,31 @@
     USE kinds
 
     CHARACTER (LEN=40) ::  region(0:9)  !< label for statistic region
- 
+
     INTEGER(iwp) ::  pr_palm = 200          !< maximum number of output profiles
     INTEGER(iwp) ::  statistic_regions = 0  !< identifier for statistic regions
 
     INTEGER(iwp) ::  u_max_ijk(3) = -1  !< index values (i,j,k) of location where u_max occurs
     INTEGER(iwp) ::  v_max_ijk(3) = -1  !< index values (i,j,k) of location where v_max occurs
     INTEGER(iwp) ::  w_max_ijk(3) = -1  !< index values (i,j,k) of location where w_max occurs
-    
+
     LOGICAL ::  flow_statistics_called = .FALSE.  !< flag that tells other routines if flow statistics was executed
                                                   !< (after each timestep)
-    
+
     REAL(wp) ::  u_max = 0.0_wp  !< maximum of absolute u-veloctiy in entire domain
     REAL(wp) ::  v_max = 0.0_wp  !< maximum of absolute v-veloctiy in entire domain
     REAL(wp) ::  w_max = 0.0_wp  !< maximum of absolute w-veloctiy in entire domain
 
     REAL(wp), DIMENSION(2) ::  z_i  !< inversion height
-    
+
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  mean_surface_level_height  !< mean surface level height for the different statistic regions
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  sums_divnew_l              !< subdomain sum (_l) of divergence after pressure 
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  sums_divnew_l              !< subdomain sum (_l) of divergence after pressure
                                                                        !< solver call (new)
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  sums_divold_l              !< subdomain sum (_l) of divergence before pressure
                                                                        !< solver call (old)
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  weight_substep             !< weighting factor for substeps in timestepping
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  weight_pres                !< substep weighting factor for pressure solver
-    
+
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sums             !< global sum array for the various output quantities
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sums_wsts_bc_l   !< subdomain sum of sensible heat flux in Bott-Chlond scheme
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  ts_value         !< timeseries output array for the various output quantities
@@ -2117,7 +2153,7 @@
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sums_wssas_ws_l  !< subdomain sum of vertical salinity flux w'sa' (5th-order advection scheme only)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sums_wsss_ws_l   !< subdomain sum of vertical passive scalar flux w's' (5th-order advection scheme only)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sums_ls_l        !< subdomain sum of large scale forcing and nudging tendencies
-                                              
+
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  hom_sum             !< sum array for horizontal mean
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  rmask               !< REAL flag array (0.0 or 1.0) for statistic regions
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  sums_l              !< subdomain sum (_l) gathered for various quantities
@@ -2125,7 +2161,7 @@
 
     REAL(wp), DIMENSION(:,:,:,:), ALLOCATABLE ::  hom  !< horizontal mean of various quantities (profiles/timeseries)
 
-    SAVE
+!    SAVE
 
  END MODULE statistics
 
@@ -2156,7 +2192,7 @@
     INTEGER(iwp) ::  nzt_x   !< internal index bound for transpositions
     INTEGER(iwp) ::  nzt_y   !< internal index bound for transpositions
     INTEGER(iwp) ::  nzt_yd  !< internal index bound for transpositions
-                
-    SAVE
+
+!    SAVE
 
  END MODULE transpose_indices

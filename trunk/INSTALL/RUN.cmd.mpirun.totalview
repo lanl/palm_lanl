@@ -6,7 +6,9 @@
 # ${mpi_ranks} is the total number of mpi ranks (option -p)
 # ${mpi_ranks_per_node} is the total number of mpi ranks per node (option -n)
 # ${openmp_threads} is the number of OpenMP threads (option -t)
+# Modified: 2018-11-02 cbegeman. Version to be used with totalview.
 
 export OMP_NUM_THREADS=${openmp_threads}
-aprun -n ${mpi_ranks}  ./palm
-./combine_plot_fields.x
+echo "       MPI ranks in RUN.cmd: $mpi_ranks"
+
+totalview mpirun -a -n ${mpi_ranks} ./palm

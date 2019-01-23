@@ -20,6 +20,8 @@
 ! Current revisions:
 ! -----------------
 ! 
+! 2018-11-15 cbegeman
+! Change ptanom to 2D and 3D bubble with user-specified properties
 ! 
 ! Former revisions:
 ! -----------------
@@ -72,7 +74,10 @@
  
 
     USE arrays_3d,                                                             &
-        ONLY:  pt, zu
+        ONLY:  pt, sa, zu
+
+    USE constants,                                                             &
+        ONLY:  pi
 
     USE control_parameters    
         
@@ -87,82 +92,75 @@
     IMPLICIT NONE
 
     INTEGER(iwp) ::  i  !< grid index along x
-    INTEGER(iwp) ::  ic !< center index along x 
     INTEGER(iwp) ::  j  !< grid index along y
-    INTEGER(iwp) ::  jc !< center index along y
     INTEGER(iwp) ::  k  !< grid index along z
-    INTEGER(iwp) ::  kc !< center index along z
     
-    REAL(wp)     ::  amount                               !< amount of temperature perturbation
-    REAL(wp)     ::  bubble_center_y                      !< center of bubble in y
-    REAL(wp)     ::  bubble_center_z = 170.0              !< center of bubble in z
-    REAL(wp)     ::  bubble_sigma_y = 300.0               !< width of bubble in y
-    REAL(wp)     ::  bubble_sigma_z = 150.0               !< width of bubble in z
-    REAL(wp)     ::  initial_temperature_difference = 0.4 !< temperature perturbation for bubble in K
-    REAL(wp)     ::  radius                               !< radius of pt anomaly
-    REAL(wp)     ::  rc                                   !< radius of pt anomaly
-    REAL(wp)     ::  x                                    !< x dimension of pt anomaly
-    REAL(wp)     ::  y                                    !< y dimension of pt anomaly
-    REAL(wp)     ::  z                                    !< z dimension of pt anomaly
-    
+    REAL(wp)     ::  bubble_dr                            !< distance from the center of the bubble    
     
 !
-!-- Defaults: radius rc, strength z,
-!--           position of center: ic, jc, kc
-    rc =  10.0_wp * dx
-    ic =  ( nx+1 ) / 2
-    jc =  ic
-    kc =  nzt / 2
-    
-    IF ( INDEX( initializing_actions, 'initialize_ptanom' ) /= 0 )  THEN
+!-- Set default bubble center to the center of the domain
+    IF ( bubble_center_x == 9999999.9_wp ) bubble_center_x = dx * ( nx+1 ) / 2
+    IF ( bubble_center_y == 9999999.9_wp ) bubble_center_y = dy * ( ny+1 ) / 2
+    IF ( bubble_center_z == 9999999.9_wp ) bubble_center_z = (zu(nzt) - zu(nzb)) / 2
+    IF ( bubble_pt == 9999999.9_wp ) bubble_pt = 0.
+    IF ( bubble_sa == 9999999.9_wp .AND. ocean ) bubble_sa = 0.
+
 !
 !--    Compute the perturbation.
-       DO  i = nxl, nxr
-          DO  j = nys, nyn
-             DO  k = nzb+1, nzt
-                x = ( i - ic ) * dx
-                y = ( j - jc ) * dy
-                z = ABS( zu(k) - zu(kc) )
-                radius = SQRT( x**2 + y**2 + z**2 )
-                IF ( radius <= rc )  THEN
-                   amount = 5.0_wp * EXP( -( radius * 0.001_wp / 2.0_wp )**2 )
-                ELSE
-                   amount = 0.0_wp
+    DO  i = nxl, nxr
+       DO  j = nys, nyn
+          DO  k = nzb+1, nzt
+             IF ( INDEX( initializing_actions, 'initialize_2D_bubble' ) /= 0   &
+                  .AND. bubble_radius /= 0 )  THEN
+
+                bubble_dr = SQRT( ( dy*j - bubble_center_y )**2 +              &
+                                  ( zu(k) - bubble_center_z )**2 )
+
+                IF ( bubble_dr <= bubble_radius )  THEN
+
+                   pt(k,j,i) = pt(k,j,i) + bubble_pt *                            &
+                            EXP( -0.5 * ( (dy*j  - bubble_center_y) /          &
+                                                   bubble_radius )**2) *       &
+                            EXP( -0.5 * ( (zu(k) - bubble_center_z) /          &
+                                                   bubble_radius)**2)
+                   IF ( ocean ) THEN
+
+                      sa(k,j,i) = sa(k,j,i) + bubble_sa *                         &
+                               EXP( -0.5 * ( (dy*j  - bubble_center_y) /       &
+                                                      bubble_radius )**2) *    &
+                               EXP( -0.5 * ( (zu(k) - bubble_center_z) /       &
+                                                      bubble_radius )**2)
+
+                   ENDIF
                 ENDIF
+             ELSE
 
-                pt(k,j,i) = pt(k,j,i) + amount
+                bubble_dr = SQRT( ( dx*i - bubble_center_x )**2 +              &
+                                  ( dy*j - bubble_center_y )**2 +              &
+                                  ( zu(k) - bubble_center_z )**2 )
 
-             ENDDO
+                IF ( bubble_dr <= bubble_radius )  THEN
+
+                   IF ( INDEX( initializing_actions, 'initialize_3D_bubble' ) /= 0 &
+                            .AND. bubble_radius /= 0 )  THEN
+
+                      pt(k,j,i) = pt(k,j,i) + bubble_pt*cos(pi*bubble_dr/(2*bubble_radius))
+
+                      IF ( ocean ) THEN                                           
+                         sa(k,j,i) = sa(k,j,i) + bubble_sa*cos(pi*bubble_dr/(2*bubble_radius))
+                      ENDIF
+
+                   ENDIF
+                ENDIF
+             ENDIF
           ENDDO
        ENDDO
-        
-!
-!-- Initialize warm air bubble close to surface and homogenous elegonated 
-!-- along x-Axis
-    ELSEIF ( INDEX( initializing_actions, 'initialize_bubble' ) /= 0 )  THEN
-!
-!--    Calculate y-center of model domain
-       bubble_center_y = ( ny + 1.0 ) * dy / 2.0
-    
-!
-!--    Compute perturbation for potential temperaure
-       DO  i = nxl, nxr
-          DO  j = nys, nyn
-             DO  k = nzb+1, nzt 
-                pt(k,j,i) = pt(k,j,i) +                                        &
-                               EXP( -0.5 * ( (j* dy  - bubble_center_y) /      &
-                                                       bubble_sigma_y )**2) *  &
-                               EXP( -0.5 * ( (zu(k)  - bubble_center_z) /      &
-                                                       bubble_sigma_z)**2) *   &
-                               initial_temperature_difference
-             ENDDO
-          ENDDO
-       ENDDO
-    ENDIF
+    ENDDO
 
 !
-!-- Exchange of boundary values for temperature
+!-- Exchange of boundary values
     CALL exchange_horiz( pt, nbgp )
+    IF ( ocean ) CALL exchange_horiz( sa, nbgp )
 
 
  END SUBROUTINE init_pt_anomaly

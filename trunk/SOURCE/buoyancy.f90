@@ -159,13 +159,13 @@
        REAL(wp), DIMENSION(:,:,:), POINTER ::  var
 #endif
 
-
        IF ( .NOT. sloping_surface )  THEN
 !
 !--       Normal case: horizontal surface
           DO  i = nxl, nxr
              DO  j = nys, nyn
                 DO  k = nzb+1, nzt-1
+
                    tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g * 0.5_wp *  &
                           (                                                     &
                              ( var(k,j,i)   - ref_state(k) )   / ref_state(k) + &

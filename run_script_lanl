@@ -6,12 +6,21 @@
 #SBATCH  --output=PALM_TEST.%j
 #SBATCH  --exclusive
 #SBATCH --qos=interactive
-#SBATCH --time=01:00:20
+#SBATCH --time=01:00:00
 #SBATCH -A w17_mpasles
 
 use_hdf5="True"
+do_coupled="True"
+do_restart="False"
+# number of cores for atmosphere and ocean, respectively, only used when do_coupled = True
+# atm_cores + ocn_cores should be equal to $SLURM_NTASKS
+atm_cores=32
+ocn_cores=32
+test_case="test_coupled"
+run_config="mpirun"
+openmp_threads=1
 repo_path=$PWD
-exec_path="/path/to/case/directory"
+exec_path="/path/to/build/directory"
 
 cd $SLURM_SUBMIT_DIR
 export PATH="$repo_path/trunk/SCRIPTS:${PATH}"
@@ -23,23 +32,35 @@ NTASKS=$SLURM_NTASKS
 nnodes=$SLURM_JOB_NUM_NODES
 NN=$((NTASKS/nnodes))
 
-echo "PROCS = $NP"
+echo "PROCS = $NN"
 
 timestring=`squeue -h -j $SLURM_JOBID -o "%l"`
 WTIME=`echo $timestring | sed -E 's/(.*):(.+):(.+)/\1*3600+\2*60+\3/;s/(.+):(.+)/\1*60+\2/' | bc`
 
-echo "WTITME = $WTIME"
+echo "WTIME = $WTIME"
+
+# set options for palm_simple_run
+palm_options="-w $exec_path -c $run_config -s $test_case -n $NN -p $NTASKS -t $openmp_threads -T $WTIME"
 
 if [[ $use_hdf5 == "True" ]]; then
     module load intel/18.0.2
     module load openmpi/2.1.2
     module load hdf5/1.10.2
     module load netcdf/4.6.1_hdf5
-    palm_simple_run -b ifort.grizzly_hdf5 -w $exec_path -c mpirun -s test_oceanml -n $NN -p $NTASKS -t 1 -T $WTIME 
+    palm_options="$palm_options -b ifort.grizzly_hdf5"
 else
     module load intel/17.0.1
     module load openmpi/1.10.5
     module load netcdf/4.4.1
-    palm_simple_run -b ifort.grizzly -w $exec_path -c mpirun -s test_oceanml -n $NN -p $NTASKS -t 1 -T $WTIME
+    palm_options="$palm_options -b ifort.grizzly"
 fi
 
+if [[ $do_restart == "True" ]]; then
+    palm_options="$palm_options -r"
+fi
+
+if [[ $do_coupled == "True" ]]; then
+    palm_simple_run $palm_options -Y "$atm_cores $ocn_cores"
+else
+    palm_simple_run $palm_options
+fi

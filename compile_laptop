@@ -1,0 +1,6 @@
+#!/bin/bash
+
+repo_path=$PWD
+
+export PATH="$repo_path/trunk/SCRIPTS:$PATH"
+palm_simple_build -x -b gfortran -w "/home/lvanroekel/palm_jobs/test/"

@@ -10,13 +10,13 @@
 #SBATCH -A e3sm
 
 use_hdf5="True"
-do_coupled="True"
+do_coupled="False"
 do_restart="False"
 # number of cores for atmosphere and ocean, respectively, only used when do_coupled = True
 # atm_cores + ocn_cores should be equal to $SLURM_NTASKS
-atm_cores=32
+atm_cores=0
 ocn_cores=32
-test_case="test_coupled"
+test_case="test_oceanml"
 run_config="mpirun"
 openmp_threads=1
 repo_path=$PWD

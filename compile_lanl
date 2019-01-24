@@ -2,10 +2,10 @@
 
 use_hdf5="True"
 repo_path=$PWD
-build_path="/path/to/build/directory/"
+build_path="/lustre/scratch4/turquoise/lvanroekel/palm/jobs/kodiakTest/"
 compile_debug="False"
 build_flags=""
-
+hname=$(hostname | cut -c 1-2)
 if [[ $compile_debug == "True" ]]; then
     build_flags="-D"
 fi
@@ -13,15 +13,27 @@ fi
 export PATH="$repo_path/trunk/SCRIPTS:$PATH"
 module purge
 module use -a /usr/projects/climate/SHARED_CLIMATE/modulefiles/all
-if [[ $use_hdf5 == "True" ]]; then
-    module load intel/18.0.2
-    module load openmpi/2.1.2
-    module load hdf5/1.10.2
-    module load netcdf/4.6.1_hdf5
-    palm_simple_build -b ifort.grizzly_hdf5 -w $build_path $build_flags
-else
-    module load intel/17.0.1
-    module load openmpi/1.10.5
-    module load netcdf/4.4.1
-    palm_simple_build -b ifort.grizzly -w $build_path $build_flags
+
+if [ "$hname" = "gr" ] || [ "$hname" = "ba" ]
+then
+	if [[ $use_hdf5 == "True" ]]; then
+		module load intel/18.0.2
+		module load openmpi/2.1.2
+		module load hdf5/1.10.2
+		module load netcdf/4.6.1_hdf5
+		palm_simple_build -b ifort.grizzly_hdf5 -w $build_path $build_flags
+	else
+		module load intel/17.0.1
+		module load openmpi/1.10.5
+		module load netcdf/4.4.1
+		palm_simple_build -b ifort.grizzly -w $build_path $build_flags
+	fi
+
+elif [ "$hname" = "ko" ]
+then
+        module load pgi
+        module load openmpi
+        module load hdf5-serial
+        module load netcdf-serial
+        palm_simple_build -b pgi.kodiak -w $build_path $build_flags
 fi

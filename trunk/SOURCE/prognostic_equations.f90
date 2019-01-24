@@ -457,7 +457,6 @@
     ENDIF
 
     CALL cpu_log( log_point(5), 'u-equation', 'stop' )
-
 !
 !-- v-velocity component
     CALL cpu_log( log_point(6), 'v-equation', 'start' )

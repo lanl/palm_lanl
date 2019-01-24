@@ -456,7 +456,6 @@
     DO  WHILE ( simulated_time < end_time  .AND.  .NOT. stop_dt  .AND. &
                 .NOT. terminate_run )
 
-        print *, 'time = ',simulated_time
        CALL cpu_log( log_point_s(10), 'timesteps', 'start' )
 !
 !--    Start of intermediate step loop
@@ -471,14 +470,12 @@
 !--       on the timestep scheme
           CALL timestep_scheme_steering
 
-
 !--          Horizontally averaged profiles to be used as reference state in
 !--          buoyancy terms (WARNING: only the respective last call of
 !--          calc_mean_profile defines the reference state!)
                 CALL calc_mean_profile( rho_ocean, 64 )
 
                 ref_state(:)  = hom(:,1,64,0)
-                
 !--          Assure that ref_state does not become zero at any level
 !--          ( might be the case if a vertical level is completely occupied
 !--            with topography ).
@@ -490,7 +487,7 @@
                intermediate_timestep_count == 1 )  CALL ws_statistics
 !
             CALL prognostic_equations_vector
-
+            !
 !
 !--       Exchange of ghost points (lateral boundary conditions)
           CALL cpu_log( log_point(26), 'exchange-horiz-progn', 'start' )

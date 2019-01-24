@@ -953,49 +953,49 @@
        
        CALL location_message( 'finished', .TRUE. )
 
-!    ELSEIF ( TRIM( initializing_actions ) == 'read_restart_data'  .OR.         &
-!             TRIM( initializing_actions ) == 'cyclic_fill' )                   &
-!    THEN
+    ELSEIF ( TRIM( initializing_actions ) == 'read_restart_data'  .OR.         &
+             TRIM( initializing_actions ) == 'cyclic_fill' )                   &
+    THEN
 
-!       CALL location_message( 'initializing in case of restart / cyclic_fill', &
-!                              .FALSE. )
+       CALL location_message( 'initializing in case of restart / cyclic_fill', &
+                              .FALSE. )
 !
 !--    Initialize surface elements and its attributes, e.g. heat- and 
 !--    momentumfluxes, roughness, scaling parameters. As number of surface 
 !--    elements might be different between runs, e.g. in case of cyclic fill, 
 !--    and not all surface elements are read, surface elements need to be 
 !--    initialized before.     
-!       CALL init_surfaces
+       CALL init_surfaces
 !
 !--    Read processor specific binary data from restart file
-!       DO  i = 0, io_blocks-1
-!          IF ( i == io_group )  THEN
-!             CALL rrd_local
-!          ENDIF
-!#if defined( __parallel )
-!          CALL MPI_BARRIER( comm2d, ierr )
-!#endif
-!       ENDDO
+       DO  i = 0, io_blocks-1
+          IF ( i == io_group )  THEN
+             CALL rrd_local
+          ENDIF
+#if defined( __parallel )
+          CALL MPI_BARRIER( comm2d, ierr )
+#endif
+       ENDDO
 !
 !
 !--    Calculate initial temperature field and other constants used in case
 !--    of a sloping surface
-!       IF ( sloping_surface )  CALL init_slope
+       IF ( sloping_surface )  CALL init_slope
 
 !
 !--    Initialize new time levels (only done in order to set boundary values
 !--    including ghost points)
-!       pt_p = pt; u_p = u; v_p = v; w_p = w
-!       sa_p = sa
+       pt_p = pt; u_p = u; v_p = v; w_p = w
+       sa_p = sa
 
 !
 !--    Allthough tendency arrays are set in prognostic_equations, they have
 !--    have to be predefined here because they are used (but multiplied with 0)
 !--    there before they are set. 
-!       tpt_m = 0.0_wp; tu_m = 0.0_wp; tv_m = 0.0_wp; tw_m = 0.0_wp
-!       tsa_m = 0.0_wp
+       tpt_m = 0.0_wp; tu_m = 0.0_wp; tv_m = 0.0_wp; tw_m = 0.0_wp
+       tsa_m = 0.0_wp
 !
-!       CALL location_message( 'finished', .TRUE. )
+       CALL location_message( 'finished', .TRUE. )
 
     ELSE
 !

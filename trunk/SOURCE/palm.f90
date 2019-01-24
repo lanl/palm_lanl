@@ -28,15 +28,8 @@
 !> @todo create routine last_actions instead of calling lsm_last_actions etc.
 !> @todo move chem_init call to init_3d_model or to check_parameters
 !------------------------------------------------------------------------------!
- subroutine palm(T_mpas,S_mpas,U_mpas,V_mpas,lt_mpas, &
-             f_mpas,nVertLevels,wtflux,wtflux_solar, wsflux,uwflux, &
-             vwflux,fac,dep1,dep2,dzLES,nzLES,        &
-             dtDataOutput, dtDisturb, dtDataOutputAv, &
-             dtDopr, endTime, dtDots,                &
-             tIncrementLES,sIncrementLES,             &
-             uIncrementLES,vIncrementLES)
-
-
+ program palm
+       
     USE arrays_3d
 
     USE control_parameters
@@ -73,25 +66,25 @@
 
 !
 ! -- Variables from MPAS
-   integer(iwp) :: nVertLevels, il, jl, kl, knt, nzLES, iz
-   Real(wp),dimension(nVertLevels),intent(inout)   :: T_mpas, S_mpas, U_mpas, V_mpas
-   Real(wp),dimension(nVertLevels),intent(inout)   :: tIncrementLES, sIncrementLES, &
-                                                        uIncrementLES, vIncrementLES
-   Real(wp),dimension(nVertLevels),intent(in)      :: lt_mpas
-   Real(wp),allocatable,dimension(:)   :: T_mpas2, S_mpas2, U_mpas2, V_mpas2
-   Real(wp),allocatable,dimension(:)   :: Tles, Sles, Ules, Vles, zmid, zedge
-   real(wp),allocatable,dimension(:)   :: zeLES, wtLES, wsLES, wuLES, wvLES
-   Real(wp) :: wtflux, wsflux, uwflux, vwflux, dzLES, z_fac, z_frst, z_cntr
-   real(wp) :: z_fac1, z_fac2, z_facn, tol, test, f_mpas, fac, dep1, dep2
-   real(wp) :: dtDataOutput, dtDisturb, dtDataOutputAv, dtDopr, endTime, dtDots
-   real(wp) :: wtflux_solar
+!   integer(iwp) :: nVertLevels, il, jl, kl, knt, nzLES, iz
+!   Real(wp),dimension(nVertLevels),intent(inout)   :: T_mpas, S_mpas, U_mpas, V_mpas
+!   Real(wp),dimension(nVertLevels),intent(inout)   :: tIncrementLES, sIncrementLES, &
+!                                                        uIncrementLES, vIncrementLES
+!   Real(wp),dimension(nVertLevels),intent(in)      :: lt_mpas
+!   Real(wp),allocatable,dimension(:)   :: T_mpas2, S_mpas2, U_mpas2, V_mpas2
+!   Real(wp),allocatable,dimension(:)   :: Tles, Sles, Ules, Vles, zmid, zedge
+!   real(wp),allocatable,dimension(:)   :: zeLES, wtLES, wsLES, wuLES, wvLES
+!   Real(wp) :: wtflux, wsflux, uwflux, vwflux, dzLES, z_fac, z_frst, z_cntr
+!   real(wp) :: z_fac1, z_fac2, z_facn, tol, test, f_mpas, fac, dep1, dep2
+!   real(wp) :: dtDataOutput, dtDisturb, dtDataOutputAv, dtDopr, endTime, dtDots
+!   real(wp) :: wtflux_solar
    !
 !-- Local variables
    CHARACTER(LEN=9)  ::  time_to_string  !<
    CHARACTER(LEN=10) ::  env_string      !< to store string of environment var
    INTEGER(iwp)      ::  env_stat        !< to hold status of GET_ENV
    INTEGER(iwp)      ::  myid_openmpi    !< OpenMPI local rank for CUDA aware MPI
-   Real(wp) :: coeff1, coeff2
+!   Real(wp) :: coeff1, coeff2
 
 !more arguments to send
 ! dt_data_output, dt_disturb, dt_data_output_av, dt_dopr
@@ -99,37 +92,32 @@
 
    call init_control_parameters
 
-   dt_data_output = dtDataOutput
-   dt_disturb = dtDisturb
-   dt_data_output_av = dtDataOutputAv
-   dt_dopr = dtDopr
-   end_time = endTime
-   dt_dots = dtDots
-   ideal_solar_division = fac
-   ideal_solar_efolding1 = dep1
-   ideal_solar_efolding2 = dep2
-   wb_solar = wtflux_solar
-  ! nVertLevels = 50
-  ! nzLES = 128
-   nz = nzLES
-  ! dzLES = 1.0_wp
-!   allocate(T_mpas(nVertLevels),S_mpas(nVertLevels),U_mpas(nVertLevels),V_mpas(nVertLevels))
-!   allocate(tIncrementLES(nVertLevels),sIncrementLES(nVertLevels))
-!   allocate(uIncrementLES(nVertLevels),vIncrementLES(nVertLevels))
-   allocate(zmid(nVertLevels),zedge(nVertLevels+1))!,lt_mpas(nVertLevels))
-   allocate(T_mpas2(nVertLevels),S_mpas2(nVertLevels),U_mpas2(nVertLevels))
-   allocate(V_mpas2(nVertLevels))
+!   dt_data_output = dtDataOutput
+!   dt_disturb = dtDisturb
+!   dt_data_output_av = dtDataOutputAv
+!   dt_dopr = dtDopr
+!   end_time = endTime
+!   dt_dots = dtDots
+!   ideal_solar_division = fac
+!   ideal_solar_efolding1 = dep1
+!   ideal_solar_efolding2 = dep2
+!   wb_solar = wtflux_solar
+
+!   nz = nzLES
+!   allocate(zmid(nVertLevels),zedge(nVertLevels+1))!,lt_mpas(nVertLevels))
+!   allocate(T_mpas2(nVertLevels),S_mpas2(nVertLevels),U_mpas2(nVertLevels))
+!   allocate(V_mpas2(nVertLevels))
 
 !   lt_mpas(:) = 50.0_wp
-   zmid(1) = -0.5_wp*lt_mpas(1)
-   zedge(1) = 0
+!   zmid(1) = -0.5_wp*lt_mpas(1)
+!   zedge(1) = 0
 
-   do il=2,nVertLevels
-      zmid(il) = zmid(il-1) - 0.5*(lt_mpas(il-1) + lt_mpas(il))
-      zedge(il) = zedge(il-1) - lt_mpas(il-1)
-   enddo
+!   do il=2,nVertLevels
+!      zmid(il) = zmid(il-1) - 0.5*(lt_mpas(il-1) + lt_mpas(il))
+!      zedge(il) = zedge(il-1) - lt_mpas(il-1)
+!   enddo
 
-   zedge(nvertLevels+1) = zedge(nVertLevels) - lt_mpas(nVertLevels)
+!   zedge(nvertLevels+1) = zedge(nVertLevels) - lt_mpas(nVertLevels)
 
 !   U_mpas(:) = 0.0_wp
 !   V_mpas(:) = 0.0_wp
@@ -162,13 +150,12 @@
 !   wtflux = -1.78e-5
 
 !TODO add check for right / acceptable range.
-    top_momentumflux_u = uwflux
-    top_momentumflux_v = vwflux
-    top_heatflux = wtflux
-    top_salinityflux = wsflux
-    f = f_mpas
+!    top_momentumflux_u = uwflux
+!    top_momentumflux_v = vwflux
+!    top_heatflux = wtflux
+!    top_salinityflux = wsflux
+!    f = f_mpas
 
-    print *, top_heatflux
     !TODO ooverride the LES setting from a namelist
 !
 !-- Initialize measuring of the CPU-time remaining to the run
@@ -183,99 +170,49 @@
 !-- Read control parameters from NAMELIST files and read environment-variables
     CALL parin
 
-
-!
-!-- Set netcdf output fields -- not sure how or if to do this once hooked to MPAS
-!
-    section_xy(1) = 8
-
-    data_output(1) = 'shf*_xy'
-    data_output(2) = 'e'
-    data_output(3) = 'pt'
-    data_output(4) = 'sa'
-    data_output(5) = 'u'
-    data_output(6) = 'v'
-    data_output(7) = 'w'
-    data_output(8) = 'rho_ocean'
-    data_output(9) = 'alpha_T'
-
-    data_output_pr(1) = 'e'
-    data_output_pr(2) = 'e*'
-    data_output_pr(3) = '#pt'
-    data_output_pr(4) = '#sa'
-    data_output_pr(5) = 'p'
-    data_output_pr(6) = 'hyp'
-    data_output_pr(7) = 'km'
-    data_output_pr(8) = 'kh'
-    data_output_pr(9) = 'l'
-    data_output_pr(10) = '#u'
-    data_output_pr(11) = '#v'
-    data_output_pr(12) = 'w'
-    data_output_pr(13) = 'prho'
-    data_output_pr(14) = 'w"u"'
-    data_output_pr(15) = 'w*u*'
-    data_output_pr(16) = 'w"v"'
-    data_output_pr(17) = 'w*v*'
-    data_output_pr(18) = 'w"pt"'
-    data_output_pr(19) = 'w*pt*'
-    data_output_pr(20) = 'w"sa"'
-    data_output_pr(21) = 'w*sa*'
-    data_output_pr(22) = 'w*e*'
-    data_output_pr(23) = 'u*2'
-    data_output_pr(24) = 'v*2'
-    data_output_pr(25) = 'w*2'
-    data_output_pr(26) = 'pt*2'
-    data_output_pr(27) = 'w*3'
-    data_output_pr(28) = 'Sw'
-    data_output_pr(29) = 'w*2pt*'
-    data_output_pr(30) = 'w*pt*2'
-    data_output_pr(31) = 'w*u*u*:dz'
-    data_output_pr(32) = 'w*p*:dz'
-    data_output_pr(33) = 'rho_ocean'
-    data_output_pr(34) = 'alpha_T'
-
 !-- Determine processor topology and local array indices
     CALL init_pegrid
-    allocate(zu(nzb:nzt+1),zeLES(nzb-1:nzt+1),Tles(0:nzLES+1),Sles(0:nzLES+1))
-    allocate(Ules(0:nzLES+1),Vles(0:nzLES+1))
 
-    nzt = nzLES
-    ! construct a stretched stretched grid
-    z_cntr = zedge(nVertLevels+1)
-    z_frst = -dzLES
-    z_fac1 = z_cntr / z_frst
-    z_fac2 = 1.0_wp / float(nzt)
-    z_fac = 1.10_wp
-    tol = 1.0E-10_wp
-    test = 10.00_wp
-    knt = 0
+!    allocate(zu(nzb:nzt+1),zeLES(nzb-1:nzt+1),Tles(0:nzLES+1),Sles(0:nzLES+1))
+!    allocate(Ules(0:nzLES+1),Vles(0:nzLES+1))
 
-    do while (test > tol)
-      knt = knt + 1
-      z_facn = (z_fac1*(z_fac - 1.0_wp) + 1.0_wp)**z_fac2
-      test = abs(1.0 - z_facn / z_fac)
-      if(knt .gt. 500) THEN
-        print *, 'cannot find stretching factor,'
-        print *, 'z_fac = ',z_fac, 'z_facn = ',z_facn, 'knt = ',knt
-        stop
-      ENDIF
-      z_fac = z_facn
-    enddo
+!    nzt = nzLES
+    ! construct a stretched stretched grid borrowed from NCARLES
+!    z_cntr = zedge(nVertLevels+1)
+!    z_frst = -dzLES
+!    z_fac1 = z_cntr / z_frst
+!    z_fac2 = 1.0_wp / float(nzt)
+!    z_fac = 1.10_wp
+!    tol = 1.0E-10_wp
+!    test = 10.00_wp
+!    knt = 0
 
-    zeLES(nzt+1) = dzLES
-    zeLES(nzt) = 0.0_wp
-    zeLES(nzt-1) = -dzLES
-    iz = 2
-    do il = nzt-2,nzb,-1
-      zeLES(il) = zeLES(nzt-1)*(z_fac**(float(iz)) - 1.0_wp) / (z_fac - 1.0_wp)
-      iz = iz + 1
-    enddo
-    zeLES(nzb-1) = max(z_cntr,zeLES(nzb) - (zeLES(nzb+1) - zeLES(nzb)))
+!    do while (test > tol)
+!      knt = knt + 1
+!      z_facn = (z_fac1*(z_fac - 1.0_wp) + 1.0_wp)**z_fac2
+!      test = abs(1.0 - z_facn / z_fac)
+!      if(knt .gt. 500) THEN
+!        print *, 'cannot find stretching factor,'
+!        print *, 'z_fac = ',z_fac, 'z_facn = ',z_facn, 'knt = ',knt
+!        stop
+!      ENDIF
+!      z_fac = z_facn
+!    enddo
 
-    do il = nzt,nzb,-1
-      zu(il) = 0.5*(zeLES(il) + zeLES(il-1))
-    enddo
-    zu(nzt+1) = dzLES*0.5
+!    zeLES(nzt+1) = dzLES
+!    zeLES(nzt) = 0.0_wp
+!    zeLES(nzt-1) = -dzLES
+!    iz = 2
+!    do il = nzt-2,nzb,-1
+!      zeLES(il) = zeLES(nzt-1)*(z_fac**(float(iz)) - 1.0_wp) / (z_fac - 1.0_wp)
+!      iz = iz + 1
+!    enddo
+!    zeLES(nzb-1) = max(z_cntr,zeLES(nzb) - (zeLES(nzb+1) - zeLES(nzb)))
+
+!    do il = nzt,nzb,-1
+!      zu(il) = 0.5*(zeLES(il) + zeLES(il-1))
+!    enddo
+!    zu(nzt+1) = dzLES*0.5
 
 !-- Check if input file according to input-data standard exists
     CALL netcdf_data_input_inquire_file
@@ -283,7 +220,6 @@
 !-- Generate grid parameters, initialize generic topography and further process
 !-- topography information if required
     CALL init_grid
-
 
 !
 !-- Read global attributes if available.
@@ -300,41 +236,9 @@
 !
 !-- Initialize all necessary variables
     CALL init_3d_model
-    il = 1
-    do while (il < nVertLevels-1)
-      do jl=nzt,nzb,-1
-         if(zu(jl) < zmid(il+1)) then
-           il = il+1
-           il = min(il,nVertLevels-1)
-         endif
-
-         coeff2 = (T_mpas(il) - T_mpas(il+1)) / (zmid(il) - zmid(il+1))
-         coeff1 = T_mpas(il+1) - coeff2*zmid(il+1)
-         pt(jl,:,:) = coeff2*zu(jl) + coeff1 + 273.15_wp
-
-         coeff2 = (S_mpas(il) - S_mpas(il+1)) / (zmid(il) - zmid(il+1))
-         coeff1 = S_mpas(il+1) - coeff2*zmid(il+1)
-         sa(jl,:,:) = coeff2*zu(jl) + coeff1
-
-         coeff2 = (U_mpas(il) - U_mpas(il+1)) / (zmid(il) - zmid(il+1))
-         coeff1 = U_mpas(il+1) - coeff2*zmid(il+1)
-         u(jl,:,:) = coeff2*zu(jl) + coeff1
-
-         coeff2 = (V_mpas(il) - V_mpas(il+1)) / (zmid(il) - zmid(il+1))
-         coeff1 = V_mpas(il+1) - coeff2*zmid(il+1)
-         v(jl,:,:) = coeff2*zu(jl) + coeff1
-
-      enddo
-    enddo
-
-    pt(nzt+1,:,:) = pt(nzt,:,:)
-    sa(nzt+1,:,:) = sa(nzt,:,:)
-    u(nzt+1,:,:) = u(nzt,:,:)
-    v(nzt+1,:,:) = v(nzt,:,:)
-
     !
 !-- Output of program header
-!    IF ( myid == 0 )  CALL header
+    IF ( myid == 0 )  CALL header
 
     CALL cpu_log( log_point(2), 'initialisation', 'stop' )
 
@@ -342,16 +246,16 @@
 !-- Set start time in format hh:mm:ss
     simulated_time_chr = time_to_string( time_since_reference_point )
 
-!    IF ( do3d_at_begin )  THEN
-!       CALL data_output_3d( 0 )
-!    ENDIF
+    IF ( do3d_at_begin )  THEN
+       CALL data_output_3d( 0 )
+    ENDIF
 
 !
 !-- Integration of the model equations using timestep-scheme
     CALL time_integration
 
 !-- If required, repeat output of header including the required CPU-time
-!    IF ( myid == 0 )  CALL header
+    IF ( myid == 0 )  CALL header
 !
 !-- If required, final  user-defined actions, and
 !-- last actions on the open files and close files. Unit 14 was opened
@@ -366,55 +270,14 @@
 !
 !-- Take final CPU-time for CPU-time analysis
     CALL cpu_log( log_point(1), 'total', 'stop' )
-!    CALL cpu_statistics
-
-    ! need tto interpolate back to mpas for fluxes, include sgs terms?
-    Tles = hom(:,1,4,statistic_regions) - 273.15
-    Sles = hom(:,1,23,statistic_regions)
-    Ules = hom(:,1,1,statistic_regions)
-    Vles = hom(:,1,2,statistic_regions)
-
-    il = nzt-1
-    do while (il > 1)
-      do jl=1,nVertLevels
-         if(zmid(jl) < zu(il)) then
-           do while (zmid(jl) < zu(il))
-              il = il-1
-           enddo
-           il = max(il,nzb)
-         endif
-
-         coeff2 = (Tles(il+1) - Tles(il)) / (zu(il+1) - zu(il))
-         coeff1 = Tles(il+1) - coeff2*zu(il+1)
-
-         T_mpas2(jl) = coeff2*zmid(jl) + coeff1 
-         tIncrementLES(jl) = (T_mpas2(jl) - T_mpas(jl)) / end_time
-
-         coeff2 = (Sles(il+1) - Sles(il)) / (zu(il+1) - zu(il))
-         coeff1 = Sles(il+1) - coeff2*zu(il+1)
-         S_mpas2(jl) = coeff2*zmid(jl) + coeff1
-         sIncrementLES(jl) = (S_mpas2(jl) - S_mpas(jl)) / end_time
-
-         coeff2 = (Ules(il+1) - Ules(il)) / (zu(il+1) - zu(il))
-         coeff1 = Ules(il+1) - coeff2*zu(il+1)
-         U_mpas2(jl) = coeff2*zmid(jl) + coeff1
-         uIncrementLES(jl) = (U_mpas2(jl) - U_mpas(jl)) / end_time
-
-         coeff2 = (Vles(il+1) - Vles(il)) / (zu(il+1) - zu(il))
-         coeff1 = Vles(il+1) - coeff2*zu(il+1)
-         V_mpas2(jl) = coeff2*zmid(jl) + coeff1
-         vIncrementLES(jl) = (V_mpas2(jl) - V_mpas(jl)) / end_time
-
-      enddo
-    enddo
+    CALL cpu_statistics
 
     DEALLOCATE( pt_init, q_init, s_init, ref_state, sa_init, ug,         &
                        u_init, v_init, vg, hom, hom_sum )
 
    deallocate(hor_index_bounds)
 
-    deallocate(zu,zeLES,Tles,Sles)
-    deallocate(hyp, Ules,Vles)
+    deallocate(hyp)
     deallocate(ddzu, ddzw, dd2zu, dzu, dzw, zw, ddzu_pres, nzb_s_inner,  &
                nzb_s_outer, nzb_u_inner, nzb_u_outer, nzb_v_inner,       &
                nzb_v_outer, nzb_w_inner, nzb_w_outer, nzb_diff_s_inner,  &
@@ -432,7 +295,7 @@
     CALL MPI_FINALIZE( ierr )
 #endif
 
-END subroutine palm
+END PROGRAM palm
 
 subroutine init_control_parameters
     USE arrays_3d

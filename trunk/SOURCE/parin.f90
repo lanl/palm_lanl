@@ -725,75 +725,75 @@
 
 !
 !--       Open the NAMELIST-file which is send with this job
-!          CALL check_open( 11 )
+          CALL check_open( 11 )
 
 !
 !--       Read the control parameters for initialization.
 !--       The namelist "inipar" must be provided in the NAMELIST-file.
-!          READ ( 11, initialization_parameters, ERR=10, END=11 )
+          READ ( 11, initialization_parameters, ERR=10, END=11 )
 
-!          GOTO 12
+          GOTO 12
 
-! 10       message_string = 'errors in initialization_parameters & or no ' //  &
-!                           'initialization_parameters-namelist ' //           &
-!                           'found (CRAY-machines only)'
-!          CALL message( 'parin', 'PA0271', 1, 2, 0, 6, 0 )
+ 10       message_string = 'errors in initialization_parameters & or no ' //  &
+                           'initialization_parameters-namelist ' //           &
+                           'found (CRAY-machines only)'
+          CALL message( 'parin', 'PA0271', 1, 2, 0, 6, 0 )
 
-! 11       REWIND ( 11 )
-!          READ ( 11, inipar, ERR=13, END=14 )
+ 11       REWIND ( 11 )
+          READ ( 11, inipar, ERR=13, END=14 )
 
-!          message_string = 'namelist inipar is deprecated and will be ' //    &
-!                          'removed in near future. & Please use namelist ' // &
-!                          'initialization_parameters instead'
-!          CALL message( 'parin', 'PA0017', 0, 1, 0, 6, 0 )
+          message_string = 'namelist inipar is deprecated and will be ' //    &
+                          'removed in near future. & Please use namelist ' // &
+                          'initialization_parameters instead'
+          CALL message( 'parin', 'PA0017', 0, 1, 0, 6, 0 )
 
-!          GOTO 12
+          GOTO 12
 
-! 13       message_string = 'errors in inipar & or no inipar-namelist ' //      &
-!                           'found (CRAY-machines only)'
-!          CALL message( 'parin', 'PA0271', 1, 2, 0, 6, 0 )
+ 13       message_string = 'errors in inipar & or no inipar-namelist ' //      &
+                           'found (CRAY-machines only)'
+          CALL message( 'parin', 'PA0271', 1, 2, 0, 6, 0 )
 
-! 14       message_string = 'no initialization_parameters-namelist found'
-!          CALL message( 'parin', 'PA0272', 1, 2, 0, 6, 0 )
-!
+ 14       message_string = 'no initialization_parameters-namelist found'
+          CALL message( 'parin', 'PA0272', 1, 2, 0, 6, 0 )
+
 !
 !--       Try to read runtime parameters given by the user for this run
 !--       (namelist "runtime_parameters"). The namelist "runtime_parmeters"
 !--       can be omitted. In that case default values are used for the
 !--       parameters.
-! 12       line = ' '
+ 12       line = ' '
 
-!          REWIND ( 11 )
-!          line = ' '
-!          DO   WHILE ( INDEX( line, '&runtime_parameters' ) == 0 )
-!             READ ( 11, '(A)', END=20 )  line
-!          ENDDO
-!          BACKSPACE ( 11 )
+          REWIND ( 11 )
+          line = ' '
+          DO   WHILE ( INDEX( line, '&runtime_parameters' ) == 0 )
+             READ ( 11, '(A)', END=20 )  line
+          ENDDO
+          BACKSPACE ( 11 )
 
           
 !
 !--       Read namelist
-!          READ ( 11, runtime_parameters )
+          READ ( 11, runtime_parameters )
 
-!          GOTO 21
+          GOTO 21
 
-! 20       REWIND ( 11 )
-!          line = ' '
-!          DO   WHILE ( INDEX( line, '&d3par' ) == 0 )
-!             READ ( 11, '(A)', END=21 )  line
-!          ENDDO
-!          BACKSPACE ( 11 )
+ 20       REWIND ( 11 )
+          line = ' '
+          DO   WHILE ( INDEX( line, '&d3par' ) == 0 )
+             READ ( 11, '(A)', END=21 )  line
+          ENDDO
+          BACKSPACE ( 11 )
 
  !
 !--       Read namelist
-!          READ ( 11, d3par )
+          READ ( 11, d3par )
 
-!message_string = 'namelist d3par is deprecated and will be ' //      &
-!                          'removed in near future. &Please use namelist ' //   &
-!                          'runtime_parameters instead'
-!          CALL message( 'parin', 'PA0487', 0, 1, 0, 6, 0 )
+          message_string = 'namelist d3par is deprecated and will be ' //      &
+                          'removed in near future. &Please use namelist ' //   &
+                          'runtime_parameters instead'
+          CALL message( 'parin', 'PA0487', 0, 1, 0, 6, 0 )
 
-! 21       CONTINUE
+ 21       CONTINUE
 
 
 !--       If required, read control parameters from restart file (produced by
@@ -890,6 +890,7 @@
 !--       NAMELIST-file is not needed anymore
           CALL close_file( 11 )
 
+          print *, 'dz = ',dz
        ENDIF
 #if defined( __parallel )
        CALL MPI_BARRIER( MPI_COMM_WORLD, ierr )

@@ -120,7 +120,7 @@ OBJS=$(SOURCES:.f90=.o)
 CC = cc
 CFLAGS = -O
 
-# The following line is needed for palm_simple_install, don't remove it!
+include MAKE.inc
 
 COPT= -cpp -D__netcdf
 

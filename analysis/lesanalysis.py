@@ -57,7 +57,7 @@ class LESProfile(object):
 
         """
         # use curret axis if not specified
-        if axis is:
+        if axis is None:
             axis = plt.gca()
         # plot type
         if ptype == 'contourf':

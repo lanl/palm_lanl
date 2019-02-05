@@ -867,9 +867,13 @@
 !
 !-- Density profile calculation for anelastic approximation
     IF ( ocean )  THEN
-!
+
+       CALL cpu_log( log_point(42), 'init-ocean', 'start' )
+
 !--    Initialize quantities needed for the ocean model
        CALL init_ocean
+
+       CALL cpu_log( log_point(42), 'init-ocean', 'stop' )
 
     ELSE
 

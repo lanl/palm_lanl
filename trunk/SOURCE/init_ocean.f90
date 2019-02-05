@@ -156,10 +156,10 @@
 
     hyp(nzt)      = hyp(nzt+1) + rho_surface * g * 0.5_wp * dzu(nzt+1)
 
-    DO  k = nzt-1, 1, -1
+    DO  k = nzt-1, nzb+1, -1
        hyp(k) = hyp(k+1) + rho_surface * g * dzu(k)
     ENDDO
-    hyp(0) = hyp(1) + rho_surface * g * dzu(1)
+    hyp(nzb) = hyp(nzb+1) + rho_surface * g * dzu(nzb+1)
 
 !
 !-- Second step: Iteratively calculate in situ density (based on presssure)
@@ -175,7 +175,7 @@
 
        ENDDO
 
-       DO  k = nzt, 0, -1
+       DO  k = nzt, nzb, -1
           hyp(k) = hyp(k+1) + g * 0.5_wp * ( rho_ref_zw(k)                 &
                                            + rho_ref_zw(k+1) ) * dzu(k+1)
        ENDDO
@@ -187,11 +187,16 @@
 !CB    rho_reference = rho_surface * 0.5_wp * dzu(nzt+1)
     rho_reference = 0.0_wp
     DO  k = nzt, nzb, -1
+       rho_ref_zw(k) = eqn_state_seawater_func( hyp(k), pt_l, sa_l )
        rho_reference = rho_reference + rho_ref_zw(k) * dzu(k+1)
+       !write(message_string,*) 'rho_ref_zw(', k, ') = ', rho_ref_zw(k)
+       !CALL location_message(trim(adjustl(message_string)),.TRUE.)
        rho_ref_uv(k) = eqn_state_seawater_func( 0.5_wp * ( hyp(k) + hyp(k+1) ), pt_init(k), sa_init(k) )
     ENDDO
     rho_reference = rho_reference / ( zu(nzt+1) - zu(nzb) )
 !    rho_reference = rho_reference / ( zw(nzt) - zu(nzb) )
+!    write(message_string,*) 'rho_reference = ',rho_reference
+!    CALL location_message(trim(adjustl(message_string)),.TRUE.)
 
 !
 !-- Calculate the reference potential density

@@ -572,9 +572,7 @@
 
              IF ( timestep_scheme(1:5) == 'runge' )  THEN
                 IF ( ws_scheme_mom )  THEN
-                   CALL cpu_log( log_point(43), 'advec-u-ws', 'start' )
                    CALL advec_u_ws( i, j, i_omp_start, tn )
-                   CALL cpu_log( log_point(43), 'advec-u-ws', 'stop' )
                 ELSE
                    CALL advec_u_pw( i, j )
                 ENDIF

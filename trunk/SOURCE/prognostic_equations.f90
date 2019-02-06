@@ -577,9 +577,9 @@
              CALL coriolis( i, j, 1 )
              IF ( sloping_surface  .AND.  .NOT. neutral )  THEN
                 IF ( ocean ) THEN
-                   CALL buoyancy( i, j, rho_ocean, 1 ) ! add argument ref_state
+                   CALL buoyancy( i, j, rho_ocean, 1 )
                 ELSE
-                   CALL buoyancy( i, j, pt, 1 ) ! add argument pt_slope_ref
+                   CALL buoyancy( i, j, pt, 1 )
                 ENDIF
              ENDIF
 !
@@ -877,8 +877,6 @@
                                        * MERGE( 1.0_wp, 0.0_wp,                &
                                                 BTEST( wall_flags_0(k,j,i), 0 )&
                                               )
-
-
              ENDDO
 
 !

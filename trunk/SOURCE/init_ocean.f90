@@ -125,10 +125,6 @@
     ALLOCATE( hyp(nzb:nzt+1) )
 
 !
-!-- Convert surface pressure to Pa
-    IF ( surface_pressure .EQ. 1013.25_wp ) surface_pressure = surface_pressure / 100.0_wp
-
-!
 !-- Set kinematic viscosity to sea water at 20C
 !-- WARNING: This value is especially used for calculating terminal fall
 !--          velocities in the LPM, so lpm_init should always be called after
@@ -141,18 +137,14 @@
 
 !
 !-- Set water density near the ocean surface
-    rho_surface = eqn_state_seawater_func( surface_pressure * 10000.0_wp, pt_init(nzt+1), sa_init(nzt+1) )
+    rho_surface = eqn_state_seawater_func( surface_pressure * 100.0_wp, pt_init(nzt+1), sa_init(nzt+1) )
     rho_ref_zw(nzt+1) = rho_surface
 
 !
 !-- Calculate initial vertical profile of hydrostatic pressure (in Pa)
 !-- and the reference density (used later in buoyancy term)
 !-- First step: Calculate pressure using reference density
-    IF ( surface_pressure .EQ. 1013.25_wp ) THEN
-       hyp(nzt+1) = surface_pressure * 100.0_wp
-    ELSE
-       hyp(nzt+1) = surface_pressure * 10000.0_wp
-    ENDIF
+    hyp(nzt+1) = surface_pressure * 100.0_wp
 
     hyp(nzt)      = hyp(nzt+1) + rho_surface * g * 0.5_wp * dzu(nzt+1)
 

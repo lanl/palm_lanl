@@ -495,9 +495,6 @@
     USE constants,                                                             &
         ONLY:  pi
     
-    USE cpulog,                                                                &
-        ONLY: cpu_log, log_point
-        
     USE control_parameters
     
     USE flight_mod,                                                            &
@@ -2360,11 +2357,9 @@
     IF ( dt_dvrp /= 9999999.9_wp )  CALL init_dvrp
 
     IF ( ocean )  THEN
-       CALL cpu_log( log_point(42), 'init-ocean', 'start' )
 !
 !--    Initialize quantities needed for the ocean model
        CALL init_ocean
-       CALL cpu_log( log_point(42), 'init-ocean', 'stop' )
 
     ELSE
 !

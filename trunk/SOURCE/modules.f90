@@ -718,8 +718,8 @@
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  f3_mg                 !< grid factor used in right hand side of Gauss-Seidel equation (multigrid)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  mean_inflow_profiles  !< used for turbulent inflow (non-cyclic boundary conditions)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  precipitation_amount  !< precipitation amount due to gravitational settling (bulk microphysics)
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  pt_slope_ref          !< potential temperature in rotated coordinate system
-                                                                    !< (in case of sloped surface)
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  pt_slope_ref          !< potential temperature in rotated coordinate system (in case of sloped surface)
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  rho_slope_ref         !< density in rotated coordinate system (in case of sloped surface)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  total_2d_a            !< horizontal array to store the total domain data, used for atmosphere-ocean coupling (atmosphere data)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  total_2d_o            !< horizontal array to store the total domain data, used for atmosphere-ocean coupling (ocean data)
 

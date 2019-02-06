@@ -84,7 +84,7 @@
 
 
     USE arrays_3d,                                                             &
-        ONLY:  dzu, hyp, pt_init, ref_state, rho_ref_uv, rho_ref_zw,           &
+        ONLY:  dzu, hyp, pt_init, ref_state, rho_ref_zu, rho_ref_zw,           &
                sa_init, zu, zw
 
     USE cloud_parameters,                                                      &
@@ -180,7 +180,7 @@
     DO  k = nzt, nzb, -1
        rho_ref_zw(k) = eqn_state_seawater_func( hyp(k), pt_l, sa_l )
        rho_reference = rho_reference + rho_ref_zw(k) * dzu(k+1)
-       rho_ref_uv(k) = eqn_state_seawater_func( 0.5_wp * ( hyp(k) + hyp(k+1) ), pt_init(k), sa_init(k) )
+       rho_ref_zu(k) = eqn_state_seawater_func( 0.5_wp * ( hyp(k) + hyp(k+1) ), pt_init(k), sa_init(k) )
     ENDDO
     rho_reference = rho_reference / ( zu(nzt+1) - zu(nzb) )
 

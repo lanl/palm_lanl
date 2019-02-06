@@ -180,7 +180,7 @@
 
 
           USE arrays_3d,                                                       &
-              ONLY:  tric, rho_ref_uv
+              ONLY:  tric, rho_ref_zu
 
           USE constants,                                                       &
               ONLY:  pi
@@ -241,7 +241,7 @@
           DO  k = 0, nz-1
              DO  j = nys_z, nyn_z
                 DO  i = nxl_z, nxr_z
-                   tric(i,j,k) = ddzuw(k,3) - ll(i,j) * rho_ref_uv(k+1)
+                   tric(i,j,k) = ddzuw(k,3) - ll(i,j) * rho_ref_zu(k+1)
                 ENDDO
              ENDDO
           ENDDO
@@ -473,7 +473,7 @@
 
 
        USE arrays_3d,                                                          &
-           ONLY:  ddzu_pres, ddzw, rho_ref_uv, rho_ref_zw
+           ONLY:  ddzu_pres, ddzw, rho_ref_zu, rho_ref_zw
 
        USE control_parameters,                                                 &
            ONLY:  ibc_p_b, ibc_p_t
@@ -575,7 +575,7 @@
              DO  i = 0, nx
                 a = -1.0_wp * ddzu_pres(k+2) * ddzw(k+1) * rho_ref_zw(k+1)
                 c = -1.0_wp * ddzu_pres(k+1) * ddzw(k+1) * rho_ref_zw(k)
-                tri_for_1d(1,i,k) = a + c - l(i) * rho_ref_uv(k+1)
+                tri_for_1d(1,i,k) = a + c - l(i) * rho_ref_zu(k+1)
              ENDDO
           ENDDO
           IF ( ibc_p_b == 1 )  THEN

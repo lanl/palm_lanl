@@ -156,7 +156,7 @@
  
 
     USE arrays_3d,                                                             &
-        ONLY:  d, ddzu, ddzu_pres, ddzw, dzw, p, p_loc, rho_ref_uv, rho_ref_zw,&
+        ONLY:  d, ddzu, ddzu_pres, ddzw, dzw, p, p_loc, rho_ref_zu, rho_ref_zw,&
                tend, u, v, w
 
     USE control_parameters,                                                    &
@@ -449,8 +449,8 @@
     DO  i = nxl, nxr
        DO  j = nys, nyn
           DO  k = nzb+1, nzt
-             d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_ref_uv(k) * ddx +    &
-                          ( v(k,j+1,i) - v(k,j,i) ) * rho_ref_uv(k) * ddy +    &
+             d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_ref_zu(k) * ddx +    &
+                          ( v(k,j+1,i) - v(k,j,i) ) * rho_ref_zu(k) * ddy +    &
                           ( w(k,j,i)   * rho_ref_zw(k) -                       &
                             w(k-1,j,i) * rho_ref_zw(k-1) ) * ddzw(k)           &
                         ) * ddt_3d * d_weight_pres                             &
@@ -482,8 +482,8 @@
     DO  i = nxl, nxr
        DO  j = nys, nyn
           DO  k = 1, nzt
-             d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_ref_uv(k) * ddx +    &
-                          ( v(k,j+1,i) - v(k,j,i) ) * rho_ref_uv(k) * ddy +    &
+             d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_ref_zu(k) * ddx +    &
+                          ( v(k,j+1,i) - v(k,j,i) ) * rho_ref_zu(k) * ddy +    &
                           ( w(k,j,i)   * rho_ref_zw(k) -                       &
                             w(k-1,j,i) * rho_ref_zw(k-1) ) * ddzw(k)           &
                         ) * ddt_3d * d_weight_pres                             &
@@ -868,8 +868,8 @@
        DO  i = nxl, nxr
           DO  j = nys, nyn
              DO  k = nzb+1, nzt
-                d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_ref_uv(k) * ddx +    &
-                             ( v(k,j+1,i) - v(k,j,i) ) * rho_ref_uv(k) * ddy +    &
+                d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_ref_zu(k) * ddx +    &
+                             ( v(k,j+1,i) - v(k,j,i) ) * rho_ref_zu(k) * ddy +    &
                              ( w(k,j,i)   * rho_ref_zw(k) -                       &
                                w(k-1,j,i) * rho_ref_zw(k-1) ) * ddzw(k)           &
                            ) * MERGE( 1.0_wp, 0.0_wp,                             &
@@ -886,8 +886,8 @@
        DO  i = nxl, nxr
           DO  j = nys, nyn
              DO  k = nzb+1, nzt
-                d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_ref_uv(k) * ddx +    &
-                             ( v(k,j+1,i) - v(k,j,i) ) * rho_ref_uv(k) * ddy +    &
+                d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_ref_zu(k) * ddx +    &
+                             ( v(k,j+1,i) - v(k,j,i) ) * rho_ref_zu(k) * ddy +    &
                              ( w(k,j,i)   * rho_ref_zw(k) -                       &
                                w(k-1,j,i) * rho_ref_zw(k-1) ) * ddzw(k)           &
                            ) * MERGE( 1.0_wp, 0.0_wp,                             &

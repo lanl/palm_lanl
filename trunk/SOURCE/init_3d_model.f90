@@ -862,9 +862,9 @@
 !
 !-- Allocation of anelastic and Boussinesq approximation specific arrays
     ALLOCATE( p_hydrostatic(nzb:nzt+1) )
-    ALLOCATE( rho_ref_uv(nzb:nzt+1) )
+    ALLOCATE( rho_ref_zu(nzb:nzt+1) )
     ALLOCATE( rho_ref_zw(nzb:nzt+1) )
-    ALLOCATE( drho_ref_uv(nzb:nzt+1) )
+    ALLOCATE( drho_ref_zu(nzb:nzt+1) )
     ALLOCATE( drho_ref_zw(nzb:nzt+1) )
 
 !
@@ -886,33 +886,33 @@
              p_hydrostatic(k)    = surface_pressure * 100.0_wp *                  &
                                    ( 1 - ( g * zu(k) ) / ( cp * t_surface )       &
                                    )**( cp / r_d )
-             rho_ref_uv(k)          = ( p_hydrostatic(k) *                           &
+             rho_ref_zu(k)          = ( p_hydrostatic(k) *                           &
                                      ( 100000.0_wp / p_hydrostatic(k)             &
                                      )**( r_d / cp )                              &
                                    ) / ( r_d * pt_init(k) )
           ENDDO
           DO  k = nzb, nzt
-             rho_ref_zw(k) = 0.5_wp * ( rho_ref_uv(k) + rho_ref_uv(k+1) )
+             rho_ref_zw(k) = 0.5_wp * ( rho_ref_zu(k) + rho_ref_zu(k+1) )
           ENDDO
           rho_ref_zw(nzt+1)  = rho_ref_zw(nzt)                                    &
-                               + 2.0_wp * ( rho_ref_uv(nzt+1) - rho_ref_zw(nzt)  )
+                               + 2.0_wp * ( rho_ref_zu(nzt+1) - rho_ref_zw(nzt)  )
        ELSE
 !          DO  k = nzb, nzt+1
           p_hydrostatic(:)   = surface_pressure * 100.0_wp *                  &
                                ( 1 - ( g * zu(nzb) ) / ( cp * t_surface )       &
                                )**( cp / r_d )
-          rho_ref_uv(:)          = ( p_hydrostatic(nzb) *                           &
+          rho_ref_zu(:)          = ( p_hydrostatic(nzb) *                           &
                                 ( 100000.0_wp / p_hydrostatic(nzb)             &
                                 )**( r_d / cp )                              &
                                 ) / ( r_d * pt_init(nzb) )
-          rho_ref_zw(:) = rho_ref_uv(nzb)
+          rho_ref_zw(:) = rho_ref_zu(nzb)
        ENDIF
 
     ENDIF
 
 !
 !-- compute the inverse density array in order to avoid expensive divisions
-    drho_ref_uv = 1.0_wp / rho_ref_uv
+    drho_ref_zu = 1.0_wp / rho_ref_zu
     drho_ref_zw = 1.0_wp / rho_ref_zw
 
 !
@@ -932,12 +932,12 @@
        ALLOCATE( rho_ref_zw_mg(nzb:nzt+1,maximum_grid_level) )
        
        dzu_mg(:,maximum_grid_level) = dzu
-       rho_ref_mg(:,maximum_grid_level) = rho_ref_uv
+       rho_ref_mg(:,maximum_grid_level) = rho_ref_zu
 !       
 !--    Next line to ensure an equally spaced grid. 
        dzu_mg(1,maximum_grid_level) = dzu(2)
-       rho_ref_mg(nzb,maximum_grid_level) = rho_ref_uv(nzb) +                     &
-                                             (rho_ref_uv(nzb) - rho_ref_uv(nzb+1))
+       rho_ref_mg(nzb,maximum_grid_level) = rho_ref_zu(nzb) +                     &
+                                             (rho_ref_zu(nzb) - rho_ref_zu(nzb+1))
 
        dzw_mg(:,maximum_grid_level) = dzw
        rho_ref_zw_mg(:,maximum_grid_level) = rho_ref_zw

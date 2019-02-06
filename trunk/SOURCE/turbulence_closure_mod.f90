@@ -3722,7 +3722,7 @@
  SUBROUTINE diffusion_e( var, var_reference )
 
     USE arrays_3d,                                                             &
-        ONLY:  ddzu, ddzw, drho_ref_uv, rho_ref_zw
+        ONLY:  ddzu, ddzw, drho_ref_zu, rho_ref_zw
 
     USE grid_variables,                                                        &
         ONLY:  ddx2, ddy2
@@ -3802,7 +3802,7 @@
                                                           * rho_ref_zw(k)      &
           - ( km(k,j,i)+km(k-1,j,i) ) * ( e(k,j,i)-e(k-1,j,i) ) * ddzu(k)      &
                                                           * rho_ref_zw(k-1)    &
-                                           ) * ddzw(k) * drho_ref_uv(k)        &
+                                           ) * ddzw(k) * drho_ref_zu(k)        &
                                          ) * flag * dsig_e                     &
                           - dissipation(k,j) * flag
 
@@ -3859,7 +3859,7 @@
  SUBROUTINE diffusion_e_ij( i, j, var, var_reference )
 
     USE arrays_3d,                                                             &
-        ONLY:  ddzu, ddzw, drho_ref_uv, rho_ref_zw
+        ONLY:  ddzu, ddzw, drho_ref_zu, rho_ref_zw
 
     USE grid_variables,                                                        &
         ONLY:  ddx2, ddy2
@@ -3943,7 +3943,7 @@
                                                          * rho_ref_zw(k)       &
          - ( km(k,j,i)+km(k-1,j,i) ) * ( e(k,j,i)-e(k-1,j,i) ) * ddzu(k)       &
                                                          * rho_ref_zw(k-1)     &
-                                      ) * ddzw(k) * drho_ref_uv(k)             &
+                                      ) * ddzw(k) * drho_ref_zu(k)             &
                                    ) * flag * dsig_e                           &
                                  - dissipation(k) * flag
 
@@ -3988,7 +3988,7 @@
 !------------------------------------------------------------------------------!
  SUBROUTINE diffusion_diss()
     USE arrays_3d,                                                             &
-        ONLY:  ddzu, ddzw, drho_ref_uv, rho_ref_zw
+        ONLY:  ddzu, ddzw, drho_ref_zu, rho_ref_zw
 
     USE grid_variables,                                                        &
         ONLY:  ddx2, ddy2
@@ -4025,7 +4025,7 @@
                                                     * rho_ref_zw(k)            &
     - ( km(k,j,i)+km(k-1,j,i) ) * ( diss(k,j,i)-diss(k-1,j,i) ) * ddzu(k)      &
                                                     * rho_ref_zw(k-1)          &
-                                 ) * ddzw(k) * drho_ref_uv(k)                  &
+                                 ) * ddzw(k) * drho_ref_zu(k)                  &
                          ) * flag * dsig_diss                                  &
                          - c_2 * diss(k,j,i)**2                                &
                                / ( e(k,j,i) + 1.0E-20_wp ) * flag
@@ -4046,7 +4046,7 @@
  SUBROUTINE diffusion_diss_ij( i, j )
 
     USE arrays_3d,                                                             &
-        ONLY:  ddzu, ddzw, drho_ref_uv, rho_ref_zw
+        ONLY:  ddzu, ddzw, drho_ref_zu, rho_ref_zw
 
     USE grid_variables,                                                        &
         ONLY:  ddx2, ddy2
@@ -4083,7 +4083,7 @@
                                                    * rho_ref_zw(k)             &
    - ( km(k,j,i)+km(k-1,j,i) ) * ( diss(k,j,i)-diss(k-1,j,i) ) * ddzu(k)       &
                                                    * rho_ref_zw(k-1)           &
-                                ) * ddzw(k) * drho_ref_uv(k)                   &
+                                ) * ddzw(k) * drho_ref_zu(k)                   &
                    ) * flag * dsig_diss                                        &
                    - c_2 * diss(k,j,i)**2 / ( e(k,j,i) + 1.0E-20_wp ) * flag
 

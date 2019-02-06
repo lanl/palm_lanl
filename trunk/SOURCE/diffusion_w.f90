@@ -125,7 +125,7 @@
 
        USE arrays_3d,                                                          &          
            ONLY :  ddzu, ddzw, km, tend, u, v, w, drho_ref_zw, rho_ref_zw,        &
-                   drho_ref_uv, rho_ref_uv
+                   drho_ref_zu, rho_ref_zu
            
        USE control_parameters,                                                 & 
            ONLY :  ocean, topography
@@ -209,9 +209,9 @@
                          ) * ddy                                 * flag        &
                        + 2.0_wp * (                                            &
                          km(k+1,j,i) * ( w(k+1,j,i) - w(k,j,i) )   * ddzw(k+1) &
-                                     * rho_ref_uv(k+1)                         &
+                                     * rho_ref_zu(k+1)                         &
                        - km(k,j,i)   * ( w(k,j,i)   - w(k-1,j,i) ) * ddzw(k)   &
-                                     * rho_ref_uv(k)                           &
+                                     * rho_ref_zu(k)                           &
                                   ) * ddzu(k+1) * drho_ref_zw(k) * flag
              ENDDO
 
@@ -303,7 +303,7 @@
 
        USE arrays_3d,                                                          &          
            ONLY :  ddzu, ddzw, km, tend, u, v, w, drho_ref_zw, rho_ref_zw,        &
-                   drho_ref_uv, rho_ref_uv
+                   drho_ref_zu, rho_ref_zu
            
        USE control_parameters,                                                 & 
            ONLY :  ocean, topography
@@ -377,9 +377,9 @@
                          ) * ddy                                 * flag        &
                        + 2.0_wp * (                                            &
                          km(k+1,j,i) * ( w(k+1,j,i) - w(k,j,i) ) * ddzw(k+1)   &
-                                     * rho_ref_uv(k+1)                         &
+                                     * rho_ref_zu(k+1)                         &
                        - km(k,j,i)   * ( w(k,j,i)   - w(k-1,j,i) ) * ddzw(k)   &
-                                     * rho_ref_uv(k)                           &
+                                     * rho_ref_zu(k)                           &
                                   ) * ddzu(k+1) * drho_ref_zw(k) * flag
        ENDDO
 

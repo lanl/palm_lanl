@@ -70,7 +70,7 @@
  SUBROUTINE sor( d, ddzu, ddzw, p )
 
     USE arrays_3d,                                                             &
-        ONLY:  rho_ref_uv, rho_ref_zw
+        ONLY:  rho_ref_zu, rho_ref_zw
 
     USE grid_variables,                                                        &
         ONLY:  ddx2, ddy2
@@ -115,7 +115,7 @@
     DO  k = 1, nz
        f2(k) = ddzu(k+1) * ddzw(k) * rho_ref_zw(k)
        f3(k) = ddzu(k)   * ddzw(k) * rho_ref_zw(k-1)
-       f1(k) = 2.0_wp * ( ddx2 + ddy2 ) * rho_ref_uv(k) + f2(k) + f3(k)
+       f1(k) = 2.0_wp * ( ddx2 + ddy2 ) * rho_ref_zu(k) + f2(k) + f3(k)
     ENDDO
 
 !
@@ -143,8 +143,8 @@
           DO  j = nys2, nyn, 2
              DO  k = nzb+1, nzt
                 p(k,j,i) = p(k,j,i) + omega_sor / f1(k) * (            &
-                           rho_ref_uv(k) * ddx2 * ( p(k,j,i+1) + p(k,j,i-1) ) +   &
-                           rho_ref_uv(k) * ddy2 * ( p(k,j+1,i) + p(k,j-1,i) ) +   &
+                           rho_ref_zu(k) * ddx2 * ( p(k,j,i+1) + p(k,j,i-1) ) +   &
+                           rho_ref_zu(k) * ddy2 * ( p(k,j+1,i) + p(k,j-1,i) ) +   &
                            f2(k) * p(k+1,j,i)                              +   &
                            f3(k) * p(k-1,j,i)                              -   &
                            d(k,j,i)                                        -   &
@@ -157,8 +157,8 @@
           DO  j = nys1, nyn, 2
              DO  k = nzb+1, nzt
                 p(k,j,i) = p(k,j,i) + omega_sor / f1(k) * (                    &
-                           rho_ref_uv(k) * ddx2 * ( p(k,j,i+1) + p(k,j,i-1) ) +   &
-                           rho_ref_uv(k) * ddy2 * ( p(k,j+1,i) + p(k,j-1,i) ) +   &
+                           rho_ref_zu(k) * ddx2 * ( p(k,j,i+1) + p(k,j,i-1) ) +   &
+                           rho_ref_zu(k) * ddy2 * ( p(k,j+1,i) + p(k,j-1,i) ) +   &
                            f2(k) * p(k+1,j,i)                              +   &
                            f3(k) * p(k-1,j,i)                              -   &
                            d(k,j,i)                                        -   &
@@ -192,8 +192,8 @@
           DO  j = nys1, nyn, 2
              DO  k = nzb+1, nzt
                 p(k,j,i) = p(k,j,i) + omega_sor / f1(k) * (            &
-                           rho_ref_uv(k) * ddx2 * ( p(k,j,i+1) + p(k,j,i-1) ) +   &
-                           rho_ref_uv(k) * ddy2 * ( p(k,j+1,i) + p(k,j-1,i) ) +   &
+                           rho_ref_zu(k) * ddx2 * ( p(k,j,i+1) + p(k,j,i-1) ) +   &
+                           rho_ref_zu(k) * ddy2 * ( p(k,j+1,i) + p(k,j-1,i) ) +   &
                            f2(k) * p(k+1,j,i)                              +   &
                            f3(k) * p(k-1,j,i)                              -   &
                            d(k,j,i)                                        -   &
@@ -206,8 +206,8 @@
           DO  j = nys2, nyn, 2
              DO  k = nzb+1, nzt
                 p(k,j,i) = p(k,j,i) + omega_sor / f1(k) * (            &
-                           rho_ref_uv(k) * ddx2 * ( p(k,j,i+1) + p(k,j,i-1) ) +   &
-                           rho_ref_uv(k) * ddy2 * ( p(k,j+1,i) + p(k,j-1,i) ) +   &
+                           rho_ref_zu(k) * ddx2 * ( p(k,j,i+1) + p(k,j,i-1) ) +   &
+                           rho_ref_zu(k) * ddy2 * ( p(k,j+1,i) + p(k,j-1,i) ) +   &
                            f2(k) * p(k+1,j,i)                              +   &
                            f3(k) * p(k-1,j,i)                              -   &
                            d(k,j,i)                                        -   &

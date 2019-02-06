@@ -929,9 +929,9 @@
 
     REAL(wp), DIMENSION(:,:,:,:), ALLOCATABLE ::  tri    !<  array to hold the tridiagonal matrix for solution of the Poisson equation in Fourier space (4th dimension for threads)
 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  rho_ref_uv      !< air density profile on the uv grid
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  rho_ref_zu      !< air density profile on the uv grid
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  rho_ref_zw   !< air density profile on the w grid
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  drho_ref_uv     !< inverse air density profile on the uv grid
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  drho_ref_zu     !< inverse air density profile on the uv grid
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  drho_ref_zw  !< inverse air density profile on the w grid
 
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  rho_ref_mg     !< air density profiles on the uv grid for multigrid

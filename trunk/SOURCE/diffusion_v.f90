@@ -120,7 +120,7 @@
     SUBROUTINE diffusion_v
 
        USE arrays_3d,                                                          &
-           ONLY:  ddzu, ddzw, km, tend, u, v, w, drho_ref_uv, rho_ref_zw
+           ONLY:  ddzu, ddzw, km, tend, u, v, w, drho_ref_zu, rho_ref_zw
        
        USE control_parameters,                                                 &
            ONLY:  constant_top_momentumflux, use_surface_fluxes,               &
@@ -263,7 +263,7 @@
                       &   - kmzm * ( ( v(k,j,i)   - v(k-1,j,i)   ) * ddzu(k)   &
                       &            + ( w(k-1,j,i) - w(k-1,j-1,i) ) * ddy       &
                       &            ) * rho_ref_zw(k-1) * mask_bottom           &
-                      &   ) * ddzw(k) * drho_ref_uv(k) * flag
+                      &   ) * ddzw(k) * drho_ref_zu(k) * flag
              ENDDO
 
 !
@@ -284,7 +284,7 @@
 
                    tend(k,j,i) = tend(k,j,i)                                   &
                         + ( - ( - surf_def_h(0)%vsws(m) )                      &
-                          ) * ddzw(k) * drho_ref_uv(k)
+                          ) * ddzw(k) * drho_ref_zu(k)
                 ENDDO
 !
 !--             Default-type surfaces, dowward-facing
@@ -295,7 +295,7 @@
 
                    tend(k,j,i) = tend(k,j,i)                                   &
                         + ( - surf_def_h(1)%vsws(m)                            &
-                          ) * ddzw(k) * drho_ref_uv(k)
+                          ) * ddzw(k) * drho_ref_zu(k)
                 ENDDO
 !
 !--             Natural-type surfaces, upward-facing
@@ -306,7 +306,7 @@
 
                    tend(k,j,i) = tend(k,j,i)                                   &
                         + ( - ( - surf_lsm_h%vsws(m) )                         &
-                          ) * ddzw(k) * drho_ref_uv(k)
+                          ) * ddzw(k) * drho_ref_zu(k)
 
                 ENDDO
 !
@@ -318,7 +318,7 @@
 
                    tend(k,j,i) = tend(k,j,i)                                   &
                         + ( - ( - surf_usm_h%vsws(m) )                         &
-                          ) * ddzw(k) * drho_ref_uv(k)
+                          ) * ddzw(k) * drho_ref_zu(k)
 
                 ENDDO
              ENDIF
@@ -332,7 +332,7 @@
                    k   = surf_def_h(2)%k(m)
 
                    tend(k,j,i) = tend(k,j,i)                                   &
-                           + ( - surf_def_h(2)%vsws(m) ) * ddzw(k) * drho_ref_uv(k)
+                           + ( - surf_def_h(2)%vsws(m) ) * ddzw(k) * drho_ref_zu(k)
                 ENDDO
              ENDIF
 
@@ -350,7 +350,7 @@
     SUBROUTINE diffusion_v_ij( i, j )
 
        USE arrays_3d,                                                          &
-           ONLY:  ddzu, ddzw, km, tend, u, v, w, drho_ref_uv, rho_ref_zw
+           ONLY:  ddzu, ddzw, km, tend, u, v, w, drho_ref_zu, rho_ref_zw
        
        USE control_parameters,                                                 &
            ONLY:  constant_top_momentumflux, use_surface_fluxes,               &
@@ -485,7 +485,7 @@
                       &   - kmzm * ( ( v(k,j,i)   - v(k-1,j,i)   ) * ddzu(k)   &
                       &            + ( w(k-1,j,i) - w(k-1,j-1,i) ) * ddy       &
                       &            ) * rho_ref_zw(k-1) * mask_bottom           &
-                      &   ) * ddzw(k) * drho_ref_uv(k) * flag
+                      &   ) * ddzw(k) * drho_ref_zu(k) * flag
        ENDDO
 
 !
@@ -506,7 +506,7 @@
 
              tend(k,j,i) = tend(k,j,i)                                         &
                         + ( - ( - surf_def_h(0)%vsws(m) )                      &
-                          ) * ddzw(k) * drho_ref_uv(k)
+                          ) * ddzw(k) * drho_ref_zu(k)
           ENDDO
 !
 !--       Default-type surfaces, dowward-facing
@@ -517,7 +517,7 @@
 
              tend(k,j,i) = tend(k,j,i)                                         &
                         + ( - surf_def_h(1)%vsws(m)                            &
-                          ) * ddzw(k) * drho_ref_uv(k)
+                          ) * ddzw(k) * drho_ref_zu(k)
           ENDDO
 !
 !--       Natural-type surfaces, upward-facing
@@ -528,7 +528,7 @@
 
              tend(k,j,i) = tend(k,j,i)                                         &
                         + ( - ( - surf_lsm_h%vsws(m) )                         &
-                          ) * ddzw(k) * drho_ref_uv(k)
+                          ) * ddzw(k) * drho_ref_zu(k)
 
           ENDDO
 !
@@ -540,7 +540,7 @@
 
              tend(k,j,i) = tend(k,j,i)                                         &
                         + ( - ( - surf_usm_h%vsws(m) )                         &
-                          ) * ddzw(k) * drho_ref_uv(k)
+                          ) * ddzw(k) * drho_ref_zu(k)
 
           ENDDO
        ENDIF
@@ -554,7 +554,7 @@
              k   = surf_def_h(2)%k(m)
 
              tend(k,j,i) = tend(k,j,i)                                         &
-                           + ( - surf_def_h(2)%vsws(m) ) * ddzw(k) * drho_ref_uv(k)
+                           + ( - surf_def_h(2)%vsws(m) ) * ddzw(k) * drho_ref_zu(k)
           ENDDO
        ENDIF
 

@@ -278,7 +278,7 @@
     USE arrays_3d,                                                             &
         ONLY:  drho_ref_zw, ddzu, ddzw, e, hyp, km, kh,                        &
                nc, nr, p, prho, prr, pt, q,                                    &
-               qc, ql, qr, rho_ref_uv, rho_ref_zw, rho_ocean,                  &
+               qc, ql, qr, rho_ref_zu, rho_ref_zw, rho_ocean,                  &
                s, sa, u, ug, v, vg, vpt, w, w_subs,                            &
                zw, alpha_T, beta_S, solar3d,                                   &
                u_stk, v_stk, u_stk_zw, v_stk_zw
@@ -2035,7 +2035,7 @@
           hom(:,1,116,sr) = sums(:,116)     ! s*2
        ENDIF
 
-       hom(:,1,119,sr) = rho_ref_uv       ! rho_air in Kg/m^3
+       hom(:,1,119,sr) = rho_ref_zu       ! rho_air in Kg/m^3
        hom(:,1,120,sr) = rho_ref_zw    ! rho_air_zw in Kg/m^3
 
        hom(:,1,pr_palm,sr) =   sums(:,pr_palm)

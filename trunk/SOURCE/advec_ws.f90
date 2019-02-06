@@ -1159,7 +1159,7 @@
                               swap_diss_x_local, i_omp, tn )
 
        USE arrays_3d,                                                          &
-           ONLY:  ddzw, drho_ref_uv, drho_ref_zw, tend, u, v, w, rho_ref_uv,   &
+           ONLY:  ddzw, drho_ref_zu, drho_ref_zw, tend, u, v, w, rho_ref_zu,   &
                   rho_ref_zw
 
        USE constants,                                                          &
@@ -1501,7 +1501,7 @@
                                       + IBITS(advc_flags_1(k-1,j,i),7,1)    &
                                       + IBITS(advc_flags_1(k-1,j,i),8,1)    &
                                       )                                     &      
-                       ) * drho_ref_uv(k) * ddzw(k)
+                       ) * drho_ref_zu(k) * ddzw(k)
 
           tend(k,j,i) = tend(k,j,i) - (                                    &
                      ( flux_r(k) + diss_r(k) - swap_flux_x_local(k,j,tn) - &
@@ -1510,7 +1510,7 @@
                        swap_diss_y_local(k,tn)              ) * ddy        &
                    + ( ( flux_t(k) + diss_t(k) ) -                         &
                        ( flux_d    + diss_d    )                           &
-                                                 ) * drho_ref_uv(k) * ddzw(k) &
+                                                 ) * drho_ref_zu(k) * ddzw(k) &
                                    ) + sk(k,j,i) * div
 
           swap_flux_y_local(k,tn)   = flux_n(k)
@@ -1598,7 +1598,7 @@
                         + ( v(k,j+1,i) - v(k,j,i)   ) * ddy                   &
                         + ( w(k,j,i)   * rho_ref_zw(k) -                      &
                             w(k-1,j,i) * rho_ref_zw(k-1)                      &
-                          ) * drho_ref_uv(k) * ddzw(k)
+                          ) * drho_ref_zu(k) * ddzw(k)
 
           tend(k,j,i) = tend(k,j,i) - (                                       &
                         ( flux_r(k) + diss_r(k) - swap_flux_x_local(k,j,tn) - &
@@ -1607,7 +1607,7 @@
                           swap_diss_y_local(k,tn)              ) * ddy        &
                       + ( ( flux_t(k) + diss_t(k) ) -                         &
                           ( flux_d    + diss_d    )                           &
-                                                    ) * drho_ref_uv(k) * ddzw(k) &
+                                                    ) * drho_ref_zu(k) * ddzw(k) &
                                       ) + sk(k,j,i) * div
 
           swap_flux_y_local(k,tn)   = flux_n(k)
@@ -1726,7 +1726,7 @@
 
        USE arrays_3d,                                                         &
            ONLY:  ddzw, diss_l_u, diss_s_u, flux_l_u, flux_s_u, tend, u, v, w,&
-                  drho_ref_uv, rho_ref_zw
+                  drho_ref_zu, rho_ref_zw
 
        USE constants,                                                         &
            ONLY:  adv_mom_1, adv_mom_3, adv_mom_5
@@ -2049,7 +2049,7 @@
                                       + IBITS(advc_flags_1(k-1,j,i),16,1)     &
                                       + IBITS(advc_flags_1(k-1,j,i),17,1)     &
                                       )                                       &  
-                  ) * drho_ref_uv(k) * ddzw(k)                                &
+                  ) * drho_ref_zu(k) * ddzw(k)                                &
                 ) * 0.5_wp
 
           tend(k,j,i) = tend(k,j,i) - (                                       &
@@ -2059,7 +2059,7 @@
                           -   flux_s_u(k,tn) - diss_s_u(k,tn)     ) * ddy     &
                           + ( ( flux_t(k) + diss_t(k) )                       &
                           -   ( flux_d    + diss_d )                          &
-                                                    ) * drho_ref_uv(k) * ddzw(k) &
+                                                    ) * drho_ref_zu(k) * ddzw(k) &
                                        ) + div * u(k,j,i)
            flux_l_u(k,j,tn) = flux_r(k)
            diss_l_u(k,j,tn) = diss_r(k)
@@ -2164,7 +2164,7 @@
                +  ( v_comp(k) + gv - ( v(k,j,i)   + v(k,j,i-1 )  ) ) * ddy    &
                +  ( w_comp(k)   * rho_ref_zw(k)   -                           &
                     w_comp(k-1) * rho_ref_zw(k-1)                             &
-                  ) * drho_ref_uv(k) * ddzw(k)                                &
+                  ) * drho_ref_zu(k) * ddzw(k)                                &
                 ) * 0.5_wp
 
           tend(k,j,i) = tend(k,j,i) - (                                       &
@@ -2174,7 +2174,7 @@
                           -   flux_s_u(k,tn) - diss_s_u(k,tn)     ) * ddy     &
                           + ( ( flux_t(k) + diss_t(k) )                       &
                           -   ( flux_d    + diss_d    )                       &
-                                                 ) * drho_ref_uv(k) * ddzw(k) &
+                                                 ) * drho_ref_zu(k) * ddzw(k) &
                                        ) + div * u(k,j,i)
 
            flux_l_u(k,j,tn) = flux_r(k)
@@ -2221,7 +2221,7 @@
 
        USE arrays_3d,                                                          &
            ONLY:  ddzw, diss_l_v, diss_s_v, flux_l_v, flux_s_v, tend, u, v, w, &
-                  drho_ref_uv, rho_ref_zw
+                  drho_ref_zu, rho_ref_zw
 
        USE constants,                                                          &
            ONLY:  adv_mom_1, adv_mom_3, adv_mom_5
@@ -2548,7 +2548,7 @@
                                          + IBITS(advc_flags_1(k-1,j,i),25,1)  &
                                          + IBITS(advc_flags_1(k-1,j,i),26,1)  &
                                          )                                    &
-                   ) * drho_ref_uv(k) * ddzw(k)                               &
+                   ) * drho_ref_zu(k) * ddzw(k)                               &
                 ) * 0.5_wp
 
 
@@ -2559,7 +2559,7 @@
                        -   flux_s_v(k,tn) - diss_s_v(k,tn)       ) * ddy      &
                        + ( ( flux_t(k) + diss_t(k) )                          &
                        -   ( flux_d    + diss_d    )                          &
-                                                ) * drho_ref_uv(k) * ddzw(k)  &
+                                                ) * drho_ref_zu(k) * ddzw(k)  &
                                       ) + v(k,j,i) * div
 
            flux_l_v(k,j,tn) = flux_r(k)
@@ -2670,7 +2670,7 @@
                +  ( v_comp(k)      - ( v(k,j,i)     + v(k,j-1,i) ) ) * ddy    &
                +  ( w_comp(k)   * rho_ref_zw(k)   -                           &
                     w_comp(k-1) * rho_ref_zw(k-1)                             &
-                  ) * drho_ref_uv(k) * ddzw(k)                                &
+                  ) * drho_ref_zu(k) * ddzw(k)                                &
                 ) * 0.5_wp
 
           tend(k,j,i) = tend(k,j,i) - (                                       &
@@ -2680,7 +2680,7 @@
                        -   flux_s_v(k,tn) - diss_s_v(k,tn)       ) * ddy      &
                        + ( ( flux_t(k) + diss_t(k) )                          &
                        -   ( flux_d    + diss_d    )                          &
-                                                ) * drho_ref_uv(k) * ddzw(k)  &
+                                                ) * drho_ref_zu(k) * ddzw(k)  &
                                       ) + v(k,j,i) * div
            flux_l_v(k,j,tn) = flux_r(k)
            diss_l_v(k,j,tn) = diss_r(k)
@@ -2725,7 +2725,7 @@
 
        USE arrays_3d,                                                         &
            ONLY:  ddzu, diss_l_w, diss_s_w, flux_l_w, flux_s_w, tend, u, v, w,&
-                  drho_ref_uv, drho_ref_zw, rho_ref_uv, rho_ref_zw
+                  drho_ref_zu, drho_ref_zw, rho_ref_zu, rho_ref_zw
 
        USE constants,                                                         &
            ONLY:  adv_mom_1, adv_mom_3, adv_mom_5
@@ -2993,7 +2993,7 @@
           k_mm  = k - 2 * ibit35
 
           w_comp(k) = w(k+1,j,i) + w(k,j,i)
-          flux_t(k) = w_comp(k) * rho_ref_uv(k+1) * (                         &
+          flux_t(k) = w_comp(k) * rho_ref_zu(k+1) * (                         &
                      ( 37.0_wp * ibit35 * adv_mom_5                           &
                   +     7.0_wp * ibit34 * adv_mom_3                           &
                   +              ibit33 * adv_mom_1                           &
@@ -3008,7 +3008,7 @@
                                 ( w(k_ppp,j,i) + w(k_mm,j,i) )                &
                                                  )
 
-             diss_t(k) = - ABS( w_comp(k) ) * rho_ref_uv(k+1) * (             &
+             diss_t(k) = - ABS( w_comp(k) ) * rho_ref_zu(k+1) * (             &
                      ( 10.0_wp * ibit35 * adv_mom_5                           &
                   +     3.0_wp * ibit34 * adv_mom_3                           &
                   +              ibit33 * adv_mom_1                           &
@@ -3046,9 +3046,9 @@
                                       + IBITS(advc_flags_2(k,j-1,i),0,1)      &
                                       )                                       &
                   ) * ddy                                                     &
-              +   ( w_comp(k)               * rho_ref_uv(k)                   &
+              +   ( w_comp(k)               * rho_ref_zu(k)                   &
                                             * ( ibit33 + ibit34 + ibit35 )    &
-                   - ( w(k,j,i) + w(k-1,j,i) ) * rho_ref_uv(k)                &
+                   - ( w(k,j,i) + w(k-1,j,i) ) * rho_ref_zu(k)                &
                                     * ( IBITS(advc_flags_2(k-1,j,i),1,1)      &
                                       + IBITS(advc_flags_2(k-1,j,i),2,1)      &
                                       + IBITS(advc_flags_2(k-1,j,i),3,1)      &
@@ -3118,7 +3118,7 @@
           k_mm  = k - 2 * ibit35
 
           w_comp(k) = w(k+1,j,i) + w(k,j,i)
-          flux_t(k) = w_comp(k) * rho_ref_uv(k+1) * (                         &
+          flux_t(k) = w_comp(k) * rho_ref_zu(k+1) * (                         &
                      ( 37.0_wp * ibit35 * adv_mom_5                           &
                   +     7.0_wp * ibit34 * adv_mom_3                           &
                   +              ibit33 * adv_mom_1                           &
@@ -3133,7 +3133,7 @@
                                 ( w(k_ppp,j,i) + w(k_mm,j,i) )                &
                                                  )
 
-          diss_t(k) = - ABS( w_comp(k) ) * rho_ref_uv(k+1) * (                &
+          diss_t(k) = - ABS( w_comp(k) ) * rho_ref_zu(k+1) * (                &
                      ( 10.0_wp * ibit35 * adv_mom_5                           &
                   +     3.0_wp * ibit34 * adv_mom_3                           &
                   +              ibit33 * adv_mom_1                           &
@@ -3159,8 +3159,8 @@
 !--       by a not sufficient reduction of divergences near topography.
           div = ( ( u_comp(k) + gu - ( u(k+1,j,i) + u(k,j,i)   ) ) * ddx      &
               +   ( v_comp(k) + gv - ( v(k+1,j,i) + v(k,j,i)   ) ) * ddy      &
-              +   ( w_comp(k)               * rho_ref_uv(k+1) -               &
-                  ( w(k,j,i) + w(k-1,j,i) ) * rho_ref_uv(k)                   &
+              +   ( w_comp(k)               * rho_ref_zu(k+1) -               &
+                  ( w(k,j,i) + w(k-1,j,i) ) * rho_ref_zu(k)                   &
                   ) * drho_ref_zw(k) * ddzu(k+1)                              &
                 ) * 0.5_wp
 
@@ -3203,7 +3203,7 @@
     SUBROUTINE advec_s_ws( sk, sk_char )
 
        USE arrays_3d,                                                         &
-           ONLY:  ddzw, drho_ref_uv, drho_ref_zw, tend, u, v, w, rho_ref_zw, rho_ref_uv
+           ONLY:  ddzw, drho_ref_zu, drho_ref_zw, tend, u, v, w, rho_ref_zw, rho_ref_zu
 
        USE constants,                                                         &
            ONLY:  adv_sca_1, adv_sca_3, adv_sca_5
@@ -3537,7 +3537,7 @@
                                          + IBITS(advc_flags_1(k-1,j,i),7,1)    &
                                          + IBITS(advc_flags_1(k-1,j,i),8,1)    &
                                          )                                     &      
-                          ) * drho_ref_uv(k) * ddzw(k)
+                          ) * drho_ref_zu(k) * ddzw(k)
 
 
                 tend(k,j,i) = tend(k,j,i) - (                                 &
@@ -3547,7 +3547,7 @@
                           swap_diss_y_local(k)              ) * ddy           &
                       + ( ( flux_t(k) + diss_t(k) ) -                         &
                           ( flux_d    + diss_d    )                           &
-                                                 ) * drho_ref_uv(k) * ddzw(k) &
+                                                 ) * drho_ref_zu(k) * ddzw(k) &
                                             ) + sk(k,j,i) * div
 
                 swap_flux_y_local(k)   = flux_n(k)
@@ -3627,7 +3627,7 @@
                               + ( v(k,j+1,i) - v(k,j,i)   ) * ddy              &
                               + ( w(k,j,i)   * rho_ref_zw(k) -                 &
                                   w(k-1,j,i) * rho_ref_zw(k-1)                 &
-                                ) * drho_ref_uv(k) * ddzw(k)
+                                ) * drho_ref_zu(k) * ddzw(k)
 
                 tend(k,j,i) = tend(k,j,i) - (                                 &
                         ( flux_r(k) + diss_r(k) - swap_flux_x_local(k,j) -    &
@@ -3636,7 +3636,7 @@
                           swap_diss_y_local(k)              ) * ddy           &
                       + ( ( flux_t(k) + diss_t(k) ) -                         &
                           ( flux_d    + diss_d    )                           &
-                                                 ) * drho_ref_uv(k) * ddzw(k) &
+                                                 ) * drho_ref_zu(k) * ddzw(k) &
                                             ) + sk(k,j,i) * div
 
                 swap_flux_y_local(k)   = flux_n(k)
@@ -3757,7 +3757,7 @@
     SUBROUTINE advec_u_ws
 
        USE arrays_3d,                                                          &
-           ONLY:  ddzw, drho_ref_uv, drho_ref_zw, tend, u, v, w, rho_ref_uv, rho_ref_zw
+           ONLY:  ddzw, drho_ref_zu, drho_ref_zw, tend, u, v, w, rho_ref_zu, rho_ref_zw
 
        USE constants,                                                          &
            ONLY:  adv_mom_1, adv_mom_3, adv_mom_5
@@ -4080,7 +4080,7 @@
                                       + IBITS(advc_flags_1(k-1,j,i),16,1)     &
                                       + IBITS(advc_flags_1(k-1,j,i),17,1)     &
                                       )                                       &  
-                            ) * drho_ref_uv(k) * ddzw(k)                      &
+                            ) * drho_ref_zu(k) * ddzw(k)                      &
                          ) * 0.5_wp
 
 
@@ -4094,7 +4094,7 @@
                                        - swap_diss_y_local_u(k)   ) * ddy     &
                                     + (  ( flux_t(k) + diss_t(k) )            &
                                        - ( flux_d    + diss_d    )            &
-                                       ) * drho_ref_uv(k) * ddzw(k)           &
+                                       ) * drho_ref_zu(k) * ddzw(k)           &
                                    ) + div * u(k,j,i)
 
                 swap_flux_x_local_u(k,j) = flux_r(k)
@@ -4192,7 +4192,7 @@
                         +  ( v_comp + gv - ( v(k,j,i)   + v(k,j,i-1 )  ) ) * ddy &
                         +  (   w_comp                      * rho_ref_zw(k) -     &
                              ( w(k-1,j,i) + w(k-1,j,i-1) ) * rho_ref_zw(k-1)     &
-                           ) * drho_ref_uv(k) * ddzw(k)                          &
+                           ) * drho_ref_zu(k) * ddzw(k)                          &
                          ) * 0.5_wp
 
                 tend(k,j,i) = tend(k,j,i) -                                   &
@@ -4204,7 +4204,7 @@
                                       - swap_diss_y_local_u(k)   ) * ddy         &
                                   + (   ( flux_t(k) + diss_t(k) )                &
                                       - ( flux_d    + diss_d    )                &
-                                    ) * drho_ref_uv(k) * ddzw(k)                 &
+                                    ) * drho_ref_zu(k) * ddzw(k)                 &
                                  ) + div * u(k,j,i)
 
                 swap_flux_x_local_u(k,j) = flux_r(k)
@@ -4251,8 +4251,8 @@
     SUBROUTINE advec_v_ws
 
        USE arrays_3d,                                                          &
-           ONLY:  ddzw, drho_ref_uv, drho_ref_zw, tend, u, v, w, rho_ref_zw,   &
-                  rho_ref_uv
+           ONLY:  ddzw, drho_ref_zu, drho_ref_zw, tend, u, v, w, rho_ref_zw,   &
+                  rho_ref_zu
 
        USE constants,                                                          &
            ONLY:  adv_mom_1, adv_mom_3, adv_mom_5
@@ -4570,7 +4570,7 @@
                                    + IBITS(advc_flags_1(k-1,j,i),25,1)        &
                                    + IBITS(advc_flags_1(k-1,j,i),26,1)        &
                                  )                                            &
-                              ) * drho_ref_uv(k) * ddzw(k)                    &
+                              ) * drho_ref_zu(k) * ddzw(k)                    &
                          ) * 0.5_wp
 
                    tend(k,j,i) = tend(k,j,i) -                                &
@@ -4584,7 +4584,7 @@
                                      ) * ddy                                  &
                                    + (  ( flux_t(k) + diss_t(k) )             &
                                       - ( flux_d    + diss_d    )             &
-                                     ) * drho_ref_uv(k) * ddzw(k)             &
+                                     ) * drho_ref_zu(k) * ddzw(k)             &
                                  ) + v(k,j,i) * div
 
                 swap_flux_x_local_v(k,j) = flux_r(k)
@@ -4685,7 +4685,7 @@
                            + ( v_comp(k)   - ( v(k,j,i)     + v(k,j-1,i) ) ) * ddy &
                            + (   w_comp                      * rho_ref_zw(k) -     &
                                ( w(k-1,j-1,i) + w(k-1,j,i) ) * rho_ref_zw(k-1)     &
-                             ) * drho_ref_uv(k) * ddzw(k)                          &
+                             ) * drho_ref_zu(k) * ddzw(k)                          &
                          ) * 0.5_wp
  
                 tend(k,j,i) = tend(k,j,i) -                                   &
@@ -4697,7 +4697,7 @@
                                        - swap_diss_y_local_v(k) ) * ddy       &
                                    + (   ( flux_t(k) + diss_t(k) )            &
                                        - ( flux_d    + diss_d    )            &
-                                     ) * drho_ref_uv(k) * ddzw(k)             &
+                                     ) * drho_ref_zu(k) * ddzw(k)             &
                                  ) + v(k,j,i) * div
 
                 swap_flux_x_local_v(k,j) = flux_r(k)
@@ -4746,8 +4746,8 @@
     SUBROUTINE advec_w_ws
 
        USE arrays_3d,                                                          &
-           ONLY:  ddzu, drho_ref_uv, drho_ref_zw, tend, u, v, w, rho_ref_zw,   &
-                  rho_ref_uv
+           ONLY:  ddzu, drho_ref_zu, drho_ref_zw, tend, u, v, w, rho_ref_zw,   &
+                  rho_ref_zu
 
        USE constants,                                                          &
            ONLY:  adv_mom_1, adv_mom_3, adv_mom_5
@@ -5021,7 +5021,7 @@
                 k_mm  = k - 2 * ibit35
 
                 w_comp    = w(k+1,j,i) + w(k,j,i)
-                flux_t(k) = w_comp * rho_ref_uv(k+1) *                        &
+                flux_t(k) = w_comp * rho_ref_zu(k+1) *                        &
                                ( (   37.0_wp * ibit35 * adv_mom_5             &
                                    +  7.0_wp * ibit34 * adv_mom_3             &
                                    +           ibit33 * adv_mom_1             &
@@ -5036,7 +5036,7 @@
                                  ( w(k_ppp,j,i) + w(k_mm,j,i) )               &
                                )
 
-                diss_t(k) = - ABS( w_comp ) * rho_ref_uv(k+1) *               &
+                diss_t(k) = - ABS( w_comp ) * rho_ref_zu(k+1) *               &
                                ( (  10.0_wp * ibit35 * adv_mom_5              &
                                    + 3.0_wp * ibit34 * adv_mom_3              &
                                    +          ibit33 * adv_mom_1              &
@@ -5068,8 +5068,8 @@
                                  + IBITS(advc_flags_2(k,j-1,i),0,1)           &
                                 )                                             &
                            ) * ddy                                            &
-                         + (   w_comp * rho_ref_uv(k+1) * ( ibit33 + ibit34 + ibit35 )&
-                             - ( w(k,j,i)   + w(k-1,j,i)   ) * rho_ref_uv(k)     &
+                         + (   w_comp * rho_ref_zu(k+1) * ( ibit33 + ibit34 + ibit35 )&
+                             - ( w(k,j,i)   + w(k-1,j,i)   ) * rho_ref_zu(k)     &
                              * (   IBITS(advc_flags_2(k-1,j,i),1,1)           &
                                  + IBITS(advc_flags_2(k-1,j,i),2,1)           &
                                  + IBITS(advc_flags_2(k-1,j,i),3,1)           &
@@ -5144,7 +5144,7 @@
                 k_mm  = k - 2 * ibit35
 
                 w_comp    = w(k+1,j,i) + w(k,j,i)
-                flux_t(k) = w_comp * rho_ref_uv(k+1) *                       &
+                flux_t(k) = w_comp * rho_ref_zu(k+1) *                       &
                               (  (  37.0_wp * ibit35 * adv_mom_5             &
                                    + 7.0_wp * ibit34 * adv_mom_3             &
                                    +          ibit33 * adv_mom_1             &
@@ -5159,7 +5159,7 @@
                                  ( w(k_ppp,j,i) + w(k_mm,j,i) )              &
                               )
 
-                diss_t(k) = - ABS( w_comp ) * rho_ref_uv(k+1) *               &
+                diss_t(k) = - ABS( w_comp ) * rho_ref_zu(k+1) *               &
                                (  (  10.0_wp * ibit35 * adv_mom_5             &
                                     + 3.0_wp * ibit34 * adv_mom_3             &
                                     +          ibit33 * adv_mom_1             &
@@ -5179,8 +5179,8 @@
 !--             by a not sufficient reduction of divergences near topography.
                 div = (   ( u_comp + gu - ( u(k+1,j,i) + u(k,j,i)   ) ) * ddx     &
                            + ( v_comp + gv - ( v(k+1,j,i) + v(k,j,i)   ) ) * ddy  &
-                           + (   w_comp                    * rho_ref_uv(k+1) -    &
-                               ( w(k,j,i)   + w(k-1,j,i) ) * rho_ref_uv(k)        &
+                           + (   w_comp                    * rho_ref_zu(k+1) -    &
+                               ( w(k,j,i)   + w(k-1,j,i) ) * rho_ref_zu(k)        &
                              ) * drho_ref_zw(k) * ddzu(k+1)                       &
                          ) * 0.5_wp
 

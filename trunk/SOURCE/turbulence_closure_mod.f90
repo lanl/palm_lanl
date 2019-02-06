@@ -2763,12 +2763,6 @@
     REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  dwdy  !< Gradient of w-component in y-direction
     REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  dwdz  !< Gradient of w-component in z-direction
 
-!CB    write(message_string,*) g * (alpha_T(surf_def_h(2)%k(surf_s),1,1)*surf_def_h(2)%shf(surf_s) + &
-!CB                                           beta_S(surf_def_h(2)%k(surf_s),1,1)*surf_def_h(2)%sasws(surf_s))  &
-!CB                                          / MERGE( rho_reference, rho_ref_zw(surf_def_h(2)%k(surf_s)),  &
-!CB                                            use_single_reference_value )
-!CB    CALL location_message(trim(adjustl(message_string)),.TRUE.)
-    
     DO  i = nxl, nxr
 
        IF ( constant_flux_layer )  THEN
@@ -3245,15 +3239,6 @@
     REAL(wp), DIMENSION(nzb+1:nzt)  ::  dwdz        !< Gradient of w-component in z-direction
     REAL(wp), DIMENSION(nzb+1:nzt)  ::  tend_temp   !< temporal tendency
 
-!CB    IF (i .eq. 1 .and. j .eq. 1) THEN
-!CB       surf_s = surf_def_h(2)%start_index(1,1)
-!CB       write(message_string,*) g * (alpha_T(surf_def_h(2)%k(surf_s),1,1)*surf_def_h(2)%shf(surf_s) + &
-!CB                                           beta_S(surf_def_h(2)%k(surf_s),1,1)*surf_def_h(2)%sasws(surf_s))  &
-!CB                                          / MERGE( rho_reference, rho_ref_zw(surf_def_h(2)%k(surf_s)),  &
-!CB                                            use_single_reference_value )
-!CB       CALL location_message(trim(adjustl(message_string)),.TRUE.)
-!CB    ENDIF
-    
     IF ( constant_flux_layer )  THEN
 !
 !--    Calculate TKE production by shear. Calculate gradients at all grid
@@ -4320,13 +4305,6 @@
                                                              * flag
                 ENDDO
 
-!CB             Output some quantities
-!                IF ( ( i .eq. nxlg ) .and. ( j .eq. nysg ) .and. ( k .eq. nzt ) ) THEN
-!                   write(message_string,*) 'Mixing length l = ',l
-!                   CALL location_message(trim(adjustl(message_string)),.TRUE.)
-!                   write(message_string,*) 'Mixing length ll = ',ll
-!                   CALL location_message(trim(adjustl(message_string)),.TRUE.)
-!                ENDIF
              ENDDO
           ENDDO
        ENDDO

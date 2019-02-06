@@ -497,6 +497,9 @@
     
     USE control_parameters
     
+    USE cpulog,                                                                &
+        ONLY:  cpu_log, log_point, log_point_s
+    
     USE eqn_state_seawater_mod,                                                &
         ONLY:  eqn_state_seawater, eqn_state_seawater_func
 
@@ -2331,10 +2334,11 @@
 !-- If required, initialize dvrp-software
     IF ( dt_dvrp /= 9999999.9_wp )  CALL init_dvrp
 
-    IF ( ocean )  THEN
-!
-!--    Initialize quantities needed for the ocean model
-       CALL init_ocean
+    IF ( ocean ) THEN
+
+!--    Calculate the 3-d array of initial in-situ and potential density
+!--    based on the initial temperature and salinity profiles.
+       CALL eqn_state_seawater
 
     ELSE
 !

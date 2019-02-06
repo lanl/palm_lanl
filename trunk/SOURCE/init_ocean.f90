@@ -184,19 +184,13 @@
 
 !
 !-- Define reference in situ density
-!CB    rho_reference = rho_surface * 0.5_wp * dzu(nzt+1)
     rho_reference = 0.0_wp
     DO  k = nzt, nzb, -1
        rho_ref_zw(k) = eqn_state_seawater_func( hyp(k), pt_l, sa_l )
        rho_reference = rho_reference + rho_ref_zw(k) * dzu(k+1)
-       !write(message_string,*) 'rho_ref_zw(', k, ') = ', rho_ref_zw(k)
-       !CALL location_message(trim(adjustl(message_string)),.TRUE.)
        rho_ref_uv(k) = eqn_state_seawater_func( 0.5_wp * ( hyp(k) + hyp(k+1) ), pt_init(k), sa_init(k) )
     ENDDO
     rho_reference = rho_reference / ( zu(nzt+1) - zu(nzb) )
-!    rho_reference = rho_reference / ( zw(nzt) - zu(nzb) )
-!    write(message_string,*) 'rho_reference = ',rho_reference
-!    CALL location_message(trim(adjustl(message_string)),.TRUE.)
 
 !
 !-- Calculate the reference potential density
@@ -209,19 +203,16 @@
                         eqn_state_seawater_func( 0.0_wp, pt_l, sa_l )
     ENDDO
     prho_reference = prho_reference / ( zu(nzt+1) - zu(nzb) )
-!    prho_reference = prho_reference / ( zu(nzt) - zu(nzb) )
 
 !
 !-- Calculate the 3d array of initial in situ and potential density,
 !-- based on the initial temperature and salinity profile
 !    CALL eqn_state_seawater
 !    CALL location_message(', returned eqn_state_seawater',.FALSE.)
-! CB moved to init_3d_model where init_ocean used to be
 
 !
 !-- Store initial density profile
     hom(:,1,77,:)  = SPREAD( rho_ref_zw(:), 2, statistic_regions+1 )
-!CB    CALL location_message(', stored rho_ocean_init',.FALSE.)
 
 !
 !-- Set the reference state to be used in the buoyancy terms

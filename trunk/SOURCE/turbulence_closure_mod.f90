@@ -2794,8 +2794,8 @@
                                         w(k,j-1,i) - w(k-1,j-1,i) ) * ddy
                 dwdz(k,j) =           ( w(k,j,i)   - w(k-1,j,i)   ) * ddzw(k)
 
-             ENDDO
-          ENDDO
+             ENDDO ! k
+          ENDDO ! j
 
 !
 !--       Position beneath wall
@@ -2822,7 +2822,7 @@
                                      BTEST( wall_flags_0(k,j-1,i), 0 ) )
                    dudy(k,j) = sign_dir * usvs / ( km_neutral + 1E-10_wp )
                    dwdy(k,j) = sign_dir * wsvs / ( km_neutral + 1E-10_wp )
-                ENDDO
+                ENDDO ! m
 !
 !--             Natural surfaces
                 surf_s = surf_lsm_v(l)%start_index(j,i)
@@ -2840,7 +2840,7 @@
                                      BTEST( wall_flags_0(k,j-1,i), 0 ) )
                    dudy(k,j) = sign_dir * usvs / ( km_neutral + 1E-10_wp )
                    dwdy(k,j) = sign_dir * wsvs / ( km_neutral + 1E-10_wp )
-                ENDDO
+                ENDDO ! m
 !
 !--             Urban surfaces
                 surf_s = surf_usm_v(l)%start_index(j,i)
@@ -2858,8 +2858,8 @@
                                      BTEST( wall_flags_0(k,j-1,i), 0 ) )
                    dudy(k,j) = sign_dir * usvs / ( km_neutral + 1E-10_wp )
                    dwdy(k,j) = sign_dir * wsvs / ( km_neutral + 1E-10_wp )
-                ENDDO
-             ENDDO
+                ENDDO ! m
+             ENDDO ! l
 !
 !--          Compute gradients at east- and west-facing walls
              DO  l = 2, 3
@@ -2878,7 +2878,7 @@
                                      BTEST( wall_flags_0(k,j,i-1), 0 ) )
                    dvdx(k,j) = sign_dir * vsus / ( km_neutral + 1E-10_wp )
                    dwdx(k,j) = sign_dir * wsus / ( km_neutral + 1E-10_wp )
-                ENDDO
+                ENDDO ! m
 !
 !--             Natural surfaces
                 surf_s = surf_lsm_v(l)%start_index(j,i)
@@ -2896,7 +2896,7 @@
                                      BTEST( wall_flags_0(k,j,i-1), 0 ) )
                    dvdx(k,j) = sign_dir * vsus / ( km_neutral + 1E-10_wp )
                    dwdx(k,j) = sign_dir * wsus / ( km_neutral + 1E-10_wp )
-                ENDDO
+                ENDDO ! m
 !
 !--             Urban surfaces
                 surf_s = surf_usm_v(l)%start_index(j,i)
@@ -2914,8 +2914,8 @@
                                      BTEST( wall_flags_0(k,j,i-1), 0 ) )
                    dvdx(k,j) = sign_dir * vsus / ( km_neutral + 1E-10_wp )
                    dwdx(k,j) = sign_dir * wsus / ( km_neutral + 1E-10_wp )
-                ENDDO
-             ENDDO
+                ENDDO ! m
+             ENDDO ! l
 !
 !--          Compute gradients at upward-facing surfaces
              surf_s = surf_def_h(0)%start_index(j,i)
@@ -2931,7 +2931,7 @@
                 dudz(k,j) = ( u(k+1,j,i) - surf_def_h(0)%u_0(m) ) * dd2zu(k)
                 dvdz(k,j) = ( v(k+1,j,i) - surf_def_h(0)%v_0(m) ) * dd2zu(k)
 
-             ENDDO
+             ENDDO ! m
 !
 !--          Natural surfaces
              surf_s = surf_lsm_h%start_index(j,i)
@@ -2942,7 +2942,7 @@
                 dudz(k,j) = ( u(k+1,j,i) - surf_lsm_h%u_0(m) ) * dd2zu(k)
                 dvdz(k,j) = ( v(k+1,j,i) - surf_lsm_h%v_0(m) ) * dd2zu(k)
 
-             ENDDO
+             ENDDO ! m
 !
 !--          Urban surfaces
              surf_s = surf_usm_h%start_index(j,i)
@@ -2953,7 +2953,7 @@
                 dudz(k,j) = ( u(k+1,j,i) - surf_usm_h%u_0(m) ) * dd2zu(k)
                 dvdz(k,j) = ( v(k+1,j,i) - surf_usm_h%v_0(m) ) * dd2zu(k)
 
-             ENDDO
+             ENDDO ! m
 !
 !--          Compute gradients at downward-facing walls, only for
 !--          non-natural default surfaces
@@ -2965,8 +2965,8 @@
                 dudz(k,j) = ( surf_def_h(1)%u_0(m) - u(k-1,j,i) ) * dd2zu(k)
                 dvdz(k,j) = ( surf_def_h(1)%v_0(m) - v(k-1,j,i) ) * dd2zu(k)
 
-             ENDDO
-          ENDDO
+             ENDDO ! m
+          ENDDO ! l
 
           DO  j = nys, nyn
              DO  k = nzb+1, nzt
@@ -2983,8 +2983,8 @@
 
                 tend(k,j,i) = tend(k,j,i) + km(k,j,i) * def * flag
 
-             ENDDO
-          ENDDO
+             ENDDO ! k
+          ENDDO ! j
 
        ELSE ! not constant_flux_layer
 
@@ -3032,10 +3032,10 @@
                                BTEST( wall_flags_0(k,j,i), 29 ) )
                 tend(k,j,i) = tend(k,j,i) + km(k,j,i) * def * flag
 
-             ENDDO
-          ENDDO
+             ENDDO ! k
+          ENDDO ! j
 
-       ENDIF
+       ENDIF ! constant flux layer
 
 !
 !--    If required, calculate TKE production by buoyancy
@@ -3062,19 +3062,17 @@
                                     MERGE( 1.0_wp, 0.0_wp,                     &
                                            BTEST( wall_flags_0(k,j,i), 9 )     &
                                          )
-                   ENDDO
-                ENDDO
-          
-             ENDIF
-          
-          ELSE ! humidity
+                   ENDDO ! k
+                ENDDO ! j
 
-             DO  j = nys, nyn
-                DO  k = nzb+1, nzt
+             ELSE ! not ocean
+
+                DO  j = nys, nyn
+                   DO  k = nzb+1, nzt
 !
-!--                Flag 9 is used to mask top fluxes, flag 30 to mask
-!--                surface fluxes
-                   tend(k,j,i) = tend(k,j,i) -                              &
+!--                   Flag 9 is used to mask top fluxes, flag 30 to mask
+!--                   surface fluxes
+                      tend(k,j,i) = tend(k,j,i) -                              &
                                     kh(k,j,i) * g /                            &
                                 MERGE( pt_reference, pt(k,j,i),                &
                                         use_single_reference_value ) *         &
@@ -3086,49 +3084,22 @@
                                 MERGE( 1.0_wp, 0.0_wp,                         &
                                        BTEST( wall_flags_0(k,j,i), 9 )         &
                                      )
+                   ENDDO
                 ENDDO
-             ENDDO
 
-          ENDIF
+             ENDIF ! ocean
 
-       ELSE
+          ELSE ! humidity
 
-          DO  j = nys, nyn
+             DO  j = nys, nyn
 
-             DO  k = nzb+1, nzt
+                DO  k = nzb+1, nzt
 !
-!--             Flag 9 is used to mask top fluxes, flag 30 to mask
-!--             surface fluxes
-                IF ( .NOT. cloud_physics .AND. .NOT. cloud_droplets ) THEN
-                   k1 = 1.0_wp + 0.61_wp * q(k,j,i)
-                   k2 = 0.61_wp * pt(k,j,i)
-                   tend(k,j,i) = tend(k,j,i) - kh(k,j,i) *                  &
-                                      g /                                      &
-                                 MERGE( vpt_reference, vpt(k,j,i),             &
-                                        use_single_reference_value ) *         &
-                                      ( k1 * ( pt(k+1,j,i)-pt(k-1,j,i) ) +     &
-                                        k2 * ( q(k+1,j,i) - q(k-1,j,i) )       &
-                                      ) * dd2zu(k) *                           &
-                                   MERGE( 1.0_wp, 0.0_wp,                      &
-                                          BTEST( wall_flags_0(k,j,i), 30 )     &
-                                        )          *                           &
-                                   MERGE( 1.0_wp, 0.0_wp,                      &
-                                          BTEST( wall_flags_0(k,j,i), 9 )      &
-                                        )
-                ELSE IF ( cloud_physics )  THEN
-                   IF ( ql(k,j,i) == 0.0_wp )  THEN
+!--                Flag 9 is used to mask top fluxes, flag 30 to mask
+!--                surface fluxes
+                   IF ( .NOT. cloud_physics .AND. .NOT. cloud_droplets ) THEN
                       k1 = 1.0_wp + 0.61_wp * q(k,j,i)
                       k2 = 0.61_wp * pt(k,j,i)
-                   ELSE
-                      theta = pt(k,j,i) + pt_d_t(k) * l_d_cp * ql(k,j,i)
-                      temp  = theta * t_d_pt(k)
-                      k1 = ( 1.0_wp - q(k,j,i) + 1.61_wp *                  &
-                                       ( q(k,j,i) - ql(k,j,i) ) *              &
-                              ( 1.0_wp + 0.622_wp * l_d_r / temp ) ) /         &
-                              ( 1.0_wp + 0.622_wp * l_d_r * l_d_cp *           &
-                              ( q(k,j,i) - ql(k,j,i) ) / ( temp * temp ) )
-                         k2 = theta * ( l_d_cp / temp * k1 - 1.0_wp )
-                   ENDIF
                       tend(k,j,i) = tend(k,j,i) - kh(k,j,i) *                  &
                                       g /                                      &
                                  MERGE( vpt_reference, vpt(k,j,i),             &
@@ -3142,10 +3113,37 @@
                                    MERGE( 1.0_wp, 0.0_wp,                      &
                                           BTEST( wall_flags_0(k,j,i), 9 )      &
                                         )
-                ELSE IF ( cloud_droplets )  THEN
-                   k1 = 1.0_wp + 0.61_wp * q(k,j,i) - ql(k,j,i)
-                   k2 = 0.61_wp * pt(k,j,i)
-                   tend(k,j,i) = tend(k,j,i) -                              &
+                   ELSE IF ( cloud_physics )  THEN
+                      IF ( ql(k,j,i) == 0.0_wp )  THEN
+                         k1 = 1.0_wp + 0.61_wp * q(k,j,i)
+                         k2 = 0.61_wp * pt(k,j,i)
+                      ELSE
+                         theta = pt(k,j,i) + pt_d_t(k) * l_d_cp * ql(k,j,i)
+                         temp  = theta * t_d_pt(k)
+                         k1 = ( 1.0_wp - q(k,j,i) + 1.61_wp *                  &
+                                       ( q(k,j,i) - ql(k,j,i) ) *              &
+                              ( 1.0_wp + 0.622_wp * l_d_r / temp ) ) /         &
+                              ( 1.0_wp + 0.622_wp * l_d_r * l_d_cp *           &
+                              ( q(k,j,i) - ql(k,j,i) ) / ( temp * temp ) )
+                         k2 = theta * ( l_d_cp / temp * k1 - 1.0_wp )
+                      ENDIF
+                      tend(k,j,i) = tend(k,j,i) - kh(k,j,i) *                  &
+                                      g /                                      &
+                                 MERGE( vpt_reference, vpt(k,j,i),             &
+                                        use_single_reference_value ) *         &
+                                      ( k1 * ( pt(k+1,j,i)-pt(k-1,j,i) ) +     &
+                                        k2 * ( q(k+1,j,i) - q(k-1,j,i) )       &
+                                      ) * dd2zu(k) *                           &
+                                   MERGE( 1.0_wp, 0.0_wp,                      &
+                                          BTEST( wall_flags_0(k,j,i), 30 )     &
+                                        )          *                           &
+                                   MERGE( 1.0_wp, 0.0_wp,                      &
+                                          BTEST( wall_flags_0(k,j,i), 9 )      &
+                                        )
+                   ELSE IF ( cloud_droplets )  THEN
+                      k1 = 1.0_wp + 0.61_wp * q(k,j,i) - ql(k,j,i)
+                      k2 = 0.61_wp * pt(k,j,i)
+                      tend(k,j,i) = tend(k,j,i) -                              &
                                     kh(k,j,i) * g /                            &
                                  MERGE( vpt_reference, vpt(k,j,i),             &
                                         use_single_reference_value ) *         &
@@ -3159,15 +3157,17 @@
                                    MERGE( 1.0_wp, 0.0_wp,                      &
                                           BTEST( wall_flags_0(k,j,i), 9 )      &
                                         )
-                ENDIF
+                   ENDIF ! cloud
+
+                ENDDO
 
              ENDDO
 
-          ENDDO
+          ENDIF ! humidity
 
-       ENDIF
+       ENDIF ! neutral
 
-    ENDDO
+    ENDDO ! i
 
  END SUBROUTINE production_e
 
@@ -3640,7 +3640,8 @@
                                      )
 
              ENDDO
-          ENDIF ! ocean
+
+          ENDIF ! atmosphere/ocean
 
        ELSE ! humidity
 
@@ -3707,7 +3708,9 @@
                                         )
              ENDIF
           ENDDO
+
        ENDIF
+
     ENDIF
 
   END SUBROUTINE production_e_ij

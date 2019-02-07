@@ -136,16 +136,14 @@
     cp = cpw
 
 !
-!-- Set water density near the ocean surface
-    rho_surface = eqn_state_seawater_func( surface_pressure * 100.0_wp, pt_init(nzt+1), sa_init(nzt+1) )
-    rho_ref_zw(nzt+1) = rho_surface
-
-!
 !-- Calculate initial vertical profile of hydrostatic pressure (in Pa)
 !-- and the reference density (used later in buoyancy term)
 !-- First step: Calculate pressure using reference density
     hyp(nzt+1) = surface_pressure * 100.0_wp
 
+    rho_surface = eqn_state_seawater_func( hyp(nzt+1), pt_init(nzt+1), sa_init(nzt+1) )
+    rho_ref_zw(nzt+1) = rho_surface
+    
     hyp(nzt)      = hyp(nzt+1) + rho_surface * g * 0.5_wp * dzu(nzt+1)
 
     DO  k = nzt-1, nzb+1, -1

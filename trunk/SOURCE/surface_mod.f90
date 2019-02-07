@@ -178,12 +178,12 @@
  MODULE surface_mod
 
     USE arrays_3d,                                                             &
-        ONLY:  alpha_T, beta_S, zu, zw
+        ONLY:  alpha_T, beta_S, csflux_input_conversion,                       &
+               heatflux_input_conversion, momentumflux_input_conversion,       &
+               scalarflux_input_conversion, salinityflux_input_conversion,     &
+               waterflux_input_conversion, zu, zw
 
     USE chem_modules
-
-    USE cloud_parameters,                                                      &
-        ONLY:  cp, l_v
 
     USE control_parameters
 
@@ -2144,12 +2144,15 @@
 !--                   Initialize surface heatflux. However, skip this for now if 
 !--                   if random_heatflux is set. This case, shf is initialized later.
                       IF ( .NOT. random_heatflux )  THEN
-                         surf%shf(num_h) = surface_heatflux / cp
+                         surf%shf(num_h) = surface_heatflux *                  &
+                                                 heatflux_input_conversion(k-1)
 !
 !--                      Check if surface heat flux might be replaced by 
 !--                      prescribed wall heatflux
-                         IF ( k-1 /= 0 ) surf%shf(num_h) = wall_heatflux(0) / cp
-
+                         IF ( k-1 /= 0 )  THEN
+                            surf%shf(num_h) = wall_heatflux(0) *               &
+                                                 heatflux_input_conversion(k-1)
+                         ENDIF
                       ENDIF
                    ELSE
                       surf%shf(num_h) = 0.0_wp
@@ -2157,36 +2160,44 @@
 !
 !--             Set heat-flux at downward-facing surfaces
                 ELSE
-                   surf%shf(num_h) = wall_heatflux(5) / cp
+                   surf%shf(num_h) = wall_heatflux(5) *                        &
+                                             heatflux_input_conversion(k)
                 ENDIF
 
                 IF ( humidity )  THEN
                    IF ( upward_facing )  THEN
                       IF ( constant_waterflux )  THEN
-                         surf%qsws(num_h) = surface_waterflux / l_v
+                         surf%qsws(num_h) = surface_waterflux *                &
+                                                 waterflux_input_conversion(k-1)
                          IF ( k-1 /= 0 )  THEN
-                            surf%qsws(num_h) = wall_humidityflux(0) / l_v
+                            surf%qsws(num_h) = wall_humidityflux(0) *          &
+                                                 waterflux_input_conversion(k-1)
                          ENDIF
                       ELSE
                          surf%qsws(num_h) = 0.0_wp
                       ENDIF
                    ELSE
-                      surf%qsws(num_h) = wall_humidityflux(5) / l_v
+                      surf%qsws(num_h) = wall_humidityflux(5) *                &
+                                             heatflux_input_conversion(k)
                    ENDIF
                 ENDIF
 
                 IF ( passive_scalar )  THEN
                    IF ( upward_facing )  THEN
                       IF ( constant_scalarflux )  THEN
-                         surf%ssws(num_h) = surface_scalarflux
+                         surf%ssws(num_h) = surface_scalarflux *               &
+                                            scalarflux_input_conversion(k-1)
 
-                         IF ( k-1 /= 0 ) surf%ssws(num_h) = wall_scalarflux(0)
+                         IF ( k-1 /= 0 )                                       &
+                            surf%ssws(num_h) = wall_scalarflux(0) *            &
+                                               scalarflux_input_conversion(k-1)
 
                       ELSE
                          surf%ssws(num_h) = 0.0_wp
                       ENDIF
                    ELSE
-                      surf%ssws(num_h) = wall_scalarflux(5)
+                      surf%ssws(num_h) = wall_scalarflux(5) *                  &
+                                         scalarflux_input_conversion(k)
                    ENDIF
                 ENDIF
 
@@ -2199,15 +2210,18 @@
                          IF ( TRIM( spc_names(lsp) ) == TRIM( surface_csflux_name(lsp_pr) ) )  THEN   
                             IF ( upward_facing )  THEN
                                IF ( constant_csflux(lsp_pr) )  THEN
-                                  surf%cssws(lsp,num_h) = surface_csflux(lsp_pr) 
+                                  surf%cssws(lsp,num_h) = surface_csflux(lsp_pr) * &
+                                                          csflux_input_conversion(k-1)
 
-                                  IF ( k-1 /= 0 )                              &
-                                     surf%cssws(lsp,num_h) = wall_csflux(lsp,0) 
+                                  IF ( k-1 /= 0 )                                 &
+                                     surf%cssws(lsp,num_h) = wall_csflux(lsp,0) * &
+                                                             csflux_input_conversion(k-1)
                                ELSE
                                   surf%cssws(lsp,num_h) = 0.0_wp
                                ENDIF
                             ELSE
-                               surf%cssws(lsp,num_h) = wall_csflux(lsp,5)
+                               surf%cssws(lsp,num_h) = wall_csflux(lsp,5) *       &
+                                                       csflux_input_conversion(k)
                             ENDIF
                          ENDIF
                       ENDDO
@@ -2217,7 +2231,8 @@
 
                 IF ( ocean )  THEN
                    IF ( upward_facing )  THEN 
-                      surf%sasws(num_h) = bottom_salinityflux
+                      surf%sasws(num_h) = bottom_salinityflux *                &
+                                          salinityflux_input_conversion(k-1)
                    ELSE
                       surf%sasws(num_h) = 0.0_wp
                    ENDIF
@@ -2258,15 +2273,14 @@
              surf%k(num_h) = k
 !
              IF ( ocean ) THEN
+                surf%shf(num_h) = 0.0_wp
+                surf%sasws(num_h) = 0.0_wp
                 surf%shf_sol(num_h) = 0.0_wp
              ENDIF
 
 !--          Initialize top heat flux
-             IF ( constant_top_heatflux ) THEN
-                surf%shf(num_h) = top_heatflux / cp
-             ELSE
-                surf%shf(num_h) = 0.0_wp
-             ENDIF
+             IF ( constant_top_heatflux )                                       &
+                surf%shf(num_h) = top_heatflux * heatflux_input_conversion(nzt+1)
 !
 !--          Initialization in case of a coupled model run
              IF ( coupling_mode == 'ocean_to_atmosphere' )  THEN
@@ -2289,23 +2303,28 @@
 !
 !--          Prescribe top scalar flux
              IF ( passive_scalar .AND. constant_top_scalarflux )               &
-                surf%ssws(num_h) = top_scalarflux
+                surf%ssws(num_h) = top_scalarflux *                            &
+                                   scalarflux_input_conversion(nzt+1)
 
 !--          Prescribe top chemical species' flux
              DO  lsp = 1, nvar
                 IF ( air_chemistry  .AND.  constant_top_csflux(lsp) )  THEN 
-                   surf%cssws(lsp,num_h) = top_csflux(lsp)
+                   surf%cssws(lsp,num_h) = top_csflux(lsp) *                   &
+                                           csflux_input_conversion(nzt+1)
                 ENDIF
              ENDDO
 !
 !--          Prescribe top salinity flux
              IF ( ocean .AND. constant_top_salinityflux)                       &
-                surf%sasws(num_h) = top_salinityflux
+                surf%sasws(num_h) = top_salinityflux *                         &
+                                    salinityflux_input_conversion(nzt+1)
  
 !--          Top momentum fluxes
              IF ( constant_top_momentumflux )  THEN
-                surf%usws(num_h) = top_momentumflux_u 
-                surf%vsws(num_h) = top_momentumflux_v 
+                surf%usws(num_h) = top_momentumflux_u *                        &
+                                   momentumflux_input_conversion(nzt+1)
+                surf%vsws(num_h) = top_momentumflux_v *                        &
+                                   momentumflux_input_conversion(nzt+1)
              ENDIF
 !
 !--          Increment surface indices

@@ -937,6 +937,19 @@
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  rho_ref_mg     !< air density profiles on the uv grid for multigrid
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  rho_ref_zw_mg  !< air density profiles on the w grid for multigrid
 
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  csflux_input_conversion         !< conversion factor array for chemical species flux input
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  heatflux_input_conversion       !< conversion factor array for heatflux input
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  scalarflux_input_conversion     !< conversion factor array for scalarflux input
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  salinityflux_input_conversion   !< conversion factor array for salinityflux input
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  waterflux_input_conversion      !< conversion factor array for waterflux input
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  momentumflux_input_conversion   !< conversion factor array for momentumflux input
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  csflux_output_conversion         !< conversion factor array for chemical species flux output
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  heatflux_output_conversion      !< conversion factor array for heatflux output
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  scalarflux_output_conversion     !< conversion factor array for scalarflux output
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  salinityflux_output_conversion   !< conversion factor array for salinityflux output
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  waterflux_output_conversion     !< conversion factor array for waterflux output
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  momentumflux_output_conversion  !< conversion factor array for momentumflux output
+    
     SAVE
 
  END MODULE arrays_3d
@@ -1097,6 +1110,8 @@
     CHARACTER (LEN=16)   ::  psolver = 'poisfft'                          !< namelist parameter
     CHARACTER (LEN=16)   ::  scalar_advec = 'ws-scheme'                   !< namelist parameter
     CHARACTER (LEN=20)   ::  approximation = 'boussinesq'                 !< namelist parameter
+    CHARACTER (LEN=40)   ::  flux_input_mode = 'approximation-specific'   !< type of flux input: dynamic or kinematic
+    CHARACTER (LEN=40)   ::  flux_output_mode = 'approximation-specific'  !< type of flux output: dynamic or kinematic
     CHARACTER (LEN=20)   ::  bc_e_b = 'neumann'                           !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_lr = 'cyclic'                             !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_ns = 'cyclic'                             !< namelist parameter

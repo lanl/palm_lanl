@@ -73,8 +73,9 @@
 !------------------------------------------------------------------------------!
  SUBROUTINE disturb_heatflux( surf )
  
-    USE cloud_parameters,                                                      &
-        ONLY: cp
+
+    USE arrays_3d,                                                             &
+        ONLY:  heatflux_input_conversion
         
     USE control_parameters,                                                    &
         ONLY:  iran, surface_heatflux, random_generator, wall_heatflux
@@ -124,9 +125,11 @@
 !--       k-1 is topography top index. If this is 0, set surface heatflux. Over
 !--       topography surface_heatflux is replaced by wall_heatflux(0).
           IF ( k-1 == 0 )  THEN
-             surf%shf(m) = randomnumber * surface_heatflux * cp
+             surf%shf(m) = randomnumber * surface_heatflux                     &
+                              * heatflux_input_conversion(nzb)
           ELSE
-             surf%shf(m) = randomnumber * wall_heatflux(0) * cp
+             surf%shf(m) = randomnumber * wall_heatflux(0)                     &
+                              * heatflux_input_conversion(k-1)
           ENDIF
        ENDDO
     ELSE
@@ -143,9 +146,11 @@
 !--       k-1 is topography top index. If this is 0, set surface heatflux. Over
 !--       topography surface_heatflux is replaced by wall_heatflux(0).
           IF ( k-1 == 0 )  THEN
-             surf%shf(m) = ( random_dummy - 0.5_wp ) * surface_heatflux * cp
+             surf%shf(m) = ( random_dummy - 0.5_wp ) * surface_heatflux        &
+                              * heatflux_input_conversion(nzb)
           ELSE
-             surf%shf(m) = ( random_dummy - 0.5_wp ) * wall_heatflux(0) * cp
+             surf%shf(m) = ( random_dummy - 0.5_wp ) * wall_heatflux(0)        &
+                              * heatflux_input_conversion(k-1)
           ENDIF
 
           CALL random_seed_parallel( get=seq_random_array(:, j, i) )

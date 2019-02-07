@@ -490,7 +490,7 @@
         ONLY:  chem_emissions
 
     USE cloud_parameters,                                                      &
-        ONLY:  cp, r_d
+        ONLY:  cp, l_v, r_d
 
     USE constants,                                                             &
         ONLY:  pi, cpw
@@ -914,6 +914,64 @@
 !-- compute the inverse density array in order to avoid expensive divisions
     drho_ref_zu = 1.0_wp / rho_ref_zu
     drho_ref_zw = 1.0_wp / rho_ref_zw
+
+!
+!-- Allocation of flux conversion arrays
+    ALLOCATE( csflux_input_conversion(nzb:nzt+1) )
+    ALLOCATE( heatflux_input_conversion(nzb:nzt+1) )
+    ALLOCATE( waterflux_input_conversion(nzb:nzt+1) )
+    ALLOCATE( momentumflux_input_conversion(nzb:nzt+1) )
+    ALLOCATE( scalarflux_input_conversion(nzb:nzt+1) )
+    ALLOCATE( salinityflux_input_conversion(nzb:nzt+1) )
+    ALLOCATE( csflux_output_conversion(nzb:nzt+1) )
+    ALLOCATE( heatflux_output_conversion(nzb:nzt+1) )
+    ALLOCATE( waterflux_output_conversion(nzb:nzt+1) )
+    ALLOCATE( momentumflux_output_conversion(nzb:nzt+1) )
+    ALLOCATE( scalarflux_output_conversion(nzb:nzt+1) )
+    ALLOCATE( salinityflux_output_conversion(nzb:nzt+1) )
+
+!
+!-- calculate flux conversion factors according to approximation and in-/output mode
+    DO  k = nzb, nzt+1
+
+        IF ( TRIM( flux_input_mode ) == 'kinematic' )  THEN
+            csflux_input_conversion(k)        = 1.0_wp
+            heatflux_input_conversion(k)      = rho_ref_zw(k)
+            waterflux_input_conversion(k)     = rho_ref_zw(k)
+            momentumflux_input_conversion(k)  = rho_ref_zw(k)
+            scalarflux_input_conversion(k)    = 1.0_wp
+            salinityflux_input_conversion(k)  = 1.0_wp
+        ELSEIF ( TRIM( flux_input_mode ) == 'dynamic' ) THEN
+            heatflux_input_conversion(k)      = 1.0_wp / cp
+            waterflux_input_conversion(k)     = 1.0_wp / l_v
+            momentumflux_input_conversion(k)  = 1.0_wp
+            csflux_input_conversion(k)        = 1.0_wp
+            scalarflux_input_conversion(k)    = 1.0_wp
+            salinityflux_input_conversion(k)  = 1.0_wp
+        ENDIF
+
+        IF ( TRIM( flux_output_mode ) == 'kinematic' )  THEN
+            csflux_output_conversion(k)       = 1.0_wp
+            heatflux_output_conversion(k)     = drho_ref_zw(k)
+            waterflux_output_conversion(k)    = drho_ref_zw(k)
+            momentumflux_output_conversion(k) = drho_ref_zw(k)
+            scalarflux_output_conversion(k)   = 1.0_wp
+            salinityflux_output_conversion(k) = 1.0_wp
+        ELSEIF ( TRIM( flux_output_mode ) == 'dynamic' ) THEN
+            heatflux_output_conversion(k)     = cp
+            waterflux_output_conversion(k)    = l_v
+            momentumflux_output_conversion(k) = 1.0_wp
+            csflux_input_conversion(k)        = 1.0_wp
+            scalarflux_output_conversion(k)   = 1.0_wp
+            salinityflux_output_conversion(k) = 1.0_wp
+        ENDIF
+
+        IF ( .NOT. humidity ) THEN
+            waterflux_input_conversion(k)  = 1.0_wp
+            waterflux_output_conversion(k) = 1.0_wp
+        ENDIF
+
+    ENDDO
 
 !
 !-- In case of multigrid method, compute grid lengths and grid factors for the

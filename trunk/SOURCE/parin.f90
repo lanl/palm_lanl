@@ -525,7 +525,7 @@
              dz_stretch_factor, dz_stretch_level, dz_stretch_level_start,      &
              dz_stretch_level_end, d_stk,                                      &
              end_time_1d, ensemble_member_nr, e_init,                          &
-             e_min, fft_method, forcing,                                       &
+             e_min, fft_method, flux_input_mode, flux_output_mode, forcing,    &
              galilei_transformation, humidity,                                 &
              inflow_damping_height, inflow_damping_width,                      &
              inflow_disturbance_begin, inflow_disturbance_end,                 &

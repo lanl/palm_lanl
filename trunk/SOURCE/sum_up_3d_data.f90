@@ -185,8 +185,9 @@
  
 
     USE arrays_3d,                                                             &
-        ONLY:  dzw, e, nc, nr, p, prr, pt, q, qc, ql, ql_c, ql_v, qr,          &
-               rho_ocean, s, sa, u, v, vpt, w, alpha_T, beta_S, solar3d
+        ONLY:  dzw, e, heatflux_output_conversion, nc, nr, p, prr, pt,         &
+               q, qc, ql, ql_c, ql_v, qr, rho_ocean, s, sa, u, v, vpt, w,      &
+               waterflux_output_conversion, alpha_T, beta_S, solar3d
 
     USE averaging,                                                             &
         ONLY:  diss_av, e_av, ghf_av, kh_av, km_av, lpt_av, lwp_av, nc_av,     &
@@ -870,7 +871,8 @@
                    i = surf_def_h(0)%i(m)
                    j = surf_def_h(0)%j(m)
                    k = surf_def_h(0)%k(m)
-                   qsws_av(j,i) = qsws_av(j,i) + surf_def_h(0)%qsws(m) * l_v
+                   qsws_av(j,i) = qsws_av(j,i) + surf_def_h(0)%qsws(m) *          &
+                                                 waterflux_output_conversion(k)
                 ENDDO
                 DO  m = 1, surf_lsm_h%ns
                    i = surf_lsm_h%i(m)
@@ -998,7 +1000,8 @@
                    i = surf_def_h(0)%i(m)
                    j = surf_def_h(0)%j(m)
                    k = surf_def_h(0)%k(m)
-                   shf_av(j,i) = shf_av(j,i) + surf_def_h(0)%shf(m) * cp
+                   shf_av(j,i) = shf_av(j,i) + surf_def_h(0)%shf(m)  *            &
+                                               heatflux_output_conversion(k)
                 ENDDO
                 DO  m = 1, surf_lsm_h%ns
                    i = surf_lsm_h%i(m)
@@ -1018,7 +1021,8 @@
                    i = surf_def_h(0)%i(m)
                    j = surf_def_h(0)%j(m)
                    k = surf_def_h(0)%k(m)
-                   shf_sol_av(j,i) = shf_sol_av(j,i) + surf_def_h(0)%shf_sol(m) * cp
+                   shf_sol_av(j,i) = shf_sol_av(j,i) + surf_def_h(0)%shf_sol(m)  *            &
+                                               heatflux_output_conversion(k)
                 ENDDO
                 DO  m = 1, surf_lsm_h%ns
                    i = surf_lsm_h%i(m)

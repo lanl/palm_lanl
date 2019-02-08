@@ -2207,7 +2207,7 @@
              '       z_mo = ',F6.2,' m   z0 =',F7.4,' m   z0h =',F8.5,&
              ' m   kappa =',F5.2/ &
              '       Rif value range:   ',F8.2,' <= rif <=',F6.2)
-306 FORMAT ('       Predefined constant heatflux:   ',F9.6,' W/m**2')
+306 FORMAT ('       Predefined constant heatflux:   ',F9.6,' K m/s')
 307 FORMAT ('       Heatflux has a random normal distribution')
 308 FORMAT ('       Predefined surface temperature')
 309 FORMAT ('       Predefined constant salinityflux:   ',F9.6,' kg/m3 psu m/s')

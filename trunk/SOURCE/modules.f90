@@ -23,6 +23,14 @@
 ! 2018-11-15 cbegeman
 ! Add bubble property variables
 !
+! 
+! 2018-10-25 cbegeman
+! Add dirichlet bottom boundary conditions for salinity
+
+! 2018-10-19 cbegeman
+! Added sa_slope_offset to control_parameters
+! Added sa_slope_ref to arrays_3d
+! 
 ! Former revisions:
 ! -----------------
 !
@@ -511,7 +519,7 @@
 ! 1031 2012-10-19 14:35:30Z raasch
 ! +output_format_netcdf
 !
-! 1015 2012-09-27 09:23:24Z raasch
+! f1015 2012-09-27 09:23:24Z raasch
 ! +acc_rank, num_acc_per_node,
 ! -adjust_mixing_length
 !
@@ -720,6 +728,7 @@
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  precipitation_amount  !< precipitation amount due to gravitational settling (bulk microphysics)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  pt_slope_ref          !< potential temperature in rotated coordinate system (in case of sloped surface)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  rho_slope_ref         !< density in rotated coordinate system (in case of sloped surface)
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sa_slope_ref          !< salinity in rotated coordinate system (in case of sloped surface) 
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  total_2d_a            !< horizontal array to store the total domain data, used for atmosphere-ocean coupling (atmosphere data)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  total_2d_o            !< horizontal array to store the total domain data, used for atmosphere-ocean coupling (ocean data)
 
@@ -1527,6 +1536,7 @@
     REAL(wp) ::  rho_init_surface                              !< initial surface value of density defined by EOS
     REAL(wp) ::  roughness_length = 0.1_wp                     !< namelist parameter
     REAL(wp) ::  sa_surface = 35.0_wp                          !< namelist parameter
+    REAL(wp) ::  sa_slope_offset = 0.0_wp                      !< salinity difference between left and right 
     REAL(wp) ::  simulated_time = 0.0_wp                       !< elapsed simulated time
     REAL(wp) ::  simulated_time_at_begin                       !< elapsed simulated time of previous run (job chain)
     REAL(wp) ::  sin_alpha_surface                             !< sine of alpha_surface (sloped surface)

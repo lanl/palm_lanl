@@ -943,7 +943,7 @@
             waterflux_input_conversion(k)     = rho_ref_zw(k)
             momentumflux_input_conversion(k)  = rho_ref_zw(k)
             scalarflux_input_conversion(k)    = 1.0_wp
-            salinityflux_input_conversion(k)  = 1.0_wp
+            salinityflux_input_conversion(k)  = rho_ref_zw(k)
         ELSEIF ( TRIM( flux_input_mode ) == 'dynamic' ) THEN
             heatflux_input_conversion(k)      = 1.0_wp / cp
             waterflux_input_conversion(k)     = 1.0_wp / l_v
@@ -959,7 +959,7 @@
             waterflux_output_conversion(k)    = drho_ref_zw(k)
             momentumflux_output_conversion(k) = drho_ref_zw(k)
             scalarflux_output_conversion(k)   = 1.0_wp
-            salinityflux_output_conversion(k) = 1.0_wp
+            salinityflux_output_conversion(k) = drho_ref_zw(k)
         ELSEIF ( TRIM( flux_output_mode ) == 'dynamic' ) THEN
             heatflux_output_conversion(k)     = cp
             waterflux_output_conversion(k)    = l_v

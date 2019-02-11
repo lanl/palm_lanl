@@ -22,6 +22,9 @@
 ! 
 ! 2018-11-15 cbegeman
 ! Modify call to init_pt_anomaly
+!
+! 2018-10-19 cbegeman
+! Fixed bug by defining ngp* variables before call to init_slope
 ! 
 ! Former revisions:
 ! -----------------
@@ -1193,6 +1196,142 @@
     sums_wsts_bc_l     = 0.0_wp
 
 !
+!-- Before initializing further modules, compute total sum of active mask 
+!-- grid points and the mean surface level height for each statistic region.
+!-- ngp_2dh: number of grid points of a horizontal cross section through the
+!--          total domain
+!-- ngp_3d:  number of grid points of the total domain
+    ngp_2dh_outer_l   = 0
+    ngp_2dh_outer     = 0
+    ngp_2dh_s_inner_l = 0
+    ngp_2dh_s_inner   = 0
+    ngp_2dh_l         = 0
+    ngp_2dh           = 0
+    ngp_3d_inner_l    = 0.0_wp
+    ngp_3d_inner      = 0
+    ngp_3d            = 0
+    ngp_sums          = ( nz + 2 ) * ( pr_palm + max_pr_user )
+
+    mean_surface_level_height   = 0.0_wp
+    mean_surface_level_height_l = 0.0_wp
+!
+!-- Pre-set masks for regional statistics. Default is the total model domain.
+!-- Ghost points are excluded because counting values at the ghost boundaries
+!-- would bias the statistics
+    rmask = 1.0_wp
+    rmask(:,nxlg:nxl-1,:) = 0.0_wp;  rmask(:,nxr+1:nxrg,:) = 0.0_wp
+    rmask(nysg:nys-1,:,:) = 0.0_wp;  rmask(nyn+1:nyng,:,:) = 0.0_wp
+!
+!-- User-defined initializing actions
+    CALL user_init
+!
+!-- To do: New concept for these non-topography grid points!
+    DO  sr = 0, statistic_regions
+       DO  i = nxl, nxr
+          DO  j = nys, nyn
+             IF ( rmask(j,i,sr) == 1.0_wp )  THEN
+!
+!--             All xy-grid points
+                ngp_2dh_l(sr) = ngp_2dh_l(sr) + 1
+!
+!--             Determine mean surface-level height. In case of downward-
+!--             facing walls are present, more than one surface level exist.
+!--             In this case, use the lowest surface-level height. 
+                IF ( surf_def_h(0)%start_index(j,i) <=                         &
+                     surf_def_h(0)%end_index(j,i) )  THEN
+                   m = surf_def_h(0)%start_index(j,i)
+                   k = surf_def_h(0)%k(m)
+                   mean_surface_level_height_l(sr) =                           &
+                                       mean_surface_level_height_l(sr) + zw(k-1)
+                ENDIF
+                IF ( surf_lsm_h%start_index(j,i) <=                            &
+                     surf_lsm_h%end_index(j,i) )  THEN
+                   m = surf_lsm_h%start_index(j,i)
+                   k = surf_lsm_h%k(m)
+                   mean_surface_level_height_l(sr) =                           &
+                                       mean_surface_level_height_l(sr) + zw(k-1)
+                ENDIF
+                IF ( surf_usm_h%start_index(j,i) <=                            &
+                     surf_usm_h%end_index(j,i) )  THEN
+                   m = surf_usm_h%start_index(j,i)
+                   k = surf_usm_h%k(m)
+                   mean_surface_level_height_l(sr) =                           &
+                                       mean_surface_level_height_l(sr) + zw(k-1)
+                ENDIF
+
+                k_surf = k - 1
+
+                DO  k = nzb, nzt+1
+!
+!--                xy-grid points above topography
+                   ngp_2dh_outer_l(k,sr) = ngp_2dh_outer_l(k,sr)     +         &
+                                  MERGE( 1, 0, BTEST( wall_flags_0(k,j,i), 24 ) )
+
+                   ngp_2dh_s_inner_l(k,sr) = ngp_2dh_s_inner_l(k,sr) +         &
+                                  MERGE( 1, 0, BTEST( wall_flags_0(k,j,i), 22 ) )
+
+                ENDDO
+!
+!--             All grid points of the total domain above topography
+                ngp_3d_inner_l(sr) = ngp_3d_inner_l(sr) + ( nz - k_surf + 2 )
+
+
+
+             ENDIF
+          ENDDO
+       ENDDO
+    ENDDO
+!
+!-- Initialize arrays encompassing number of grid-points in inner and outer
+!-- domains, statistic regions, etc. Mainly used for horizontal averaging
+!-- of turbulence statistics. Please note, user_init must be called before
+!-- doing this.   
+    sr = statistic_regions + 1
+#if defined( __parallel )
+    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
+    CALL MPI_ALLREDUCE( ngp_2dh_l(0), ngp_2dh(0), sr, MPI_INTEGER, MPI_SUM,    &
+                        comm2d, ierr )
+    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
+    CALL MPI_ALLREDUCE( ngp_2dh_outer_l(0,0), ngp_2dh_outer(0,0), (nz+2)*sr,   &
+                        MPI_INTEGER, MPI_SUM, comm2d, ierr )
+    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
+    CALL MPI_ALLREDUCE( ngp_2dh_s_inner_l(0,0), ngp_2dh_s_inner(0,0),          &
+                        (nz+2)*sr, MPI_INTEGER, MPI_SUM, comm2d, ierr )
+    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
+    CALL MPI_ALLREDUCE( ngp_3d_inner_l(0), ngp_3d_inner_tmp(0), sr, MPI_REAL,  &
+                        MPI_SUM, comm2d, ierr )
+    ngp_3d_inner = INT( ngp_3d_inner_tmp, KIND = SELECTED_INT_KIND( 18 ) )
+    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
+    CALL MPI_ALLREDUCE( mean_surface_level_height_l(0),                        &
+                        mean_surface_level_height(0), sr, MPI_REAL,            &
+                        MPI_SUM, comm2d, ierr )
+    mean_surface_level_height = mean_surface_level_height / REAL( ngp_2dh )
+#else
+    ngp_2dh         = ngp_2dh_l
+    ngp_2dh_outer   = ngp_2dh_outer_l
+    ngp_2dh_s_inner = ngp_2dh_s_inner_l
+    ngp_3d_inner    = INT( ngp_3d_inner_l, KIND = SELECTED_INT_KIND( 18 ) )
+    mean_surface_level_height = mean_surface_level_height_l / REAL( ngp_2dh_l )
+#endif
+
+    ngp_3d = INT ( ngp_2dh, KIND = SELECTED_INT_KIND( 18 ) ) * &
+             INT ( (nz + 2 ), KIND = SELECTED_INT_KIND( 18 ) )
+
+!
+!-- Set a lower limit of 1 in order to avoid zero divisions in flow_statistics,
+!-- buoyancy, etc. A zero value will occur for cases where all grid points of
+!-- the respective subdomain lie below the surface topography
+    ngp_2dh_outer   = MAX( 1, ngp_2dh_outer(:,:)   ) 
+    ngp_3d_inner    = MAX( INT(1, KIND = SELECTED_INT_KIND( 18 )),             &
+                           ngp_3d_inner(:) )
+    ngp_2dh_s_inner = MAX( 1, ngp_2dh_s_inner(:,:) ) 
+
+    DEALLOCATE( mean_surface_level_height_l, ngp_2dh_l, ngp_2dh_outer_l,       &
+                ngp_3d_inner_l, ngp_3d_inner_tmp )
+
+    CALL location_message('Initialize model variables',.TRUE.)
+
+!
 !-- Initialize model variables
     IF ( TRIM( initializing_actions ) /= 'read_restart_data'  .AND.            &
          TRIM( initializing_actions ) /= 'cyclic_fill' )  THEN
@@ -2204,140 +2343,6 @@
           IF ( surf_usm_h%ns    >= 1 )  CALL disturb_heatflux( surf_usm_h    )
        ENDIF
     ENDIF
-
-!
-!-- Before initializing further modules, compute total sum of active mask 
-!-- grid points and the mean surface level height for each statistic region.
-!-- ngp_2dh: number of grid points of a horizontal cross section through the
-!--          total domain
-!-- ngp_3d:  number of grid points of the total domain
-    ngp_2dh_outer_l   = 0
-    ngp_2dh_outer     = 0
-    ngp_2dh_s_inner_l = 0
-    ngp_2dh_s_inner   = 0
-    ngp_2dh_l         = 0
-    ngp_2dh           = 0
-    ngp_3d_inner_l    = 0.0_wp
-    ngp_3d_inner      = 0
-    ngp_3d            = 0
-    ngp_sums          = ( nz + 2 ) * ( pr_palm + max_pr_user )
-
-    mean_surface_level_height   = 0.0_wp
-    mean_surface_level_height_l = 0.0_wp
-!
-!-- Pre-set masks for regional statistics. Default is the total model domain.
-!-- Ghost points are excluded because counting values at the ghost boundaries
-!-- would bias the statistics
-    rmask = 1.0_wp
-    rmask(:,nxlg:nxl-1,:) = 0.0_wp;  rmask(:,nxr+1:nxrg,:) = 0.0_wp
-    rmask(nysg:nys-1,:,:) = 0.0_wp;  rmask(nyn+1:nyng,:,:) = 0.0_wp
-!
-!-- User-defined initializing actions
-    CALL user_init
-!
-!-- To do: New concept for these non-topography grid points!
-    DO  sr = 0, statistic_regions
-       DO  i = nxl, nxr
-          DO  j = nys, nyn
-             IF ( rmask(j,i,sr) == 1.0_wp )  THEN
-!
-!--             All xy-grid points
-                ngp_2dh_l(sr) = ngp_2dh_l(sr) + 1
-!
-!--             Determine mean surface-level height. In case of downward-
-!--             facing walls are present, more than one surface level exist.
-!--             In this case, use the lowest surface-level height. 
-                IF ( surf_def_h(0)%start_index(j,i) <=                         &
-                     surf_def_h(0)%end_index(j,i) )  THEN
-                   m = surf_def_h(0)%start_index(j,i)
-                   k = surf_def_h(0)%k(m)
-                   mean_surface_level_height_l(sr) =                           &
-                                       mean_surface_level_height_l(sr) + zw(k-1)
-                ENDIF
-                IF ( surf_lsm_h%start_index(j,i) <=                            &
-                     surf_lsm_h%end_index(j,i) )  THEN
-                   m = surf_lsm_h%start_index(j,i)
-                   k = surf_lsm_h%k(m)
-                   mean_surface_level_height_l(sr) =                           &
-                                       mean_surface_level_height_l(sr) + zw(k-1)
-                ENDIF
-                IF ( surf_usm_h%start_index(j,i) <=                            &
-                     surf_usm_h%end_index(j,i) )  THEN
-                   m = surf_usm_h%start_index(j,i)
-                   k = surf_usm_h%k(m)
-                   mean_surface_level_height_l(sr) =                           &
-                                       mean_surface_level_height_l(sr) + zw(k-1)
-                ENDIF
-
-                k_surf = k - 1
-
-                DO  k = nzb, nzt+1
-!
-!--                xy-grid points above topography
-                   ngp_2dh_outer_l(k,sr) = ngp_2dh_outer_l(k,sr)     +         &
-                                  MERGE( 1, 0, BTEST( wall_flags_0(k,j,i), 24 ) )
-
-                   ngp_2dh_s_inner_l(k,sr) = ngp_2dh_s_inner_l(k,sr) +         &
-                                  MERGE( 1, 0, BTEST( wall_flags_0(k,j,i), 22 ) )
-
-                ENDDO
-!
-!--             All grid points of the total domain above topography
-                ngp_3d_inner_l(sr) = ngp_3d_inner_l(sr) + ( nz - k_surf + 2 )
-
-
-
-             ENDIF
-          ENDDO
-       ENDDO
-    ENDDO
-!
-!-- Initialize arrays encompassing number of grid-points in inner and outer
-!-- domains, statistic regions, etc. Mainly used for horizontal averaging
-!-- of turbulence statistics. Please note, user_init must be called before
-!-- doing this.   
-    sr = statistic_regions + 1
-#if defined( __parallel )
-    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-    CALL MPI_ALLREDUCE( ngp_2dh_l(0), ngp_2dh(0), sr, MPI_INTEGER, MPI_SUM,    &
-                        comm2d, ierr )
-    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-    CALL MPI_ALLREDUCE( ngp_2dh_outer_l(0,0), ngp_2dh_outer(0,0), (nz+2)*sr,   &
-                        MPI_INTEGER, MPI_SUM, comm2d, ierr )
-    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-    CALL MPI_ALLREDUCE( ngp_2dh_s_inner_l(0,0), ngp_2dh_s_inner(0,0),          &
-                        (nz+2)*sr, MPI_INTEGER, MPI_SUM, comm2d, ierr )
-    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-    CALL MPI_ALLREDUCE( ngp_3d_inner_l(0), ngp_3d_inner_tmp(0), sr, MPI_REAL,  &
-                        MPI_SUM, comm2d, ierr )
-    ngp_3d_inner = INT( ngp_3d_inner_tmp, KIND = SELECTED_INT_KIND( 18 ) )
-    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-    CALL MPI_ALLREDUCE( mean_surface_level_height_l(0),                        &
-                        mean_surface_level_height(0), sr, MPI_REAL,            &
-                        MPI_SUM, comm2d, ierr )
-    mean_surface_level_height = mean_surface_level_height / REAL( ngp_2dh )
-#else
-    ngp_2dh         = ngp_2dh_l
-    ngp_2dh_outer   = ngp_2dh_outer_l
-    ngp_2dh_s_inner = ngp_2dh_s_inner_l
-    ngp_3d_inner    = INT( ngp_3d_inner_l, KIND = SELECTED_INT_KIND( 18 ) )
-    mean_surface_level_height = mean_surface_level_height_l / REAL( ngp_2dh_l )
-#endif
-
-    ngp_3d = INT ( ngp_2dh, KIND = SELECTED_INT_KIND( 18 ) ) * &
-             INT ( (nz + 2 ), KIND = SELECTED_INT_KIND( 18 ) )
-
-!
-!-- Set a lower limit of 1 in order to avoid zero divisions in flow_statistics,
-!-- buoyancy, etc. A zero value will occur for cases where all grid points of
-!-- the respective subdomain lie below the surface topography
-    ngp_2dh_outer   = MAX( 1, ngp_2dh_outer(:,:)   ) 
-    ngp_3d_inner    = MAX( INT(1, KIND = SELECTED_INT_KIND( 18 )),             &
-                           ngp_3d_inner(:) )
-    ngp_2dh_s_inner = MAX( 1, ngp_2dh_s_inner(:,:) ) 
-
-    DEALLOCATE( mean_surface_level_height_l, ngp_2dh_l, ngp_2dh_outer_l,       &
-                ngp_3d_inner_l, ngp_3d_inner_tmp )
 
 !
 !-- Initialize nudging if required

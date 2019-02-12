@@ -1746,17 +1746,19 @@
 !
 !--    Set the reference state to be used in the buoyancy terms (for ocean runs
 !--    the reference state will be set (overwritten) in init_ocean)
-       IF ( use_single_reference_value )  THEN
-          IF (  .NOT.  humidity )  THEN
-             ref_state(:) = pt_reference
+       IF ( .NOT. ocean ) THEN
+          IF ( use_single_reference_value )  THEN
+             IF (  .NOT.  humidity )  THEN
+                ref_state(:) = pt_reference
+             ELSE
+                ref_state(:) = vpt_reference
+             ENDIF
           ELSE
-             ref_state(:) = vpt_reference
-          ENDIF
-       ELSE
-          IF (  .NOT.  humidity )  THEN
-             ref_state(:) = pt_init(:)
-          ELSE
-             ref_state(:) = vpt(:,nys,nxl)
+             IF (  .NOT.  humidity )  THEN
+                ref_state(:) = pt_init(:)
+             ELSE
+                ref_state(:) = vpt(:,nys,nxl)
+             ENDIF
           ENDIF
        ENDIF
 

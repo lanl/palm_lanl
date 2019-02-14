@@ -101,7 +101,7 @@
         ONLY:  pt, rho_ocean, sa, total_2d_a, total_2d_o, u, v
 
     USE cloud_parameters,                                                      &
-        ONLY:  cp, l_v
+        ONLY:  cp, cpa, l_v
 
     USE constants,                                                             &
         ONLY:  cpw
@@ -351,32 +351,6 @@
 
        ENDIF
 
-!--    Receive rho_ref_zu(nzt) from the ocean
-       !IF ( myid == 0 )  THEN
-       !   CALL MPI_RECV( rho_ocean_ref, 1, MPI_REAL, &
-       !                     target_id, 19, comm_inter, status, ierr )
-       !ENDIF
-
-!--    Send rho_ref_zu(nzb) to the ocean
-       !CALL MPI_SEND( rho_ref_zu(nzb), 1, MPI_REAL, target_id, &
-       !               20, comm_inter, ierr )
-
-       !CALL MPI_BARRIER( comm2d, ierr )
-       !CALL MPI_BCAST( rho_ocean_ref, 1, MPI_REAL, 0, comm2d, &
-       !                   ierr )
-
-!
-!--    Conversions of fluxes received from ocean
-
-       DO  m = 1, surf_def_h(0)%ns
-
-          surf_def_h(2)%shf(m) = surf_def_h(2)%shf(m) * cpw / cp
-          !surf_def_h(2)%ssws(m) = surf_def_h(2)%ssws(m)
-          !surf_def_h(2)%usws(m) = surf_def_h(2)%usws(m)
-          !surf_def_h(2)%vsws(m) = surf_def_h(2)%vsws(m)
-
-       ENDDO
-
     ELSEIF ( coupling_mode == 'ocean_to_atmosphere' )  THEN
 
 !
@@ -492,19 +466,6 @@
         
        ENDIF
 
-!--    Send rho_ref_zu(nzt) to the atmosphere
-       !CALL MPI_SEND( rho_ref_zu(nzt), 1, MPI_REAL, target_id, &
-       !               19, comm_inter, ierr )
-
-!--    Receive rho_ref_zu(nzb) from the atmosphere
-       !IF ( myid == 0 )  THEN
-       !   CALL MPI_RECV( rho_air_ref, 1, MPI_REAL, &
-       !                     target_id, 20, comm_inter, status, ierr )
-       !ENDIF
-       !CALL MPI_BARRIER( comm2d, ierr )
-       !CALL MPI_BCAST( rho_air_ref, 1, MPI_REAL, 0, comm2d, &
-       !                   ierr )
-
 !
 !--    Conversions of fluxes received from atmosphere
        IF ( humidity_remote )  THEN
@@ -517,7 +478,7 @@
              j = surf_def_h(2)%j(m)
              
              surf_def_h(2)%shf(m) = surf_def_h(2)%shf(m) +                     &
-                                    surf_def_h(2)%qsws(m) * l_v / cp
+                                    surf_def_h(2)%qsws(m) * l_v / cpa
 !
 !--          ...and convert it to a salinity flux at the sea surface (top)
 !--          following Steinhorn (1991), JPO 21, pp. 1681-1683:
@@ -533,7 +494,7 @@
 !
 !--    Adjust the kinematic heat flux with respect to heat capacities
        DO  m = 1, surf_def_h(2)%ns
-          surf_def_h(2)%shf(m) = surf_def_h(2)%shf(m) * cp / cpw
+          surf_def_h(2)%shf(m) = surf_def_h(2)%shf(m) * cpa / cpw
        ENDDO
 
     ENDIF ! ocean-to-atmosphere

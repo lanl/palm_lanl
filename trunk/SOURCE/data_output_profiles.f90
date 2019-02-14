@@ -148,7 +148,6 @@
        ENDIF
     ENDIF
 
-    
     IF ( myid == 0 )  THEN
 
 !

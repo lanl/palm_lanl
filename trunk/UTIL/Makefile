@@ -49,8 +49,8 @@ CFLAGS = -O
 F90 = mpif90
 F90_SER = mpif90
 COPT = -cpp -DMPI_REAL=MPI_DOUBLE_PRECISION -DMPI_2REAL=MPI_2DOUBLE_PRECISION -D__netcdf
-F90FLAGS = -check all -r8 -convert little_endian
-LDFLAGS  = -check all -r8 -convert little_endian
+F90FLAGS = 
+LDFLAGS  = 
 
 #PKG_CONFIG      := PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1 pkg-config
 #NETCDF_F90FLAGS != $(PKG_CONFIG) --cflags netcdf-fortran

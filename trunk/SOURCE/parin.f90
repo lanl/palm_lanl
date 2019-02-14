@@ -890,7 +890,6 @@
 !--       NAMELIST-file is not needed anymore
           CALL close_file( 11 )
 
-          print *, 'dz = ',dz
        ENDIF
 #if defined( __parallel )
        CALL MPI_BARRIER( MPI_COMM_WORLD, ierr )

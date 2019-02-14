@@ -4,6 +4,6 @@
 
 PROG=palm 
 F90=mpif90
-COPT= -Mpreprocess -DMPI_REAL=MPI_DOUBLE_PRECISION -DMPI_2REAL=MPI_2DOUBLE_PRECISION -D__parallel -D__nopointer -D__openacc -D__lc
+COPT= -Mpreprocess -DMPI_REAL=MPI_DOUBLE_PRECISION -DMPI_2REAL=MPI_2DOUBLE_PRECISION -D__parallel -D__nopointer -D__openacc -D__lc -D__netcdf
 F90FLAGS= -acc -ta=tesla  -Minfo=acc -fastsse -Mcuda -I/usr/projects/hpcsoft/toss3/common/netcdf/4.4.0_pgi-17.10/include
 LDFLAGS= -acc -ta=tesla -Minfo=accel -fastsse -Mcuda -L/usr/projects/hpcsoft/toss3/common/netcdf/4.4.0_pgi-17.10/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5

@@ -571,7 +571,6 @@
 
        ENDIF
 
-       DEALLOCATE( sum, pe_max, pe_min, pe_rms, pe_log_points )
 
        CALL location_message( 'finished', .TRUE. )
 

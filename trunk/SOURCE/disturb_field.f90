@@ -116,6 +116,7 @@
     INTEGER(iwp) ::  i       !< index variable
     INTEGER(iwp) ::  j       !< index variable
     INTEGER(iwp) ::  k       !< index variable
+    INTEGER(iwp) ::  iskip, jskip, istop, jstop
 
     REAL(wp) ::  randomnumber  !<
     
@@ -135,26 +136,43 @@
     ALLOCATE( dist2(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
     dist1 = 0.0_wp
     dist2 = 0.0_wp
-!    disturbance_level_ind_b = nzt - 12 
-!    disturbance_level_ind_t = nzt
+    disturbance_level_ind_b = nzt - 6
+    disturbance_level_ind_t = nzt 
 
 
 !
 !-- Create the random perturbation and store it on temporary array
     IF ( random_generator == 'numerical-recipes' )  THEN
-       DO  i = dist_nxl(dist_range), dist_nxr(dist_range)
-          DO  j = dist_nys(dist_range), dist_nyn(dist_range)
-             DO  k = disturbance_level_ind_b, disturbance_level_ind_t
-                randomnumber = 3.0_wp * disturbance_amplitude *                &
-                               ( random_function( iran ) - 0.5_wp )
-                IF ( nxl <= i  .AND.  nxr >= i  .AND.  nys <= j  .AND.         &
-                     nyn >= j )                                                &
-                THEN
-                   dist1(k,j,i) = randomnumber
-                ENDIF
-             ENDDO
-          ENDDO
-       ENDDO
+!       DO  i = dist_nxl(dist_range), dist_nxr(dist_range)
+!          DO  j = dist_nys(dist_range), dist_nyn(dist_range)
+!             DO  k = disturbance_level_ind_b, disturbance_level_ind_t
+!                randomnumber = 3.0_wp * disturbance_amplitude *                &
+!                               ( random_function( iran ) - 0.5_wp )
+!                IF ( nxl <= i  .AND.  nxr >= i  .AND.  nys <= j  .AND.         &
+!                     nyn >= j )                                                &
+!                THEN
+!                   dist1(k,j,i) = randomnumber
+!                ENDIF
+!             ENDDO
+!         ENDDO
+!       ENDDO
+
+       istop = (dist_nxr(dist_range) - dist_nxl(dist_range) + 1)/8
+       jstop = (dist_nys(dist_range) - dist_nyn(dist_range) + 1)/8
+       do iskip = dist_nxl(dist_range), istop
+         do jskip = dist_nys(dist_range), jstop
+           DO k = disturbance_level_ind_b, disturbance_level_ind_t
+             randomnumber = 3.0_wp * disturbance_amplitude *                &
+                      ( random_function( iran ) - 0.5_wp )
+              do i = iskip,iskip+8
+                 do j = jskip,jskip+8
+                    dist1(k,j,i) = randomnumber
+                 enddo
+              enddo
+           enddo
+         enddo
+       enddo
+
     ELSEIF ( random_generator == 'random-parallel' )  THEN
        DO  i = dist_nxl(dist_range), dist_nxr(dist_range)
           DO  j = dist_nys(dist_range), dist_nyn(dist_range)
@@ -193,45 +211,45 @@
 !-- Exchange of ghost points for the random perturbation
 
     CALL exchange_horiz( dist1, nbgp )
-!
+
 !-- Applying the Shuman filter in order to smooth the perturbations.
 !-- Neighboured grid points in all three directions are used for the
 !-- filter operation.
 !-- Loop has been splitted to make runs reproducible on HLRN systems using
 !-- compiler option -O3
 
-     DO  i = nxl, nxr
-        DO  j = nys, nyn
-          DO  k = disturbance_level_ind_b-1, disturbance_level_ind_t+1
-             dist2(k,j,i) = ( dist1(k,j,i-1) + dist1(k,j,i+1)                  &
-                            + dist1(k,j+1,i) + dist1(k+1,j,i)                  &
-                            ) / 12.0_wp
-          ENDDO
-          DO  k = disturbance_level_ind_b-1, disturbance_level_ind_t+1
-              dist2(k,j,i) = dist2(k,j,i) + ( dist1(k,j-1,i) + dist1(k-1,j,i)  &
-                            + 6.0_wp * dist1(k,j,i)                            &
-                            ) / 12.0_wp
-          ENDDO
-        ENDDO
-     ENDDO
+!     DO  i = nxl, nxr
+!        DO  j = nys, nyn
+!          DO  k = disturbance_level_ind_b-1, disturbance_level_ind_t+1
+!             dist2(k,j,i) = ( dist1(k,j,i-1) + dist1(k,j,i+1)                  &
+!                            + dist1(k,j+1,i) + dist1(k+1,j,i)                  &
+!                            ) / 12.0_wp
+!          ENDDO
+!          DO  k = disturbance_level_ind_b-1, disturbance_level_ind_t+1
+!              dist2(k,j,i) = dist2(k,j,i) + ( dist1(k,j-1,i) + dist1(k-1,j,i)  &
+!                            + 6.0_wp * dist1(k,j,i)                            &
+!                            ) / 12.0_wp
+!          ENDDO
+!        ENDDO
+!     ENDDO
 
 !
 !-- Exchange of ghost points for the filtered perturbation.
 !-- Afterwards, filter operation and exchange of ghost points are repeated.
-    CALL exchange_horiz( dist2, nbgp )
+!    CALL exchange_horiz( dist2, nbgp )
 
-    DO  i = nxl, nxr
-       DO  j = nys, nyn
-          DO  k = disturbance_level_ind_b-2, disturbance_level_ind_t+2
-             dist1(k,j,i) = ( dist2(k,j,i-1) + dist2(k,j,i+1) + dist2(k,j-1,i) &
-                            + dist2(k,j+1,i) + dist2(k+1,j,i) + dist2(k-1,j,i) &
-                            + 6.0_wp * dist2(k,j,i)                            &
-                            ) / 12.0_wp
-          ENDDO
-       ENDDO
-    ENDDO
+ !   DO  i = nxl, nxr
+ !      DO  j = nys, nyn
+ !         DO  k = disturbance_level_ind_b-2, disturbance_level_ind_t+2
+ !            dist1(k,j,i) = ( dist2(k,j,i-1) + dist2(k,j,i+1) + dist2(k,j-1,i) &
+ !                           + dist2(k,j+1,i) + dist2(k+1,j,i) + dist2(k-1,j,i) &
+ !                           + 6.0_wp * dist2(k,j,i)                            &
+ !                           ) / 12.0_wp
+ !         ENDDO
+ !      ENDDO
+ !   ENDDO
 
-    CALL exchange_horiz( dist1, nbgp )
+ !   CALL exchange_horiz( dist1, nbgp )
 
 !
 !-- Remove perturbations below topography (including one gridpoint above it
@@ -253,7 +271,7 @@
 !-- Random perturbation is added to the array to be disturbed.
     DO  i = nxlg, nxrg
        DO  j = nysg, nyng
-          DO  k = disturbance_level_ind_b-2, disturbance_level_ind_t+2
+          DO  k = disturbance_level_ind_b, disturbance_level_ind_t
              field(k,j,i) = field(k,j,i) + dist1(k,j,i)
           ENDDO
        ENDDO

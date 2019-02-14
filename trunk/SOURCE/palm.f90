@@ -140,10 +140,8 @@
 !
     CALL MPI_COMM_SIZE( MPI_COMM_WORLD, numprocs, ierr )
     CALL MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
-!
+    !
 #endif
-
-!   f_mpas = 1e-4
 !   uwflux = 0.0
 !   vwflux = 0.0
 !   wsflux = 1e-4
@@ -271,25 +269,6 @@
 !-- Take final CPU-time for CPU-time analysis
     CALL cpu_log( log_point(1), 'total', 'stop' )
     CALL cpu_statistics
-
-    DEALLOCATE( pt_init, q_init, s_init, ref_state, sa_init, ug,         &
-                       u_init, v_init, vg, hom, hom_sum )
-
-   deallocate(hor_index_bounds)
-
-    deallocate(hyp)
-    deallocate(ddzu, ddzw, dd2zu, dzu, dzw, zw, ddzu_pres, nzb_s_inner,  &
-               nzb_s_outer, nzb_u_inner, nzb_u_outer, nzb_v_inner,       &
-               nzb_v_outer, nzb_w_inner, nzb_w_outer, nzb_diff_s_inner,  &
-               nzb_diff_s_outer, wall_flags_0, advc_flags_1, advc_flags_2)
-
-    call deallocate_bc
-    call deallocate_3d_variables
-    call tcm_deallocate_arrays
-    call deallocate_random_generator
-    call tridia_deallocate
-
-    close(18)
 
 #if defined( __parallel )
     CALL MPI_FINALIZE( ierr )

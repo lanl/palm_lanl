@@ -122,7 +122,7 @@ CFLAGS = -O
 
 include MAKE.inc
 
-COPT= -cpp -D__netcdf
+
 
 .SUFFIXES:
 .SUFFIXES: .o .f90

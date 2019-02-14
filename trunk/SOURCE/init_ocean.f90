@@ -84,7 +84,7 @@
 
 
     USE arrays_3d,                                                             &
-        ONLY:  dzu, hyp, pt_init, ref_state, rho_ref_zu, rho_ref_zw,           &
+        ONLY:  dzu, dzw, hyp, pt_init, ref_state, rho_ref_zu, rho_ref_zw,      &
                sa_init, zu, zw
 
     USE cloud_parameters,                                                      &
@@ -167,7 +167,7 @@
 
        DO  k = nzt, nzb, -1
           hyp(k) = hyp(k+1) + g * 0.5_wp * ( rho_ref_zw(k)                 &
-                                           + rho_ref_zw(k+1) ) * dzu(k+1)
+                                           + rho_ref_zw(k+1) ) * dzw(k+1)
        ENDDO
 
     ENDDO
@@ -177,10 +177,10 @@
     rho_reference = 0.0_wp
     DO  k = nzt, nzb, -1
        rho_ref_zw(k) = eqn_state_seawater_func( hyp(k), pt_l, sa_l )
-       rho_reference = rho_reference + rho_ref_zw(k) * dzu(k+1)
+       rho_reference = rho_reference + rho_ref_zw(k) * dzw(k+1)
        rho_ref_zu(k) = eqn_state_seawater_func( 0.5_wp * ( hyp(k) + hyp(k+1) ), pt_init(k), sa_init(k) )
     ENDDO
-    rho_reference = rho_reference / ( zu(nzt+1) - zu(nzb) )
+    rho_reference = rho_reference / ( zw(nzt) - zw(nzb) + dzw(nzb) )
 
 !
 !-- Calculate the reference potential density
@@ -192,7 +192,7 @@
        prho_reference = prho_reference + dzu(k+1) * &
                         eqn_state_seawater_func( 0.0_wp, pt_l, sa_l )
     ENDDO
-    prho_reference = prho_reference / ( zu(nzt+1) - zu(nzb) )
+    prho_reference = prho_reference / ( zw(nzt) - zw(nzb) + dzw(nzb) )
 
 !
 !-- Calculate the 3d array of initial in situ and potential density,

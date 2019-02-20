@@ -1025,6 +1025,7 @@
     USE kinds
 
     REAL(wp) ::  cp = 1005.0_wp                            !< heat capacity of dry air (J kg-1 K-1)
+    REAL(wp) ::  cpa = 1005.0_wp                           !< heat capacity of dry air (J kg-1 K-1)
     REAL(wp) ::  l_v = 2.5E+06_wp                          !< latent heat of vaporization (J kg-1)
     REAL(wp) ::  l_d_cp                                    !< l_v / cp
     REAL(wp) ::  l_d_r                                     !< l_v / r_d

@@ -4355,11 +4355,18 @@
        CALL message( 'check_parameters', 'PA0150', 1, 2, 0, 6, 0 )
     ENDIF
     IF ( dp_external )  THEN
+       
+       ! Default for ocean is the whole domain
+       IF ( dp_level_b == 0.0_wp .AND. ocean ) THEN
+          dp_level_b = zu(nzt)
+       ENDIF
+
        IF ( dp_level_b < zu(nzb)  .OR.  dp_level_b > zu(nzt) )  THEN
           WRITE( message_string, * )  'dp_level_b = ', dp_level_b, ' is out ', &
                ' of range [zu(nzb), zu(nzt)]'
           CALL message( 'check_parameters', 'PA0151', 1, 2, 0, 6, 0 )
        ENDIF
+
        IF ( .NOT. ANY( dpdxy /= 0.0_wp ) )  THEN
           WRITE( message_string, * )  'dp_external is .TRUE. but dpdxy is ze', &
                'ro, i.e. the external pressure gradient will not be applied'

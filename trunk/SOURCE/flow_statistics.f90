@@ -442,12 +442,16 @@
                               * momentumflux_output_conversion ! w*u*
              sums_l(:,15,i) = sums_wsvs_ws_l(:,i)                              &
                               * momentumflux_output_conversion ! w*v*
-             sums_l(:,30,i) = sums_us2_ws_l(:,i)               ! u*2 
-             sums_l(:,31,i) = sums_vs2_ws_l(:,i)               ! v*2 
-             sums_l(:,32,i) = sums_ws2_ws_l(:,i)               ! w*2 
+             sums_l(:,30,i) = sums_us2_ws_l(:,i)                               &
+                              * momentumflux_output_conversion ! u*2
+             sums_l(:,31,i) = sums_vs2_ws_l(:,i)                               &
+                              * momentumflux_output_conversion ! v*2
+             sums_l(:,32,i) = sums_ws2_ws_l(:,i)                               &
+                              * momentumflux_output_conversion ! w*2
              sums_l(:,34,i) = sums_l(:,34,i) + 0.5_wp *                        & 
                               ( sums_us2_ws_l(:,i) + sums_vs2_ws_l(:,i) +      &
-                                sums_ws2_ws_l(:,i) )            ! e*
+                                sums_ws2_ws_l(:,i) )                           &
+                              * momentumflux_output_conversion ! e*
           ENDDO
 
        ENDIF

@@ -2075,7 +2075,8 @@
                   + diss_r(k)                                                  &
                     *   ABS( u_comp(k) - 2.0_wp * hom(k,1,1,0)              )  &
                     / ( ABS( u_comp(k) - gu ) + 1.0E-20_wp                  )  &
-                  ) *   weight_substep(intermediate_timestep_count)
+                  ) * rho_ref_zw(k)                                            &
+                    * weight_substep(intermediate_timestep_count)
 !
 !--        Statistical Evaluation of w'u'.
            sums_wsus_ws_l(k,tn) = sums_wsus_ws_l(k,tn)                         &
@@ -2085,7 +2086,7 @@
                   + diss_t(k)                                                  &
                     *   ABS( w_comp(k) - 2.0_wp * hom(k,1,3,0)           )     &
                     / ( ABS( w_comp(k) ) + 1.0E-20_wp                    )     &
-                  ) *   weight_substep(intermediate_timestep_count)
+                  ) * weight_substep(intermediate_timestep_count)
        ENDDO
 
        DO  k = nzb_max+1, nzt
@@ -2181,7 +2182,7 @@
            diss_l_u(k,j,tn) = diss_r(k)
            flux_s_u(k,tn)   = flux_n(k)
            diss_s_u(k,tn)   = diss_n(k)
-!
+ !
 !--        Statistical Evaluation of u'u'. The factor has to be applied for
 !--        right evaluation when gallilei_trans = .T. .
            sums_us2_ws_l(k,tn) = sums_us2_ws_l(k,tn)                           &
@@ -2191,7 +2192,8 @@
                   + diss_r(k)                                                  &
                     *   ABS( u_comp(k) - 2.0_wp * hom(k,1,1,0)              )  &
                     / ( ABS( u_comp(k) - gu ) + 1.0E-20_wp                  )  &
-                  ) *   weight_substep(intermediate_timestep_count)
+                  ) * rho_ref_zw(k)                                            &
+                    * weight_substep(intermediate_timestep_count)
 !
 !--        Statistical Evaluation of w'u'.
            sums_wsus_ws_l(k,tn) = sums_wsus_ws_l(k,tn)                         &
@@ -2577,7 +2579,8 @@
                   + diss_n(k)                                                  &
                     *   ABS( v_comp(k) - 2.0_wp * hom(k,1,2,0)              )  &
                     / ( ABS( v_comp(k) - gv ) + 1.0E-20_wp                  )  &
-                  ) *   weight_substep(intermediate_timestep_count)
+                  ) * rho_ref_zw(k)                                            &
+                    * weight_substep(intermediate_timestep_count)
 !
 !--        Statistical Evaluation of w'u'.
            sums_wsvs_ws_l(k,tn) = sums_wsvs_ws_l(k,tn)                         &
@@ -2587,7 +2590,7 @@
                   + diss_t(k)                                                  &
                     *   ABS( w_comp(k) - 2.0_wp * hom(k,1,3,0)              )  &
                     / ( ABS( w_comp(k) ) + 1.0E-20_wp                       )  &
-                  ) *   weight_substep(intermediate_timestep_count)
+                  ) * weight_substep(intermediate_timestep_count)
 
        ENDDO
 
@@ -2649,7 +2652,7 @@
                      ) *                                                      &
                                 ( v(k+1,j,i)   - v(k,j,i)    )                &
               -      (  5.0_wp * ibit26 * adv_mom_5                           &
-                  +              ibit25 * adv_mom_3                           &
+                   +              ibit25 * adv_mom_3                           &
                      ) *                                                      &
                                 ( v(k_pp,j,i)  - v(k-1,j,i)  )                &
               +      (           ibit26 * adv_mom_5                           &
@@ -2696,7 +2699,8 @@
                   + diss_n(k)                                                  &
                     *   ABS( v_comp(k) - 2.0_wp * hom(k,1,2,0)              )  &
                     / ( ABS( v_comp(k) - gv ) + 1.0E-20_wp                  )  &
-                  ) *   weight_substep(intermediate_timestep_count)
+                  ) * rho_ref_zw(k)                                            &
+                    * weight_substep(intermediate_timestep_count)
 !
 !--        Statistical Evaluation of w'u'.
            sums_wsvs_ws_l(k,tn) = sums_wsvs_ws_l(k,tn)                         &
@@ -2706,7 +2710,7 @@
                   + diss_t(k)                                                  &
                     *   ABS( w_comp(k) - 2.0_wp * hom(k,1,3,0)              )  &
                     / ( ABS( w_comp(k) ) + 1.0E-20_wp                       )  &
-                  ) *   weight_substep(intermediate_timestep_count)
+                  ) * weight_substep(intermediate_timestep_count)
 
        ENDDO
        sums_vs2_ws_l(nzb,tn) = sums_vs2_ws_l(nzb+1,tn)
@@ -2986,7 +2990,7 @@
 !--       subscripts will be exceeded.
           ibit35 = IBITS(advc_flags_2(k,j,i),3,1)
           ibit34 = IBITS(advc_flags_2(k,j,i),2,1)
-          ibit33 = IBITS(advc_flags_2(k,j,i),1,1)
+          ibit33 =  IBITS(advc_flags_2(k,j,i),1,1)
 
           k_ppp = k + 3 * ibit35
           k_pp  = k + 2 * ( 1 - ibit33  )
@@ -3070,7 +3074,7 @@
           diss_l_w(k,j,tn) = diss_r(k)
           flux_s_w(k,tn)   = flux_n(k)
           diss_s_w(k,tn)   = diss_n(k)
-!
+! 
 !--       Statistical Evaluation of w'w'.
           sums_ws2_ws_l(k,tn)  = sums_ws2_ws_l(k,tn)                          &
                       + ( flux_t(k)                                           &
@@ -4113,7 +4117,8 @@
                   + diss_r(k)                                                  &
                     *   ABS( u_comp(k) - 2.0_wp * hom(k,1,1,0)              )  &
                     / ( ABS( u_comp(k) - gu ) + 1.0E-20_wp                  )  &
-                  ) *   weight_substep(intermediate_timestep_count)
+                  ) * rho_ref_zw(k)                                            &
+                    * weight_substep(intermediate_timestep_count)
 !
 !--             Statistical Evaluation of w'u'.
                 sums_wsus_ws_l(k,tn) = sums_wsus_ws_l(k,tn)                    &
@@ -4123,7 +4128,7 @@
                   + diss_t(k)                                                  &
                     *   ABS( w_comp - 2.0_wp * hom(k,1,3,0)              )     &
                     / ( ABS( w_comp ) + 1.0E-20_wp                       )     &
-                  ) *   weight_substep(intermediate_timestep_count)
+                  ) * weight_substep(intermediate_timestep_count)
 
              ENDDO
 
@@ -4223,7 +4228,8 @@
                   + diss_r(k)                                                  &
                     *   ABS( u_comp(k) - 2.0_wp * hom(k,1,1,0)              )  &
                     / ( ABS( u_comp(k) - gu ) + 1.0E-20_wp                  )  &
-                  ) *   weight_substep(intermediate_timestep_count)
+                  ) * rho_ref_zw(k)                                            &
+                    * weight_substep(intermediate_timestep_count)
 !
 !--             Statistical Evaluation of w'u'.
                 sums_wsus_ws_l(k,tn) = sums_wsus_ws_l(k,tn)                    &
@@ -4233,7 +4239,7 @@
                   + diss_t(k)                                                  &
                     *   ABS( w_comp - 2.0_wp * hom(k,1,3,0)              )     &
                     / ( ABS( w_comp ) + 1.0E-20_wp                       )     &
-                  ) *   weight_substep(intermediate_timestep_count)
+                  ) * weight_substep(intermediate_timestep_count)
              ENDDO
           ENDDO
        ENDDO
@@ -4604,7 +4610,8 @@
                +   diss_n(k)                                                   &
                     *   ABS( v_comp(k) - 2.0_wp * hom(k,1,2,0)              )  &
                     / ( ABS( v_comp(k) - gv ) + 1.0E-20_wp                  )  &
-                  ) *   weight_substep(intermediate_timestep_count)
+                  ) * rho_ref_zw(k)                                            &
+                    * weight_substep(intermediate_timestep_count)
 !
 !--             Statistical Evaluation of w'u'.
                 sums_wsvs_ws_l(k,tn) = sums_wsvs_ws_l(k,tn)                    &
@@ -4614,7 +4621,7 @@
                +   diss_t(k)                                                   &
                     *   ABS( w_comp - 2.0_wp * hom(k,1,3,0)              )     &
                     / ( ABS( w_comp ) + 1.0E-20_wp                       )     &
-                  ) *   weight_substep(intermediate_timestep_count)
+                  ) * weight_substep(intermediate_timestep_count)
 
              ENDDO
 
@@ -4717,7 +4724,8 @@
                +   diss_n(k)                                                   &
                     *   ABS( v_comp(k) - 2.0_wp * hom(k,1,2,0)              )  &
                     / ( ABS( v_comp(k) - gv ) + 1.0E-20_wp                  )  &
-                  ) *   weight_substep(intermediate_timestep_count)
+                  ) * rho_ref_zw(k)                                            &
+                    * weight_substep(intermediate_timestep_count)
 !
 !--             Statistical Evaluation of w'u'.
                 sums_wsvs_ws_l(k,tn) = sums_wsvs_ws_l(k,tn)                    &
@@ -4727,7 +4735,7 @@
                +   diss_t(k)                                                   &
                     *   ABS( w_comp - 2.0_wp * hom(k,1,3,0)              )     &
                     / ( ABS( w_comp ) + 1.0E-20_wp                       )     &
-                  ) *   weight_substep(intermediate_timestep_count)
+                  ) * weight_substep(intermediate_timestep_count)
 
              ENDDO
           ENDDO
@@ -5105,7 +5113,7 @@
                         + diss_t(k)                                           &
                        *   ABS( w_comp - 2.0_wp * hom(k,1,3,0)              ) &
                        / ( ABS( w_comp ) + 1.0E-20_wp                       ) &
-                        ) *   weight_substep(intermediate_timestep_count)
+                        ) * weight_substep(intermediate_timestep_count)
 
              ENDDO
 
@@ -5212,7 +5220,7 @@
                         + diss_t(k)                                           &
                        *   ABS( w_comp - 2.0_wp * hom(k,1,3,0)              ) &
                        / ( ABS( w_comp ) + 1.0E-20_wp                       ) &
-                        ) *   weight_substep(intermediate_timestep_count)
+                        ) * weight_substep(intermediate_timestep_count)
 
              ENDDO
           ENDDO

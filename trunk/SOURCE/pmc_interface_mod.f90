@@ -1425,7 +1425,7 @@
        CALL pmci_init_interp_tril
 !
 !--    Precompute the log-law correction index- and ratio-arrays 
-       IF ( constant_flux_layer )  THEN
+       IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
           CALL pmci_init_loglaw_correction
        ENDIF
 !
@@ -4031,7 +4031,8 @@ SUBROUTINE pmci_create_child_arrays( name, is, ie, js, je, nzc,n  )
 !--    made over horizontal wall surfaces in this phase. For the nest boundary
 !--    conditions, a corresponding correction is made for all vertical walls,
 !--    too.
-       IF ( constant_flux_layer .AND. ( var == 'u' .OR. var == 'v' ) )  THEN
+       IF ( .NOT. TRIM(constant_flux_layer) == 'none' .AND.                    &
+            ( var == 'u' .OR. var == 'v' )                  )  THEN
           z0_topo = roughness_length
           DO  i = ib, nxr
              DO  j = jb, nyn
@@ -5251,7 +5252,8 @@ SUBROUTINE pmci_create_child_arrays( name, is, ie, js, je, nzc,n  )
 !--   pmci_init_loglaw_correction.
 !
 !--   Solid surface below the node 
-      IF ( constant_flux_layer .AND. ( var == 'u' .OR. var == 'v' ) )  THEN
+      IF ( .NOT. TRIM(constant_flux_layer) == 'none' .AND.                     &
+           ( var == 'u' .OR. var == 'v' )                   )  THEN
          DO  j = nys, nyn
 !
 !--         Determine vertical index of topography top at grid point (j,i)
@@ -5274,7 +5276,8 @@ SUBROUTINE pmci_create_child_arrays( name, is, ie, js, je, nzc,n  )
 !--   valid anyway in such locations.
       IF ( topography /= 'flat' )  THEN
 
-         IF ( constant_flux_layer .AND. ( var == 'u' .OR. var == 'w' ) )  THEN           
+         IF ( .NOT. TRIM(constant_flux_layer) == 'none' .AND.                  &
+              ( var == 'u' .OR. var == 'w' )                 )  THEN           
 !
 !--         Solid surface only on south/north side of the node                   
             DO  j = nys, nyn
@@ -5297,7 +5300,7 @@ SUBROUTINE pmci_create_child_arrays( name, is, ie, js, je, nzc,n  )
          ENDIF
 !
 !--      Solid surface on both below and on south/north side of the node           
-         IF ( constant_flux_layer .AND. var == 'u' )  THEN
+         IF ( .NOT. TRIM(constant_flux_layer) == 'none' .AND. var == 'u' )  THEN
             DO  j = nys, nyn
                k = logc_kbounds(1,j)
                IF ( ( logc(2,k,j) /= 0 )  .AND.  ( logc(1,k,j) /= 0 ) )  THEN
@@ -5468,7 +5471,8 @@ SUBROUTINE pmci_create_child_arrays( name, is, ie, js, je, nzc,n  )
 !--   pmci_init_loglaw_correction.
 !
 !--   Solid surface below the node 
-      IF ( constant_flux_layer .AND. ( var == 'u'  .OR.  var == 'v' ) )  THEN           
+      IF ( .NOT. TRIM(constant_flux_layer) == 'none' .AND.                     &
+           ( var == 'u'  .OR.  var == 'v' )                )  THEN           
          DO  i = nxl, nxr
 !
 !--         Determine vertical index of topography top at grid point (j,i)
@@ -5492,7 +5496,8 @@ SUBROUTINE pmci_create_child_arrays( name, is, ie, js, je, nzc,n  )
 !--   locations.
       IF ( topography /= 'flat' )  THEN
 
-         IF ( constant_flux_layer .AND. ( var == 'v' .OR. var == 'w' ) )  THEN
+         IF ( .NOT. TRIM(constant_flux_layer) == 'none' .AND.                  &
+              ( var == 'v' .OR. var == 'w' )                  )  THEN
             DO  i = nxl, nxr
                DO  k = logc_kbounds(1,i), logc_kbounds(2,i)
 !
@@ -5515,7 +5520,7 @@ SUBROUTINE pmci_create_child_arrays( name, is, ie, js, je, nzc,n  )
          ENDIF
 !
 !--      Solid surface on both below and on left/right side of the node           
-         IF ( constant_flux_layer .AND. var == 'v' )  THEN
+         IF ( .NOT. TRIM(constant_flux_layer) == 'none' .AND. var == 'v' )  THEN
             DO  i = nxl, nxr
                k = logc_kbounds(1,i)
                IF ( ( logc(2,k,i) /= 0 )  .AND.  ( logc(1,k,i) /= 0 ) )  THEN

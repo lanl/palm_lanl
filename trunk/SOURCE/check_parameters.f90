@@ -1065,8 +1065,14 @@
        IF ( cloud_droplets )  THEN
           WRITE( action, '(A)' )  'cloud_droplets = .TRUE.'
        ENDIF
-       IF ( .NOT. constant_flux_layer )  THEN
-          WRITE( action, '(A)' )  'constant_flux_layer = .FALSE.'
+       IF ( TRIM(constant_flux_layer) == 'none' )  THEN
+          WRITE( action, '(A)' )  'constant_flux_layer = none '
+       ENDIF
+       IF ( TRIM(constant_flux_layer) == 'top' )  THEN
+          WRITE( action, '(A)' )  'constant_flux_layer = top '
+       ENDIF
+       IF ( TRIM(constant_flux_layer) == 'bottom' )  THEN
+          WRITE( action, '(A)' )  'constant_flux_layer = bottom '
        ENDIF
        IF ( action /= ' ' )  THEN
           message_string = 'a non-flat topography does not allow ' //          &
@@ -1924,7 +1930,8 @@
 !
 !-- In case of using a prandtl-layer, calculated (or prescribed) surface
 !-- fluxes have to be used in the diffusion-terms
-    IF ( constant_flux_layer )  use_surface_fluxes = .TRUE.
+    IF ( TRIM( constant_flux_layer ) == 'bottom' )  use_surface_fluxes = .TRUE.
+    IF ( TRIM( constant_flux_layer ) == 'top'    )  use_top_fluxes = .TRUE.
 
 !-- Check initial conditions for bubble case
     IF ( INDEX( initializing_actions, 'initialize_3D_bubble' ) /= 0 .OR.         &
@@ -2024,7 +2031,7 @@
        ibc_e_b = 1
     ELSEIF ( bc_e_b == '(u*)**2+neumann' )  THEN
        ibc_e_b = 2
-       IF ( .NOT. constant_flux_layer )  THEN
+       IF ( TRIM( constant_flux_layer ) == 'none' )  THEN
           bc_e_b = 'neumann'
           ibc_e_b = 1
           message_string = 'boundary condition bc_e_b changed to "' //         &
@@ -2034,6 +2041,25 @@
     ELSE
        message_string = 'unknown boundary condition: bc_e_b = "' //            &
                         TRIM( bc_e_b ) // '"'
+       CALL message( 'check_parameters', 'PA0058', 1, 2, 0, 6, 0 )
+    ENDIF
+
+!
+!-- Top boundary condition for the turbulent Kinetic energy
+    IF ( bc_e_t == 'neumann' )  THEN
+       ibc_e_t = 1
+    ELSEIF ( bc_e_t == '(u*)**2+neumann' )  THEN
+       ibc_e_t = 2
+       IF ( TRIM( constant_flux_layer ) == 'none' )  THEN
+          bc_e_t = 'neumann'
+          ibc_e_t = 1
+          message_string = 'boundary condition bc_e_t changed to "' //         &
+                           TRIM( bc_e_t ) // '"'
+          CALL message( 'check_parameters', 'PA0057', 0, 1, 0, 6, 0 )
+       ENDIF
+    ELSE
+       message_string = 'unknown boundary condition: bc_e_t = "' //            &
+                        TRIM( bc_e_t ) // '"'
        CALL message( 'check_parameters', 'PA0058', 1, 2, 0, 6, 0 )
     ENDIF
 
@@ -2303,10 +2329,10 @@
        ibc_uv_b = 0
     ELSEIF ( bc_uv_b == 'neumann' )  THEN
        ibc_uv_b = 1
-       IF ( constant_flux_layer )  THEN
+       IF ( TRIM( constant_flux_layer ) == 'bottom' )  THEN
           message_string = 'boundary condition: bc_uv_b = "' //                &
                TRIM( bc_uv_b ) // '" is not allowed with constant_flux_layer'  &
-               // ' = .TRUE.'
+               // ' = bottom'
           CALL message( 'check_parameters', 'PA0075', 1, 2, 0, 6, 0 )
        ENDIF
     ELSE
@@ -2608,7 +2634,7 @@
              dopr_index(i) = 12
              dopr_unit(i)  = TRIM ( momentumflux_output_unit )
              hom(:,2,12,:) = SPREAD( zw, 2, statistic_regions+1 )
-             IF ( constant_flux_layer )  hom(nzb,2,12,:) = zu(1)
+             IF ( TRIM(constant_flux_layer) == 'bottom' )  hom(nzb,2,12,:) = zu(1)
 
           CASE ( 'w*u*' )
              dopr_index(i) = 13
@@ -2619,7 +2645,7 @@
              dopr_index(i) = 14
              dopr_unit(i)  = TRIM ( momentumflux_output_unit )
              hom(:,2,14,:) = SPREAD( zw, 2, statistic_regions+1 )
-             IF ( constant_flux_layer )  hom(nzb,2,14,:) = zu(1)
+             IF ( TRIM(constant_flux_layer) == 'bottom' )  hom(nzb,2,14,:) = zu(1)
 
           CASE ( 'w*v*' )
              dopr_index(i) = 15
@@ -2645,13 +2671,13 @@
              dopr_index(i) = 19
              dopr_unit(i)  = TRIM ( momentumflux_output_unit )
              hom(:,2,19,:) = SPREAD( zw, 2, statistic_regions+1 )
-             IF ( constant_flux_layer )  hom(nzb,2,19,:) = zu(1)
+             IF ( TRIM(constant_flux_layer) == 'bottom' )  hom(nzb,2,19,:) = zu(1)
 
           CASE ( 'wv' )
              dopr_index(i) = 20
              dopr_unit(i)  = TRIM ( momentumflux_output_unit )
              hom(:,2,20,:) = SPREAD( zw, 2, statistic_regions+1 )
-             IF ( constant_flux_layer )  hom(nzb,2,20,:) = zu(1)
+             IF ( TRIM(constant_flux_layer) == 'bottom' )  hom(nzb,2,20,:) = zu(1)
 
           CASE ( 'w*pt*BC' )
              dopr_index(i) = 21
@@ -4031,7 +4057,7 @@
           ENDIF
           constant_diffusion = .TRUE.
 
-          IF ( constant_flux_layer )  THEN
+          IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
              message_string = 'constant_flux_layer is not allowed with fixed ' &
                               // 'value of km'
              CALL message( 'check_parameters', 'PA0123', 1, 2, 0, 6, 0 )
@@ -4459,7 +4485,7 @@
 
 !
 !-- Check roughness length, which has to be smaller than dz/2
-    IF ( ( constant_flux_layer .OR.  &
+    IF ( ( .NOT. TRIM(constant_flux_layer) == 'none' .OR.  &
            INDEX( initializing_actions, 'set_1d-model_profiles' ) /= 0 )       &
          .AND. roughness_length >= 0.5 * dz(1) )  THEN
        message_string = 'roughness_length must be smaller than dz/2'

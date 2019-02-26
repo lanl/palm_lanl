@@ -933,7 +933,7 @@
 !
 !-- Define vertical gridpoint from (or to) which on the usual finite difference
 !-- form (which does not use surface fluxes) is applied 
-    IF ( constant_flux_layer  .OR.  use_surface_fluxes )  THEN
+    IF ( TRIM(constant_flux_layer) == 'bottom'  .OR.  use_surface_fluxes )  THEN
        nzb_diff = nzb + 2
     ELSE
        nzb_diff = nzb + 1
@@ -1099,7 +1099,7 @@
 !-- Set the individual index arrays which define the k index from which on
 !-- the usual finite difference form (which does not use surface fluxes) is
 !-- applied 
-    IF ( constant_flux_layer  .OR.  use_surface_fluxes )  THEN
+    IF ( TRIM(constant_flux_layer) == 'bottom'  .OR.  use_surface_fluxes )  THEN
        nzb_diff_s_inner   = nzb_s_inner + 2
        nzb_diff_s_outer   = nzb_s_outer + 2
     ELSE
@@ -2499,7 +2499,7 @@
 !--          treat edges (u(k,j,i+1)) simply by a gradient approach, i.e. these
 !--          points are not masked within diffusion_u. Tests had shown that the
 !--          effect on the flow is negligible. 
-             IF ( constant_flux_layer  .OR.  use_surface_fluxes )  THEN
+             IF ( TRIM(constant_flux_layer) == 'bottom'  .OR.  use_surface_fluxes )  THEN
                 IF ( BTEST( wall_flags_0(k,j,i), 0 ) )                         &
                    wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 8 )
              ELSE
@@ -2544,7 +2544,7 @@
 !
 !--          Special flag on scalar grid, nzb_diff_s_outer - 1, required in 
 !--          in production_e
-             IF ( constant_flux_layer  .OR.  use_surface_fluxes )  THEN
+             IF ( TRIM(constant_flux_layer) == 'bottom'  .OR.  use_surface_fluxes )  THEN
                 IF ( BTEST( wall_flags_0(k,j,i),   24 )  .AND.                 &
                      BTEST( wall_flags_0(k-1,j,i), 24 )  .AND.                 &
                      BTEST( wall_flags_0(k+1,j,i), 0 ) )                       &
@@ -2556,7 +2556,7 @@
 !
 !--          Special flag on scalar grid, nzb_diff_s_outer - 1, required in 
 !--          in production_e
-             IF ( constant_flux_layer  .OR.  use_surface_fluxes )  THEN
+             IF ( TRIM(constant_flux_layer) == 'bottom' .OR.  use_surface_fluxes )  THEN
                 IF ( BTEST( wall_flags_0(k,j,i),   0 )  .AND.                  &
                      BTEST( wall_flags_0(k-1,j,i), 0 )  .AND.                  &
                      BTEST( wall_flags_0(k+1,j,i), 0 ) )                       &
@@ -2624,7 +2624,7 @@
 !
 !--          Special flag on scalar grid, nzb_diff_s_inner - 1, required for 
 !--          flow_statistics
-             IF ( constant_flux_layer  .OR.  use_surface_fluxes )  THEN
+             IF ( TRIM(constant_flux_layer) == 'bottom' .OR.  use_surface_fluxes )  THEN
                 IF ( BTEST( wall_flags_0(k,j,i),   0 )  .AND.                  &
                      BTEST( wall_flags_0(k+1,j,i), 0 ) )                       &
                   wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 23 )

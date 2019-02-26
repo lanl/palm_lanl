@@ -285,6 +285,8 @@
                 READ ( 13 )  average_count_3d
              CASE ( 'bc_e_b' )
                 READ ( 13 )  bc_e_b
+             CASE ( 'bc_e_t' )
+                READ ( 13 )  bc_e_t
              CASE ( 'bc_lr' )
                 READ ( 13 )  bc_lr
              CASE ( 'bc_ns' )

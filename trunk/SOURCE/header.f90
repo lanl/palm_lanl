@@ -1262,7 +1262,7 @@
           WRITE ( io, 302 ) top_scalarflux
     ENDIF
 
-    IF ( constant_flux_layer )  THEN
+    IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
        WRITE ( io, 305 )  (zu(1)-zu(0)), roughness_length,                     &
                           z0h_factor*roughness_length, kappa,                  &
                           zeta_min, zeta_max

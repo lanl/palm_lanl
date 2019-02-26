@@ -1103,6 +1103,7 @@
 
     CHARACTER (LEN=1)    ::  cycle_mg = 'w'                               !< namelist parameter (see documentation)
     CHARACTER (LEN=1)    ::  timestep_reason = ' '                        !< 'A'dvection or 'D'iffusion criterion, written to RUN_CONTROL file
+    CHARACTER (LEN=6)    ::  constant_flux_layer = 'none'                 !< namelist parameter
     CHARACTER (LEN=8)    ::  coupling_char = ''                           !< appended to filenames in coupled or nested runs ('_O': ocean PE,
                                                                           !< '_NV': vertically nested atmosphere PE, '_N##': PE of nested domain ##
     CHARACTER (LEN=8)    ::  most_method = 'newton'                       !< namelist parameter
@@ -1123,6 +1124,7 @@
     CHARACTER (LEN=40)   ::  flux_input_mode = 'approximation-specific'   !< type of flux input: dynamic or kinematic
     CHARACTER (LEN=40)   ::  flux_output_mode = 'approximation-specific'  !< type of flux output: dynamic or kinematic
     CHARACTER (LEN=20)   ::  bc_e_b = 'neumann'                           !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_e_t = 'neumann'                           !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_lr = 'cyclic'                             !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_ns = 'cyclic'                             !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_p_b = 'neumann'                           !< namelist parameter
@@ -1198,6 +1200,7 @@
     INTEGER(iwp) ::  gathered_size                     !< number of total domain grid points of the grid level which is gathered on PE0 (multigrid solver)
     INTEGER(iwp) ::  grid_level                        !< current grid level handled in the multigrid solver
     INTEGER(iwp) ::  ibc_e_b                           !< integer flag for bc_e_b
+    INTEGER(iwp) ::  ibc_e_t                           !< integer flag for bc_e_t
     INTEGER(iwp) ::  ibc_p_b                           !< integer flag for bc_p_b
     INTEGER(iwp) ::  ibc_p_t                           !< integer flag for bc_p_t
     INTEGER(iwp) ::  ibc_pt_b                          !< integer flag for bc_pt_b
@@ -1312,7 +1315,6 @@
     LOGICAL ::  complex_terrain = .FALSE.                        !< namelist parameter
     LOGICAL ::  conserve_volume_flow = .FALSE.                   !< namelist parameter
     LOGICAL ::  constant_diffusion = .FALSE.                     !< diffusion coefficient constant?
-    LOGICAL ::  constant_flux_layer = .TRUE.                     !< namelist parameter
     LOGICAL ::  constant_heatflux = .TRUE.                       !< heat flux at all surfaces constant?
     LOGICAL ::  constant_top_heatflux = .TRUE.                   !< heat flux at domain top constant?
     LOGICAL ::  constant_top_momentumflux = .FALSE.              !< momentum flux at domain topconstant?

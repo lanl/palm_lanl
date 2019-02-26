@@ -225,7 +225,7 @@
 
     USE control_parameters,                                                    &
         ONLY:  air_chemistry, cloud_droplets, cloud_physics,                   &
-               constant_heatflux, constant_scalarflux,                         &     
+               constant_flux_layer, constant_heatflux, constant_scalarflux,    &
                constant_waterflux, coupling_mode, g, humidity, ibc_e_b,        &
                ibc_pt_b, initializing_actions, kappa,                          &
                intermediate_timestep_count, intermediate_timestep_count_max,   &
@@ -762,8 +762,6 @@
                    regr_old  = 1.0E9_wp, & !< Stretching factor of last iteration step
                    z0h_min   = 0.0_wp,   & !< Minimum value of z0h to create table
                    z0_min    = 0.0_wp      !< Minimum value of z0 to create table
-
-
 
 
 !

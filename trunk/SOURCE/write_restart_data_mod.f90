@@ -203,6 +203,9 @@
        CALL wrd_write_string( 'bc_e_b' ) 
        WRITE ( 14 )  bc_e_b
 
+       CALL wrd_write_string( 'bc_e_t' ) 
+       WRITE ( 14 )  bc_e_t
+
        CALL wrd_write_string( 'bc_lr' ) 
        WRITE ( 14 )  bc_lr
 

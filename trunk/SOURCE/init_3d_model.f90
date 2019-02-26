@@ -2456,7 +2456,7 @@
 !
 !-- Initialize surface layer (done after LSM as roughness length are required
 !-- for initialization
-    IF ( constant_flux_layer )  THEN
+    IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
        CALL location_message( 'initializing surface layer', .FALSE. )
        CALL init_surface_layer_fluxes
        CALL location_message( 'finished', .TRUE. )

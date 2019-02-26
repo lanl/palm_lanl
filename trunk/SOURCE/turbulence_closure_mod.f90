@@ -1955,7 +1955,7 @@
     INTEGER(iwp) ::  k   !< grid index z-direction
     INTEGER(iwp) ::  m   !< running index surface elements
 
-    IF ( constant_flux_layer )  THEN
+    IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
 !
 !--    Calculate a virtual velocity at the surface in a way that the
 !--    vertical velocity gradient at k = 1 (u(k+1)-u_0) matches the
@@ -2765,7 +2765,7 @@
 
     DO  i = nxl, nxr
 
-       IF ( constant_flux_layer )  THEN
+       IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
 
 !
 !--       Calculate TKE production by shear. Calculate gradients at all grid
@@ -3237,7 +3237,7 @@
     REAL(wp), DIMENSION(nzb+1:nzt)  ::  dwdz        !< Gradient of w-component in z-direction
     REAL(wp), DIMENSION(nzb+1:nzt)  ::  tend_temp   !< temporal tendency
 
-    IF ( constant_flux_layer )  THEN
+    IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
 !
 !--    Calculate TKE production by shear. Calculate gradients at all grid
 !--    points first, gradients at surface-bounded grid points will be

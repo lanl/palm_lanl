@@ -2060,9 +2060,11 @@
              IF ( INDEX( initializing_actions, 'set_1d-model_profiles' ) /= 0 )&
              THEN
                 IF ( .NOT. constant_diffusion )  THEN
-                   IF ( constant_flux_layer )  THEN
+                   IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
+                      IF ( TRIM(constant_flux_layer) == 'bottom' )  k = nzb + 1
+                      IF ( TRIM(constant_flux_layer) == 'top' )  k = nzt
                       surf%ol(num_h)   = surf%z_mo(num_h) /                    &
-                                            ( rif1d(nzb+1) + 1.0E-20_wp )
+                                            ( rif1d(k) + 1.0E-20_wp )
                       surf%us(num_h)   = us1d
                       surf%usws(num_h) = usws1d
                       surf%vsws(num_h) = vsws1d

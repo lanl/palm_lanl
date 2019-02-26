@@ -870,6 +870,52 @@
     ALLOCATE( drho_ref_zu(nzb:nzt+1) )
     ALLOCATE( drho_ref_zw(nzb:nzt+1) )
 
+#if ! defined( __nopointer )
+!
+!-- Initial assignment of the pointers
+    IF ( .NOT. neutral )  THEN
+       pt => pt_1;  pt_p => pt_2;  tpt_m => pt_3
+    ELSE
+       pt => pt_1;  pt_p => pt_1;  tpt_m => pt_3
+    ENDIF
+    u  => u_1;   u_p  => u_2;   tu_m  => u_3
+    v  => v_1;   v_p  => v_2;   tv_m  => v_3
+    w  => w_1;   w_p  => w_2;   tw_m  => w_3
+
+    IF ( humidity )  THEN
+       q => q_1;  q_p => q_2;  tq_m => q_3
+       IF ( humidity )  THEN
+          vpt  => vpt_1    
+          IF ( cloud_physics )  THEN
+             ql => ql_1
+             IF ( .NOT. microphysics_morrison )  THEN
+                qc => qc_1
+             ENDIF
+             IF ( microphysics_morrison )  THEN
+                qc => qc_1;  qc_p  => qc_2;  tqc_m  => qc_3
+                nc => nc_1;  nc_p  => nc_2;  tnc_m  => nc_3
+             ENDIF
+             IF ( microphysics_seifert )  THEN
+                qr => qr_1;  qr_p  => qr_2;  tqr_m  => qr_3
+                nr => nr_1;  nr_p  => nr_2;  tnr_m  => nr_3
+             ENDIF
+          ENDIF
+       ENDIF
+       IF ( cloud_droplets )  THEN
+          ql   => ql_1
+          ql_c => ql_2
+       ENDIF
+    ENDIF
+    
+    IF ( passive_scalar )  THEN
+       s => s_1;  s_p => s_2;  ts_m => s_3
+    ENDIF    
+
+    IF ( ocean )  THEN
+       sa => sa_1;  sa_p => sa_2;  tsa_m => sa_3
+    ENDIF
+#endif
+
 !
 !-- Density profile calculation for anelastic approximation
     IF ( ocean )  THEN
@@ -1081,52 +1127,6 @@
        ALLOCATE( c_u_m(nzb:nzt+1), c_v_m(nzb:nzt+1), c_w_m(nzb:nzt+1) )
     ENDIF
 
-
-#if ! defined( __nopointer )
-!
-!-- Initial assignment of the pointers
-    IF ( .NOT. neutral )  THEN
-       pt => pt_1;  pt_p => pt_2;  tpt_m => pt_3
-    ELSE
-       pt => pt_1;  pt_p => pt_1;  tpt_m => pt_3
-    ENDIF
-    u  => u_1;   u_p  => u_2;   tu_m  => u_3
-    v  => v_1;   v_p  => v_2;   tv_m  => v_3
-    w  => w_1;   w_p  => w_2;   tw_m  => w_3
-
-    IF ( humidity )  THEN
-       q => q_1;  q_p => q_2;  tq_m => q_3
-       IF ( humidity )  THEN
-          vpt  => vpt_1    
-          IF ( cloud_physics )  THEN
-             ql => ql_1
-             IF ( .NOT. microphysics_morrison )  THEN
-                qc => qc_1
-             ENDIF
-             IF ( microphysics_morrison )  THEN
-                qc => qc_1;  qc_p  => qc_2;  tqc_m  => qc_3
-                nc => nc_1;  nc_p  => nc_2;  tnc_m  => nc_3
-             ENDIF
-             IF ( microphysics_seifert )  THEN
-                qr => qr_1;  qr_p  => qr_2;  tqr_m  => qr_3
-                nr => nr_1;  nr_p  => nr_2;  tnr_m  => nr_3
-             ENDIF
-          ENDIF
-       ENDIF
-       IF ( cloud_droplets )  THEN
-          ql   => ql_1
-          ql_c => ql_2
-       ENDIF
-    ENDIF
-    
-    IF ( passive_scalar )  THEN
-       s => s_1;  s_p => s_2;  ts_m => s_3
-    ENDIF    
-
-    IF ( ocean )  THEN
-       sa => sa_1;  sa_p => sa_2;  tsa_m => sa_3
-    ENDIF
-#endif
 !
 !-- Initialize arrays for turbulence closure
     CALL tcm_init_arrays

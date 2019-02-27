@@ -1838,8 +1838,9 @@
 !
 !-- Ocean version must use flux boundary conditions at the top
     IF ( ocean .AND. .NOT. use_top_fluxes )  THEN
-       message_string = 'use_top_fluxes must be .TRUE. in ocean mode'
-       CALL message( 'check_parameters', 'PA0042', 1, 2, 0, 6, 0 )
+       use_top_fluxes = .TRUE.
+       message_string = 'use_top_fluxes is set to .TRUE. in ocean mode'
+       CALL message( 'check_parameters', 'PA0042', 0, 0, 0, 6, 0 )
     ENDIF
 
 !
@@ -1930,8 +1931,8 @@
 !
 !-- In case of using a prandtl-layer, calculated (or prescribed) surface
 !-- fluxes have to be used in the diffusion-terms
-    IF ( TRIM( constant_flux_layer ) == 'bottom' )  use_surface_fluxes = .TRUE.
-    IF ( TRIM( constant_flux_layer ) == 'top'    )  use_top_fluxes = .TRUE.
+    IF ( TRIM( constant_flux_layer ) == 'bottom' ) use_surface_fluxes = .TRUE.
+    IF ( TRIM( constant_flux_layer ) == 'top'    ) use_top_fluxes = .TRUE.
 
 !-- Check initial conditions for bubble case
     IF ( INDEX( initializing_actions, 'initialize_3D_bubble' ) /= 0 .OR.         &
@@ -2140,7 +2141,17 @@
        constant_heatflux = .TRUE.
     ENDIF
 
-    IF ( top_heatflux     == 9999999.9_wp )  constant_top_heatflux = .FALSE.
+    IF ( top_heatflux     == 9999999.9_wp )  THEN
+       constant_top_heatflux = .FALSE.
+       IF ( ibc_pt_t == 0 )  THEN
+             constant_top_heatflux = .FALSE.
+       ELSEIF ( ibc_pt_t == 1 )  THEN
+          constant_top_heatflux = .TRUE.
+          top_heatflux = 0.0_wp
+       ENDIF
+    ELSE
+       constant_top_heatflux = .TRUE.
+    ENDIF
 
     IF ( neutral )  THEN
 
@@ -2150,8 +2161,7 @@
           CALL message( 'check_parameters', 'PA0351', 1, 2, 0, 6, 0 )
        ENDIF
 
-       IF ( top_heatflux /= 0.0_wp  .AND.  top_heatflux /= 9999999.9_wp )      &
-       THEN
+       IF ( top_heatflux /= 0.0_wp  .AND.  top_heatflux /= 9999999.9_wp ) THEN
           message_string = 'heatflux must not be set for pure neutral flow'
           CALL message( 'check_parameters', 'PA0351', 1, 2, 0, 6, 0 )
        ENDIF
@@ -2161,8 +2171,8 @@
     IF ( top_momentumflux_u /= 9999999.9_wp  .AND.                             &
          top_momentumflux_v /= 9999999.9_wp )  THEN
        constant_top_momentumflux = .TRUE.
-    ELSEIF (  .NOT. ( top_momentumflux_u == 9999999.9_wp  .AND.                &
-           top_momentumflux_v == 9999999.9_wp ) )  THEN
+    ELSEIF ( .NOT. ( top_momentumflux_u == 9999999.9_wp  .AND.                &
+                     top_momentumflux_v == 9999999.9_wp        ) )  THEN
        message_string = 'both, top_momentumflux_u AND top_momentumflux_v ' //  &
                         'must be set'
        CALL message( 'check_parameters', 'PA0064', 1, 2, 0, 6, 0 )
@@ -2175,7 +2185,7 @@
     IF ( ibc_pt_b == 0  .AND.  constant_heatflux  .AND.                        &
          surface_heatflux /= 0.0_wp )  THEN
        message_string = 'boundary_condition: bc_pt_b = "' // TRIM( bc_pt_b ) //&
-                        '& is not allowed with constant_heatflux = .TRUE.'
+                        '" is not allowed with constant_heatflux = .TRUE.'
        CALL message( 'check_parameters', 'PA0065', 1, 2, 0, 6, 0 )
     ENDIF
     IF ( constant_heatflux  .AND.  pt_surface_initial_change /= 0.0_wp )  THEN
@@ -2211,10 +2221,8 @@
 
        IF ( bc_sa_b == 'dirichlet' )  THEN
           ibc_sa_b = 0
-          CALL location_message('ib_sa_b assigned for dirichlet conditions',.TRUE.) !CB
        ELSEIF ( bc_sa_b == 'neumann' )  THEN
           ibc_sa_b = 1
-          CALL location_message('ib_sa_b assigned for neumann conditions',.TRUE.) !CB
        ELSE
           message_string = 'unknown boundary condition: bc_sa_b = "' //        &
                            TRIM( bc_sa_b ) // '"'
@@ -2332,14 +2340,20 @@
        IF ( TRIM( constant_flux_layer ) == 'bottom' )  THEN
           message_string = 'boundary condition: bc_uv_b = "' //                &
                TRIM( bc_uv_b ) // '" is not allowed with constant_flux_layer'  &
-               // ' = bottom'
-          CALL message( 'check_parameters', 'PA0075', 1, 2, 0, 6, 0 )
+               // ' = bottom. bc_uv_b set to "dirichlet".'
+          CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
+          bc_uv_b = 'dirichlet'
+          ibc_uv_b = 0
        ENDIF
     ELSE
        message_string = 'unknown boundary condition: bc_uv_b = "' //           &
                         TRIM( bc_uv_b ) // '"'
        CALL message( 'check_parameters', 'PA0076', 1, 2, 0, 6, 0 )
     ENDIF
+
+!
+!-- Boundary conditions for horizontal components of wind speed
+
 !
 !-- In case of coupled simulations u and v at the ground in atmosphere will be
 !-- assigned with the u and v values of the ocean surface
@@ -2362,6 +2376,14 @@
           ENDIF
        ELSEIF ( bc_uv_t == 'neumann' )  THEN
           ibc_uv_t = 1
+          IF ( TRIM( constant_flux_layer ) == 'top' )  THEN
+             message_string = 'boundary condition: bc_uv_t = "' //                &
+                  TRIM( bc_uv_t ) // '" is not allowed with constant_flux_layer'  &
+                  // ' = top. bc_uv_t set to "dirichlet".'
+             CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
+             bc_uv_t = 'dirichlet'
+             ibc_uv_t = 0
+          ENDIF
        ELSEIF ( bc_uv_t == 'nested'  .OR.  bc_uv_t == 'forcing' )  THEN
           ibc_uv_t = 3
        ELSE
@@ -2634,7 +2656,8 @@
              dopr_index(i) = 12
              dopr_unit(i)  = TRIM ( momentumflux_output_unit )
              hom(:,2,12,:) = SPREAD( zw, 2, statistic_regions+1 )
-             IF ( TRIM(constant_flux_layer) == 'bottom' )  hom(nzb,2,12,:) = zu(1)
+             IF ( TRIM(constant_flux_layer) == 'bottom' )  hom(nzb,2,12,:) = zu(nzb+1)
+             IF ( TRIM(constant_flux_layer) == 'top'    )  hom(nzt+1,2,12,:) = zu(nzt)
 
           CASE ( 'w*u*' )
              dopr_index(i) = 13
@@ -2645,7 +2668,8 @@
              dopr_index(i) = 14
              dopr_unit(i)  = TRIM ( momentumflux_output_unit )
              hom(:,2,14,:) = SPREAD( zw, 2, statistic_regions+1 )
-             IF ( TRIM(constant_flux_layer) == 'bottom' )  hom(nzb,2,14,:) = zu(1)
+             IF ( TRIM(constant_flux_layer) == 'bottom' )  hom(nzb,2,14,:) = zu(nzb+1)
+             IF ( TRIM(constant_flux_layer) == 'top'    )  hom(nzt+1,2,14,:) = zu(nzt)
 
           CASE ( 'w*v*' )
              dopr_index(i) = 15
@@ -2671,13 +2695,15 @@
              dopr_index(i) = 19
              dopr_unit(i)  = TRIM ( momentumflux_output_unit )
              hom(:,2,19,:) = SPREAD( zw, 2, statistic_regions+1 )
-             IF ( TRIM(constant_flux_layer) == 'bottom' )  hom(nzb,2,19,:) = zu(1)
+             IF ( TRIM(constant_flux_layer) == 'bottom' )  hom(nzb,2,19,:) = zu(nzb+1)
+             IF ( TRIM(constant_flux_layer) == 'top'    )  hom(nzt+1,2,19,:) = zu(nzt)
 
           CASE ( 'wv' )
              dopr_index(i) = 20
              dopr_unit(i)  = TRIM ( momentumflux_output_unit )
              hom(:,2,20,:) = SPREAD( zw, 2, statistic_regions+1 )
-             IF ( TRIM(constant_flux_layer) == 'bottom' )  hom(nzb,2,20,:) = zu(1)
+             IF ( TRIM(constant_flux_layer) == 'bottom' )  hom(nzb,2,20,:) = zu(nzb+1)
+             IF ( TRIM(constant_flux_layer) == 'top'    )  hom(nzt+1,2,20,:) = zu(nzt)
 
           CASE ( 'w*pt*BC' )
              dopr_index(i) = 21

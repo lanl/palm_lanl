@@ -1601,7 +1601,8 @@
                                                               surf_lsm_h,      &
                                                               num_lsm_h,       &
                                                               num_lsm_h_kji,   &
-                                                              .TRUE., .FALSE. )  
+                                                              .TRUE., .FALSE., &
+                                                              .FALSE.,.TRUE. )  
 !
 !--                   Urban surface tpye
                       ELSEIF ( urban_surface  .AND.  building )  THEN
@@ -1609,7 +1610,8 @@
                                                               surf_usm_h,      &
                                                               num_usm_h,       &
                                                               num_usm_h_kji,   &
-                                                              .TRUE., .FALSE. )  
+                                                              .TRUE., .FALSE., &
+                                                              .FALSE.,.TRUE. )  
 !
 !--                   Default surface type
                       ELSE
@@ -1617,16 +1619,23 @@
                                                               surf_def_h(0),   &
                                                               num_def_h(0),    &
                                                               num_def_h_kji(0),&
-                                                              .TRUE., .FALSE. )  
+                                                              .TRUE., .FALSE., &
+                                                              .FALSE.,         &
+                                      TRIM( constant_flux_layer ) == 'bottom' )  
                       ENDIF
                    ENDIF  
 !
 !--                downward-facing surface, first, model top. Please note, 
 !--                for the moment, downward-facing surfaces are always of 
 !--                default type
-                   IF ( k == nzt  .AND.  use_top_fluxes )  THEN
-                      CALL initialize_top( k, j, i, surf_def_h(2),             &
-                                           num_def_h(2), num_def_h_kji(2) )
+                   IF ( k == nzt .AND. use_top_fluxes )  THEN
+                      CALL initialize_horizontal_surfaces( k, j, i,            &
+                                                           surf_def_h(2),      &
+                                                           num_def_h(2),       &
+                                                           num_def_h_kji(2) ,  &
+                                                           .FALSE., .TRUE.,    &
+                                                           .TRUE.,             &
+                                         TRIM( constant_flux_layer ) == 'top' )  
 !
 !--                Check for any other downward-facing surface. So far only for 
 !--                default surface type.
@@ -1635,7 +1644,8 @@
                                                            surf_def_h(1),      &
                                                            num_def_h(1),       &
                                                            num_def_h_kji(1),   &
-                                                           .FALSE., .TRUE. )    
+                                                           .FALSE., .TRUE.,    &
+                                                           .TRUE., .TRUE. )    
                    ENDIF 
 !
 !--                Check for vertical walls and, if required, initialize it.
@@ -1874,7 +1884,8 @@
 !------------------------------------------------------------------------------!
           SUBROUTINE initialize_horizontal_surfaces( k, j, i, surf, num_h,     &
                                                      num_h_kji, upward_facing, &
-                                                     downward_facing )       
+                                                     downward_facing, is_top,  &
+                                                     flux_layer )       
 
              IMPLICIT NONE 
 
@@ -1888,6 +1899,8 @@
 
              LOGICAL       ::  upward_facing    !< flag indicating upward-facing surface
              LOGICAL       ::  downward_facing  !< flag indicating downward-facing surface
+             LOGICAL       ::  is_top           !< flag indicating whether surface is top
+             LOGICAL       :: flux_layer
 
              TYPE( surf_type ) :: surf          !< respective surface type
 !             REAL(WP)      ::  wb_sfc, tod,arg1      !< surface buoyancy forcing -- only matters for ocean
@@ -1903,15 +1916,17 @@
              IF ( downward_facing )  surf%facing(num_h) = IBSET( surf%facing(num_h), 1 )
 !
 !--          Initialize surface-layer height
-             IF ( upward_facing )  THEN
-                surf%z_mo(num_h)  = zu(k) - zw(k-1)
-             ELSE
-                surf%z_mo(num_h)  = zw(k) - zu(k)
-             ENDIF
+             IF ( flux_layer ) THEN
+                IF ( upward_facing )  THEN
+                   surf%z_mo(num_h)  = zu(k) - zw(k-1)
+                ELSE
+                   surf%z_mo(num_h)  = zw(k) - zu(k)
+                ENDIF
  
-             surf%z0(num_h)    = roughness_length
-             surf%z0h(num_h)   = z0h_factor * roughness_length
-             surf%z0q(num_h)   = z0h_factor * roughness_length          
+                surf%z0(num_h)    = roughness_length
+                surf%z0h(num_h)   = z0h_factor * roughness_length
+                surf%z0q(num_h)   = z0h_factor * roughness_length          
+             ENDIF
 !
 !--          Initialization in case of 1D pre-cursor run
              IF ( INDEX( initializing_actions, 'set_1d-model_profiles' ) /= 0 )&

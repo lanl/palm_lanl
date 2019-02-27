@@ -227,7 +227,7 @@
         ONLY:  air_chemistry, cloud_droplets, cloud_physics,                   &
                constant_flux_layer, constant_heatflux, constant_scalarflux,    &
                constant_waterflux, coupling_mode, g, humidity, ibc_e_b,        &
-               ibc_pt_b, initializing_actions, kappa,                          &
+               ibc_e_t, ibc_pt_b, ibc_pt_t, initializing_actions, kappa,       &
                intermediate_timestep_count, intermediate_timestep_count_max,   &
                land_surface, large_scale_forcing, lsf_surf,                    &
                message_string, microphysics_morrison, microphysics_seifert,    &
@@ -239,7 +239,7 @@
         ONLY:  dx, dy  
 
     USE indices,                                                               &
-        ONLY:  nxl, nxr, nys, nyn, nzb
+        ONLY:  nxl, nxr, nys, nyn, nzb, nzt
 
     USE kinds
 
@@ -747,55 +747,9 @@
 
        IMPLICIT NONE
 
-       INTEGER(iwp) :: li,         & !< Index for loop to create lookup table
-                       num_steps_n   !< Number of non-stretched zeta steps
-
        LOGICAL :: terminate_run_l = .FALSE.    !< Flag to terminate run (global)
 
-       REAL(wp), PARAMETER ::  zeta_stretch = -10.0_wp !< Start of stretching in the free convection limit
-                               
-       REAL(wp), DIMENSION(:), ALLOCATABLE :: zeta_tmp
-
-
-       REAL(wp) :: zeta_step,            & !< Increment of zeta
-                   regr      = 1.01_wp,  & !< Stretching factor of zeta_step in the free convection limit
-                   regr_old  = 1.0E9_wp, & !< Stretching factor of last iteration step
-                   z0h_min   = 0.0_wp,   & !< Minimum value of z0h to create table
-                   z0_min    = 0.0_wp      !< Minimum value of z0 to create table
-
-
-!
-!--    In case of runs with neutral statification, set Obukhov length to a
-!--    large value
-       IF ( neutral )  THEN
-          IF ( surf_def_h(0)%ns >= 1 )  surf_def_h(0)%ol = 1.0E10_wp
-          IF ( surf_lsm_h%ns    >= 1 )  surf_lsm_h%ol    = 1.0E10_wp
-          IF ( surf_usm_h%ns    >= 1 )  surf_usm_h%ol    = 1.0E10_wp
-       ENDIF
-
-       IF ( most_method == 'lookup' )  THEN
-
-!
-!--       Check for roughness heterogeneity. In that case terminate run and
-!--       inform user. Check for both, natural and non-natural walls.
-          IF ( surf_def_h(0)%ns >= 1 )  THEN
-             IF ( MINVAL( surf_def_h(0)%z0h ) /= MAXVAL( surf_def_h(0)%z0h )  .OR. &
-                  MINVAL( surf_def_h(0)%z0  ) /= MAXVAL( surf_def_h(0)%z0  ) )  THEN
-                terminate_run_l = .TRUE.
-             ENDIF
-          ENDIF
-          IF ( surf_lsm_h%ns >= 1 )  THEN
-             IF ( MINVAL( surf_lsm_h%z0h ) /= MAXVAL( surf_lsm_h%z0h )  .OR.       &
-                  MINVAL( surf_lsm_h%z0  ) /= MAXVAL( surf_lsm_h%z0  ) )  THEN
-                terminate_run_l = .TRUE.
-             ENDIF
-          ENDIF
-          IF ( surf_usm_h%ns >= 1 )  THEN
-             IF ( MINVAL( surf_usm_h%z0h ) /= MAXVAL( surf_usm_h%z0h )  .OR.       &
-                  MINVAL( surf_usm_h%z0  ) /= MAXVAL( surf_usm_h%z0  ) )  THEN
-                terminate_run_l = .TRUE.
-             ENDIF
-          ENDIF
+       IF ( most_method == 'lookup' .AND. TRIM(constant_flux_layer) == 'bottom' )  THEN
 !
 !--       Check roughness homogeneity between differt surface types. 
           IF ( surf_lsm_h%ns >= 1  .AND.  surf_def_h(0)%ns >= 1 )  THEN
@@ -835,13 +789,91 @@
                               'heterogeneity'
              CALL message( 'surface_layer_fluxes', 'PA0116', 1, 2, 0, 6, 0 )
           ENDIF
+       ENDIF
+
+       IF ( surf_def_h(0)%ns >= 1 .AND. TRIM(constant_flux_layer) == 'bottom' )&
+          THEN
+          surf => surf_def_h(0)
+          CALL init_surface_layer_fluxes_m
+       ENDIF
+       IF ( surf_lsm_h%ns    >= 1 ) THEN
+          surf => surf_lsm_h
+          CALL init_surface_layer_fluxes_m
+       ENDIF
+       IF ( surf_usm_h%ns    >= 1 ) THEN
+          surf => surf_usm_h
+          CALL init_surface_layer_fluxes_m
+       ENDIF
+       IF ( surf_def_h(2)%ns >= 1 .AND. TRIM(constant_flux_layer) == 'top' )   &
+          THEN
+          surf => surf_def_h(2)
+          CALL init_surface_layer_fluxes_m
+       ENDIF
+
+    END SUBROUTINE init_surface_layer_fluxes
+
+!-- Subroutine to initialize each surface
+    SUBROUTINE init_surface_layer_fluxes_m
+
+       IMPLICIT NONE
+
+       INTEGER(iwp) :: li,         & !< Index for loop to create lookup table
+                       num_steps_n   !< Number of non-stretched zeta steps
+
+       LOGICAL :: terminate_run_l = .FALSE.    !< Flag to terminate run (global)
+
+       REAL(wp), PARAMETER ::  zeta_stretch = -10.0_wp !< Start of stretching in the free convection limit
+                               
+       REAL(wp), DIMENSION(:), ALLOCATABLE :: zeta_tmp
+
+       REAL(wp) :: zeta_step,            & !< Increment of zeta
+                   regr      = 1.01_wp,  & !< Stretching factor of zeta_step in the free convection limit
+                   regr_old  = 1.0E9_wp, & !< Stretching factor of last iteration step
+                   z0h_min   = 0.0_wp,   & !< Minimum value of z0h to create table
+                   z0_min    = 0.0_wp      !< Minimum value of z0 to create table
+
+
+!
+!--    In case of runs with neutral statification, set Obukhov length to a
+!--    large value
+       IF ( neutral .AND. surf%ns >= 1 )  surf%ol = 1.0E10_wp
+
+       IF ( most_method == 'lookup' )  THEN
+
+!
+!--       Check for roughness heterogeneity. In that case terminate run and
+!--       inform user. Check for both, natural and non-natural walls.
+          IF ( surf%ns >= 1 )  THEN
+             IF ( MINVAL( surf%z0h ) /= MAXVAL( surf%z0h )  .OR. &
+                  MINVAL( surf%z0  ) /= MAXVAL( surf%z0  ) )  THEN
+                terminate_run_l = .TRUE.
+             ENDIF
+          ENDIF
+
+#if defined( __parallel )
+!
+!--       Make a logical OR for all processes. Force termiation of model if result
+!--       is TRUE
+          IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
+          CALL MPI_ALLREDUCE( terminate_run_l, terminate_run, 1, MPI_LOGICAL,  &
+                              MPI_LOR, comm2d, ierr )
+#else
+          terminate_run = terminate_run_l
+#endif
+
+          IF ( terminate_run )  THEN
+             message_string = 'most_method = "lookup" cannot be used in ' //   &
+                              'combination with a prescribed roughness '  //   &
+                              'heterogeneity'
+             CALL message( 'surface_layer_fluxes', 'PA0116', 1, 2, 0, 6, 0 )
+          ENDIF
 
           ALLOCATE(  zeta_tmp(0:num_steps-1) )
 
 !
 !--       Use the lowest possible value for z_mo
-          k    = nzb
-          z_mo = zu(k+1) - zw(k)
+          IF ( TRIM(constant_flux_layer) == 'top'    ) z_mo = zu(nzt+1) - zw(nzt)
+          IF ( TRIM(constant_flux_layer) == 'bottom' ) z_mo = zu(nzb+1) - zw(nzb)
 
 !
 !--       Calculate z/L range from zeta_stretch to zeta_max using 90% of the
@@ -873,21 +905,13 @@
 
 !
 !--       Save roughness lengths to temporary variables
-          IF ( surf_def_h(0)%ns >= 1  )  THEN
-             z0h_min = surf_def_h(0)%z0h(1)
-             z0_min  = surf_def_h(0)%z0(1)
-          ELSEIF ( surf_lsm_h%ns >= 1 )  THEN
-             z0h_min = surf_lsm_h%z0h(1)
-             z0_min  = surf_lsm_h%z0(1)
-          ELSEIF ( surf_usm_h%ns >= 1 )  THEN
-             z0h_min = surf_usm_h%z0h(1)
-             z0_min  = surf_usm_h%z0(1)
-          ENDIF         
+          z0h_min = surf%z0h(1)
+          z0_min  = surf%z0(1)
 !
 !--       Calculate lookup table for the Richardson number versus Obukhov length
 !--       The Richardson number (rib) is defined depending on the choice of 
 !--       boundary conditions for temperature
-          IF ( ibc_pt_b == 1 )  THEN
+          IF ( ibc_pt_b == 1 .OR. ibc_pt_t == 1 )  THEN
              DO li = 0, num_steps-1
                 ol_tab(li)  = - z_mo / zeta_tmp(num_steps-1-li)
                 rib_tab(li) = z_mo / ol_tab(li)  / ( LOG( z_mo / z0_min )       &
@@ -918,7 +942,7 @@
           DEALLOCATE( zeta_tmp )
        ENDIF
 
-    END SUBROUTINE init_surface_layer_fluxes
+    END SUBROUTINE init_surface_layer_fluxes_m
 
 
 !------------------------------------------------------------------------------!

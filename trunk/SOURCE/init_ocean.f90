@@ -158,32 +158,37 @@
 
        DO  k = nzt, nzb, -1
 
-          sa_l = 0.5_wp * ( sa_init(k) + sa_init(k+1) )
+!--       Calculate initial profiles on the zw grid
+          sa_l = 0.5_wp * ( sa_init(k) + sa_init(k+1) ) 
           pt_l = 0.5_wp * ( pt_init(k) + pt_init(k+1) )
 
-          rho_ref_zw(k) = eqn_state_seawater_func( hyp(k), pt_l, sa_l )
+          rho_ref_zw(k) = eqn_state_seawater_func(                             &
+                                0.5_wp * ( hyp(k) + hyp(k+1) ), pt_l, sa_l )
 
        ENDDO
 
        DO  k = nzt, nzb, -1
-          hyp(k) = hyp(k+1) + g * 0.5_wp * ( rho_ref_zw(k)                 &
+          hyp(k) = hyp(k+1) + g * 0.5_wp * ( rho_ref_zw(k)                     &
                                            + rho_ref_zw(k+1) ) * dzw(k+1)
        ENDDO
 
     ENDDO
 
 !
-!-- Define reference in situ density
+!-- Define reference in situ density on the zw grid
     rho_reference = 0.0_wp
     DO  k = nzt, nzb, -1
-       rho_ref_zw(k) = eqn_state_seawater_func( hyp(k), pt_l, sa_l )
-       rho_reference = rho_reference + rho_ref_zw(k) * dzw(k+1)
-       rho_ref_zu(k) = eqn_state_seawater_func( 0.5_wp * ( hyp(k) + hyp(k+1) ), pt_init(k), sa_init(k) )
+       sa_l = 0.5_wp * ( sa_init(k) + sa_init(k+1) )
+       pt_l = 0.5_wp * ( pt_init(k) + pt_init(k+1) )
+       rho_ref_zw(k) = eqn_state_seawater_func( 0.5_wp * ( hyp(k) + hyp(k+1) ),&
+                                                pt_l, sa_l )
+       rho_reference = rho_reference + rho_ref_zw(k) * dzu(k+1)
+       rho_ref_zu(k) = eqn_state_seawater_func( hyp(k), pt_init(k), sa_init(k) )
     ENDDO
-    rho_reference = rho_reference / ( zw(nzt) - zw(nzb) + dzw(nzb+1) )
+    rho_reference = rho_reference / ( zu(nzt+1) - zu(nzb) )
 
 !
-!-- Calculate the reference potential density
+!-- Calculate the reference potential density on the zw grid
     prho_reference = 0.0_wp
     DO  k = nzt, nzb, -1
        sa_l = 0.5_wp * ( sa_init(k) + sa_init(k+1) )
@@ -192,7 +197,7 @@
        prho_reference = prho_reference + dzu(k+1) * &
                         eqn_state_seawater_func( 0.0_wp, pt_l, sa_l )
     ENDDO
-    prho_reference = prho_reference / ( zw(nzt) - zw(nzb) + dzw(nzb+1) )
+    prho_reference = prho_reference / ( zu(nzt+1) - zu(nzb) )
 
 !
 !-- Calculate the 3d array of initial in situ and potential density,

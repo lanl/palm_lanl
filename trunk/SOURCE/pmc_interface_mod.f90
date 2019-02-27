@@ -1712,7 +1712,19 @@
 !--    This maximum is individual for each boundary to minimize the storage
 !--    requirements and to minimize the corresponding loop k-range in the
 !--    interpolation routines.
-       nzt_topo_nestbc_l = nzb
+       IF ( TRIM(constant_flux_layer) == 'bottom') THEN
+          nzt_topo_nestbc_l = nzb
+          nzt_topo_nestbc_r = nzb
+          nzt_topo_nestbc_s = nzb
+          nzt_topo_nestbc_n = nzb
+       ENDIF
+       IF ( TRIM(constant_flux_layer) == 'top') THEN
+          nzt_topo_nestbc_l = nzt+1
+          nzt_topo_nestbc_r = nzt+1
+          nzt_topo_nestbc_s = nzt+1
+          nzt_topo_nestbc_n = nzt+1
+       ENDIF
+
        IF ( nest_bound_l )  THEN
           DO  i = nxl-1, nxl
              DO  j = nys, nyn
@@ -1735,10 +1747,12 @@
                                     get_topography_top_index_ji( j, i, 'w' ) )
              ENDDO
           ENDDO
-          nzt_topo_nestbc_l = nzt_topo_nestbc_l + 1
+          IF ( TRIM(constant_flux_layer) == 'bottom')                          &
+             nzt_topo_nestbc_l = nzt_topo_nestbc_l + 1
+          IF ( TRIM(constant_flux_layer) == 'top')                             &
+             nzt_topo_nestbc_l = nzt_topo_nestbc_l - 1
        ENDIF
       
-       nzt_topo_nestbc_r = nzb
        IF ( nest_bound_r )  THEN
           i = nxr + 1
           DO  j = nys, nyn
@@ -1760,10 +1774,12 @@
                 nzt_topo_nestbc_r = MAX( nzt_topo_nestbc_r,                    &
                                     get_topography_top_index_ji( j, i, 'w' ) )
           ENDDO
-          nzt_topo_nestbc_r = nzt_topo_nestbc_r + 1
+          IF ( TRIM(constant_flux_layer) == 'bottom')                          &
+             nzt_topo_nestbc_l = nzt_topo_nestbc_r + 1
+          IF ( TRIM(constant_flux_layer) == 'top')                             &
+             nzt_topo_nestbc_l = nzt_topo_nestbc_r - 1
        ENDIF
 
-       nzt_topo_nestbc_s = nzb
        IF ( nest_bound_s )  THEN
           DO  j = nys-1, nys
              DO  i = nxl, nxr
@@ -1786,10 +1802,12 @@
                                     get_topography_top_index_ji( j, i, 'w' ) )
              ENDDO
           ENDDO
-          nzt_topo_nestbc_s = nzt_topo_nestbc_s + 1
+          IF ( TRIM(constant_flux_layer) == 'bottom')                          &
+             nzt_topo_nestbc_l = nzt_topo_nestbc_s + 1
+          IF ( TRIM(constant_flux_layer) == 'top')                             &
+             nzt_topo_nestbc_l = nzt_topo_nestbc_s - 1
        ENDIF
 
-       nzt_topo_nestbc_n = nzb
        IF ( nest_bound_n )  THEN
           j = nyn + 1
           DO  i = nxl, nxr
@@ -1811,28 +1829,35 @@
                 nzt_topo_nestbc_n = MAX( nzt_topo_nestbc_n,                    &
                                     get_topography_top_index_ji( j, i, 'w' ) )
           ENDDO
-          nzt_topo_nestbc_n = nzt_topo_nestbc_n + 1
+          IF ( TRIM(constant_flux_layer) == 'bottom')                          &
+             nzt_topo_nestbc_n = nzt_topo_nestbc_s + 1
+          IF ( TRIM(constant_flux_layer) == 'top')                             &
+             nzt_topo_nestbc_n = nzt_topo_nestbc_s - 1
        ENDIF
 
 #if defined( __parallel )
 !
 !--       Determine global topography-top index along child boundary. 
-          dum = nzb
+          IF ( TRIM(constant_flux_layer) == 'bottom') dum = nzb
+          IF ( TRIM(constant_flux_layer) == 'top') dum = nzt+1
           CALL MPI_ALLREDUCE( nzt_topo_nestbc_l, dum, 1, MPI_INTEGER,          &
                               MPI_MAX, comm1dy, ierr )
           nzt_topo_nestbc_l = dum
 
-          dum = nzb
+          IF ( TRIM(constant_flux_layer) == 'bottom') dum = nzb
+          IF ( TRIM(constant_flux_layer) == 'top') dum = nzt+1
           CALL MPI_ALLREDUCE( nzt_topo_nestbc_r, dum, 1, MPI_INTEGER,          &
                               MPI_MAX, comm1dy, ierr )
           nzt_topo_nestbc_r = dum
 
-          dum = nzb
+          IF ( TRIM(constant_flux_layer) == 'bottom') dum = nzb
+          IF ( TRIM(constant_flux_layer) == 'top') dum = nzt+1
           CALL MPI_ALLREDUCE( nzt_topo_nestbc_n, dum, 1, MPI_INTEGER,          &
                               MPI_MAX, comm1dx, ierr )
           nzt_topo_nestbc_n = dum
 
-          dum = nzb
+          IF ( TRIM(constant_flux_layer) == 'bottom') dum = nzb
+          IF ( TRIM(constant_flux_layer) == 'top') dum = nzt+1
           CALL MPI_ALLREDUCE( nzt_topo_nestbc_s, dum, 1, MPI_INTEGER,          &
                               MPI_MAX, comm1dx, ierr )
           nzt_topo_nestbc_s = dum
@@ -1863,15 +1888,25 @@
 !--    Left boundary
        IF ( nest_bound_l )  THEN
 
-          ALLOCATE( logc_u_l(1:2,nzb:nzt_topo_nestbc_l,nys:nyn) )
-          ALLOCATE( logc_v_l(1:2,nzb:nzt_topo_nestbc_l,nys:nyn) )
-          ALLOCATE( logc_w_l(1:2,nzb:nzt_topo_nestbc_l,nys:nyn) )
+          IF ( TRIM(constant_flux_layer) == 'bottom') THEN
+             ALLOCATE( logc_u_l(1:2,nzb:nzt_topo_nestbc_l,nys:nyn) )
+             ALLOCATE( logc_v_l(1:2,nzb:nzt_topo_nestbc_l,nys:nyn) )
+             ALLOCATE( logc_w_l(1:2,nzb:nzt_topo_nestbc_l,nys:nyn) )
+             ALLOCATE( logc_ratio_u_l(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nys:nyn) )
+             ALLOCATE( logc_ratio_v_l(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nys:nyn) )
+             ALLOCATE( logc_ratio_w_l(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nys:nyn) )
+          ENDIF
+          IF ( TRIM(constant_flux_layer) == 'top') THEN
+             ALLOCATE( logc_u_l(1:2,nzt_topo_nestbc_l:nzt+1,nys:nyn) )
+             ALLOCATE( logc_v_l(1:2,nzt_topo_nestbc_l:nzt+1,nys:nyn) )
+             ALLOCATE( logc_w_l(1:2,nzt_topo_nestbc_l:nzt+1,nys:nyn) )
+             ALLOCATE( logc_ratio_u_l(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nys:nyn) )
+             ALLOCATE( logc_ratio_v_l(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nys:nyn) )
+             ALLOCATE( logc_ratio_w_l(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nys:nyn) )
+          ENDIF
           ALLOCATE( logc_kbounds_u_l(1:2,nys:nyn) )
           ALLOCATE( logc_kbounds_v_l(1:2,nys:nyn) )
           ALLOCATE( logc_kbounds_w_l(1:2,nys:nyn) )
-          ALLOCATE( logc_ratio_u_l(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nys:nyn) )
-          ALLOCATE( logc_ratio_v_l(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nys:nyn) )
-          ALLOCATE( logc_ratio_w_l(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nys:nyn) )
           logc_u_l       = 0
           logc_v_l       = 0
           logc_w_l       = 0
@@ -1890,7 +1925,8 @@
 !--          is part of the surfacetypes now. Set default roughness instead. 
 !--          Determine topography top index on u-grid
              kb  = get_topography_top_index_ji( j, i, 'u' )
-             k   = kb + 1
+             IF ( TRIM(constant_flux_layer) == 'bottom') k = kb + 1
+             IF ( TRIM(constant_flux_layer) == 'top')    k = kb - 1
              wall_index = kb
 
              CALL pmci_define_loglaw_correction_parameters( lc, lcr, k,        &
@@ -1906,7 +1942,8 @@
 !
 !--          Determine topography top index on v-grid
              kb  = get_topography_top_index_ji( j, i, 'v' )
-             k   = kb + 1
+             IF ( TRIM(constant_flux_layer) == 'bottom') k = kb + 1
+             IF ( TRIM(constant_flux_layer) == 'top')    k = kb - 1
              wall_index = kb
 
              CALL pmci_define_loglaw_correction_parameters( lc, lcr, k,        &
@@ -1924,15 +1961,25 @@
 !--    Right boundary
        IF ( nest_bound_r )  THEN
            
-          ALLOCATE( logc_u_r(1:2,nzb:nzt_topo_nestbc_r,nys:nyn) )
-          ALLOCATE( logc_v_r(1:2,nzb:nzt_topo_nestbc_r,nys:nyn) )
-          ALLOCATE( logc_w_r(1:2,nzb:nzt_topo_nestbc_r,nys:nyn) )          
+          IF ( TRIM(constant_flux_layer) == 'bottom') THEN
+             ALLOCATE( logc_u_r      (1:2,          nzb:nzt_topo_nestbc_l,nys:nyn) )
+             ALLOCATE( logc_v_r      (1:2,          nzb:nzt_topo_nestbc_l,nys:nyn) )
+             ALLOCATE( logc_w_r      (1:2,          nzb:nzt_topo_nestbc_l,nys:nyn) )
+             ALLOCATE( logc_ratio_u_r(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nys:nyn) )
+             ALLOCATE( logc_ratio_v_r(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nys:nyn) )
+             ALLOCATE( logc_ratio_w_r(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nys:nyn) )
+          ENDIF
+          IF ( TRIM(constant_flux_layer) == 'top') THEN
+             ALLOCATE( logc_u_r      (1:2,          nzt_topo_nestbc_l:nzt+1,nys:nyn) )
+             ALLOCATE( logc_v_r      (1:2,          nzt_topo_nestbc_l:nzt+1,nys:nyn) )
+             ALLOCATE( logc_w_r      (1:2,          nzt_topo_nestbc_l:nzt+1,nys:nyn) )
+             ALLOCATE( logc_ratio_u_r(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nys:nyn) )
+             ALLOCATE( logc_ratio_v_r(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nys:nyn) )
+             ALLOCATE( logc_ratio_w_r(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nys:nyn) )
+          ENDIF
           ALLOCATE( logc_kbounds_u_r(1:2,nys:nyn) )
           ALLOCATE( logc_kbounds_v_r(1:2,nys:nyn) )
           ALLOCATE( logc_kbounds_w_r(1:2,nys:nyn) )
-          ALLOCATE( logc_ratio_u_r(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_r,nys:nyn) )
-          ALLOCATE( logc_ratio_v_r(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_r,nys:nyn) )
-          ALLOCATE( logc_ratio_w_r(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_r,nys:nyn) )
           logc_u_r       = 0
           logc_v_r       = 0
           logc_w_r       = 0
@@ -1952,7 +1999,8 @@
 !--          to the present surface tpye. 
 !--          Determine topography top index on u-grid
              kb  = get_topography_top_index_ji( j, i, 'u' )
-             k   = kb + 1
+             IF ( TRIM(constant_flux_layer) == 'bottom') k = kb + 1
+             IF ( TRIM(constant_flux_layer) == 'top')    k = kb - 1
              wall_index = kb
 
              CALL pmci_define_loglaw_correction_parameters( lc, lcr, k,        &
@@ -1968,7 +2016,8 @@
 !
 !--          Determine topography top index on v-grid
              kb  = get_topography_top_index_ji( j, i, 'v' )
-             k   = kb + 1
+             IF ( TRIM(constant_flux_layer) == 'bottom') k = kb + 1
+             IF ( TRIM(constant_flux_layer) == 'top')    k = kb - 1
              wall_index = kb
 
              CALL pmci_define_loglaw_correction_parameters( lc, lcr, k,        &
@@ -1986,15 +2035,25 @@
 !--    South boundary
        IF ( nest_bound_s )  THEN
 
-          ALLOCATE( logc_u_s(1:2,nzb:nzt_topo_nestbc_s,nxl:nxr) )
-          ALLOCATE( logc_v_s(1:2,nzb:nzt_topo_nestbc_s,nxl:nxr) )
-          ALLOCATE( logc_w_s(1:2,nzb:nzt_topo_nestbc_s,nxl:nxr) )
+          IF ( TRIM(constant_flux_layer) == 'bottom') THEN
+             ALLOCATE( logc_u_s      (1:2,          nzb:nzt_topo_nestbc_l,nxl:nxr) )
+             ALLOCATE( logc_v_s      (1:2,          nzb:nzt_topo_nestbc_l,nxl:nxr) )
+             ALLOCATE( logc_w_s      (1:2,          nzb:nzt_topo_nestbc_l,nxl:nxr) )
+             ALLOCATE( logc_ratio_u_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nxl:nxr) )
+             ALLOCATE( logc_ratio_v_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nxl:nxr) )
+             ALLOCATE( logc_ratio_w_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nxl:nxr) )
+          ENDIF
+          IF ( TRIM(constant_flux_layer) == 'top') THEN
+             ALLOCATE( logc_u_s      (1:2,          nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_v_s      (1:2,          nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_w_s      (1:2,          nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_ratio_u_s(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_ratio_v_s(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_ratio_w_s(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
+          ENDIF
           ALLOCATE( logc_kbounds_u_s(1:2,nxl:nxr) )
           ALLOCATE( logc_kbounds_v_s(1:2,nxl:nxr) )
           ALLOCATE( logc_kbounds_w_s(1:2,nxl:nxr) )
-          ALLOCATE( logc_ratio_u_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_s,nxl:nxr) )
-          ALLOCATE( logc_ratio_v_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_s,nxl:nxr) )
-          ALLOCATE( logc_ratio_w_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_s,nxl:nxr) )
           logc_u_s       = 0
           logc_v_s       = 0
           logc_w_s       = 0
@@ -2011,7 +2070,8 @@
 !
 !--          Determine topography top index on u-grid
              kb  = get_topography_top_index_ji( j, i, 'u' )
-             k   = kb + 1
+             IF ( TRIM(constant_flux_layer) == 'bottom') k = kb + 1
+             IF ( TRIM(constant_flux_layer) == 'top')    k = kb - 1
              wall_index = kb
 
              CALL pmci_define_loglaw_correction_parameters( lc, lcr, k,        &
@@ -2027,7 +2087,8 @@
 !
 !--          Determine topography top index on v-grid
              kb  = get_topography_top_index_ji( j, i, 'v' )
-             k   = kb + 1
+             IF ( TRIM(constant_flux_layer) == 'bottom') k = kb + 1
+             IF ( TRIM(constant_flux_layer) == 'top')    k = kb - 1
              wall_index = kb
 
              CALL pmci_define_loglaw_correction_parameters( lc, lcr, k,        &
@@ -2045,15 +2106,25 @@
 !--    North boundary
        IF ( nest_bound_n )  THEN
 
-          ALLOCATE( logc_u_n(1:2,nzb:nzt_topo_nestbc_n,nxl:nxr) )
-          ALLOCATE( logc_v_n(1:2,nzb:nzt_topo_nestbc_n,nxl:nxr) )
-          ALLOCATE( logc_w_n(1:2,nzb:nzt_topo_nestbc_n,nxl:nxr) )
-          ALLOCATE( logc_kbounds_u_n(1:2,nxl:nxr) )
-          ALLOCATE( logc_kbounds_v_n(1:2,nxl:nxr) )
-          ALLOCATE( logc_kbounds_w_n(1:2,nxl:nxr) )
-          ALLOCATE( logc_ratio_u_n(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_n,nxl:nxr) )
-          ALLOCATE( logc_ratio_v_n(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_n,nxl:nxr) )
-          ALLOCATE( logc_ratio_w_n(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_n,nxl:nxr) )
+          IF ( TRIM(constant_flux_layer) == 'bottom') THEN
+             ALLOCATE( logc_u_n      (1:2,          nzb:nzt_topo_nestbc_l,nxl:nxr) )
+             ALLOCATE( logc_v_s      (1:2,          nzb:nzt_topo_nestbc_l,nxl:nxr) )
+             ALLOCATE( logc_w_s      (1:2,          nzb:nzt_topo_nestbc_l,nxl:nxr) )
+             ALLOCATE( logc_ratio_u_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nxl:nxr) )
+             ALLOCATE( logc_ratio_v_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nxl:nxr) )
+             ALLOCATE( logc_ratio_w_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nxl:nxr) )
+          ENDIF
+          IF ( TRIM(constant_flux_layer) == 'top') THEN
+             ALLOCATE( logc_u_s      (1:2,          nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_v_s      (1:2,          nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_w_s      (1:2,          nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_ratio_u_s(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_ratio_v_s(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_ratio_w_s(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
+          ENDIF
+          ALLOCATE( logc_kbounds_u_s(1:2,nxl:nxr) )
+          ALLOCATE( logc_kbounds_v_s(1:2,nxl:nxr) )
+          ALLOCATE( logc_kbounds_w_s(1:2,nxl:nxr) )
           logc_u_n       = 0
           logc_v_n       = 0
           logc_w_n       = 0
@@ -2070,7 +2141,8 @@
 !
 !--          Determine topography top index on u-grid
              kb  = get_topography_top_index_ji( j, i, 'u' )
-             k   = kb + 1
+             IF ( TRIM(constant_flux_layer) == 'bottom') k = kb + 1
+             IF ( TRIM(constant_flux_layer) == 'top')    k = kb - 1
              wall_index = kb
 
              CALL pmci_define_loglaw_correction_parameters( lc, lcr, k,        &
@@ -2086,7 +2158,8 @@
 !
 !--          Determine topography top index on v-grid
              kb  = get_topography_top_index_ji( j, i, 'v' )
-             k   = kb + 1
+             IF ( TRIM(constant_flux_layer) == 'bottom') k = kb + 1
+             IF ( TRIM(constant_flux_layer) == 'top')    k = kb - 1
              wall_index = kb
 
              CALL pmci_define_loglaw_correction_parameters( lc, lcr, k,        &
@@ -2814,16 +2887,26 @@
 
 !
 !--    kbc is the first coarse-grid point above the surface
-       kbc = nzb + 1
+       IF ( TRIM(constant_flux_layer) == 'bottom') kbc = nzb + 1
+       IF ( TRIM(constant_flux_layer) == 'top'   ) kbc = nzt
        DO  WHILE ( cg%zu(kbc) < zu(kb) )
-          kbc = kbc + 1
+          IF ( TRIM(constant_flux_layer) == 'bottom') kbc = kbc + 1
+          IF ( TRIM(constant_flux_layer) == 'top')    kbc = kbc - 1
        ENDDO
        zuc1  = cg%zu(kbc)
-       k1    = kb + 1
-       DO  WHILE ( zu(k1) < zuc1 )  !  Important: must be <, not <=
-          k1 = k1 + 1
-       ENDDO
-       logzc1 = LOG( (zu(k1) - zw(kb) ) / z0_l )
+       IF ( TRIM(constant_flux_layer) == 'bottom') THEN
+          k1    = kb + 1
+          DO  WHILE ( zu(k1) < zuc1 )  !  Important: must be <, not <=
+            k1 = k1 + 1
+          ENDDO
+       ENDIF
+       IF ( TRIM(constant_flux_layer) == 'top') THEN
+          k1    = kb - 1
+          DO  WHILE ( zu(k1) > zuc1 )  !  Important: must be <, not <=
+            k1 = k1 - 1
+          ENDDO
+       ENDIF
+       logzc1 = LOG( ABS( zu(k1) - zw(kb) ) / z0_l )
        lc = k1
 
     END SUBROUTINE pmci_find_logc_pivot_k

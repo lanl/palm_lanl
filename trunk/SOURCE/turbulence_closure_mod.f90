@@ -3052,9 +3052,8 @@
                    DO  k = nzb+1, nzt
                       tend(k,j,i) = tend(k,j,i) +                              &
                                     kh(k,j,i) * g /                            &
-                                    MERGE( rho_reference, rho_ref_zw(k),       &
-                                           use_single_reference_value ) *      &
-                                    ( rho_ocean(k+1,j,i) - rho_ocean(k-1,j,i) )&
+                                    prho_reference *                           &
+                                    ( prho(k+1,j,i) - prho(k-1,j,i) )          &
                                     * dd2zu(k) *                               &
                                     MERGE( 1.0_wp, 0.0_wp,                     &
                                            BTEST( wall_flags_0(k,j,i), 30 )    &
@@ -3184,8 +3183,7 @@
  SUBROUTINE production_e_ij( i, j, diss_production )
 
     USE arrays_3d,                                                             &
-        ONLY:  ddzw, dd2zu, drho_ref_zw, q, ql, rho_ocean, rho_ref_zw,         &
-               alpha_T, beta_S
+        ONLY:  ddzw, dd2zu, q, ql, rho_ocean, alpha_T, beta_S
 
     USE cloud_parameters,                                                      &
         ONLY:  l_d_cp, l_d_r, pt_d_t, t_d_pt
@@ -3609,9 +3607,8 @@
 
                 tend(k,j,i) = tend(k,j,i) +                                    &
                               kh(k,j,i) * g /                                  &
-                              MERGE( rho_reference, rho_ref_zw(k),             &
-                                     use_single_reference_value ) *            &
-                              ( rho_ocean(k+1,j,i) - rho_ocean(k-1,j,i) ) *              &
+                              prho_reference *                                 &
+                              ( prho(k+1,j,i) - prho(k-1,j,i) ) *              &
                               dd2zu(k) *                                       &
                                 MERGE( 1.0_wp, 0.0_wp,                         &
                                        BTEST( wall_flags_0(k,j,i), 30 )        &

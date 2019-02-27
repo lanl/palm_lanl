@@ -200,12 +200,6 @@
     prho_reference = prho_reference / ( zu(nzt+1) - zu(nzb) )
 
 !
-!-- Calculate the 3d array of initial in situ and potential density,
-!-- based on the initial temperature and salinity profile
-!    CALL eqn_state_seawater
-!    CALL location_message(', returned eqn_state_seawater',.FALSE.)
-
-!
 !-- Store initial density profile
     hom(:,1,77,:)  = SPREAD( rho_ref_zw(:), 2, statistic_regions+1 )
 

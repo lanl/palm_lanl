@@ -2611,7 +2611,7 @@
              IF ( TRIM(constant_flux_layer) == 'bottom' .OR.                   &
                   use_surface_fluxes                          )  THEN
                 IF ( BTEST( wall_flags_0(k,j,i),   0 )  .AND.                  &
-                     BTEST( wall_flags_0(k+1,j,i), 0 )  .AND.                  &
+                     BTEST( wall_flags_0(k+1,j,i), 0 ) )                       &
                   wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 23 )
              ELSEIF ( TRIM(constant_flux_layer) == 'top' .OR. use_top_fluxes ) &
                 THEN

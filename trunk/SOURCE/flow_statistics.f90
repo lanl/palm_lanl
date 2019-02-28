@@ -290,7 +290,8 @@
         ONLY:   cp, l_v, l_d_cp, pt_d_t
         
     USE control_parameters,                                                    &
-        ONLY:   average_count_pr, cloud_droplets, cloud_physics, do_sum,       &
+        ONLY:   average_count_pr, cloud_droplets, constant_flux_layer,         &
+                cloud_physics, do_sum,       &
                 dt_3d, g, humidity, initializing_actions, kappa, land_surface, &
                 large_scale_forcing, large_scale_subsidence, max_pr_user,      &
                 message_string, neutral, microphysics_morrison,                &

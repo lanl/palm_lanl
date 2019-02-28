@@ -621,7 +621,6 @@
 
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  p_hydrostatic !< hydrostatic pressure
 
-    INTEGER(iwp) ::  l       !< loop variable
     INTEGER(iwp) ::  nzt_l   !< index of top PE boundary for multigrid level
     REAL(wp) ::  dx_l !< grid spacing along x on different multigrid level
     REAL(wp) ::  dy_l !< grid spacing along y on different multigrid level

@@ -304,7 +304,7 @@
 
 
        USE arrays_3d,                                                          &
-           ONLY:  f1_mg, f2_mg, f3_mg, rho_air_mg
+           ONLY:  f1_mg, f2_mg, f3_mg, rho_ref_mg
 
        USE control_parameters,                                                 &
            ONLY:  bc_lr_cyc, bc_ns_cyc, ibc_p_b, ibc_p_t
@@ -347,9 +347,9 @@
                 km1 = k-ind_even_odd-1
                 kp1 = k-ind_even_odd
                 r(k,j,i) = f_mg(k,j,i)                                         &
-                      - rho_air_mg(k,l) * ddx2_mg(l) *                         &
+                      - rho_ref_mg(k,l) * ddx2_mg(l) *                         &
                       ( p_mg(k,j,i+1) +  p_mg(k,j,i-1)  )                      &
-                      - rho_air_mg(k,l) * ddy2_mg(l) *                         &
+                      - rho_ref_mg(k,l) * ddy2_mg(l) *                         &
                       ( p_mg(k,j+1,i) + p_mg(k,j-1,i)  )                       &
                       - f2_mg_b(k,l) * p_mg(kp1,j,i)                           &
                       - f3_mg_b(k,l) * p_mg(km1,j,i)                           &
@@ -360,9 +360,9 @@
                 km1 = k+ind_even_odd
                 kp1 = k+ind_even_odd+1
                 r(k,j,i) = f_mg(k,j,i)                                         &
-                      - rho_air_mg(k,l) * ddx2_mg(l) *                         &
+                      - rho_ref_mg(k,l) * ddx2_mg(l) *                         &
                       ( p_mg(k,j,i+1) +  p_mg(k,j,i-1)  )                      &
-                      - rho_air_mg(k,l) * ddy2_mg(l) *                         &
+                      - rho_ref_mg(k,l) * ddy2_mg(l) *                         &
                       ( p_mg(k,j+1,i) + p_mg(k,j-1,i)  )                       &
                       - f2_mg_b(k,l) * p_mg(kp1,j,i)                           &
                       - f3_mg_b(k,l) * p_mg(km1,j,i)                           &
@@ -736,7 +736,7 @@
 
 
        USE arrays_3d,                                                          &
-           ONLY:  f1_mg, f2_mg, f3_mg, rho_air_mg
+           ONLY:  f1_mg, f2_mg, f3_mg, rho_ref_mg
 
        USE control_parameters,                                                 &
            ONLY:  bc_lr_cyc, bc_ns_cyc, ibc_p_b, ibc_p_t, ngsrb 
@@ -795,9 +795,9 @@
                          km1 = k-ind_even_odd-1
                          kp1 = k-ind_even_odd
                          p_mg(k,j,i) = 1.0_wp / f1_mg_b(k,l) * (               &
-                                 rho_air_mg(k,l) * ddx2_mg(l) *                &
+                                 rho_ref_mg(k,l) * ddx2_mg(l) *                &
                                ( p_mg(k,j,i+1) + p_mg(k,j,i-1) )               &
-                               + rho_air_mg(k,l) * ddy2_mg(l) *                &
+                               + rho_ref_mg(k,l) * ddy2_mg(l) *                &
                                ( p_mg(k,j+1,i) + p_mg(k,j-1,i) )               &
                                + f2_mg_b(k,l) * p_mg(kp1,j,i)                  &
                                + f3_mg_b(k,l) * p_mg(km1,j,i)                  &
@@ -814,9 +814,9 @@
                          km1 = k-ind_even_odd-1
                          kp1 = k-ind_even_odd
                          p_mg(k,j,i) = 1.0_wp / f1_mg_b(k,l) * (               &
-                                 rho_air_mg(k,l) * ddx2_mg(l) *                &
+                                 rho_ref_mg(k,l) * ddx2_mg(l) *                &
                                ( p_mg(k,j,i+1) + p_mg(k,j,i-1) )               &
-                               + rho_air_mg(k,l) * ddy2_mg(l) *                &
+                               + rho_ref_mg(k,l) * ddy2_mg(l) *                &
                                ( p_mg(k,j+1,i) + p_mg(k,j-1,i) )               &
                                + f2_mg_b(k,l) * p_mg(kp1,j,i)                  &
                                + f3_mg_b(k,l) * p_mg(km1,j,i)                  &
@@ -833,9 +833,9 @@
                          km1 = k+ind_even_odd
                          kp1 = k+ind_even_odd+1
                          p_mg(k,j,i) = 1.0_wp / f1_mg_b(k,l) * (               &
-                                 rho_air_mg(k,l) * ddx2_mg(l) *                &
+                                 rho_ref_mg(k,l) * ddx2_mg(l) *                &
                                ( p_mg(k,j,i+1) + p_mg(k,j,i-1) )               &
-                               + rho_air_mg(k,l) * ddy2_mg(l) *                &
+                               + rho_ref_mg(k,l) * ddy2_mg(l) *                &
                                ( p_mg(k,j+1,i) + p_mg(k,j-1,i) )               &
                                + f2_mg_b(k,l) * p_mg(kp1,j,i)                  &
                                + f3_mg_b(k,l) * p_mg(km1,j,i)                  &
@@ -852,9 +852,9 @@
                          km1 = k+ind_even_odd
                          kp1 = k+ind_even_odd+1
                          p_mg(k,j,i) = 1.0_wp / f1_mg_b(k,l) * (               &
-                                 rho_air_mg(k,l) * ddx2_mg(l) *                &
+                                 rho_ref_mg(k,l) * ddx2_mg(l) *                &
                                ( p_mg(k,j,i+1) + p_mg(k,j,i-1) )               &
-                               + rho_air_mg(k,l) * ddy2_mg(l) *                &
+                               + rho_ref_mg(k,l) * ddy2_mg(l) *                &
                                ( p_mg(k,j+1,i) + p_mg(k,j-1,i) )               &
                                + f2_mg_b(k,l) * p_mg(kp1,j,i)                  &
                                + f3_mg_b(k,l) * p_mg(km1,j,i)                  &
@@ -883,18 +883,18 @@
                          kp1 = k-ind_even_odd
                          j   = jj
                          p_mg(k,j,i) = 1.0_wp / f1_mg_b(k,l) * (               &
-                                 rho_air_mg(k,l) * ddx2_mg(l) *                &
+                                 rho_ref_mg(k,l) * ddx2_mg(l) *                &
                                ( p_mg(k,j,i+1) + p_mg(k,j,i-1) )               &
-                               + rho_air_mg(k,l) * ddy2_mg(l) *                &
+                               + rho_ref_mg(k,l) * ddy2_mg(l) *                &
                                ( p_mg(k,j+1,i) + p_mg(k,j-1,i) )               &
                                + f2_mg_b(k,l) * p_mg(kp1,j,i)                  &
                                + f3_mg_b(k,l) * p_mg(km1,j,i)                  &
                                - f_mg(k,j,i)                   )
                          j = jj+2
                          p_mg(k,j,i) = 1.0_wp / f1_mg_b(k,l) * (               &
-                                 rho_air_mg(k,l) * ddx2_mg(l) *                &
+                                 rho_ref_mg(k,l) * ddx2_mg(l) *                &
                                ( p_mg(k,j,i+1) + p_mg(k,j,i-1) )               &
-                               + rho_air_mg(k,l) * ddy2_mg(l) *                &
+                               + rho_ref_mg(k,l) * ddy2_mg(l) *                &
                                ( p_mg(k,j+1,i) + p_mg(k,j-1,i) )               &
                                + f2_mg_b(k,l) * p_mg(kp1,j,i)                  &
                                + f3_mg_b(k,l) * p_mg(km1,j,i)                  &
@@ -909,18 +909,18 @@
                          kp1 = k-ind_even_odd
                          j   = jj
                          p_mg(k,j,i) = 1.0_wp / f1_mg_b(k,l) * (               &
-                                 rho_air_mg(k,l) * ddx2_mg(l) *                &
+                                 rho_ref_mg(k,l) * ddx2_mg(l) *                &
                                ( p_mg(k,j,i+1) + p_mg(k,j,i-1) )               &
-                               + rho_air_mg(k,l) * ddy2_mg(l) *                &
+                               + rho_ref_mg(k,l) * ddy2_mg(l) *                &
                                ( p_mg(k,j+1,i) + p_mg(k,j-1,i) )               &
                                + f2_mg_b(k,l) * p_mg(kp1,j,i)                  &
                                + f3_mg_b(k,l) * p_mg(km1,j,i)                  &
                                - f_mg(k,j,i)                   )
                          j = jj+2
                          p_mg(k,j,i) = 1.0_wp / f1_mg_b(k,l) * (               &
-                                 rho_air_mg(k,l) * ddx2_mg(l) *                &
+                                 rho_ref_mg(k,l) * ddx2_mg(l) *                &
                                ( p_mg(k,j,i+1) + p_mg(k,j,i-1) )               &
-                               + rho_air_mg(k,l) * ddy2_mg(l) *                &
+                               + rho_ref_mg(k,l) * ddy2_mg(l) *                &
                                ( p_mg(k,j+1,i) + p_mg(k,j-1,i) )               &
                                + f2_mg_b(k,l) * p_mg(kp1,j,i)                  &
                                + f3_mg_b(k,l) * p_mg(km1,j,i)                  &
@@ -935,18 +935,18 @@
                          kp1 = k+ind_even_odd+1
                          j   = jj
                          p_mg(k,j,i) = 1.0_wp / f1_mg_b(k,l) * (               &
-                                 rho_air_mg(k,l) * ddx2_mg(l) *                &
+                                 rho_ref_mg(k,l) * ddx2_mg(l) *                &
                                ( p_mg(k,j,i+1) + p_mg(k,j,i-1) )               &
-                               + rho_air_mg(k,l) * ddy2_mg(l) *                &
+                               + rho_ref_mg(k,l) * ddy2_mg(l) *                &
                                ( p_mg(k,j+1,i) + p_mg(k,j-1,i) )               &
                                + f2_mg_b(k,l) * p_mg(kp1,j,i)                  &
                                + f3_mg_b(k,l) * p_mg(km1,j,i)                  &
                                - f_mg(k,j,i)                   )
                          j = jj+2
                          p_mg(k,j,i) = 1.0_wp / f1_mg_b(k,l) * (               &
-                                 rho_air_mg(k,l) * ddx2_mg(l) *                &
+                                 rho_ref_mg(k,l) * ddx2_mg(l) *                &
                                ( p_mg(k,j,i+1) + p_mg(k,j,i-1) )               &
-                               + rho_air_mg(k,l) * ddy2_mg(l) *                &
+                               + rho_ref_mg(k,l) * ddy2_mg(l) *                &
                                ( p_mg(k,j+1,i) + p_mg(k,j-1,i) )               &
                                + f2_mg_b(k,l) * p_mg(kp1,j,i)                  &
                                + f3_mg_b(k,l) * p_mg(km1,j,i)                  &
@@ -961,18 +961,18 @@
                          kp1 = k+ind_even_odd+1
                          j   = jj
                          p_mg(k,j,i) = 1.0_wp / f1_mg_b(k,l) * (               &
-                                 rho_air_mg(k,l) * ddx2_mg(l) *                &
+                                 rho_ref_mg(k,l) * ddx2_mg(l) *                &
                                ( p_mg(k,j,i+1) + p_mg(k,j,i-1) )               &
-                               + rho_air_mg(k,l) * ddy2_mg(l) *                &
+                               + rho_ref_mg(k,l) * ddy2_mg(l) *                &
                                ( p_mg(k,j+1,i) + p_mg(k,j-1,i) )               &
                                + f2_mg_b(k,l) * p_mg(kp1,j,i)                  &
                                + f3_mg_b(k,l) * p_mg(km1,j,i)                  &
                                - f_mg(k,j,i)                   )
                          j = jj+2
                          p_mg(k,j,i) = 1.0_wp / f1_mg_b(k,l) * (               &
-                                 rho_air_mg(k,l) * ddx2_mg(l) *                &
+                                 rho_ref_mg(k,l) * ddx2_mg(l) *                &
                                ( p_mg(k,j,i+1) + p_mg(k,j,i-1) )               &
-                               + rho_air_mg(k,l) * ddy2_mg(l) *                &
+                               + rho_ref_mg(k,l) * ddy2_mg(l) *                &
                                ( p_mg(k,j+1,i) + p_mg(k,j-1,i) )               &
                                + f2_mg_b(k,l) * p_mg(kp1,j,i)                  &
                                + f3_mg_b(k,l) * p_mg(km1,j,i)                  &

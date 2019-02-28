@@ -101,7 +101,10 @@
         ONLY:  pt, rho_ocean, sa, total_2d_a, total_2d_o, u, v
 
     USE cloud_parameters,                                                      &
-        ONLY:  cp, l_v
+        ONLY:  cp, cpa, l_v
+
+    USE constants,                                                             &
+        ONLY:  cpw
 
     USE control_parameters,                                                    &
         ONLY:  coupling_mode, coupling_mode_remote, coupling_topology,         &
@@ -129,7 +132,6 @@
     INTEGER(iwp) ::  j                                    !< index variable y-direction 
     INTEGER(iwp) ::  m                                    !< running index for surface elements
 
-    REAL(wp)    ::  cpw = 4218.0_wp                       !< heat capacity of water at constant pressure
     REAL(wp)    ::  time_since_reference_point_rem        !< 
     REAL(wp)    ::  total_2d(-nbgp:ny+nbgp,-nbgp:nx+nbgp) !< 
 
@@ -476,7 +478,7 @@
              j = surf_def_h(2)%j(m)
              
              surf_def_h(2)%shf(m) = surf_def_h(2)%shf(m) +                     &
-                                    surf_def_h(2)%qsws(m) * l_v / cp
+                                    surf_def_h(2)%qsws(m) * l_v / cpa
 !
 !--          ...and convert it to a salinity flux at the sea surface (top)
 !--          following Steinhorn (1991), JPO 21, pp. 1681-1683:
@@ -490,20 +492,12 @@
        ENDIF
 
 !
-!--    Adjust the kinematic heat flux with respect to ocean density
-!--    (constants are the specific heat capacities for air and water), as well 
-!--    as momentum fluxes 
+!--    Adjust the kinematic heat flux with respect to heat capacities
        DO  m = 1, surf_def_h(2)%ns
-          i = surf_def_h(2)%i(m)
-          j = surf_def_h(2)%j(m)
-          surf_def_h(2)%shf(m) = surf_def_h(2)%shf(m) / rho_ocean(nzt,j,i) *   &
-                                 cp / cpw
-
-          surf_def_h(2)%usws(m) = surf_def_h(2)%usws(m) / rho_ocean(nzt,j,i)
-          surf_def_h(2)%vsws(m) = surf_def_h(2)%vsws(m) / rho_ocean(nzt,j,i)
+          surf_def_h(2)%shf(m) = surf_def_h(2)%shf(m) * cpa / cpw
        ENDDO
 
-    ENDIF
+    ENDIF ! ocean-to-atmosphere
 
     IF ( coupling_topology == 1 )  THEN
        DEALLOCATE( total_2d_o, total_2d_a )

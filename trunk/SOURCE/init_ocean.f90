@@ -84,12 +84,19 @@
 
 
     USE arrays_3d,                                                             &
-        ONLY:  dzu, hyp, pt_init, ref_state, sa_init, zu, zw
+        ONLY:  dzu, dzw, hyp, pt_init, ref_state, rho_ref_zu, rho_ref_zw,      &
+               sa_init, zu, zw
+
+    USE cloud_parameters,                                                      &
+        ONLY:  cp
+
+    USE constants,                                                             &
+        ONLY:  cpw
 
     USE control_parameters,                                                    &
-        ONLY:  g, molecular_viscosity, prho_reference, rho_surface,            &
-               rho_reference, surface_pressure, use_single_reference_value,    &
-               stokes_force
+        ONLY:  g, molecular_viscosity, message_string,                         &
+               rho_surface, rho_reference, prho_reference,                     &
+               surface_pressure, use_single_reference_value, stokes_force
 
     USE eqn_state_seawater_mod,                                                &
         ONLY:  eqn_state_seawater, eqn_state_seawater_func
@@ -115,13 +122,7 @@
     REAL(wp)     ::  pt_l !<
     REAL(wp)     ::  sa_l !<
 
-    REAL(wp), DIMENSION(nzb:nzt+1) ::  rho_ocean_init !<
-
     ALLOCATE( hyp(nzb:nzt+1) )
-
-!
-!-- Set water density near the ocean surface
-    rho_surface = 1027.62_wp
 
 !
 !-- Set kinematic viscosity to sea water at 20C
@@ -131,76 +132,83 @@
     molecular_viscosity = 1.05E-6_wp
 
 !
+!-- Set specific heat to specific heat of water 
+    cp = cpw
+
+!
 !-- Calculate initial vertical profile of hydrostatic pressure (in Pa)
 !-- and the reference density (used later in buoyancy term)
 !-- First step: Calculate pressure using reference density
     hyp(nzt+1) = surface_pressure * 100.0_wp
 
+    rho_surface = eqn_state_seawater_func( hyp(nzt+1), pt_init(nzt+1), sa_init(nzt+1) )
+    rho_ref_zw(nzt+1) = rho_surface
+    
     hyp(nzt)      = hyp(nzt+1) + rho_surface * g * 0.5_wp * dzu(nzt+1)
-    rho_ocean_init(nzt) = rho_surface
 
-    DO  k = nzt-1, 1, -1
+    DO  k = nzt-1, nzb+1, -1
        hyp(k) = hyp(k+1) + rho_surface * g * dzu(k)
     ENDDO
-    hyp(0) = hyp(1) + rho_surface * g * dzu(1)
+    hyp(nzb) = hyp(nzb+1) + rho_surface * g * dzu(nzb+1)
 
 !
 !-- Second step: Iteratively calculate in situ density (based on presssure)
 !-- and pressure (based on in situ density)
     DO  n = 1, 5
 
-       rho_reference = rho_surface * 0.5_wp * dzu(nzt+1)
+       DO  k = nzt, nzb, -1
 
-       DO  k = nzt, 0, -1
-
-          sa_l = 0.5_wp * ( sa_init(k) + sa_init(k+1) )
+!--       Calculate initial profiles on the zw grid
+          sa_l = 0.5_wp * ( sa_init(k) + sa_init(k+1) ) 
           pt_l = 0.5_wp * ( pt_init(k) + pt_init(k+1) )
 
-          rho_ocean_init(k) = eqn_state_seawater_func( hyp(k), pt_l, sa_l )
-
-          rho_reference = rho_reference + rho_ocean_init(k) * dzu(k+1)
+          rho_ref_zw(k) = eqn_state_seawater_func(                             &
+                                0.5_wp * ( hyp(k) + hyp(k+1) ), pt_l, sa_l )
 
        ENDDO
 
-       rho_reference = rho_reference / ( zw(nzt) - zu(nzb) )
-
-       DO  k = nzt, 0, -1
-          hyp(k) = hyp(k+1) + g * 0.5_wp * ( rho_ocean_init(k)                 &
-                                           + rho_ocean_init(k+1) ) * dzu(k+1)
+       DO  k = nzt, nzb, -1
+          hyp(k) = hyp(k+1) + g * 0.5_wp * ( rho_ref_zw(k)                     &
+                                           + rho_ref_zw(k+1) ) * dzw(k+1)
        ENDDO
 
     ENDDO
 
 !
-!-- Calculate the reference potential density
-    prho_reference = 0.0_wp
-    DO  k = 0, nzt
+!-- Define reference in situ density on the zw grid
+    rho_reference = 0.0_wp
+    DO  k = nzt, nzb, -1
+       sa_l = 0.5_wp * ( sa_init(k) + sa_init(k+1) )
+       pt_l = 0.5_wp * ( pt_init(k) + pt_init(k+1) )
+       rho_ref_zw(k) = eqn_state_seawater_func( 0.5_wp * ( hyp(k) + hyp(k+1) ),&
+                                                pt_l, sa_l )
+       rho_reference = rho_reference + rho_ref_zw(k) * dzu(k+1)
+       rho_ref_zu(k) = eqn_state_seawater_func( hyp(k), pt_init(k), sa_init(k) )
+    ENDDO
+    rho_reference = rho_reference / ( zu(nzt+1) - zu(nzb) )
 
+!
+!-- Calculate the reference potential density on the zw grid
+    prho_reference = 0.0_wp
+    DO  k = nzt, nzb, -1
        sa_l = 0.5_wp * ( sa_init(k) + sa_init(k+1) )
        pt_l = 0.5_wp * ( pt_init(k) + pt_init(k+1) )
 
        prho_reference = prho_reference + dzu(k+1) * &
                         eqn_state_seawater_func( 0.0_wp, pt_l, sa_l )
-
     ENDDO
-
-    prho_reference = prho_reference / ( zu(nzt) - zu(nzb) )
-
-!
-!-- Calculate the 3d array of initial in situ and potential density,
-!-- based on the initial temperature and salinity profile
-    CALL eqn_state_seawater
+    prho_reference = prho_reference / ( zu(nzt+1) - zu(nzb) )
 
 !
 !-- Store initial density profile
-    hom(:,1,77,:)  = SPREAD( rho_ocean_init(:), 2, statistic_regions+1 )
+    hom(:,1,77,:)  = SPREAD( rho_ref_zw(:), 2, statistic_regions+1 )
 
 !
 !-- Set the reference state to be used in the buoyancy terms
     IF ( use_single_reference_value )  THEN
        ref_state(:) = rho_reference
     ELSE
-       ref_state(:) = rho_ocean_init(:)
+       ref_state(:) = rho_ref_zw(:)
     ENDIF
 
 !

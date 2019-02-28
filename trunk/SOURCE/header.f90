@@ -2210,7 +2210,7 @@
 306 FORMAT ('       Predefined constant heatflux:   ',F9.6,' K m/s')
 307 FORMAT ('       Heatflux has a random normal distribution')
 308 FORMAT ('       Predefined surface temperature')
-309 FORMAT ('       Predefined constant salinityflux:   ',F9.6,' psu m/s')
+309 FORMAT ('       Predefined constant salinityflux:   ',F9.6,' kg/m3 psu m/s')
 310 FORMAT (//'    1D-Model:'// &
              '       Rif value range:   ',F6.2,' <= rif <=',F6.2)
 311 FORMAT ('       Predefined constant humidity flux: ',E10.3,' kg/kg m/s')

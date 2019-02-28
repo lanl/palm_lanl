@@ -210,7 +210,7 @@
 
     USE arrays_3d,                                                             &
         ONLY:  e, kh, nc, nr, pt, q, ql, qc, qr, s, u, v, vpt, w, zu, zw,      &
-               drho_air_zw, rho_air_zw
+               drho_ref_zw, rho_ref_zw
 
     USE chem_modules,                                                          &
         ONLY:  constant_csflux, nvar
@@ -1218,7 +1218,7 @@
                    surf%rib(m) = - g * z_mo * ( ( 1.0_wp + 0.61_wp             &
                            * q(k,j,i) ) * surf%shf(m) + 0.61_wp                &
                            * pt(k,j,i) * surf%qsws(m) ) *                      &
-                             drho_air_zw(k-1)                /                 &
+                             drho_ref_zw(k-1)                /                 &
                          ( surf%uvw_abs(m)**3 * vpt(k,j,i) * kappa**2          &
                            + 1.0E-20_wp )
                 ENDDO
@@ -1233,7 +1233,7 @@
                    z_mo = surf%z_mo(m)
 
                    surf%rib(m) = - g * z_mo * surf%shf(m) *                    &
-                                        drho_air_zw(k-1)            /          &
+                                        drho_ref_zw(k-1)            /          &
                         ( surf%uvw_abs(m)**3 * pt(k,j,i) * kappa**2            &
                            + 1.0E-20_wp )
                 ENDDO
@@ -1633,7 +1633,7 @@
              j   = surf%j(m)
              k   = surf%k(m)
 
-             surf%ts(m) = -surf%shf(m) * drho_air_zw(k-1) /                    &
+             surf%ts(m) = -surf%shf(m) * drho_ref_zw(k-1) /                    &
                                   ( surf%us(m) + 1E-30_wp )
 
 !
@@ -1703,7 +1703,7 @@
                 i   = surf%i(m)            
                 j   = surf%j(m)
                 k   = surf%k(m)
-                surf%qs(m) = -surf%qsws(m) * drho_air_zw(k-1) /                &
+                surf%qs(m) = -surf%qsws(m) * drho_ref_zw(k-1) /                &
                                                ( surf%us(m) + 1E-30_wp )
 
              ENDDO
@@ -1945,7 +1945,7 @@
 !--             The impact of the missing interpolation is negligible as several 
 !--             tests had shown. 
 !--             Same also for ol.  
-                surf%usws(m) = -surf%usws(m) * surf%us(m) * rho_air_zw(k-1)
+                surf%usws(m) = -surf%usws(m) * surf%us(m) * rho_ref_zw(k-1)
 
              ENDDO
 !
@@ -1961,7 +1961,7 @@
                 z_mo = surf%z_mo(m)
 
                 surf%usws(m) = kappa * u(k,j,i) / LOG( z_mo / surf%z0(m) )
-                surf%usws(m) = surf%usws(m) * surf%us(m) * rho_air_zw(k)
+                surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k)
 
              ENDDO     
           ENDIF
@@ -1991,7 +1991,7 @@
 !--             The impact of the missing interpolation is negligible as several 
 !--             tests had shown. 
 !--             Same also for ol.  
-                surf%vsws(m) = -surf%vsws(m) * surf%us(m) * rho_air_zw(k-1)
+                surf%vsws(m) = -surf%vsws(m) * surf%us(m) * rho_ref_zw(k-1)
              ENDDO
 !
 !--       Downward-facing surfaces
@@ -2005,7 +2005,7 @@
                 z_mo = surf%z_mo(m)
 
                 surf%vsws(m) = kappa * v(k,j,i) / LOG( z_mo / surf%z0(m) )
-                surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_air_zw(k)
+                surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k)
              ENDDO
           ENDIF
 !
@@ -2019,7 +2019,7 @@
                 i    = surf%i(m)            
                 j    = surf%j(m)
                 k    = surf%k(m)
-                surf%shf(m) = -surf%ts(m) * surf%us(m) * rho_air_zw(k-1)
+                surf%shf(m) = -surf%ts(m) * surf%us(m) * rho_ref_zw(k-1)
              ENDDO
           ENDIF
 !
@@ -2033,7 +2033,7 @@
                 i    = surf%i(m)            
                 j    = surf%j(m)
                 k    = surf%k(m)
-                surf%qsws(m) = -surf%qs(m) * surf%us(m) * rho_air_zw(k-1)
+                surf%qsws(m) = -surf%qs(m) * surf%us(m) * rho_ref_zw(k-1)
              ENDDO
           ENDIF
 !

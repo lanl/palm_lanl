@@ -124,10 +124,11 @@
     SUBROUTINE diffusion_w
 
        USE arrays_3d,                                                          &          
-           ONLY :  ddzu, ddzw, km, tend, u, v, w, drho_air_zw, rho_air
+           ONLY :  ddzu, ddzw, km, tend, u, v, w, drho_ref_zw, rho_ref_zw,        &
+                   drho_ref_zu, rho_ref_zu
            
        USE control_parameters,                                                 & 
-           ONLY :  topography
+           ONLY :  ocean, topography
            
        USE grid_variables,                                                     &     
            ONLY :  ddx, ddy
@@ -187,7 +188,6 @@
                                    km(k,j+1,i) + km(k+1,j+1,i) )
                 kmym = 0.25_wp * ( km(k,j,i)   + km(k+1,j,i)   +               &
                                    km(k,j-1,i) + km(k+1,j-1,i) )
-
                 tend(k,j,i) = tend(k,j,i)                                      &
                        + ( mask_east *  kmxp * (                               &
                                    ( w(k,j,i+1)   - w(k,j,i)   ) * ddx         &
@@ -209,10 +209,10 @@
                          ) * ddy                                 * flag        &
                        + 2.0_wp * (                                            &
                          km(k+1,j,i) * ( w(k+1,j,i) - w(k,j,i) )   * ddzw(k+1) &
-                                     * rho_air(k+1)                            &
+                                     * rho_ref_zu(k+1)                         &
                        - km(k,j,i)   * ( w(k,j,i)   - w(k-1,j,i) ) * ddzw(k)   &
-                                     * rho_air(k)                              &
-                                  ) * ddzu(k+1) * drho_air_zw(k) * flag
+                                     * rho_ref_zu(k)                           &
+                                  ) * ddzu(k+1) * drho_ref_zw(k) * flag
              ENDDO
 
 !
@@ -302,10 +302,11 @@
     SUBROUTINE diffusion_w_ij( i, j )
 
        USE arrays_3d,                                                          &          
-           ONLY :  ddzu, ddzw, km, tend, u, v, w, drho_air_zw, rho_air
+           ONLY :  ddzu, ddzw, km, tend, u, v, w, drho_ref_zw, rho_ref_zw,        &
+                   drho_ref_zu, rho_ref_zu
            
        USE control_parameters,                                                 & 
-           ONLY :  topography
+           ONLY :  ocean, topography
            
        USE grid_variables,                                                     &     
            ONLY :  ddx, ddy
@@ -376,11 +377,12 @@
                          ) * ddy                                 * flag        &
                        + 2.0_wp * (                                            &
                          km(k+1,j,i) * ( w(k+1,j,i) - w(k,j,i) ) * ddzw(k+1)   &
-                                     * rho_air(k+1)                            &
+                                     * rho_ref_zu(k+1)                         &
                        - km(k,j,i)   * ( w(k,j,i)   - w(k-1,j,i) ) * ddzw(k)   &
-                                     * rho_air(k)                              &
-                                  ) * ddzu(k+1) * drho_air_zw(k) * flag
+                                     * rho_ref_zu(k)                           &
+                                  ) * ddzu(k+1) * drho_ref_zw(k) * flag
        ENDDO
+
 !
 !--    Add horizontal momentum flux v'w' at north- (l=0) and south-facing (l=1)
 !--    surfaces. Note, in the the flat case, loops won't be entered as 

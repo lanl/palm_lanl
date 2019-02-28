@@ -69,7 +69,7 @@
  
 
     USE arrays_3d,                                                             &
-        ONLY:  pt, pt_init, pt_slope_ref, zu
+        ONLY:  hyp, pt, pt_init, pt_slope_ref, rho_slope_ref, sa_init, zu
         
     USE constants,                                                             &
         ONLY:  pi
@@ -77,7 +77,10 @@
     USE control_parameters,                                                    &
         ONLY:  alpha_surface, initializing_actions, pt_slope_offset,           &
                pt_surface, pt_vertical_gradient, sin_alpha_surface
-        
+
+    USE eqn_state_seawater_mod,                                                &
+        ONLY:  eqn_state_seawater, eqn_state_seawater_func
+
     USE grid_variables,                                                        &
         ONLY:  dx
         
@@ -105,6 +108,7 @@
 !
 !-- Calculate reference temperature field needed for computing buoyancy
     ALLOCATE( pt_slope_ref(nzb:nzt+1,nxlg:nxrg) )
+    ALLOCATE( rho_slope_ref(nzb:nzt+1,nxlg:nxrg) )
 
     DO  i = nxlg, nxrg
        DO  k = nzb, nzt+1
@@ -133,6 +137,7 @@
           pt_value = pt_surface + radius * SIN( alpha ) * &
                                   pt_vertical_gradient(1) / 100.0_wp
           pt_slope_ref(k,i) = pt_value
+          rho_slope_ref(k,i) = eqn_state_seawater_func(hyp(k),pt_slope_ref(k,i),sa_init(k))
        ENDDO                
     ENDDO
 

@@ -19,7 +19,13 @@
 !
 ! Current revisions:
 ! ------------------
+! 
+! 2019-01-22 cbegeman
+! Add timers to prognostic_equations_cache and to tcm_prognostic
 !
+!
+! 2018-10-19 cbegeman
+! Change buoyancy call for sloped ocean cases
 !
 ! Former revisions:
 ! -----------------
@@ -301,7 +307,7 @@
                humidity, idealized_diurnal, g,                                 &
                inflow_l, intermediate_timestep_count,                          &
                intermediate_timestep_count_max, large_scale_forcing,           &
-               large_scale_subsidence, microphysics_morrison,                  &
+               large_scale_subsidence, message_string, microphysics_morrison,  &
                microphysics_seifert, microphysics_sat_adjust, neutral, nudging,&
                ocean, outflow_l, outflow_s, passive_scalar, plant_canopy,      &
                prho_reference, prho_reference,                                 &
@@ -361,7 +367,7 @@
 
     USE coriolis_mod,                                                          &
         ONLY:  coriolis
-
+    
     USE diffusion_s_mod,                                                       &
         ONLY:  diffusion_s
 
@@ -538,6 +544,7 @@
     enddo
     !$OMP DO
 
+
     DO  i = nxl, nxr
 
 !
@@ -556,6 +563,7 @@
           IF ( i >= nxlu )  THEN
 
              tend(:,j,i) = 0.0_wp
+
              IF ( timestep_scheme(1:5) == 'runge' )  THEN
                 IF ( ws_scheme_mom )  THEN
                    CALL advec_u_ws( i, j, i_omp_start, tn )
@@ -568,9 +576,12 @@
              CALL diffusion_u( i, j )
              CALL coriolis( i, j, 1 )
              IF ( sloping_surface  .AND.  .NOT. neutral )  THEN
-                CALL buoyancy( i, j, pt, 1 )
+                IF ( ocean ) THEN
+                   CALL buoyancy( i, j, rho_ocean, 1 )
+                ELSE
+                   CALL buoyancy( i, j, pt, 1 )
+                ENDIF
              ENDIF
-
 !
 !--          If required, compute Stokes forces
              IF ( ocean .AND. stokes_force ) THEN
@@ -598,10 +609,11 @@
              IF ( wind_turbine )  CALL wtm_tendencies( i, j, 1 )
 
              CALL user_actions( i, j, 'u-tendency' )
+
 !
 !--          Prognostic equation for u-velocity component
+             CALL cpu_log( log_point(48), 'prog-u', 'start' )
              DO  k = nzb+1, nzt
-
                 u_p(k,j,i) = u(k,j,i) + ( dt_3d *                               &
                                             ( tsc(2) * tend(k,j,i) +            &
                                               tsc(3) * tu_m(k,j,i) )            &
@@ -612,8 +624,7 @@
                                                  )
              ENDDO
 
-!
-!--          Calculate tendencies for the next Runge-Kutta step
+!!--          Calculate tendencies for the next Runge-Kutta step
              IF ( timestep_scheme(1:5) == 'runge' )  THEN
                 IF ( intermediate_timestep_count == 1 )  THEN
                    DO  k = nzb+1, nzt
@@ -675,6 +686,7 @@
              IF ( wind_turbine )  CALL wtm_tendencies( i, j, 2 )
 
              CALL user_actions( i, j, 'v-tendency' )
+
 !
 !--          Prognostic equation for v-velocity component
              DO  k = nzb+1, nzt
@@ -748,6 +760,7 @@
           IF ( wind_turbine )  CALL wtm_tendencies( i, j, 3 )
 
           CALL user_actions( i, j, 'w-tendency' )
+
 !
 !--       Prognostic equation for w-velocity component
           DO  k = nzb+1, nzt-1
@@ -850,14 +863,14 @@
 
 
              CALL user_actions( i, j, 'pt-tendency' )
+
 !
 !--          Prognostic equation for potential temperature
              DO  k = nzb+1, nzt
-                pt_p(k,j,i) = pt(k,j,i) + ( dt_3d *                            &
+                   pt_p(k,j,i) = pt(k,j,i) + ( dt_3d *                            &
                                                   ( tsc(2) * tend(k,j,i) +     &
                                                     tsc(3) * tpt_m(k,j,i) )    &
-                                                  - tsc(5)                     &
-                                                  * ( pt(k,j,i) - pt_init(k) ) &
+                                                  - tsc(5) * ( pt(k,j,i) - pt_init(k) ) &
                                                   * ( rdf_sc(k) + ptdf_x(i)    &
                                                                 + ptdf_y(j) )  &
                                           )                                    &
@@ -1370,6 +1383,7 @@
              ENDIF
 
           ENDIF
+
 !
 !--       Calculate prognostic equations for turbulence closure
           CALL tcm_prognostic( i, j, i_omp_start, tn )
@@ -1455,7 +1469,11 @@
     CALL diffusion_u
     CALL coriolis( 1 )
     IF ( sloping_surface  .AND.  .NOT. neutral )  THEN
-       CALL buoyancy( pt, 1 )
+       IF ( ocean ) THEN
+          CALL buoyancy( rho_ocean, 1 )
+       ELSE
+          CALL buoyancy( pt, 1 )
+       ENDIF
     ENDIF
 
 !

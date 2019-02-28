@@ -22,6 +22,9 @@
 ! 
 ! 2018-11-15 cbegeman
 ! Modify call to init_pt_anomaly
+!
+! 2018-10-19 cbegeman
+! Fixed bug by defining ngp* variables before call to init_slope
 ! 
 ! Former revisions:
 ! -----------------
@@ -493,10 +496,16 @@
         ONLY:  cp, l_v, r_d
 
     USE constants,                                                             &
-        ONLY:  pi
+        ONLY:  pi, cpw
     
     USE control_parameters
     
+    USE cpulog,                                                                &
+        ONLY:  cpu_log, log_point, log_point_s
+    
+    USE eqn_state_seawater_mod,                                                &
+        ONLY:  eqn_state_seawater, eqn_state_seawater_func
+
     USE flight_mod,                                                            &
         ONLY:  flight_init
     
@@ -856,82 +865,154 @@
 !
 !-- Allocation of anelastic and Boussinesq approximation specific arrays
     ALLOCATE( p_hydrostatic(nzb:nzt+1) )
-    ALLOCATE( rho_air(nzb:nzt+1) )
-    ALLOCATE( rho_air_zw(nzb:nzt+1) )
-    ALLOCATE( drho_air(nzb:nzt+1) )
-    ALLOCATE( drho_air_zw(nzb:nzt+1) )
+    ALLOCATE( rho_ref_zu(nzb:nzt+1) )
+    ALLOCATE( rho_ref_zw(nzb:nzt+1) )
+    ALLOCATE( drho_ref_zu(nzb:nzt+1) )
+    ALLOCATE( drho_ref_zw(nzb:nzt+1) )
+
+#if ! defined( __nopointer )
+!
+!-- Initial assignment of the pointers
+    IF ( .NOT. neutral )  THEN
+       pt => pt_1;  pt_p => pt_2;  tpt_m => pt_3
+    ELSE
+       pt => pt_1;  pt_p => pt_1;  tpt_m => pt_3
+    ENDIF
+    u  => u_1;   u_p  => u_2;   tu_m  => u_3
+    v  => v_1;   v_p  => v_2;   tv_m  => v_3
+    w  => w_1;   w_p  => w_2;   tw_m  => w_3
+
+    IF ( humidity )  THEN
+       q => q_1;  q_p => q_2;  tq_m => q_3
+       IF ( humidity )  THEN
+          vpt  => vpt_1    
+          IF ( cloud_physics )  THEN
+             ql => ql_1
+             IF ( .NOT. microphysics_morrison )  THEN
+                qc => qc_1
+             ENDIF
+             IF ( microphysics_morrison )  THEN
+                qc => qc_1;  qc_p  => qc_2;  tqc_m  => qc_3
+                nc => nc_1;  nc_p  => nc_2;  tnc_m  => nc_3
+             ENDIF
+             IF ( microphysics_seifert )  THEN
+                qr => qr_1;  qr_p  => qr_2;  tqr_m  => qr_3
+                nr => nr_1;  nr_p  => nr_2;  tnr_m  => nr_3
+             ENDIF
+          ENDIF
+       ENDIF
+       IF ( cloud_droplets )  THEN
+          ql   => ql_1
+          ql_c => ql_2
+       ENDIF
+    ENDIF
+    
+    IF ( passive_scalar )  THEN
+       s => s_1;  s_p => s_2;  ts_m => s_3
+    ENDIF    
+
+    IF ( ocean )  THEN
+       sa => sa_1;  sa_p => sa_2;  tsa_m => sa_3
+    ENDIF
+#endif
 
 !
 !-- Density profile calculation for anelastic approximation
-    t_surface = pt_surface * ( surface_pressure / 1000.0_wp )**( r_d / cp )
-    IF ( TRIM( approximation ) == 'anelastic' ) THEN
-       DO  k = nzb, nzt+1
-          p_hydrostatic(k)    = surface_pressure * 100.0_wp *                  &
-                                ( 1 - ( g * zu(k) ) / ( cp * t_surface )       &
-                                )**( cp / r_d )
-          rho_air(k)          = ( p_hydrostatic(k) *                           &
-                                  ( 100000.0_wp / p_hydrostatic(k)             &
-                                  )**( r_d / cp )                              &
-                                ) / ( r_d * pt_init(k) )
-       ENDDO
-       DO  k = nzb, nzt
-          rho_air_zw(k) = 0.5_wp * ( rho_air(k) + rho_air(k+1) )
-       ENDDO
-       rho_air_zw(nzt+1)  = rho_air_zw(nzt)                                    &
-                            + 2.0_wp * ( rho_air(nzt+1) - rho_air_zw(nzt)  )
+    IF ( ocean )  THEN
+
+       CALL cpu_log( log_point(42), 'init-ocean', 'start' )
+
+!--    Initialize quantities needed for the ocean model
+       CALL init_ocean
+
+       CALL cpu_log( log_point(42), 'init-ocean', 'stop' )
+
     ELSE
-       DO  k = nzb, nzt+1
-          p_hydrostatic(k)    = surface_pressure * 100.0_wp *                  &
-                                ( 1 - ( g * zu(nzb) ) / ( cp * t_surface )       &
-                                )**( cp / r_d )
-          rho_air(k)          = ( p_hydrostatic(k) *                           &
-                                  ( 100000.0_wp / p_hydrostatic(k)             &
-                                  )**( r_d / cp )                              &
+
+       t_surface = pt_surface * ( surface_pressure / 1000.0_wp )**( r_d / cp )
+       IF ( TRIM( approximation ) == 'anelastic' ) THEN
+          DO  k = nzb, nzt+1
+             p_hydrostatic(k)    = surface_pressure * 100.0_wp *                  &
+                                   ( 1 - ( g * zu(k) ) / ( cp * t_surface )       &
+                                   )**( cp / r_d )
+             rho_ref_zu(k)          = ( p_hydrostatic(k) *                           &
+                                     ( 100000.0_wp / p_hydrostatic(k)             &
+                                     )**( r_d / cp )                              &
+                                   ) / ( r_d * pt_init(k) )
+          ENDDO
+          DO  k = nzb, nzt
+             rho_ref_zw(k) = 0.5_wp * ( rho_ref_zu(k) + rho_ref_zu(k+1) )
+          ENDDO
+          rho_ref_zw(nzt+1)  = rho_ref_zw(nzt)                                    &
+                               + 2.0_wp * ( rho_ref_zu(nzt+1) - rho_ref_zw(nzt)  )
+       ELSE
+!          DO  k = nzb, nzt+1
+          p_hydrostatic(:)   = surface_pressure * 100.0_wp *                  &
+                               ( 1 - ( g * zu(nzb) ) / ( cp * t_surface )       &
+                               )**( cp / r_d )
+          rho_ref_zu(:)          = ( p_hydrostatic(nzb) *                           &
+                                ( 100000.0_wp / p_hydrostatic(nzb)             &
+                                )**( r_d / cp )                              &
                                 ) / ( r_d * pt_init(nzb) )
-       ENDDO
-       DO  k = nzb, nzt
-          rho_air_zw(k) = 0.5_wp * ( rho_air(k) + rho_air(k+1) )
-       ENDDO
-       rho_air_zw(nzt+1)  = rho_air_zw(nzt)                                    &
-                            + 2.0_wp * ( rho_air(nzt+1) - rho_air_zw(nzt)  )
+          rho_ref_zw(:) = rho_ref_zu(nzb)
+       ENDIF
+
     ENDIF
-    rho_air(:) = 1.0_wp
+
 !
-!-- compute the inverse density array in order to avoid expencive divisions
-    drho_air    = 1.0_wp / rho_air
-    drho_air_zw = 1.0_wp / rho_air_zw
+!-- compute the inverse density array in order to avoid expensive divisions
+    drho_ref_zu = 1.0_wp / rho_ref_zu
+    drho_ref_zw = 1.0_wp / rho_ref_zw
 
 !
 !-- Allocation of flux conversion arrays
+    ALLOCATE( csflux_input_conversion(nzb:nzt+1) )
     ALLOCATE( heatflux_input_conversion(nzb:nzt+1) )
     ALLOCATE( waterflux_input_conversion(nzb:nzt+1) )
     ALLOCATE( momentumflux_input_conversion(nzb:nzt+1) )
+    ALLOCATE( scalarflux_input_conversion(nzb:nzt+1) )
+    ALLOCATE( salinityflux_input_conversion(nzb:nzt+1) )
+    ALLOCATE( csflux_output_conversion(nzb:nzt+1) )
     ALLOCATE( heatflux_output_conversion(nzb:nzt+1) )
     ALLOCATE( waterflux_output_conversion(nzb:nzt+1) )
     ALLOCATE( momentumflux_output_conversion(nzb:nzt+1) )
+    ALLOCATE( scalarflux_output_conversion(nzb:nzt+1) )
+    ALLOCATE( salinityflux_output_conversion(nzb:nzt+1) )
 
 !
 !-- calculate flux conversion factors according to approximation and in-/output mode
     DO  k = nzb, nzt+1
 
         IF ( TRIM( flux_input_mode ) == 'kinematic' )  THEN
-            heatflux_input_conversion(k)      = rho_air_zw(k)
-            waterflux_input_conversion(k)     = rho_air_zw(k)
-            momentumflux_input_conversion(k)  = rho_air_zw(k)
+            csflux_input_conversion(k)        = 1.0_wp
+            heatflux_input_conversion(k)      = rho_ref_zw(k)
+            waterflux_input_conversion(k)     = rho_ref_zw(k)
+            momentumflux_input_conversion(k)  = rho_ref_zw(k)
+            scalarflux_input_conversion(k)    = 1.0_wp
+            salinityflux_input_conversion(k)  = rho_ref_zw(k)
         ELSEIF ( TRIM( flux_input_mode ) == 'dynamic' ) THEN
             heatflux_input_conversion(k)      = 1.0_wp / cp
             waterflux_input_conversion(k)     = 1.0_wp / l_v
             momentumflux_input_conversion(k)  = 1.0_wp
+            csflux_input_conversion(k)        = 1.0_wp
+            scalarflux_input_conversion(k)    = 1.0_wp
+            salinityflux_input_conversion(k)  = 1.0_wp
         ENDIF
 
         IF ( TRIM( flux_output_mode ) == 'kinematic' )  THEN
-            heatflux_output_conversion(k)     = drho_air_zw(k)
-            waterflux_output_conversion(k)    = drho_air_zw(k)
-            momentumflux_output_conversion(k) = drho_air_zw(k)
+            csflux_output_conversion(k)       = 1.0_wp
+            heatflux_output_conversion(k)     = drho_ref_zw(k)
+            waterflux_output_conversion(k)    = drho_ref_zw(k)
+            momentumflux_output_conversion(k) = drho_ref_zw(k)
+            scalarflux_output_conversion(k)   = 1.0_wp
+            salinityflux_output_conversion(k) = drho_ref_zw(k)
         ELSEIF ( TRIM( flux_output_mode ) == 'dynamic' ) THEN
             heatflux_output_conversion(k)     = cp
             waterflux_output_conversion(k)    = l_v
             momentumflux_output_conversion(k) = 1.0_wp
+            csflux_input_conversion(k)        = 1.0_wp
+            scalarflux_output_conversion(k)   = 1.0_wp
+            salinityflux_output_conversion(k) = 1.0_wp
         ENDIF
 
         IF ( .NOT. humidity ) THEN
@@ -944,6 +1025,7 @@
 !
 !-- In case of multigrid method, compute grid lengths and grid factors for the
 !-- grid levels with respective density on each grid
+
     IF ( psolver(1:9) == 'multigrid' )  THEN
 
        ALLOCATE( ddx2_mg(maximum_grid_level) )
@@ -953,33 +1035,33 @@
        ALLOCATE( f1_mg(nzb+1:nzt,maximum_grid_level) )
        ALLOCATE( f2_mg(nzb+1:nzt,maximum_grid_level) )
        ALLOCATE( f3_mg(nzb+1:nzt,maximum_grid_level) )
-       ALLOCATE( rho_air_mg(nzb:nzt+1,maximum_grid_level) )
-       ALLOCATE( rho_air_zw_mg(nzb:nzt+1,maximum_grid_level) )
-
+       ALLOCATE( rho_ref_mg(nzb:nzt+1,maximum_grid_level) )
+       ALLOCATE( rho_ref_zw_mg(nzb:nzt+1,maximum_grid_level) )
+       
        dzu_mg(:,maximum_grid_level) = dzu
-       rho_air_mg(:,maximum_grid_level) = rho_air
+       rho_ref_mg(:,maximum_grid_level) = rho_ref_zu
 !       
 !--    Next line to ensure an equally spaced grid. 
        dzu_mg(1,maximum_grid_level) = dzu(2)
-       rho_air_mg(nzb,maximum_grid_level) = rho_air(nzb) +                     &
-                                             (rho_air(nzb) - rho_air(nzb+1))
+       rho_ref_mg(nzb,maximum_grid_level) = rho_ref_zu(nzb) +                     &
+                                             (rho_ref_zu(nzb) - rho_ref_zu(nzb+1))
 
        dzw_mg(:,maximum_grid_level) = dzw
-       rho_air_zw_mg(:,maximum_grid_level) = rho_air_zw
+       rho_ref_zw_mg(:,maximum_grid_level) = rho_ref_zw
        nzt_l = nzt
        DO  l = maximum_grid_level-1, 1, -1
            dzu_mg(nzb+1,l) = 2.0_wp * dzu_mg(nzb+1,l+1)
            dzw_mg(nzb+1,l) = 2.0_wp * dzw_mg(nzb+1,l+1)
-           rho_air_mg(nzb,l)    = rho_air_mg(nzb,l+1) + (rho_air_mg(nzb,l+1) - rho_air_mg(nzb+1,l+1))
-           rho_air_zw_mg(nzb,l) = rho_air_zw_mg(nzb,l+1) + (rho_air_zw_mg(nzb,l+1) - rho_air_zw_mg(nzb+1,l+1))
-           rho_air_mg(nzb+1,l)    = rho_air_mg(nzb+1,l+1)
-           rho_air_zw_mg(nzb+1,l) = rho_air_zw_mg(nzb+1,l+1)
+           rho_ref_mg(nzb,l)    = rho_ref_mg(nzb,l+1) + (rho_ref_mg(nzb,l+1) - rho_ref_mg(nzb+1,l+1))
+           rho_ref_zw_mg(nzb,l) = rho_ref_zw_mg(nzb,l+1) + (rho_ref_zw_mg(nzb,l+1) - rho_ref_zw_mg(nzb+1,l+1))
+           rho_ref_mg(nzb+1,l)    = rho_ref_mg(nzb+1,l+1)
+           rho_ref_zw_mg(nzb+1,l) = rho_ref_zw_mg(nzb+1,l+1)
            nzt_l = nzt_l / 2
            DO  k = 2, nzt_l+1
               dzu_mg(k,l) = dzu_mg(2*k-2,l+1) + dzu_mg(2*k-1,l+1)
               dzw_mg(k,l) = dzw_mg(2*k-2,l+1) + dzw_mg(2*k-1,l+1)
-              rho_air_mg(k,l)    = rho_air_mg(2*k-1,l+1)
-              rho_air_zw_mg(k,l) = rho_air_zw_mg(2*k-1,l+1)
+              rho_ref_mg(k,l)    = rho_ref_mg(2*k-1,l+1)
+              rho_ref_zw_mg(k,l) = rho_ref_zw_mg(2*k-1,l+1)
            ENDDO
        ENDDO
 
@@ -990,10 +1072,10 @@
           ddx2_mg(l) = 1.0_wp / dx_l**2
           ddy2_mg(l) = 1.0_wp / dy_l**2
           DO  k = nzb+1, nzt_l
-             f2_mg(k,l) = rho_air_zw_mg(k,l) / ( dzu_mg(k+1,l) * dzw_mg(k,l) )
-             f3_mg(k,l) = rho_air_zw_mg(k-1,l) / ( dzu_mg(k,l)   * dzw_mg(k,l) )
+             f2_mg(k,l) = rho_ref_zw_mg(k,l) / ( dzu_mg(k+1,l) * dzw_mg(k,l) )
+             f3_mg(k,l) = rho_ref_zw_mg(k-1,l) / ( dzu_mg(k,l)   * dzw_mg(k,l) )
              f1_mg(k,l) = 2.0_wp * ( ddx2_mg(l) + ddy2_mg(l) ) &
-                          * rho_air_mg(k,l) + f2_mg(k,l) + f3_mg(k,l)
+                          * rho_ref_mg(k,l) + f2_mg(k,l) + f3_mg(k,l)
           ENDDO
           nzt_l = nzt_l / 2
           dx_l  = dx_l * 2.0_wp
@@ -1045,52 +1127,6 @@
        ALLOCATE( c_u_m(nzb:nzt+1), c_v_m(nzb:nzt+1), c_w_m(nzb:nzt+1) )
     ENDIF
 
-
-#if ! defined( __nopointer )
-!
-!-- Initial assignment of the pointers
-    IF ( .NOT. neutral )  THEN
-       pt => pt_1;  pt_p => pt_2;  tpt_m => pt_3
-    ELSE
-       pt => pt_1;  pt_p => pt_1;  tpt_m => pt_3
-    ENDIF
-    u  => u_1;   u_p  => u_2;   tu_m  => u_3
-    v  => v_1;   v_p  => v_2;   tv_m  => v_3
-    w  => w_1;   w_p  => w_2;   tw_m  => w_3
-
-    IF ( humidity )  THEN
-       q => q_1;  q_p => q_2;  tq_m => q_3
-       IF ( humidity )  THEN
-          vpt  => vpt_1    
-          IF ( cloud_physics )  THEN
-             ql => ql_1
-             IF ( .NOT. microphysics_morrison )  THEN
-                qc => qc_1
-             ENDIF
-             IF ( microphysics_morrison )  THEN
-                qc => qc_1;  qc_p  => qc_2;  tqc_m  => qc_3
-                nc => nc_1;  nc_p  => nc_2;  tnc_m  => nc_3
-             ENDIF
-             IF ( microphysics_seifert )  THEN
-                qr => qr_1;  qr_p  => qr_2;  tqr_m  => qr_3
-                nr => nr_1;  nr_p  => nr_2;  tnr_m  => nr_3
-             ENDIF
-          ENDIF
-       ENDIF
-       IF ( cloud_droplets )  THEN
-          ql   => ql_1
-          ql_c => ql_2
-       ENDIF
-    ENDIF
-    
-    IF ( passive_scalar )  THEN
-       s => s_1;  s_p => s_2;  ts_m => s_3
-    ENDIF    
-
-    IF ( ocean )  THEN
-       sa => sa_1;  sa_p => sa_2;  tsa_m => sa_3
-    ENDIF
-#endif
 !
 !-- Initialize arrays for turbulence closure
     CALL tcm_init_arrays
@@ -1159,7 +1195,141 @@
     sums_l_l           = 0.0_wp
     sums_wsts_bc_l     = 0.0_wp
 
+!
+!-- Before initializing further modules, compute total sum of active mask 
+!-- grid points and the mean surface level height for each statistic region.
+!-- ngp_2dh: number of grid points of a horizontal cross section through the
+!--          total domain
+!-- ngp_3d:  number of grid points of the total domain
+    ngp_2dh_outer_l   = 0
+    ngp_2dh_outer     = 0
+    ngp_2dh_s_inner_l = 0
+    ngp_2dh_s_inner   = 0
+    ngp_2dh_l         = 0
+    ngp_2dh           = 0
+    ngp_3d_inner_l    = 0.0_wp
+    ngp_3d_inner      = 0
+    ngp_3d            = 0
+    ngp_sums          = ( nz + 2 ) * ( pr_palm + max_pr_user )
 
+    mean_surface_level_height   = 0.0_wp
+    mean_surface_level_height_l = 0.0_wp
+!
+!-- Pre-set masks for regional statistics. Default is the total model domain.
+!-- Ghost points are excluded because counting values at the ghost boundaries
+!-- would bias the statistics
+    rmask = 1.0_wp
+    rmask(:,nxlg:nxl-1,:) = 0.0_wp;  rmask(:,nxr+1:nxrg,:) = 0.0_wp
+    rmask(nysg:nys-1,:,:) = 0.0_wp;  rmask(nyn+1:nyng,:,:) = 0.0_wp
+!
+!-- User-defined initializing actions
+    CALL user_init
+!
+!-- To do: New concept for these non-topography grid points!
+    DO  sr = 0, statistic_regions
+       DO  i = nxl, nxr
+          DO  j = nys, nyn
+             IF ( rmask(j,i,sr) == 1.0_wp )  THEN
+!
+!--             All xy-grid points
+                ngp_2dh_l(sr) = ngp_2dh_l(sr) + 1
+!
+!--             Determine mean surface-level height. In case of downward-
+!--             facing walls are present, more than one surface level exist.
+!--             In this case, use the lowest surface-level height. 
+                IF ( surf_def_h(0)%start_index(j,i) <=                         &
+                     surf_def_h(0)%end_index(j,i) )  THEN
+                   m = surf_def_h(0)%start_index(j,i)
+                   k = surf_def_h(0)%k(m)
+                   mean_surface_level_height_l(sr) =                           &
+                                       mean_surface_level_height_l(sr) + zw(k-1)
+                ENDIF
+                IF ( surf_lsm_h%start_index(j,i) <=                            &
+                     surf_lsm_h%end_index(j,i) )  THEN
+                   m = surf_lsm_h%start_index(j,i)
+                   k = surf_lsm_h%k(m)
+                   mean_surface_level_height_l(sr) =                           &
+                                       mean_surface_level_height_l(sr) + zw(k-1)
+                ENDIF
+                IF ( surf_usm_h%start_index(j,i) <=                            &
+                     surf_usm_h%end_index(j,i) )  THEN
+                   m = surf_usm_h%start_index(j,i)
+                   k = surf_usm_h%k(m)
+                   mean_surface_level_height_l(sr) =                           &
+                                       mean_surface_level_height_l(sr) + zw(k-1)
+                ENDIF
+
+                k_surf = k - 1
+
+                DO  k = nzb, nzt+1
+!
+!--                xy-grid points above topography
+                   ngp_2dh_outer_l(k,sr) = ngp_2dh_outer_l(k,sr)     +         &
+                                  MERGE( 1, 0, BTEST( wall_flags_0(k,j,i), 24 ) )
+
+                   ngp_2dh_s_inner_l(k,sr) = ngp_2dh_s_inner_l(k,sr) +         &
+                                  MERGE( 1, 0, BTEST( wall_flags_0(k,j,i), 22 ) )
+
+                ENDDO
+!
+!--             All grid points of the total domain above topography
+                ngp_3d_inner_l(sr) = ngp_3d_inner_l(sr) + ( nz - k_surf + 2 )
+
+
+
+             ENDIF
+          ENDDO
+       ENDDO
+    ENDDO
+!
+!-- Initialize arrays encompassing number of grid-points in inner and outer
+!-- domains, statistic regions, etc. Mainly used for horizontal averaging
+!-- of turbulence statistics. Please note, user_init must be called before
+!-- doing this.   
+    sr = statistic_regions + 1
+#if defined( __parallel )
+    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
+    CALL MPI_ALLREDUCE( ngp_2dh_l(0), ngp_2dh(0), sr, MPI_INTEGER, MPI_SUM,    &
+                        comm2d, ierr )
+    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
+    CALL MPI_ALLREDUCE( ngp_2dh_outer_l(0,0), ngp_2dh_outer(0,0), (nz+2)*sr,   &
+                        MPI_INTEGER, MPI_SUM, comm2d, ierr )
+    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
+    CALL MPI_ALLREDUCE( ngp_2dh_s_inner_l(0,0), ngp_2dh_s_inner(0,0),          &
+                        (nz+2)*sr, MPI_INTEGER, MPI_SUM, comm2d, ierr )
+    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
+    CALL MPI_ALLREDUCE( ngp_3d_inner_l(0), ngp_3d_inner_tmp(0), sr, MPI_REAL,  &
+                        MPI_SUM, comm2d, ierr )
+    ngp_3d_inner = INT( ngp_3d_inner_tmp, KIND = SELECTED_INT_KIND( 18 ) )
+    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
+    CALL MPI_ALLREDUCE( mean_surface_level_height_l(0),                        &
+                        mean_surface_level_height(0), sr, MPI_REAL,            &
+                        MPI_SUM, comm2d, ierr )
+    mean_surface_level_height = mean_surface_level_height / REAL( ngp_2dh )
+#else
+    ngp_2dh         = ngp_2dh_l
+    ngp_2dh_outer   = ngp_2dh_outer_l
+    ngp_2dh_s_inner = ngp_2dh_s_inner_l
+    ngp_3d_inner    = INT( ngp_3d_inner_l, KIND = SELECTED_INT_KIND( 18 ) )
+    mean_surface_level_height = mean_surface_level_height_l / REAL( ngp_2dh_l )
+#endif
+
+    ngp_3d = INT ( ngp_2dh, KIND = SELECTED_INT_KIND( 18 ) ) * &
+             INT ( (nz + 2 ), KIND = SELECTED_INT_KIND( 18 ) )
+
+!
+!-- Set a lower limit of 1 in order to avoid zero divisions in flow_statistics,
+!-- buoyancy, etc. A zero value will occur for cases where all grid points of
+!-- the respective subdomain lie below the surface topography
+    ngp_2dh_outer   = MAX( 1, ngp_2dh_outer(:,:)   ) 
+    ngp_3d_inner    = MAX( INT(1, KIND = SELECTED_INT_KIND( 18 )),             &
+                           ngp_3d_inner(:) )
+    ngp_2dh_s_inner = MAX( 1, ngp_2dh_s_inner(:,:) ) 
+
+    DEALLOCATE( mean_surface_level_height_l, ngp_2dh_l, ngp_2dh_outer_l,       &
+                ngp_3d_inner_l, ngp_3d_inner_tmp )
+
+    CALL location_message('Initialize model variables',.TRUE.)
 
 !
 !-- Initialize model variables
@@ -1296,6 +1466,7 @@
           u = MERGE( u, 0.0_wp, BTEST( wall_flags_0, 1 ) )
           v = MERGE( v, 0.0_wp, BTEST( wall_flags_0, 2 ) )
           w = MERGE( w, 0.0_wp, BTEST( wall_flags_0, 3 ) )
+
 !
 !--       Initialize surface variables, e.g. friction velocity, momentum 
 !--       fluxes, etc. 
@@ -1382,6 +1553,7 @@
              ENDDO
 
           ENDIF
+
 !
 !--       Initialize surface variables, e.g. friction velocity, momentum 
 !--       fluxes, etc. 
@@ -1478,6 +1650,7 @@
 !--       Compute initial temperature field and other constants used in case
 !--       of a sloping surface
           IF ( sloping_surface )  CALL init_slope
+
 !
 !--       Initialize surface variables, e.g. friction velocity, momentum 
 !--       fluxes, etc. 
@@ -1487,6 +1660,7 @@
        THEN
 
           CALL location_message( 'initializing by user', .FALSE. )
+
 !
 !--       Pre-initialize surface variables, i.e. setting start- and end-indices
 !--       at each (j,i)-location. Please note, this does not supersede 
@@ -1572,17 +1746,19 @@
 !
 !--    Set the reference state to be used in the buoyancy terms (for ocean runs
 !--    the reference state will be set (overwritten) in init_ocean)
-       IF ( use_single_reference_value )  THEN
-          IF (  .NOT.  humidity )  THEN
-             ref_state(:) = pt_reference
+       IF ( .NOT. ocean ) THEN
+          IF ( use_single_reference_value )  THEN
+             IF (  .NOT.  humidity )  THEN
+                ref_state(:) = pt_reference
+             ELSE
+                ref_state(:) = vpt_reference
+             ENDIF
           ELSE
-             ref_state(:) = vpt_reference
-          ENDIF
-       ELSE
-          IF (  .NOT.  humidity )  THEN
-             ref_state(:) = pt_init(:)
-          ELSE
-             ref_state(:) = vpt(:,nys,nxl)
+             IF (  .NOT.  humidity )  THEN
+                ref_state(:) = pt_init(:)
+             ELSE
+                ref_state(:) = vpt(:,nys,nxl)
+             ENDIF
           ENDIF
        ENDIF
 
@@ -1678,6 +1854,7 @@
 
        CALL location_message( 'initializing in case of restart / cyclic_fill', &
                               .FALSE. )
+
 !
 !--    Initialize surface elements and its attributes, e.g. heat- and 
 !--    momentumfluxes, roughness, scaling parameters. As number of surface 
@@ -2170,140 +2347,6 @@
     ENDIF
 
 !
-!-- Before initializing further modules, compute total sum of active mask 
-!-- grid points and the mean surface level height for each statistic region.
-!-- ngp_2dh: number of grid points of a horizontal cross section through the
-!--          total domain
-!-- ngp_3d:  number of grid points of the total domain
-    ngp_2dh_outer_l   = 0
-    ngp_2dh_outer     = 0
-    ngp_2dh_s_inner_l = 0
-    ngp_2dh_s_inner   = 0
-    ngp_2dh_l         = 0
-    ngp_2dh           = 0
-    ngp_3d_inner_l    = 0.0_wp
-    ngp_3d_inner      = 0
-    ngp_3d            = 0
-    ngp_sums          = ( nz + 2 ) * ( pr_palm + max_pr_user )
-
-    mean_surface_level_height   = 0.0_wp
-    mean_surface_level_height_l = 0.0_wp
-!
-!-- Pre-set masks for regional statistics. Default is the total model domain.
-!-- Ghost points are excluded because counting values at the ghost boundaries
-!-- would bias the statistics
-    rmask = 1.0_wp
-    rmask(:,nxlg:nxl-1,:) = 0.0_wp;  rmask(:,nxr+1:nxrg,:) = 0.0_wp
-    rmask(nysg:nys-1,:,:) = 0.0_wp;  rmask(nyn+1:nyng,:,:) = 0.0_wp
-!
-!-- User-defined initializing actions
-    CALL user_init
-!
-!-- To do: New concept for these non-topography grid points!
-    DO  sr = 0, statistic_regions
-       DO  i = nxl, nxr
-          DO  j = nys, nyn
-             IF ( rmask(j,i,sr) == 1.0_wp )  THEN
-!
-!--             All xy-grid points
-                ngp_2dh_l(sr) = ngp_2dh_l(sr) + 1
-!
-!--             Determine mean surface-level height. In case of downward-
-!--             facing walls are present, more than one surface level exist.
-!--             In this case, use the lowest surface-level height. 
-                IF ( surf_def_h(0)%start_index(j,i) <=                         &
-                     surf_def_h(0)%end_index(j,i) )  THEN
-                   m = surf_def_h(0)%start_index(j,i)
-                   k = surf_def_h(0)%k(m)
-                   mean_surface_level_height_l(sr) =                           &
-                                       mean_surface_level_height_l(sr) + zw(k-1)
-                ENDIF
-                IF ( surf_lsm_h%start_index(j,i) <=                            &
-                     surf_lsm_h%end_index(j,i) )  THEN
-                   m = surf_lsm_h%start_index(j,i)
-                   k = surf_lsm_h%k(m)
-                   mean_surface_level_height_l(sr) =                           &
-                                       mean_surface_level_height_l(sr) + zw(k-1)
-                ENDIF
-                IF ( surf_usm_h%start_index(j,i) <=                            &
-                     surf_usm_h%end_index(j,i) )  THEN
-                   m = surf_usm_h%start_index(j,i)
-                   k = surf_usm_h%k(m)
-                   mean_surface_level_height_l(sr) =                           &
-                                       mean_surface_level_height_l(sr) + zw(k-1)
-                ENDIF
-
-                k_surf = k - 1
-
-                DO  k = nzb, nzt+1
-!
-!--                xy-grid points above topography
-                   ngp_2dh_outer_l(k,sr) = ngp_2dh_outer_l(k,sr)     +         &
-                                  MERGE( 1, 0, BTEST( wall_flags_0(k,j,i), 24 ) )
-
-                   ngp_2dh_s_inner_l(k,sr) = ngp_2dh_s_inner_l(k,sr) +         &
-                                  MERGE( 1, 0, BTEST( wall_flags_0(k,j,i), 22 ) )
-
-                ENDDO
-!
-!--             All grid points of the total domain above topography
-                ngp_3d_inner_l(sr) = ngp_3d_inner_l(sr) + ( nz - k_surf + 2 )
-
-
-
-             ENDIF
-          ENDDO
-       ENDDO
-    ENDDO
-!
-!-- Initialize arrays encompassing number of grid-points in inner and outer
-!-- domains, statistic regions, etc. Mainly used for horizontal averaging
-!-- of turbulence statistics. Please note, user_init must be called before
-!-- doing this.   
-    sr = statistic_regions + 1
-#if defined( __parallel )
-    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-    CALL MPI_ALLREDUCE( ngp_2dh_l(0), ngp_2dh(0), sr, MPI_INTEGER, MPI_SUM,    &
-                        comm2d, ierr )
-    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-    CALL MPI_ALLREDUCE( ngp_2dh_outer_l(0,0), ngp_2dh_outer(0,0), (nz+2)*sr,   &
-                        MPI_INTEGER, MPI_SUM, comm2d, ierr )
-    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-    CALL MPI_ALLREDUCE( ngp_2dh_s_inner_l(0,0), ngp_2dh_s_inner(0,0),          &
-                        (nz+2)*sr, MPI_INTEGER, MPI_SUM, comm2d, ierr )
-    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-    CALL MPI_ALLREDUCE( ngp_3d_inner_l(0), ngp_3d_inner_tmp(0), sr, MPI_REAL,  &
-                        MPI_SUM, comm2d, ierr )
-    ngp_3d_inner = INT( ngp_3d_inner_tmp, KIND = SELECTED_INT_KIND( 18 ) )
-    IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-    CALL MPI_ALLREDUCE( mean_surface_level_height_l(0),                        &
-                        mean_surface_level_height(0), sr, MPI_REAL,            &
-                        MPI_SUM, comm2d, ierr )
-    mean_surface_level_height = mean_surface_level_height / REAL( ngp_2dh )
-#else
-    ngp_2dh         = ngp_2dh_l
-    ngp_2dh_outer   = ngp_2dh_outer_l
-    ngp_2dh_s_inner = ngp_2dh_s_inner_l
-    ngp_3d_inner    = INT( ngp_3d_inner_l, KIND = SELECTED_INT_KIND( 18 ) )
-    mean_surface_level_height = mean_surface_level_height_l / REAL( ngp_2dh_l )
-#endif
-
-    ngp_3d = INT ( ngp_2dh, KIND = SELECTED_INT_KIND( 18 ) ) * &
-             INT ( (nz + 2 ), KIND = SELECTED_INT_KIND( 18 ) )
-
-!
-!-- Set a lower limit of 1 in order to avoid zero divisions in flow_statistics,
-!-- buoyancy, etc. A zero value will occur for cases where all grid points of
-!-- the respective subdomain lie below the surface topography
-    ngp_2dh_outer   = MAX( 1, ngp_2dh_outer(:,:)   ) 
-    ngp_3d_inner    = MAX( INT(1, KIND = SELECTED_INT_KIND( 18 )),             &
-                           ngp_3d_inner(:) )
-    ngp_2dh_s_inner = MAX( 1, ngp_2dh_s_inner(:,:) ) 
-
-    DEALLOCATE( mean_surface_level_height_l, ngp_2dh_l, ngp_2dh_outer_l,       &
-                ngp_3d_inner_l, ngp_3d_inner_tmp )
-
-!
 !-- Initialize nudging if required
     IF ( nudging )  CALL nudge_init
 
@@ -2356,10 +2399,11 @@
 !-- If required, initialize dvrp-software
     IF ( dt_dvrp /= 9999999.9_wp )  CALL init_dvrp
 
-    IF ( ocean )  THEN
-!
-!--    Initialize quantities needed for the ocean model
-       CALL init_ocean
+    IF ( ocean ) THEN
+
+!--    Calculate the 3-d array of initial in-situ and potential density
+!--    based on the initial temperature and salinity profiles.
+       CALL eqn_state_seawater
 
     ELSE
 !
@@ -2367,16 +2411,23 @@
 !--    This routine must be called before lpm_init, because
 !--    otherwise, array pt_d_t, needed in data_output_dvrp (called by
 !--    lpm_init) is not defined.
+       CALL location_message( 'initializing cloud physics', .FALSE. )    
        CALL init_cloud_physics
+       CALL location_message( 'finished', .TRUE. )
 !
 !--    Initialize bulk cloud microphysics
+       CALL location_message( 'initializing cloud microphysics', .FALSE. )    
        CALL microphysics_init
+       CALL location_message( 'finished', .TRUE. )
     ENDIF
 
 !
 !-- If required, initialize particles
-    IF ( particle_advection )  CALL lpm_init
-
+    IF ( particle_advection )  THEN
+       CALL location_message( 'initializing partical advection', .FALSE. )    
+       CALL lpm_init
+       CALL location_message( 'finished', .TRUE. )
+    ENDIF
 !
 !-- If required, initialize quantities needed for the LSM
     IF ( land_surface )  THEN
@@ -2413,7 +2464,9 @@
 !-- If required, set chemical emissions
 !-- (todo(FK): This should later on be CALLed time-dependently in init_3d_model)
     IF ( air_chemistry )  THEN
+       CALL location_message( 'initializing air chemistry', .FALSE. )
        CALL chem_emissions
+       CALL location_message( 'finished', .TRUE. )
     ENDIF
 
 !
@@ -2656,7 +2709,5 @@
     IF ( nested_run )  CALL MPI_BARRIER( MPI_COMM_WORLD, ierr )
 #endif
 
-
-    CALL location_message( 'leaving init_3d_model', .TRUE. )
 
  END SUBROUTINE init_3d_model

@@ -1014,6 +1014,7 @@ init_rankine.o: \
 	mod_kinds.o \
 	modules.o
 init_slope.o: \
+	eqn_state_seawater.o \
 	mod_kinds.o \
 	modules.o
 interaction_droplets_ptq.o: \

@@ -133,7 +133,7 @@
                                s_flux_solar_t)
 
        USE arrays_3d,                                                          &
-           ONLY:  dzw, ddzu, ddzw, kh, tend, drho_air, rho_air_zw, solar3d
+           ONLY:  dzw, ddzu, ddzw, kh, tend, drho_ref_zu, rho_ref_zw, solar3d
        
        USE control_parameters,                                                 & 
            ONLY: use_surface_fluxes, use_top_fluxes, ideal_solar_division,     &
@@ -358,13 +358,13 @@
                                        + 0.5_wp * (                            &
                                       ( kh(k,j,i) + kh(k+1,j,i) ) *            &
                                           ( s(k+1,j,i)-s(k,j,i) ) * ddzu(k+1)  &
-                                                            * rho_air_zw(k)    &
+                                                            * rho_ref_zw(k)    &
                                                             * mask_top         &
                                     - ( kh(k,j,i) + kh(k-1,j,i) ) *            &
                                           ( s(k,j,i)-s(k-1,j,i) ) * ddzu(k)    &
-                                                            * rho_air_zw(k-1)  &
+                                                            * rho_ref_zw(k-1)  &
                                                             * mask_bottom      &
-                                                  ) * ddzw(k) * drho_air(k)    &
+                                                  ) * ddzw(k) * drho_ref_zu(k)    &
                                                               * flag
              ENDDO
 
@@ -378,7 +378,7 @@
 
                    k   = surf_def_h(0)%k(m)
                    tend(k,j,i) = tend(k,j,i) + s_flux_def_h_up(m)              &
-                                       * ddzw(k) * drho_air(k)
+                                       * ddzw(k) * drho_ref_zu(k)
 
                 ENDDO
 !
@@ -389,7 +389,7 @@
 
                    k   = surf_def_h(1)%k(m)
                    tend(k,j,i) = tend(k,j,i) + s_flux_def_h_down(m)            &
-                                       * ddzw(k) * drho_air(k)
+                                       * ddzw(k) * drho_ref_zu(k)
 
                 ENDDO
 !
@@ -400,7 +400,7 @@
 
                    k   = surf_lsm_h%k(m)
                    tend(k,j,i) = tend(k,j,i) + s_flux_lsm_h_up(m)              &
-                                       * ddzw(k) * drho_air(k)
+                                       * ddzw(k) * drho_ref_zu(k)
 
                 ENDDO
 !
@@ -411,7 +411,7 @@
 
                    k   = surf_usm_h%k(m)
                    tend(k,j,i) = tend(k,j,i) + s_flux_usm_h_up(m)              &
-                                       * ddzw(k) * drho_air(k)
+                                       * ddzw(k) * drho_ref_zu(k)
 
                 ENDDO
 
@@ -445,7 +445,7 @@
 
                    k   = surf_def_h(2)%k(m)
                    tend(k,j,i) = tend(k,j,i)                                   &
-                           + ( - s_flux_t(m) ) * ddzw(k) * drho_air(k)
+                           + ( - s_flux_t(m) ) * ddzw(k) * drho_ref_zu(k)
                 ENDDO
              ENDIF
 
@@ -472,7 +472,7 @@
                                s_flux_solar_t)
 
        USE arrays_3d,                                                          &
-           ONLY:  dzw, ddzu, ddzw, kh, tend, drho_air, rho_air_zw, solar3d
+           ONLY:  dzw, ddzu, ddzw, kh, tend, drho_ref_zu, rho_ref_zw, solar3d
            
        USE control_parameters,                                                 & 
            ONLY: use_surface_fluxes, use_top_fluxes, ideal_solar_division,     &
@@ -696,13 +696,13 @@
                                        + 0.5_wp * (                            &
                                       ( kh(k,j,i) + kh(k+1,j,i) ) *            &
                                           ( s(k+1,j,i)-s(k,j,i) ) * ddzu(k+1)  &
-                                                            * rho_air_zw(k)    &
+                                                            * rho_ref_zw(k)    &
                                                             * mask_top         &
                                     - ( kh(k,j,i) + kh(k-1,j,i) ) *            &
                                           ( s(k,j,i)-s(k-1,j,i) ) * ddzu(k)    &
-                                                            * rho_air_zw(k-1)  &
+                                                            * rho_ref_zw(k-1)  &
                                                             * mask_bottom      &
-                                                  ) * ddzw(k) * drho_air(k)    &
+                                                  ) * ddzw(k) * drho_ref_zu(k)    &
                                                               * flag
        ENDDO
 
@@ -719,7 +719,7 @@
              k   = surf_def_h(0)%k(m)
 
              tend(k,j,i) = tend(k,j,i) + s_flux_def_h_up(m)                    &
-                                       * ddzw(k) * drho_air(k)
+                                       * ddzw(k) * drho_ref_zu(k)
           ENDDO
 !
 !--       Default-type surfaces, downward-facing
@@ -730,7 +730,7 @@
              k   = surf_def_h(1)%k(m)
 
              tend(k,j,i) = tend(k,j,i) + s_flux_def_h_down(m)                  &
-                                       * ddzw(k) * drho_air(k)
+                                       * ddzw(k) * drho_ref_zu(k)
           ENDDO
 !
 !--       Natural-type surfaces, upward-facing
@@ -740,7 +740,7 @@
              k   = surf_lsm_h%k(m)
 
              tend(k,j,i) = tend(k,j,i) + s_flux_lsm_h_up(m)                    &
-                                       * ddzw(k) * drho_air(k)
+                                       * ddzw(k) * drho_ref_zu(k)
           ENDDO
 !
 !--       Urban-type surfaces, upward-facing
@@ -750,7 +750,7 @@
              k   = surf_usm_h%k(m)
 
              tend(k,j,i) = tend(k,j,i) + s_flux_usm_h_up(m)                    &
-                                       * ddzw(k) * drho_air(k)
+                                       * ddzw(k) * drho_ref_zu(k)
           ENDDO
        ENDIF
 !
@@ -762,7 +762,7 @@
 
              k   = surf_def_h(2)%k(m)
              tend(k,j,i) = tend(k,j,i)                                         &
-                           + ( - s_flux_t(m) ) * ddzw(k) * drho_air(k)
+                           + ( - s_flux_t(m) ) * ddzw(k) * drho_ref_zu(k)
           ENDDO
 
           !LPV adding solar forcing with depth

@@ -173,10 +173,11 @@
                intermediate_timestep_count_max, kappa, km_constant,            &
                message_string, mixing_length_1d, prandtl_number,               &
                roughness_length, run_description_header, simulated_time_chr,   &
-               timestep_scheme, tsc, z0h_factor
+               timestep_scheme, tsc, use_surface_fluxes, use_top_fluxes,       &
+               z0h_factor
 
     USE indices,                                                               &
-        ONLY:  nzb, nzb_diff, nzt
+        ONLY:  nzb, nzb_diff, nzt, nzt_diff
     
     USE kinds
 
@@ -446,6 +447,17 @@
     dt_1d = 0.01_wp
     CALL run_control_1d
 
+    IF ( TRIM(constant_flux_layer) == 'bottom'  .OR.  use_surface_fluxes )  THEN
+       nzb_diff = nzb + 2
+    ELSE
+       nzb_diff = nzb + 1
+    ENDIF
+    
+    IF ( TRIM(constant_flux_layer) == 'top'  .OR.  use_top_fluxes )  THEN
+       nzt_diff = nzt - 1
+    ELSE
+       nzt_diff = nzt
+    ENDIF
 !
 !-- Start of time loop
     DO  WHILE ( simulated_time_1d < end_time_1d  .AND.  .NOT. stop_dt_1d )
@@ -465,7 +477,7 @@
 !
 !--       Compute all tendency terms. If a constant-flux layer is simulated, 
 !--       k starts at nzb+2.
-          DO  k = nzb_diff, nzt
+          DO  k = nzb_diff, nzt_diff
 
              kmzm = 0.5_wp * ( km1d(k-1) + km1d(k) )
              kmzp = 0.5_wp * ( km1d(k) + km1d(k+1) )
@@ -483,7 +495,7 @@
                                                  ) * ddzw(k)
           ENDDO
           IF ( .NOT. constant_diffusion )  THEN
-             DO  k = nzb_diff, nzt
+             DO  k = nzb_diff, nzt_diff
 !
 !--             TKE and dissipation rate
                 kmzm = 0.5_wp * ( km1d(k-1) + km1d(k) )
@@ -768,7 +780,7 @@
                                ( pt_0 * ( us1d**2 + 1E-30_wp ) )
              ENDIF
 
-             DO  k = nzb_diff, nzt
+             DO  k = nzb_diff, nzt_diff
                 IF ( .NOT. humidity )  THEN
                    pt_0 = pt_init(k)
                    flux = ( pt_init(k+1) - pt_init(k-1) ) * dd2zu(k)
@@ -842,7 +854,7 @@
                      ibc_e_b == 2                                )  THEN
                    e1d(k) = ( us1d / c_0 )**2
                 ENDIF
-                IF ( TRIM(constant_flux_layer) == 'top' .AND.               &
+                IF ( TRIM(constant_flux_layer) == 'top' .AND.                  &
                      ibc_e_t == 2                                )  THEN
                    e1d(k) = ( us1d / c_0 )**2
                 ENDIF
@@ -936,17 +948,17 @@
                    km1d(k) = us1d * kappa * zu(k) /                            &
                                  ( 1.0_wp + 5.0_wp * rif1d(k) )
                 ELSE
-                   km1d(k) = us1d * kappa * zu(k) *                        &
+                   km1d(k) = us1d * kappa * zu(k) *                            &
                                  ( 1.0_wp - 16.0_wp * rif1d(k) )**0.25_wp
                 ENDIF
              ENDIF
 
              IF ( dissipation_1d == 'prognostic' )  THEN
-                DO  k = nzb_diff, nzt
+                DO  k = nzb_diff, nzt_diff
                    km1d(k) = c_mu * e1d(k)**2 / ( diss1d(k) + 1.0E-30_wp )
                 ENDDO
              ELSE
-                DO  k = nzb_diff, nzt
+                DO  k = nzb_diff, nzt_diff
                    km1d(k) = c_0 * SQRT( e1d(k) ) * l1d(k)
                 ENDDO
              ENDIF

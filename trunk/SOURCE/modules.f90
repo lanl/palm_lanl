@@ -1851,6 +1851,7 @@
     INTEGER(iwp) ::  nz = 0         !< total number of grid points in z-direction
     INTEGER(iwp) ::  nzb            !< bottom grid index of computational domain
     INTEGER(iwp) ::  nzb_diff       !< will be removed
+    INTEGER(iwp) ::  nzt_diff       !< will be removed
     INTEGER(iwp) ::  nzb_max        !< vertical index of topography top
     INTEGER(iwp) ::  nzt            !< nzt+1 = top grid index of computational domain
     INTEGER(iwp) ::  topo_min_level !< minimum topography-top index (usually equal to nzb)
@@ -1869,8 +1870,6 @@
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  ngp_2dh_outer     !< number of horizontal grid points which are non-topography and non-surface-bounded
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  ngp_2dh_s_inner   !< number of horizontal grid points which are non-topography
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  mg_loc_ind        !< internal array to store index bounds of all PEs of that multigrid level where data is collected to PE0
-    INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  nzb_diff_s_inner  !< will be removed
-    INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  nzb_diff_s_outer  !< will be removed
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  nzb_inner         !< will be removed
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  nzb_outer         !< will be removed
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  nzb_s_inner       !< will be removed

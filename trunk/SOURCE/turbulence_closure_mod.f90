@@ -1939,6 +1939,31 @@
 !------------------------------------------------------------------------------!
  SUBROUTINE production_e_init
 
+    IMPLICIT NONE
+
+    IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
+
+       IF ( TRIM(constant_flux_layer) == 'bottom' ) THEN
+          surf => surf_def_h(0)
+          CALL production_e_init_m
+          surf => surf_def_h(1)
+          CALL production_e_init_m
+          surf => surf_usm_h
+          CALL production_e_init_m
+          surf => surf_lsm_h
+          CALL production_e_init_m
+       ENDIF
+       IF ( TRIM(constant_flux_layer) == 'top'    ) THEN
+          surf => surf_def_h(2)
+          CALL production_e_init_m
+       ENDIF
+    
+    ENDIF
+
+ END SUBROUTINE production_e_init
+
+ SUBROUTINE production_e_init_m
+ 
     USE arrays_3d,                                                             &
         ONLY:  drho_ref_zw, zu
 

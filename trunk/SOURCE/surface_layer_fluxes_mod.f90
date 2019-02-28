@@ -759,7 +759,7 @@
 
        IF ( most_method == 'lookup' .AND. TRIM(constant_flux_layer) == 'bottom' )  THEN
 !
-!--       Check roughness homogeneity between differt surface types. 
+!--       Check roughness homogeneity between different surface types. 
           IF ( surf_lsm_h%ns >= 1  .AND.  surf_def_h(0)%ns >= 1 )  THEN
              IF ( MINVAL( surf_lsm_h%z0h ) /= MAXVAL( surf_def_h(0)%z0h )  .OR.    &
                   MINVAL( surf_lsm_h%z0  ) /= MAXVAL( surf_def_h(0)%z0  ) )  THEN
@@ -782,7 +782,7 @@
 
 #if defined( __parallel )
 !
-!--       Make a logical OR for all processes. Force termiation of model if result
+!--       Make a logical OR for all processes. Force termination of model if result
 !--       is TRUE
           IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
           CALL MPI_ALLREDUCE( terminate_run_l, terminate_run, 1, MPI_LOGICAL,  &

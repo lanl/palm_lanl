@@ -354,8 +354,7 @@
         
     USE indices,                                                               &
         ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, ny, nyn, nyng, nys, nysg, nz,   &
-               nzb, nzb_diff, nzb_diff_s_inner, nzb_diff_s_outer,              &
-               nzb_max, nzb_s_inner, nzb_s_outer, nzb_u_inner,                 &
+               nzb, nzb_max, nzb_s_inner, nzb_s_outer, nzb_u_inner,            &
                nzb_u_outer, nzb_v_inner, nzb_v_outer, nzb_w_inner,             &
                nzb_w_outer, nzt, topo_min_level
     
@@ -894,8 +893,6 @@
               nzb_v_outer(nysg:nyng,nxlg:nxrg),                                &
               nzb_w_inner(nysg:nyng,nxlg:nxrg),                                &
               nzb_w_outer(nysg:nyng,nxlg:nxrg),                                &
-              nzb_diff_s_inner(nysg:nyng,nxlg:nxrg),                           &
-              nzb_diff_s_outer(nysg:nyng,nxlg:nxrg),                           &
               nzb_local(nysg:nyng,nxlg:nxrg),                                  &
               nzb_tmp(nysg:nyng,nxlg:nxrg) )
 !
@@ -930,16 +927,7 @@
     nzb_v_inner = nzb;  nzb_v_outer = nzb
     nzb_w_inner = nzb;  nzb_w_outer = nzb
 
-!
-!-- Define vertical gridpoint from (or to) which on the usual finite difference
-!-- form (which does not use surface fluxes) is applied 
-    IF ( TRIM(constant_flux_layer) == 'bottom'  .OR.  use_surface_fluxes )  THEN
-       nzb_diff = nzb + 2
-    ELSE
-       nzb_diff = nzb + 1
-    ENDIF
 
-    nzb_diff_s_inner = nzb_diff;  nzb_diff_s_outer = nzb_diff
 !
 !-- Set Neumann conditions for topography. Will be removed soon.
     IF ( .NOT. bc_ns_cyc )  THEN
@@ -1095,17 +1083,6 @@
     CALL exchange_horiz_2d_int( nzb_w_outer, nys, nyn, nxl, nxr, nbgp )
     CALL exchange_horiz_2d_int( nzb_s_outer, nys, nyn, nxl, nxr, nbgp )
 
-!
-!-- Set the individual index arrays which define the k index from which on
-!-- the usual finite difference form (which does not use surface fluxes) is
-!-- applied 
-    IF ( TRIM(constant_flux_layer) == 'bottom'  .OR.  use_surface_fluxes )  THEN
-       nzb_diff_s_inner   = nzb_s_inner + 2
-       nzb_diff_s_outer   = nzb_s_outer + 2
-    ELSE
-       nzb_diff_s_inner   = nzb_s_inner + 1
-       nzb_diff_s_outer   = nzb_s_outer + 1
-    ENDIF
 !
 !-- Vertical nesting: communicate vertical grid level arrays between fine and
 !-- coarse grid
@@ -2425,6 +2402,9 @@
 
     INTEGER(iwp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  topo !< input array for 3D topography and dummy array for setting "outer"-flags
 
+    CALL location_message('Setting topo flags',.TRUE.)
+    IF (.NOT. use_surface_fluxes) CALL location_message('use_surface_fluxes = FALSE',.TRUE.)
+
     ALLOCATE( wall_flags_0(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
     wall_flags_0 = 0
 !
@@ -2499,9 +2479,11 @@
 !--          treat edges (u(k,j,i+1)) simply by a gradient approach, i.e. these
 !--          points are not masked within diffusion_u. Tests had shown that the
 !--          effect on the flow is negligible. 
-             IF ( TRIM(constant_flux_layer) == 'bottom'  .OR.  use_surface_fluxes )  THEN
-                IF ( BTEST( wall_flags_0(k,j,i), 0 ) )                         &
+             IF ( TRIM(constant_flux_layer) /= 'none' .OR.                     &
+                  use_surface_fluxes .OR. use_top_fluxes )  THEN
+                IF ( BTEST( wall_flags_0(k,j,i), 0 ) ) THEN
                    wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 8 )
+                ENDIF
              ELSE
                 wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 8 )
              ENDIF
@@ -2511,9 +2493,9 @@
 !--       Special flag to control vertical diffusion at model top - former 
 !--       nzt_diff
           wall_flags_0(:,j,i) = IBSET( wall_flags_0(:,j,i), 9 )
-          IF ( use_top_fluxes )                                                &
+          IF ( TRIM(constant_flux_layer) == 'top' .OR. use_top_fluxes ) THEN
              wall_flags_0(nzt+1,j,i) = IBCLR( wall_flags_0(nzt+1,j,i), 9 )
-
+          ENDIF
 
           DO k = nzb+1, nzt
 !
@@ -2544,7 +2526,8 @@
 !
 !--          Special flag on scalar grid, nzb_diff_s_outer - 1, required in 
 !--          in production_e
-             IF ( TRIM(constant_flux_layer) == 'bottom'  .OR.  use_surface_fluxes )  THEN
+             IF ( TRIM(constant_flux_layer) /= 'none' .OR.                     &
+                  use_surface_fluxes .OR. use_top_fluxes )  THEN
                 IF ( BTEST( wall_flags_0(k,j,i),   24 )  .AND.                 &
                      BTEST( wall_flags_0(k-1,j,i), 24 )  .AND.                 &
                      BTEST( wall_flags_0(k+1,j,i), 0 ) )                       &
@@ -2556,7 +2539,8 @@
 !
 !--          Special flag on scalar grid, nzb_diff_s_outer - 1, required in 
 !--          in production_e
-             IF ( TRIM(constant_flux_layer) == 'bottom' .OR.  use_surface_fluxes )  THEN
+             IF ( TRIM(constant_flux_layer) /= 'none' .OR.                     &
+                  use_surface_fluxes .OR. use_top_fluxes )  THEN
                 IF ( BTEST( wall_flags_0(k,j,i),   0 )  .AND.                  &
                      BTEST( wall_flags_0(k-1,j,i), 0 )  .AND.                  &
                      BTEST( wall_flags_0(k+1,j,i), 0 ) )                       &
@@ -2624,15 +2608,20 @@
 !
 !--          Special flag on scalar grid, nzb_diff_s_inner - 1, required for 
 !--          flow_statistics
-             IF ( TRIM(constant_flux_layer) == 'bottom' .OR.  use_surface_fluxes )  THEN
+             IF ( TRIM(constant_flux_layer) == 'bottom' .OR.                   &
+                  use_surface_fluxes                          )  THEN
                 IF ( BTEST( wall_flags_0(k,j,i),   0 )  .AND.                  &
-                     BTEST( wall_flags_0(k+1,j,i), 0 ) )                       &
+                     BTEST( wall_flags_0(k+1,j,i), 0 )  .AND.                  &
+                  wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 23 )
+             ELSEIF ( TRIM(constant_flux_layer) == 'top' .OR. use_top_fluxes ) &
+                THEN
+                IF ( BTEST( wall_flags_0(k,j,i),   0 )  .AND.                  &
+                     BTEST( wall_flags_0(k-1,j,i), 0 ) )                       &
                   wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 23 )
              ELSE
                 IF ( BTEST( wall_flags_0(k,j,i), 22 ) )                        &
                    wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 23 )
              ENDIF
-   
 
           ENDDO
           wall_flags_0(nzt+1,j,i) = IBSET( wall_flags_0(nzt+1,j,i), 22 )
@@ -2695,6 +2684,7 @@
              wall_flags_0(:,:,nxr+i) = wall_flags_0(:,:,nxr)     
           ENDDO
        ENDIF      
+       
     ENDIF
 
 

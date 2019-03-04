@@ -1,0 +1,221 @@
+
+ ******************************    --------------------------------------------
+ * PALM 5.0  Rev: Unversi     *    ocean - run without 1D - prerun
+ ******************************    --------------------------------------------
+
+ Date:                 13-02-19    Run:       test_oceanml        
+ Time:                 14:59:42    Run-No.:   00
+ Run on host:         localhost
+ Number of PEs:              32    Processor grid (x,y): (   4,   8) calculated
+ ------------------------------------------------------------------------------
+
+ Numerical Schemes:
+ -----------------
+
+ --> Use the Moeng_Wyngaard turbulence closure (LES mode).
+ --> Use the boussinesq approximation for the model equations.
+ --> Solve perturbation pressure via FFT using temperton-algorithm routines
+     perturbation pressure is calculated at every Runge-Kutta step
+ --> Momentum advection via Wicker-Skamarock-Scheme 5th order
+ --> Scalar advection via Wicker-Skamarock-Scheme 5th order
+ --> Loop optimization method: cache
+ --> Time differencing scheme: runge-kutta-3       
+ ------------------------------------------------------------------------------
+
+
+ Run time and time step information:
+ ----------------------------------
+
+ Timestep:             variable     maximum value: 20.000 s    CFL-factor: 0.90
+ Start time:              0.000 s
+ End time:               60.000 s
+
+
+ Computational grid and domain size:
+ ----------------------------------
+
+ Grid length:      dx =       4.000 m    dy =       4.000 m
+                dz(1) =       2.000 m
+
+ Domain size:       x =    128.000 m     y =    128.000 m  z(u) =   -128.000 m
+
+
+
+ Number of gridpoints (x,y,z):  (0:  31, 0:  31, 0:  65)
+ Subdomain size (x,y,z):        (     8,      4,     66)
+
+
+    Characteristic levels of the geo. wind component ug:
+
+       Height:         0.0     0.0  m
+       ug:            0.00    0.00  m/s
+       Gradient:    ------    0.00  1/100s
+       Gridpoint:        0      65
+
+    Characteristic levels of the geo. wind component vg:
+
+       Height:         0.0     0.0  m
+       vg:            0.00    0.00  m/s
+       Gradient:    ------    0.00  1/100s
+       Gridpoint:        0      65
+
+
+ Topography information:
+ ----------------------
+
+ Topography: flat                                    
+
+
+ Boundary conditions:
+ -------------------
+
+                     p                    uv                                  pt
+
+ B. bound.: p(0)     = p(1)   | uv(0)     = uv(1)                 | pt(0)     = pt(1)            
+ T. bound.: p(nzt+1) = p(nzt) | uv(nzt+1) = uv(nzt)               | pt(nzt+1) = pt(nzt)          
+
+                     e
+
+ B. bound.: e(0)     = e(1)                                                                      
+ T. bound.: e(nzt+1) = e(nzt) = e(nzt-1)                                                         
+
+                     sa
+
+ B. bound.: sa(0)    = sa(1)                                                                     
+ T. bound.: sa(nzt+1) = sa(nzt)                                                                  
+
+ Top surface fluxes are used in diffusion terms at k=nzt
+       Predefined constant momentumflux:  u:  0.000000 m**2/s**2
+                                          v:  0.000000 m**2/s**2
+       Predefined constant heatflux:    0.000018 K m/s
+       Predefined constant salinityflux:    0.000000 psu m/s
+
+
+ Lateral boundaries:
+       left/right:  cyclic              
+       north/south: cyclic              
+
+
+ Initial profiles:
+ ----------------
+
+    Characteristic levels of the initial temperature profile:
+
+       Height:           0.0     0.0  m
+       Temperature:   293.15  293.16  K
+       Gradient:      ------    1.00  K/100m
+       Gridpoint:          0      65
+
+    Characteristic levels of the initial salinity profile:
+
+       Height:        0.0     0.0  m
+       Salinity:    35.00   35.00  psu
+       Gradient:   ------    0.00  psu/100m
+       Gridpoint:       0      65
+
+
+ List output:
+ -----------
+
+    1D-Profiles:
+       Output every             9999999.90 s
+
+
+ Data output:
+ -----------
+
+
+    1D-Profiles:
+       Output format: netCDF 64bit offset                     
+
+
+       Profile: e, e*, pt, sa, p, hyp, km, kh, l, u, v, w, prho, w"u",       
+
+              : w*u*, w"v", w*v*, w"pt", w*pt*, w"sa", w*sa*, w*e*,          
+
+              : u*2, v*2, w*2, pt*2, w*3, Sw, w*2pt*, w*pt*2, w*u*u*:dz,     
+
+              : w*p*:dz, rho_ocean, alpha_T,                                 
+       Output every                 1.00 s
+       Time averaged over           0.00 s
+       Averaging input every        0.00 s
+
+    3D-Arrays:
+       Output format: netCDF 64bit offset                     
+
+
+       Arrays:  e, pt, sa, u, v, w, rho_ocean, alpha_T,                              
+       Output every                 1.00 s  
+       Upper output limit at        1.00 m  (GP   65)
+
+
+       Number of output time levels allowed: unlimited
+
+
+    Time series:
+       Output format: netCDF 64bit offset                     
+
+       Output every                 0.00 s
+
+ ------------------------------------------------------------------------------
+
+
+ Physical quantities:
+ -------------------
+
+    Geograph. latitude  :   latitude  = 43.5 degr
+    Geograph. longitude :   longitude =  0.0 degr
+    Angular velocity    :   omega  = 0.729E-04 rad/s
+    Coriolis parameter  :   f      =  0.000100 1/s
+                            f*     =  0.000106 1/s
+    Day of the year at model start :   day_init = 172
+    UTC time at model start        :   time_utc_init = 43200.0 s
+
+    Gravity             :   g      =  9.8 m/s**2
+
+    Reference state used in buoyancy terms: initial_profile
+
+
+ Cloud physics quantities / methods:
+ ----------------------------------
+
+
+
+ LES / Turbulence quantities:
+ ---------------------------
+
+    Mixing length is limited to 1.80 * z
+
+
+ Actions during the simulation:
+ -----------------------------
+
+    Disturbance impulse (u,v) every :   150.00 s
+    Disturbance amplitude           :     0.25 m/s
+    Lower disturbance level         :   -45.00 m (GP   42)
+    Upper disturbance level         :    -7.00 m (GP   61)
+    Disturbances cease as soon as the disturbance energy exceeds 0.010 m**2/s**2
+    Random number generator used    : random-parallel
+
+
+
+ *** no user-defined variables found
+
+ ------------------------------------------------------------------------------
+
+
+
+Run-control output:
+------------------
+
+RUN  ITER. HH:MM:SS.SS    DT(E)     UMAX     VMAX     WMAX     U*    W*      THETA*     Z_I     ENERG.   DISTENERG    DIVOLD     DIVNEW     UMAX(KJI)    VMAX(KJI)    WMAX(KJI)   ADVECX   ADVECY   MGCYC
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  0      0 00:00:00.00  15.6000A  -0.2082D -0.2174D  0.1153  0.000  0.00   0.000E+00      0.  0.139E-02  0.138E-02  0.719E-02  0.816E-12   53  13  31   60   1  12   55   8  13    0.000    0.000       0
+  0      1 00:00:15.60  10.7000A   0.3233D -0.3367D  0.1501  0.000  0.00   0.000E+00    -10.  0.266E-02  0.264E-02  0.720E-02  0.821E-12   56  12   5   47  15  31   50  25  31    0.000    0.000       0
+  0      2 00:00:26.30   8.2200A   0.4381D -0.4379D -0.1754  0.000  0.00   0.000E+00     -6.  0.384E-02  0.381E-02  0.724E-02  0.818E-12   56  12   6   49  27   3   55   3   6    0.000    0.000       0
+  0      3 00:00:34.52   6.9400A   0.5184D -0.4707D  0.1953  0.000  0.00   0.000E+00     -4.  0.486E-02  0.483E-02  0.725E-02  0.820E-12   56  12   6   47  14  31   52   3   4    0.000    0.000       0
+  0      4 00:00:41.46   6.1200A   0.5885D -0.5539D -0.2158  0.000  0.00   0.000E+00     -4.  0.580E-02  0.577E-02  0.712E-02  0.823E-12   56  12   6   61  18  19   46  19  17    0.000    0.000       0
+  0      5 00:00:47.57   5.2200D   0.5698D -0.5522D -0.2499  0.000  0.00   0.000E+00     -4.  0.659E-02  0.655E-02  0.722E-02  0.823E-12   53  10   6   59  15  21   47   2  24    0.000    0.000       0
+  0      6 00:00:52.79   4.6700D  -0.5918D -0.6989D -0.2639  0.000  0.00   0.000E+00     -4.  0.750E-02  0.745E-02  0.728E-02  0.821E-12   46   3  19   59  15  21   47   2  24    0.000    0.000       0
+  0      7 00:00:57.46   4.1500D   0.6406D  0.6521D  0.2877  0.000  0.00   0.000E+00     -4.  0.812E-02  0.808E-02  0.726E-02  0.813E-12   44   3  26   53   9  11   51  13  15    0.000    0.000       0
+  0      8 00:01:01.61   3.8200D  -0.5980D -0.6009D  0.2919  0.000  0.00   0.000E+00     -8.  0.882E-02  0.878E-02  0.724E-02  0.813E-12   60   4  24   52  29  12   51  13  15    0.000    0.000       0

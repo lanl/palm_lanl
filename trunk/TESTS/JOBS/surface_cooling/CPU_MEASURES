@@ -1,0 +1,53 @@
+PALM 5.0  Rev: Unversi  run: test_oceanml.00  host: localhost  13-02-19 14:59:42
+-----------
+
+CPU measures for    32 PEs (    4(x) *     8(y) tasks *    1 threads):
+
+gridpoints (x/y/z):                        32 *    32 *    64
+nr of timesteps:                            8
+cpu time per grid point and timestep:       1.01944 * 10**-6 s
+----------------------------------------------------------------------
+
+place:                              mean        counts      min       max       rms
+                                sec.      %                sec.      sec.      sec.
+-----------------------------------------------------------------------------------
+total                          0.551   100.00       1     0.549     0.556     0.008
+initialisation                 0.161    29.19       1     0.160     0.161     0.002
+wrd_local                      0.148    26.77       1     0.146     0.148     0.000
+data_output_3d                 0.119    21.54       8     0.026     0.122     0.017
+exchange-horiz-progn           0.031     5.60      24     0.018     0.032     0.002
+all progn.equations            0.024     4.41      24     0.023     0.025     0.000
+pres                           0.024     4.40      25     0.024     0.025     0.000
+calculate_timestep             0.012     2.10       9     0.001     0.012     0.002
+disturb_field                  0.007     1.28      26     0.007     0.007     0.000
+flow_statistics                0.007     1.21       9     0.006     0.007     0.000
+diffusivities                  0.004     0.75      24     0.004     0.004     0.000
+data_output_profiles           0.004     0.64       8     0.001     0.001     0.015
+last actions                   0.001     0.21       1     0.000     0.007     0.001
+data_output_tseries            0.000     0.04       8     0.000     0.000     0.001
+user_actions                   0.000     0.04      24     0.000     0.000     0.000
+swap_timelevel                 0.000     0.03      24     0.000     0.000     0.000
+run_control                    0.000     0.02       9     0.000     0.000     0.000
+
+special measures:
+-----------------------------------------------------------------------------------
+timesteps                      0.228    41.43       8     0.228     0.228     0.000
+exchange_horiz                 0.042     7.61     443     0.029     0.043     0.002
+poisfft                        0.014     2.58      25     0.014     0.014     0.000
+mpi_alltoall                   0.005     0.99     150     0.005     0.006     0.000
+transpo forward                0.005     0.85      25     0.004     0.005     0.000
+transpo invers                 0.004     0.73      25     0.004     0.004     0.000
+pmci_init                      0.001     0.25       1     0.000     0.004     0.001
+fft_x                          0.001     0.24      25     0.001     0.001     0.000
+fft_y                          0.001     0.24      25     0.001     0.001     0.000
+divergence                     0.001     0.12      34     0.001     0.001     0.000
+tridia                         0.001     0.12      25     0.001     0.001     0.000
+exchange_horiz_2d              0.000     0.07      10     0.000     0.000     0.000
+NetCDF/ASCII input topo        0.000     0.00       1     0.000     0.000     0.000
+
+No barriers are set in front of collective operations
+
+Exchange of ghostpoints via MPI_ISEND/MPI_IRECV
+
+
+

@@ -1879,7 +1879,7 @@
 ! Description:
 ! ------------
 !> Initialize horizontal surface elements, upward- and downward-facing. 
-!> Note, horizontal surface type alsw comprises model-top fluxes, which are,
+!> Note, horizontal surface type also comprises model-top fluxes, which are,
 !> initialized in a different routine. 
 !------------------------------------------------------------------------------!
           SUBROUTINE initialize_horizontal_surfaces( k, j, i, surf, num_h,     &
@@ -2078,6 +2078,20 @@
                    ENDIF
                 ENDIF
 
+                IF ( ocean )  THEN
+                   IF ( upward_facing )  THEN 
+                      IF ( constant_bottom_salinityflux ) THEN
+                         surf%sasws(num_h) = bottom_salinityflux *                &
+                                             salinityflux_input_conversion(k-1)
+                      ELSE
+                         surf%sasws(num_h) = 0.0_wp
+                      ENDIF
+                   ELSE
+                      surf%sasws(num_h) = wall_salinityflux(5) *                  &
+                                         salinityflux_input_conversion(k) 
+                   ENDIF
+                ENDIF
+                
                 IF ( air_chemistry )  THEN
                    lsp_pr = 1
                    DO  WHILE ( TRIM( surface_csflux_name( lsp_pr ) ) /= 'novalue' )   !<'novalue' is the default
@@ -2104,15 +2118,6 @@
                       ENDDO
                       lsp_pr = lsp_pr + 1
                    ENDDO
-                ENDIF
-
-                IF ( ocean )  THEN
-                   IF ( upward_facing )  THEN 
-                      surf%sasws(num_h) = bottom_salinityflux *                &
-                                          salinityflux_input_conversion(k-1)
-                   ELSE
-                      surf%sasws(num_h) = 0.0_wp
-                   ENDIF
                 ENDIF
              ENDIF
 !

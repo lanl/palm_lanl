@@ -447,6 +447,14 @@
           CALL calc_surface_fluxes
           downward = .FALSE.
        ENDIF
+       IF ( surf_def_h(2)%ns >= 1 )  THEN
+          downward = .TRUE.
+          surf => surf_def_h(2)
+          CALL calc_uvw_abs
+          CALL calc_us
+          CALL calc_surface_fluxes
+          downward = .FALSE.
+       ENDIF
 !
 !--    Calculate surfaces fluxes at vertical surfaces for momentum 
 !--    and subgrid-scale TKE.
@@ -2034,14 +2042,14 @@
 !--       Compute the vertical kinematic heat flux
           IF (  .NOT.  constant_heatflux  .AND.  ( ( time_since_reference_point&
                <=  skip_time_do_lsm  .AND. simulated_time > 0.0_wp ) .OR.      &
-               .NOT.  land_surface )  .AND.  .NOT. urban_surface  .AND.        &
-               .NOT. downward )  THEN
+               .NOT.  land_surface )  .AND.  .NOT. urban_surface )  THEN
              !$OMP PARALLEL DO PRIVATE( i, j, k )
              DO  m = 1, surf%ns 
                 i    = surf%i(m)            
                 j    = surf%j(m)
                 k    = surf%k(m)
-                surf%shf(m) = -surf%ts(m) * surf%us(m) * rho_ref_zw(k-1)
+                surf%shf(m) = -surf%ts(m) * surf%us(m) * rho_ref_zw(k)
+                ! Consider using rho_ref_zw(k-1) for downward and rho_ref_zw(k+1) for upward
              ENDDO
           ENDIF
 !

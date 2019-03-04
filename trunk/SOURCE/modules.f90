@@ -519,7 +519,7 @@
 ! 1031 2012-10-19 14:35:30Z raasch
 ! +output_format_netcdf
 !
-! f1015 2012-09-27 09:23:24Z raasch
+! 1015 2012-09-27 09:23:24Z raasch
 ! +acc_rank, num_acc_per_node,
 ! -adjust_mixing_length
 !

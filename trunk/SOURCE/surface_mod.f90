@@ -1903,7 +1903,7 @@
              LOGICAL       :: flux_layer
 
              TYPE( surf_type ) :: surf          !< respective surface type
-!             REAL(WP)      ::  wb_sfc, tod,arg1      !< surface buoyancy forcing -- only matters for ocean
+             REAL(WP)      ::  wb_sfc, tod,arg1 !< surface buoyancy forcing -- only matters for ocean
 !
 !--          Store indices of respective surface element
              surf%i(num_h) = i
@@ -1912,8 +1912,10 @@
 !
 !--          Surface orientation, bit 0 is set to 1 for upward-facing surfaces, 
 !--          bit 1 is for downward-facing surfaces.
-             IF ( upward_facing   )  surf%facing(num_h) = IBSET( surf%facing(num_h), 0 )
-             IF ( downward_facing )  surf%facing(num_h) = IBSET( surf%facing(num_h), 1 )
+             IF ( .NOT. is_top ) THEN
+                IF ( upward_facing   )  surf%facing(num_h) = IBSET( surf%facing(num_h), 0 )
+                IF ( downward_facing )  surf%facing(num_h) = IBSET( surf%facing(num_h), 1 )
+             ENDIF
 !
 !--          Initialize surface-layer height
              IF ( flux_layer ) THEN
@@ -2013,7 +2015,7 @@
 !
 !--          Inititalize surface fluxes of sensible and latent heat, as well as
 !--          passive scalar
-             IF ( use_surface_fluxes )  THEN
+             IF ( use_surface_fluxes .AND. (.NOT. is_top) )  THEN
 
                 IF ( upward_facing )  THEN
                    IF ( constant_heatflux )  THEN
@@ -2120,6 +2122,68 @@
                    ENDDO
                 ENDIF
              ENDIF
+
+             IF ( use_top_fluxes .AND. is_top .AND. downward_facing )  THEN
+!
+!--             Initialize top heat flux
+                IF ( constant_top_heatflux )                                &
+                   surf%shf(num_h) = top_heatflux *                         &
+                                     heatflux_input_conversion(nzt+1)
+
+!--             Initialization in case of a coupled model run
+                IF ( coupling_mode == 'ocean_to_atmosphere' )  THEN
+                   surf%shf(num_h) = 0.0_wp
+                   surf%qsws(num_h) = 0.0_wp
+                ENDIF
+
+!--             Prescribe latent heat flux at the top      
+                IF ( humidity )  THEN
+                   surf%qsws(num_h) = 0.0_wp
+                   IF ( cloud_physics  .AND.  microphysics_morrison ) THEN
+                      surf%ncsws(num_h) = 0.0_wp
+                      surf%qcsws(num_h) = 0.0_wp
+                   ENDIF
+                   IF ( cloud_physics  .AND.  microphysics_seifert ) THEN
+                      surf%nrsws(num_h) = 0.0_wp
+                      surf%qrsws(num_h) = 0.0_wp
+                   ENDIF
+                ENDIF
+
+!--             Prescribe top scalar flux
+                IF ( passive_scalar .AND. constant_top_scalarflux )            &
+                   surf%ssws(num_h) = top_scalarflux *                         &
+                                      scalarflux_input_conversion(nzt+1)
+
+!--             Prescribe top chemical species' flux
+                DO  lsp = 1, nvar
+                   IF ( air_chemistry  .AND.  constant_top_csflux(lsp) )  THEN 
+                      surf%cssws(lsp,num_h) = top_csflux(lsp) *                &
+                                              csflux_input_conversion(nzt+1)
+                   ENDIF
+                ENDDO
+
+                IF ( ocean ) THEN
+                   surf%shf_sol(num_h) = 0.0_wp
+
+!--                Prescribe top salinity flux
+                   IF ( constant_top_salinityflux ) THEN                       
+                      surf%sasws(num_h) = top_salinityflux *                   &
+                                          salinityflux_input_conversion(nzt+1)
+                   ELSE
+                      surf%sasws(num_h) = 0.0_wp
+                   ENDIF
+
+                ENDIF
+
+!--             Top momentum fluxes
+                IF ( constant_top_momentumflux )  THEN
+                   surf%usws(num_h) = top_momentumflux_u *                     &
+                                      momentumflux_input_conversion(nzt+1)
+                   surf%vsws(num_h) = top_momentumflux_v *                     &
+                                      momentumflux_input_conversion(nzt+1)
+                ENDIF
+             
+             ENDIF
 !
 !--          Increment surface indices
              num_h     = num_h + 1
@@ -2128,94 +2192,6 @@
 
           END SUBROUTINE initialize_horizontal_surfaces
        
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Initialize model-top fluxes. Currently, only the heatflux and salinity flux 
-!> can be prescribed, latent flux is zero in this case!
-!------------------------------------------------------------------------------!
-          SUBROUTINE initialize_top( k, j, i, surf, num_h, num_h_kji )       
-
-             IMPLICIT NONE 
-
-             INTEGER(iwp)  ::  i                !< running index x-direction
-             INTEGER(iwp)  ::  j                !< running index y-direction
-             INTEGER(iwp)  ::  k                !< running index z-direction
-             INTEGER(iwp)  ::  num_h            !< current number of surface element
-             INTEGER(iwp)  ::  num_h_kji        !< dummy increment
-             INTEGER(iwp)  ::  lsp              !< running index for chemical species
-             REAL(WP)      ::  wb_sfc, tod,arg1      !< surface buoyancy forcing -- only matters for ocean
-
-             TYPE( surf_type ) :: surf          !< respective surface type
-!
-!--          Store indices of respective surface element
-             surf%i(num_h) = i
-             surf%j(num_h) = j
-             surf%k(num_h) = k
-!
-             IF ( ocean ) THEN
-                surf%shf(num_h) = 0.0_wp
-                surf%sasws(num_h) = 0.0_wp
-                surf%shf_sol(num_h) = 0.0_wp
-             ENDIF
-
-!--          Initialize top heat flux
-             IF ( constant_top_heatflux )                                       &
-                surf%shf(num_h) = top_heatflux * heatflux_input_conversion(nzt+1)
-!
-!--          Initialization in case of a coupled model run
-             IF ( coupling_mode == 'ocean_to_atmosphere' )  THEN
-                surf%shf(num_h) = 0.0_wp
-                surf%qsws(num_h) = 0.0_wp
-             ENDIF
-!
-!--          Prescribe latent heat flux at the top      
-             IF ( humidity )  THEN
-                surf%qsws(num_h) = 0.0_wp
-                IF ( cloud_physics  .AND.  microphysics_morrison ) THEN
-                   surf%ncsws(num_h) = 0.0_wp
-                   surf%qcsws(num_h) = 0.0_wp
-                ENDIF
-                IF ( cloud_physics  .AND.  microphysics_seifert ) THEN
-                   surf%nrsws(num_h) = 0.0_wp
-                   surf%qrsws(num_h) = 0.0_wp
-                ENDIF
-             ENDIF
-!
-!--          Prescribe top scalar flux
-             IF ( passive_scalar .AND. constant_top_scalarflux )               &
-                surf%ssws(num_h) = top_scalarflux *                            &
-                                   scalarflux_input_conversion(nzt+1)
-
-!--          Prescribe top chemical species' flux
-             DO  lsp = 1, nvar
-                IF ( air_chemistry  .AND.  constant_top_csflux(lsp) )  THEN 
-                   surf%cssws(lsp,num_h) = top_csflux(lsp) *                   &
-                                           csflux_input_conversion(nzt+1)
-                ENDIF
-             ENDDO
-!
-!--          Prescribe top salinity flux
-             IF ( ocean .AND. constant_top_salinityflux)                       &
-                surf%sasws(num_h) = top_salinityflux *                         &
-                                    salinityflux_input_conversion(nzt+1)
- 
-!--          Top momentum fluxes
-             IF ( constant_top_momentumflux )  THEN
-                surf%usws(num_h) = top_momentumflux_u *                        &
-                                   momentumflux_input_conversion(nzt+1)
-                surf%vsws(num_h) = top_momentumflux_v *                        &
-                                   momentumflux_input_conversion(nzt+1)
-             ENDIF
-!
-!--          Increment surface indices
-             num_h     = num_h + 1
-             num_h_kji = num_h_kji + 1      
-
-
-          END SUBROUTINE initialize_top
-
 
 !------------------------------------------------------------------------------!
 ! Description:

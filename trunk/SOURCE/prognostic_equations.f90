@@ -286,7 +286,7 @@
                ref_state, rho_ocean, s,  s_init, s_p, sa, sa_init, sa_p, tend, &
                te_m, tnc_m,  tnr_m, tpt_m, tq_m, tqc_m, tqr_m, ts_m, tsa_m,    &
                tu_m, tv_m, tw_m, u, ug, u_init, u_p, v, vg, vpt, v_init, v_p,  &
-               w, w_p, alpha_T, beta_S
+               w, w_p, alpha_T, beta_S, drho_ref_zu
 
     USE chemistry_model_mod,                                                   &
         ONLY:  chem_integrate, chem_prognostic_equations,                      &
@@ -310,13 +310,12 @@
                large_scale_subsidence, message_string, microphysics_morrison,  &
                microphysics_seifert, microphysics_sat_adjust, neutral, nudging,&
                ocean, outflow_l, outflow_s, passive_scalar, plant_canopy,      &
-               prho_reference, prho_reference,                                 &
                prho_reference, pt_reference, pt_reference, pt_reference,       &
                scalar_advec, scalar_advec, simulated_time, sloping_surface,    &
-               timestep_scheme, tsc, use_subsidence_tendencies,                &
-               use_upstream_for_tke, wind_turbine, ws_scheme_mom,              &
-               ws_scheme_sca, urban_surface, land_surface, wb_solar,           &
-               stokes_force
+               rho_reference, timestep_scheme, tsc, use_single_reference_value,&
+               use_subsidence_tendencies, use_upstream_for_tke, wind_turbine,  &
+               ws_scheme_mom, ws_scheme_sca, urban_surface, land_surface,      &
+               wb_solar, stokes_force
 
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point, log_point_s
@@ -596,7 +595,9 @@
 !--          External pressure gradient
              IF ( dp_external )  THEN
                 DO  k = dp_level_ind_b+1, nzt
-                   tend(k,j,i) = tend(k,j,i) - dpdxy(1) * dp_smooth_factor(k)
+                   tend(k,j,i) = tend(k,j,i) - dpdxy(1) * dp_smooth_factor(k)   &
+                                 * MERGE( 1.0_wp/rho_reference, drho_ref_zu(k), &
+                                          use_single_reference_value )
                 ENDDO
              ENDIF
 
@@ -673,7 +674,9 @@
 !--          External pressure gradient
              IF ( dp_external )  THEN
                 DO  k = dp_level_ind_b+1, nzt
-                   tend(k,j,i) = tend(k,j,i) - dpdxy(2) * dp_smooth_factor(k)
+                   tend(k,j,i) = tend(k,j,i) - dpdxy(2) * dp_smooth_factor(k)   &
+                                 * MERGE( 1.0_wp/rho_reference, drho_ref_zu(k), &
+                                          use_single_reference_value )
                 ENDDO
              ENDIF
 
@@ -1492,7 +1495,9 @@
        DO  i = nxlu, nxr
           DO  j = nys, nyn
              DO  k = dp_level_ind_b+1, nzt
-                tend(k,j,i) = tend(k,j,i) - dpdxy(1) * dp_smooth_factor(k)
+                tend(k,j,i) = tend(k,j,i) - dpdxy(1) * dp_smooth_factor(k)   &
+                              * MERGE( 1.0_wp/rho_reference, drho_ref_zu(k), &
+                                       use_single_reference_value )
              ENDDO
           ENDDO
        ENDDO
@@ -1583,7 +1588,9 @@
        DO  i = nxl, nxr
           DO  j = nysv, nyn
              DO  k = dp_level_ind_b+1, nzt
-                tend(k,j,i) = tend(k,j,i) - dpdxy(2) * dp_smooth_factor(k)
+                tend(k,j,i) = tend(k,j,i) - dpdxy(2) * dp_smooth_factor(k)   &
+                              * MERGE( 1.0_wp/rho_reference, drho_ref_zu(k), &
+                                       use_single_reference_value )
              ENDDO
           ENDDO
        ENDDO

@@ -19,7 +19,9 @@
 !
 ! Current revisions:
 ! -----------------
-! 
+!
+! 2018-10-19 cbegeman
+! Added sa_slope_offset in sloped ocean cases 
 ! 
 ! Former revisions:
 ! -----------------
@@ -141,7 +143,7 @@ MODULE advec_s_bc_mod
 
        USE control_parameters,                                                    &
            ONLY:  dt_3d, bc_pt_t_val, bc_q_t_val, bc_s_t_val, ibc_pt_b, ibc_pt_t, &
-                  ibc_q_t, ibc_s_t, message_string, pt_slope_offset,              &
+                  ibc_q_t, ibc_s_t, message_string, pt_slope_offset, sa_slope_offset,  &
                   sloping_surface, u_gtrans, v_gtrans
 
        USE cpulog,                                                                &
@@ -285,6 +287,7 @@ MODULE advec_s_bc_mod
 !--    of the temperature field at the left and right boundary of the total
 !--    domain must be adjusted by the temperature difference between this distance
        IF ( sloping_surface  .AND.  sk_char == 'pt' )  THEN
+
           IF ( nxl ==  0 )  THEN
              sk_p(:,nys:nyn,nxl-3) = sk_p(:,nys:nyn,nxl-3) - pt_slope_offset
              sk_p(:,nys:nyn,nxl-2) = sk_p(:,nys:nyn,nxl-2) - pt_slope_offset
@@ -295,6 +298,18 @@ MODULE advec_s_bc_mod
           ENDIF
        ENDIF
 
+!--    Extension for sa so that full buoyancy offset is represented
+       IF ( sloping_surface  .AND.  sk_char == 'sa' )  THEN
+
+          IF ( nxl ==  0 )  THEN
+             sk_p(:,nys:nyn,nxl-3) = sk_p(:,nys:nyn,nxl-3) - sa_slope_offset
+             sk_p(:,nys:nyn,nxl-2) = sk_p(:,nys:nyn,nxl-2) - sa_slope_offset
+          ENDIF
+          IF ( nxr == nx )  THEN
+             sk_p(:,nys:nyn,nxr+2) = sk_p(:,nys:nyn,nxr+2) + sa_slope_offset
+             sk_p(:,nys:nyn,nxr+3) = sk_p(:,nys:nyn,nxr+3) + sa_slope_offset
+          ENDIF
+       ENDIF
 !
 !--    Initialise control density
        d = 0.0_wp

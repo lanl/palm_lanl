@@ -599,6 +599,8 @@
                 READ ( 13 )  sa_vertical_gradient_level
              CASE ( 'scalar_advec' )
                 READ ( 13 )  scalar_advec
+             CASE ( 'slope_offset' )
+                READ ( 13 )  slope_offset
              CASE ( 'simulated_time' )
                 READ ( 13 )  simulated_time
              CASE ( 'spectrum_x' )

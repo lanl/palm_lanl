@@ -1819,7 +1819,8 @@
         ONLY:  bc_lr_cyc, bc_ns_cyc, building_height, building_length_x,       &
                building_length_y, building_wall_left, building_wall_south,     &
                canyon_height, canyon_wall_left, canyon_wall_south,             &
-               canyon_width_x, canyon_width_y, dp_level_ind_b, dz,             &
+               canyon_width_x, canyon_width_y, constant_flux_layer,            &
+               dp_level_ind_b, dz,                                             &
                message_string, ocean, topography, topography_grid_convention,  &
                tunnel_height, tunnel_length, tunnel_width_x, tunnel_width_y,   &
                tunnel_wall_depth
@@ -1886,7 +1887,11 @@
        CASE ( 'flat' )
 !   
 !--       Initialilize 3D topography array, used later for initializing flags
-          topo(nzb+1:nzt+1,:,:) = IBSET( topo(nzb+1:nzt+1,:,:), 0 ) 
+          IF ( TRIM(constant_flux_layer) == 'top' ) THEN
+             topo(nzb+1:nzt,:,:) = IBSET( topo(nzb+1:nzt,:,:), 0 ) 
+          ELSE
+             topo(nzb+1:nzt+1,:,:) = IBSET( topo(nzb+1:nzt+1,:,:), 0 ) 
+          ENDIF
 
        CASE ( 'single_building' )
 !
@@ -2378,7 +2383,6 @@
    
        ENDIF
     ENDIF
-
 
  END SUBROUTINE init_topo
 

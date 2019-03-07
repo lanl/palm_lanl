@@ -1330,7 +1330,6 @@
     ngp_2dh_outer   = MAX( 1, ngp_2dh_outer(:,:)   ) 
     ngp_3d_inner    = MAX( INT(1, KIND = SELECTED_INT_KIND( 18 )),             &
                            ngp_3d_inner(:) )
-    ngp_2dh_s_inner = MAX( 1, ngp_2dh_s_inner(:,:) ) 
 
     DEALLOCATE( mean_surface_level_height_l, ngp_2dh_l, ngp_2dh_outer_l,       &
                 ngp_3d_inner_l, ngp_3d_inner_tmp )

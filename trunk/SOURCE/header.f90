@@ -19,115 +19,115 @@
 !
 ! Current revisions:
 ! -----------------
-! 
+!
 ! 2018-10-25 cbegeman
 ! Add dirichlet bottom boundary conditions for salinity
-! 
+!
 ! Former revisions:
 ! -----------------
 ! $Id: header.f90 3083 2018-06-19 14:03:12Z gronemeier $
 ! Print RANS-mode constants
-! 
+!
 ! 3065 2018-06-12 07:03:02Z Giersch
 ! Header output concerning stretching revised
-! 
+!
 ! 3045 2018-05-28 07:55:41Z Giersch
 ! Error messages revised
-! 
+!
 ! 2967 2018-04-13 11:22:08Z raasch
 ! bugfix: missing parallel cpp-directives added
-! 
+!
 ! 2883 2018-03-14 08:29:10Z Giersch
 ! Format of the output of dt_dopr_listing (325) has been changed
-! 
+!
 ! 2817 2018-02-19 16:32:21Z knoop
 ! Preliminary gust module interface implemented
-! 
+!
 ! 2776 2018-01-31 10:44:42Z Giersch
 ! Variable synthetic_turbulence_generator has been abbreviated
-! 
+!
 ! 2746 2018-01-15 12:06:04Z suehring
 ! Move flag plant canopy to modules
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2701 2017-12-15 15:40:50Z suehring
 ! Changes from last commit documented
-! 
+!
 ! 2698 2017-12-14 18:46:24Z suehring
 ! Bugfix in get_topography_top_index
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 ! Print information about turbulence closure (TG)
 ! Print information about inifor initialization (MS)
-! 
+!
 ! 2575 2017-10-24 09:57:58Z maronga
 ! Added output for complex terrain simulations
-! 
+!
 ! 2544 2017-10-13 18:09:32Z maronga
-! Moved initial day of year and time to inipar. 
-! 
+! Moved initial day of year and time to inipar.
+!
 ! 2339 2017-08-07 13:55:26Z gronemeier
 ! corrected timestamp in header
-! 
+!
 ! 2338 2017-08-07 12:15:38Z gronemeier
 ! Modularize 1D model
-! 
+!
 ! 2320 2017-07-21 12:47:43Z suehring
 ! Modularize large-scale forcing and nudging
-! 
+!
 ! 2300 2017-06-29 13:31:14Z raasch
 ! host-specific code removed
-! 
+!
 ! 2299 2017-06-29 10:14:38Z maronga
 ! Modified output for spinups
-! 
+!
 ! 2298 2017-06-29 09:28:18Z raasch
 ! MPI2 related parts removed
-! 
+!
 ! 2270 2017-06-09 12:18:47Z maronga
 ! Renamed Prandtl layer to constant flux layer
-! 
+!
 ! 2259 2017-06-08 09:09:11Z gronemeier
 ! Implemented synthetic turbulence generator
 !
 ! 2258 2017-06-08 07:55:13Z suehring
 ! Bugfix, add pre-preprocessor directives to enable non-parrallel mode
-! 
+!
 ! 2233 2017-05-30 18:08:54Z suehring
 !
 ! 2232 2017-05-30 17:47:52Z suehring
 ! Adjustments to new topography and surface concept
 ! Generic tunnel setup added
-! 
+!
 ! 2200 2017-04-11 11:37:51Z suehring
 ! monotonic_adjustment removed
-! 
+!
 ! 2118 2017-01-17 16:38:49Z raasch
 ! OpenACC relatec code removed
-! 
+!
 ! 2073 2016-11-30 14:34:05Z raasch
 ! small bugfix concerning output of scalar profiles
-! 
+!
 ! 2050 2016-11-08 15:00:55Z gronemeier
 ! Implement turbulent outflow condition
-! 
+!
 ! 2037 2016-10-26 11:15:40Z knoop
 ! Anelastic approximation implemented
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1992 2016-08-12 15:14:59Z suehring
 ! Adapted for top_scalarflux
-! 
+!
 ! 1960 2016-07-12 16:34:24Z suehring
 ! Treat humidity and passive scalar separately.
 ! Modify misleading information concerning humidity.
 ! Bugfix, change unit for humidity flux.
-! 
+!
 ! 1957 2016-07-07 10:43:48Z suehring
 ! flight module added
 !
@@ -186,20 +186,20 @@
 ! 1691 2015-10-26 16:17:44Z maronga
 ! Renamed prandtl_layer to constant_flux_layer, renames rif_min/rif_max to
 ! zeta_min/zeta_max.
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1675 2015-10-02 08:28:59Z gronemeier
 ! Bugfix: Definition of topography grid levels
-! 
+!
 ! 1660 2015-09-21 08:15:16Z gronemeier
 ! Bugfix: Definition of building/street canyon height if vertical grid stretching
 !         starts below the maximum topography height.
-! 
+!
 ! 1590 2015-05-08 13:56:27Z maronga
 ! Bugfix: Added TRIM statements for character strings for LSM and radiation code
-! 
+!
 ! 1585 2015-04-30 07:05:52Z maronga
 ! Further output for radiation model(s).
 !
@@ -208,24 +208,24 @@
 !
 ! 1560 2015-03-06 10:48:54Z keck
 ! output for recycling y shift
-! 
+!
 ! 1557 2015-03-05 16:43:04Z suehring
 ! output for monotonic limiter
 !
 ! 1551 2015-03-03 14:18:16Z maronga
 ! Added informal output for land surface model and radiation model. Removed typo.
-! 
+!
 ! 1496 2014-12-02 17:25:50Z maronga
 ! Renamed: "radiation -> "cloud_top_radiation"
-! 
+!
 ! 1484 2014-10-21 10:53:05Z kanani
 ! Changes due to new module structure of the plant canopy model:
-!   module plant_canopy_model_mod and output for new canopy model parameters 
+!   module plant_canopy_model_mod and output for new canopy model parameters
 !   (alpha_lad, beta_lad, lai_beta,...) added,
 !   drag_coefficient, leaf_surface_concentration and scalar_exchange_coefficient
 !   renamed to canopy_drag_coeff, leaf_surface_conc and leaf_scalar_exch_coeff,
 !   learde renamed leaf_area_density.
-! Bugfix: DO-WHILE-loop for lad header information additionally restricted 
+! Bugfix: DO-WHILE-loop for lad header information additionally restricted
 ! by maximum number of gradient levels (currently 10)
 !
 ! 1482 2014-10-18 12:34:45Z raasch
@@ -233,24 +233,24 @@
 !
 ! 1468 2014-09-24 14:06:57Z maronga
 ! Adapted for use on up to 6-digit processor cores
-! 
+!
 ! 1429 2014-07-15 12:53:45Z knoop
 ! header exended to provide ensemble_member_nr if specified
-! 
+!
 ! 1376 2014-04-26 11:21:22Z boeske
 ! Correction of typos
-! 
+!
 ! 1365 2014-04-22 15:03:56Z boeske
 ! New section 'Large scale forcing and nudging':
 ! output of large scale forcing and nudging information,
 ! new section for initial profiles created
-! 
+!
 ! 1359 2014-04-11 17:15:14Z hoffmann
 ! dt_sort_particles removed
-! 
+!
 ! 1353 2014-04-08 15:21:23Z heinze
-! REAL constants provided with KIND-attribute 
-! 
+! REAL constants provided with KIND-attribute
+!
 ! 1327 2014-03-21 11:00:16Z raasch
 ! parts concerning iso2d and avs output removed,
 ! -netcdf output queries
@@ -264,18 +264,18 @@
 !
 ! 1320 2014-03-20 08:40:49Z raasch
 ! ONLY-attribute added to USE-statements,
-! kind-parameters added to all INTEGER and REAL declaration statements, 
-! kinds are defined in new module kinds, 
+! kind-parameters added to all INTEGER and REAL declaration statements,
+! kinds are defined in new module kinds,
 ! revision history before 2012 removed,
 ! comment fields (!:) to be used for variable explanations added to
-! all variable declaration statements 
-! 
+! all variable declaration statements
+!
 ! 1308 2014-03-13 14:58:42Z fricke
 ! output of the fixed number of output time levels
 ! output_format adjusted for masked data if netcdf_data_format > 5
 !
 ! 1299 2014-03-06 13:15:21Z heinze
-! output for using large_scale subsidence in combination 
+! output for using large_scale subsidence in combination
 ! with large_scale_forcing
 ! reformatting, more detailed explanations
 !
@@ -360,25 +360,25 @@
 ! Description:
 ! ------------
 !> Writing a header with all important information about the current run.
-!> This subroutine is called three times, two times at the beginning 
+!> This subroutine is called three times, two times at the beginning
 !> (writing information on files RUN_CONTROL and HEADER) and one time at the
 !> end of the run, then writing additional information about CPU-usage on file
 !> header.
 !-----------------------------------------------------------------------------!
  SUBROUTINE header
- 
+
 
     USE arrays_3d,                                                             &
         ONLY:  pt_init, q_init, s_init, sa_init, ug, vg, w_subs, zu, zw
-        
+
     USE control_parameters
-        
+
     USE cloud_parameters,                                                      &
         ONLY:  cp, l_v, r_d
 
     USE cpulog,                                                                &
         ONLY:  log_point_s
-            
+
     USE date_and_time_mod,                                                     &
         ONLY:  day_of_year_init, time_utc_init
 
@@ -388,9 +388,9 @@
     USE indices,                                                               &
         ONLY:  mg_loc_ind, nnx, nny, nnz, nx, ny, nxl_mg, nxr_mg, nyn_mg,      &
                nys_mg, nzt, nzt_mg
-        
+
     USE kinds
- 
+
     USE netcdf_interface,                                                      &
         ONLY:  netcdf_data_format, netcdf_data_format_string, netcdf_deflate
 
@@ -405,22 +405,22 @@
     IMPLICIT NONE
 
     CHARACTER (LEN=1)  ::  prec                !<
-    
+
     CHARACTER (LEN=2)  ::  do2d_mode           !<
-    
+
     CHARACTER (LEN=5)  ::  section_chr         !<
-    
+
     CHARACTER (LEN=10) ::  coor_chr            !<
     CHARACTER (LEN=10) ::  host_chr            !<
-    
+
     CHARACTER (LEN=16) ::  begin_chr           !<
-    
+
     CHARACTER (LEN=26) ::  ver_rev             !<
 
     CHARACTER (LEN=32) ::  cpl_name            !<
-    
+
     CHARACTER (LEN=40) ::  output_format       !<
-    
+
     CHARACTER (LEN=70) ::  char1               !<
     CHARACTER (LEN=70) ::  char2               !<
     CHARACTER (LEN=70) ::  dopr_chr            !<
@@ -430,10 +430,10 @@
     CHARACTER (LEN=70) ::  do3d_chr            !<
     CHARACTER (LEN=70) ::  domask_chr          !<
     CHARACTER (LEN=70) ::  run_classification  !<
-    
+
     CHARACTER (LEN=85) ::  r_upper             !<
     CHARACTER (LEN=85) ::  r_lower             !<
-    
+
     CHARACTER (LEN=86) ::  coordinates         !<
     CHARACTER (LEN=86) ::  gradients           !<
     CHARACTER (LEN=86) ::  slices              !<
@@ -471,7 +471,7 @@
     INTEGER(iwp) ::  n              !<
     INTEGER(iwp) ::  ncpl           !<
     INTEGER(iwp) ::  npe_total      !<
-    
+
 
     REAL(wp) ::  cpuseconds_per_simulated_second  !<
     REAL(wp) ::  lower_left_coord_x               !< x-coordinate of nest domain
@@ -552,10 +552,10 @@
     ENDIF
 
     IF ( momentum_advec == 'ws-scheme' )  THEN
-       WRITE ( io, 113 )
+       WRITE ( io, 503 )
     ENDIF
     IF ( scalar_advec == 'ws-scheme' )  THEN
-       WRITE ( io, 116 )
+       WRITE ( io, 504 )
     ENDIF
 
     WRITE ( io, 139 )  TRIM( loop_optimization )
@@ -653,9 +653,9 @@
        DO i = 1, number_stretch_level_start+1
           WRITE ( io, 253 )  i, dz(i)
        ENDDO
-       
+
        WRITE ( io, 251 ) (nx+1)*dx, (ny+1)*dy, zu(0)
-       
+
        IF ( ANY( dz_stretch_level_start_index > 0 ) )  THEN
           WRITE( io, '(A)', advance='no') ' Vertical stretching starts at height:'
           DO i = 1, number_stretch_level_start
@@ -690,7 +690,7 @@
     coordinates = '   0.0'
     i = 1
     DO  WHILE ( ug_vertical_gradient_level_ind(i) /= -9999 )
-      
+
        WRITE (coor_chr,'(F6.2,1X)')  ug(ug_vertical_gradient_level_ind(i))
        ugcomponent = TRIM( ugcomponent ) // '  ' // TRIM( coor_chr )
 
@@ -742,7 +742,7 @@
        ELSE
           i = i + 1
        ENDIF
- 
+
     ENDDO
 
     IF ( .NOT. large_scale_forcing )  THEN
@@ -805,7 +805,7 @@
        ENDIF
        r_upper = 'e(nzt+1) = e(nzt) = e(nzt-1)'
 
-       WRITE ( io, 301 )  'e', r_lower, r_upper       
+       WRITE ( io, 301 )  'e', r_lower, r_upper
 
     ENDIF
 
@@ -852,7 +852,7 @@
 
     WRITE ( io, 317 )  bc_lr, bc_ns
     IF ( .NOT. bc_lr_cyc  .OR.  .NOT. bc_ns_cyc )  THEN
-       WRITE ( io, 318 )  use_cmax, pt_damping_width, pt_damping_factor       
+       WRITE ( io, 318 )  use_cmax, pt_damping_width, pt_damping_factor
        IF ( turbulent_inflow )  THEN
           IF ( .NOT. recycling_yshift ) THEN
              WRITE ( io, 319 )  recycling_width, recycling_plane, &
@@ -908,7 +908,7 @@
        WRITE ( io, 420 )  TRIM( coordinates ), TRIM( temperatures ), &
                           TRIM( gradients ), TRIM( slices )
     ELSE
-       WRITE ( io, 428 ) 
+       WRITE ( io, 428 )
     ENDIF
 !
 !-- Initial salinity profile
@@ -1337,7 +1337,7 @@
  !
 !-- Geostrophic parameters
     WRITE ( io, 456 )  day_of_year_init, time_utc_init
-    
+
 !
 !-- Other quantities
     WRITE ( io, 411 )  g
@@ -1508,7 +1508,7 @@
               ' Tunnel-wall depth: ', F6.2      / &
               ' Tunnel width: ', F6.2 )
 274 FORMAT (  ' Tunnel in ', A, ' direction.' / &
-              ' Tunnel height: ', F6.2, / &    
+              ' Tunnel height: ', F6.2, / &
               ' Tunnel-wall depth: ', F6.2      / &
               ' Tunnel width: ', F6.2, / &
               ' Tunnel length: ', F6.2 )

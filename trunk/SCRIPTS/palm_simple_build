@@ -142,7 +142,7 @@ if [[ ${work_dir} == "unknown" ]]; then
 fi
 trunk_dir=${SCRIPT_LOCATION}/../
 
-build_dir=${working_dir}BUILD_$build_config
+build_dir=${working_dir}/BUILD_$build_config
 
 # Check, if include file exists
 build_config_file=${trunk_dir}/INSTALL/MAKE.inc.$build_config

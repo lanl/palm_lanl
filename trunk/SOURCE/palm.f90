@@ -29,7 +29,7 @@
 !> @todo move chem_init call to init_3d_model or to check_parameters
 !------------------------------------------------------------------------------!
  program palm
-       
+
     USE arrays_3d
 
     USE control_parameters
@@ -61,6 +61,10 @@
         ONLY:  wrd_global, wrd_local
 
     use statistics
+
+#if defined( __cudaProfiler )
+    USE cudafor
+#endif
 
     IMPLICIT NONE
 
@@ -248,10 +252,20 @@
        CALL data_output_3d( 0 )
     ENDIF
 
+#if defined( __cudaProfiler )
+!-- Only profile time_integration
+    CALL cudaProfilerStart()
+#endif
 !
 !-- Integration of the model equations using timestep-scheme
     CALL time_integration
 
+#if defined( __cudaProfiler )
+!-- Only profile time_integration
+    CALL cudaProfilerStop()
+#endif
+
+!
 !-- If required, repeat output of header including the required CPU-time
     IF ( myid == 0 )  CALL header
 !
@@ -311,7 +325,7 @@ subroutine init_control_parameters
         data_output = ' '
         data_output_user = ' '
         doav = ' '
-        data_output_masks = ' ' 
+        data_output_masks = ' '
         data_output_pr = ' '
         domask = ' '
         do2d = ' '
@@ -330,7 +344,7 @@ subroutine init_control_parameters
         dopr_time_count = 0
         dopts_time_count = 0
         dots_time_count = 0
-        dp_level_ind_b = 0 
+        dp_level_ind_b = 0
         dvrp_filecount = 0
         ensemble_member_nr = 0
 
@@ -359,9 +373,9 @@ subroutine init_control_parameters
         sa_vertical_gradient_level_ind(10) = -9999
         stokes_drift_method = -9999
 
-        dz(10) = -1.0_wp 
+        dz(10) = -1.0_wp
         dzconst = 2.5_wp
-        dt_disturb = 20.0_wp 
+        dt_disturb = 20.0_wp
         dt_do3d = 9999999.9_wp
         dt_3d = 0.01_wp
 
@@ -382,7 +396,7 @@ subroutine init_control_parameters
 end subroutine init_control_parameters
 
 subroutine deallocate_memory
-        
+
         use pegrid
 
         deallocate(hor_index_bounds)

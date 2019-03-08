@@ -607,6 +607,7 @@
     INTEGER(iwp) ::  ind_array(1)  !<
     INTEGER(iwp) ::  j             !<
     INTEGER(iwp) ::  k             !<
+    INTEGER(iwp) ::  l             !<
     INTEGER(iwp) ::  k_surf        !< surface level index
     INTEGER(iwp) ::  m             !< index of surface element in surface data type
     INTEGER(iwp) ::  sr            !< index of statistic region
@@ -1240,13 +1241,15 @@
 !--             Determine mean surface-level height. In case of downward-
 !--             facing walls are present, more than one surface level exist.
 !--             In this case, use the lowest surface-level height. 
-                IF ( surf_def_h(0)%start_index(j,i) <=                         &
-                     surf_def_h(0)%end_index(j,i) )  THEN
-                   m = surf_def_h(0)%start_index(j,i)
-                   k = surf_def_h(0)%k(m)
-                   mean_surface_level_height_l(sr) =                           &
-                                       mean_surface_level_height_l(sr) + zw(k-1)
-                ENDIF
+                DO l = 0, 1, 2
+                   IF ( surf_def_h(l)%start_index(j,i) <=                         &
+                        surf_def_h(l)%end_index(j,i) )  THEN
+                      m = surf_def_h(l)%start_index(j,i)
+                      k = surf_def_h(l)%k(m)
+                      mean_surface_level_height_l(sr) =                           &
+                                           mean_surface_level_height_l(sr) + zw(k-1)
+                   ENDIF
+                ENDDO
                 IF ( surf_lsm_h%start_index(j,i) <=                            &
                      surf_lsm_h%end_index(j,i) )  THEN
                    m = surf_lsm_h%start_index(j,i)
@@ -2343,6 +2346,7 @@
        IF ( use_surface_fluxes  .AND.  constant_heatflux  .AND.                &
             random_heatflux )  THEN
           IF ( surf_def_h(0)%ns >= 1 )  CALL disturb_heatflux( surf_def_h(0) )
+          IF ( surf_def_h(2)%ns >= 1 )  CALL disturb_heatflux( surf_def_h(2) )
           IF ( surf_lsm_h%ns    >= 1 )  CALL disturb_heatflux( surf_lsm_h    )
           IF ( surf_usm_h%ns    >= 1 )  CALL disturb_heatflux( surf_usm_h    )
        ENDIF

@@ -2406,9 +2406,6 @@
 
     INTEGER(iwp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  topo !< input array for 3D topography and dummy array for setting "outer"-flags
 
-    CALL location_message('Setting topo flags',.TRUE.)
-    IF (.NOT. use_surface_fluxes) CALL location_message('use_surface_fluxes = FALSE',.TRUE.)
-
     ALLOCATE( wall_flags_0(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
     wall_flags_0 = 0
 !

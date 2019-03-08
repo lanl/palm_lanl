@@ -299,6 +299,7 @@
 
     INTEGER(iwp) ::  k  !< loop index
 
+    CALL location_message('initializing 1d model',.TRUE.)
 !
 !-- Allocate required 1D-arrays
     ALLOCATE( diss1d(nzb:nzt+1), diss1d_p(nzb:nzt+1),                          &
@@ -373,13 +374,13 @@
 
 !
 !-- For u*, theta* and the momentum fluxes plausible values are set
-    IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
-       us1d = 0.1_wp   ! without initial friction the flow would not change
+    IF ( TRIM( constant_flux_layer ) /= 'none' ) THEN 
+       us1d = 0.1_wp
     ELSE
        diss1d(nzb+1) = 0.001_wp
        e1d(nzb+1)  = 1.0_wp
        km1d(nzb+1) = 1.0_wp
-       us1d = 0.0_wp
+       us1d = 0.0_wp   ! without initial friction the flow would not change
     ENDIF
     ts1d = 0.0_wp
     usws1d = 0.0_wp
@@ -440,20 +441,21 @@
     REAL(wp) ::  l_stable     !< mixing length for stable case
     REAL(wp) ::  pt_0         !< reference temperature
     REAL(wp) ::  uv_total     !< horizontal wind speed
-
+    
+    CALL location_message('time integration for 1d model',.TRUE.)
 !
 !-- Determine the time step at the start of a 1D-simulation and
 !-- determine and printout quantities used for run control
     dt_1d = 0.01_wp
     CALL run_control_1d
 
-    IF ( TRIM(constant_flux_layer) == 'bottom'  .OR.  use_surface_fluxes )  THEN
+    IF ( use_surface_fluxes )  THEN
        nzb_diff = nzb + 2
     ELSE
        nzb_diff = nzb + 1
     ENDIF
     
-    IF ( TRIM(constant_flux_layer) == 'top'  .OR.  use_top_fluxes )  THEN
+    IF ( use_top_fluxes )  THEN
        nzt_diff = nzt - 1
     ELSE
        nzt_diff = nzt

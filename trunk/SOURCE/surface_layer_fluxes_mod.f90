@@ -314,45 +314,57 @@
 !
 !--    Derive potential temperature and specific humidity at first grid level 
 !--    from the fields pt and q
+       IF ( TRIM(constant_flux_layer) == 'bottom' )  THEN
 !
-!--    First call for horizontal default-type surfaces (l=0 - upward facing, 
-!--    l=1 - downward facing)
-       DO  l = 0, 1
-          IF ( surf_def_h(l)%ns >= 1  )  THEN
-             surf => surf_def_h(l)
+!--       First call for horizontal default-type surfaces (l=0 - upward facing, 
+!--       l=1 - downward facing)
+          DO  l = 0, 1
+             IF ( surf_def_h(l)%ns >= 1 )  THEN
+                surf => surf_def_h(l)
+                CALL calc_pt_q
+                IF ( .NOT. neutral )  CALL calc_pt_surface
+             ENDIF
+          ENDDO
+!
+!--       Call for natural-type horizontal surfaces
+          IF ( surf_lsm_h%ns >= 1 )  THEN
+             surf => surf_lsm_h
              CALL calc_pt_q
-             IF ( .NOT. neutral )  CALL calc_pt_surface
           ENDIF
-       ENDDO
+
 !
-!--    Call for natural-type horizontal surfaces
-       IF ( surf_lsm_h%ns >= 1  )  THEN
-          surf => surf_lsm_h
-          CALL calc_pt_q
+!--       Call for urban-type horizontal surfaces
+          IF ( surf_usm_h%ns >= 1 )  THEN
+             surf => surf_usm_h
+             CALL calc_pt_q
+          ENDIF
+
+!
+!--       Call for natural-type vertical surfaces
+          DO  l = 0, 3
+             IF ( surf_lsm_v(l)%ns >= 1 )  THEN
+                surf => surf_lsm_v(l)
+                CALL calc_pt_q
+             ENDIF
+
+!
+!--       Call for urban-type vertical surfaces
+             IF ( surf_usm_v(l)%ns >= 1 )  THEN
+                surf => surf_usm_v(l)
+                CALL calc_pt_q
+             ENDIF
+          ENDDO
+       
        ENDIF
-
+       IF ( TRIM(constant_flux_layer) == 'top' )  THEN
 !
-!--    Call for urban-type horizontal surfaces
-       IF ( surf_usm_h%ns >= 1  )  THEN
-          surf => surf_usm_h
-          CALL calc_pt_q
+!--       First call for horizontal default-type surfaces 
+          IF ( surf_def_h(2)%ns >= 1 )  THEN
+                surf => surf_def_h(2)
+                CALL calc_pt_q
+                IF ( .NOT. neutral )  CALL calc_pt_surface
+          ENDIF
        ENDIF
-
-!
-!--    Call for natural-type vertical surfaces
-       DO  l = 0, 3
-          IF ( surf_lsm_v(l)%ns >= 1  )  THEN
-             surf => surf_lsm_v(l)
-             CALL calc_pt_q
-          ENDIF
-
-!
-!--    Call for urban-type vertical surfaces
-          IF ( surf_usm_v(l)%ns >= 1  )  THEN
-             surf => surf_usm_v(l)
-             CALL calc_pt_q
-          ENDIF
-       ENDDO
 
 !
 !--    First, calculate the new Obukhov length, then new friction velocity,
@@ -366,91 +378,99 @@
 !--    Note, each routine is called for different surface types. 
 !--    First call for default-type horizontal surfaces, for natural- and 
 !--    urban-type surfaces. Note, at this place only upward-facing horizontal
-!--    surfaces are treted. 
-       IF ( most_method == 'circular' )  THEN
+!--    surfaces are treted.
+       IF ( TRIM(constant_flux_layer) == 'bottom' ) THEN 
+          
+          IF ( most_method == 'circular' )  THEN
 !
-!--       Default-type upward-facing horizontal surfaces
-          IF ( surf_def_h(0)%ns >= 1  )  THEN
-             surf => surf_def_h(0)
-             CALL calc_scaling_parameters
-             CALL calc_uvw_abs
-             IF ( .NOT. neutral )  CALL calc_ol
-             CALL calc_us
-             CALL calc_surface_fluxes
-          ENDIF
+!--          Default-type upward-facing horizontal surfaces
+             IF ( surf_def_h(0)%ns >= 1 )  THEN
+                surf => surf_def_h(0)
+                CALL calc_scaling_parameters
+                CALL calc_uvw_abs
+                IF ( .NOT. neutral )  CALL calc_ol
+                CALL calc_us
+                CALL calc_surface_fluxes
+             ENDIF
 !
-!--       Natural-type horizontal surfaces
-          IF ( surf_lsm_h%ns >= 1  )  THEN
-             surf => surf_lsm_h
-             CALL calc_scaling_parameters
-             CALL calc_uvw_abs
-             IF ( .NOT. neutral )  CALL calc_ol
-             CALL calc_us
-             CALL calc_surface_fluxes
-          ENDIF
+!--          Natural-type horizontal surfaces
+             IF ( surf_lsm_h%ns >= 1 )  THEN
+                surf => surf_lsm_h
+                CALL calc_scaling_parameters
+                CALL calc_uvw_abs
+                IF ( .NOT. neutral )  CALL calc_ol
+                CALL calc_us
+                CALL calc_surface_fluxes
+             ENDIF
 !
-!--       Urban-type horizontal surfaces
-          IF ( surf_usm_h%ns >= 1  )  THEN
-             surf => surf_usm_h
-             CALL calc_scaling_parameters
-             CALL calc_uvw_abs
-             IF ( .NOT. neutral )  CALL calc_ol
-             CALL calc_us
-             CALL calc_surface_fluxes
-          ENDIF
+!--          Urban-type horizontal surfaces
+             IF ( surf_usm_h%ns >= 1 )  THEN
+                surf => surf_usm_h
+                CALL calc_scaling_parameters
+                CALL calc_uvw_abs
+                IF ( .NOT. neutral )  CALL calc_ol
+                CALL calc_us
+                CALL calc_surface_fluxes
+             ENDIF
 !
-!--    Use either Newton iteration or a lookup table for the bulk Richardson
-!--    number to calculate the Obukhov length 
-       ELSEIF ( most_method == 'newton'  .OR.  most_method == 'lookup' )  THEN
+!--       Use either Newton iteration or a lookup table for the bulk Richardson
+!--       number to calculate the Obukhov length 
+          ELSEIF ( most_method == 'newton'  .OR.  most_method == 'lookup' )  THEN
 !
-!--       Default-type upward-facing horizontal surfaces
-          IF ( surf_def_h(0)%ns >= 1  )  THEN
-             surf => surf_def_h(0)
-             CALL calc_uvw_abs
-             IF ( .NOT. neutral )  CALL calc_ol
-             CALL calc_us
-             CALL calc_scaling_parameters
-             CALL calc_surface_fluxes
-          ENDIF
+!--          Default-type upward-facing horizontal surfaces
+             IF ( surf_def_h(0)%ns >= 1 )  THEN
+                surf => surf_def_h(0)
+                CALL calc_uvw_abs
+                IF ( .NOT. neutral )  CALL calc_ol
+                CALL calc_us
+                CALL calc_scaling_parameters
+                CALL calc_surface_fluxes
+             ENDIF
 !
-!--       Natural-type horizontal surfaces
-          IF ( surf_lsm_h%ns >= 1  )  THEN
-             surf => surf_lsm_h
-             CALL calc_uvw_abs
-             IF ( .NOT. neutral )  CALL calc_ol
-             CALL calc_us
-             CALL calc_scaling_parameters
-             CALL calc_surface_fluxes
-          ENDIF
+!--          Natural-type horizontal surfaces
+             IF ( surf_lsm_h%ns >= 1 )  THEN
+                surf => surf_lsm_h
+                CALL calc_uvw_abs
+                IF ( .NOT. neutral )  CALL calc_ol
+                CALL calc_us
+                CALL calc_scaling_parameters
+                CALL calc_surface_fluxes
+             ENDIF
 !
-!--       Urban-type horizontal surfaces
-          IF ( surf_usm_h%ns >= 1  )  THEN
-             surf => surf_usm_h
-             CALL calc_uvw_abs
-             IF ( .NOT. neutral )  CALL calc_ol
-             CALL calc_us
-             CALL calc_scaling_parameters
-             CALL calc_surface_fluxes
-          ENDIF
+!--          Urban-type horizontal surfaces
+             IF ( surf_usm_h%ns >= 1 )  THEN
+                surf => surf_usm_h
+                CALL calc_uvw_abs
+                IF ( .NOT. neutral )  CALL calc_ol
+                CALL calc_us
+                CALL calc_scaling_parameters
+                CALL calc_surface_fluxes
+             ENDIF
 
-       ENDIF
+          ENDIF
 !
-!--    Treat downward-facing horizontal surfaces. Note, so far, these are 
-!--    always default type. Stratification is not considered
-!--    in this case, hence, no further distinction between different 
-!--    most_method is required.  
-       IF ( surf_def_h(1)%ns >= 1  )  THEN
-          downward = .TRUE.
-          surf => surf_def_h(1)
-          CALL calc_uvw_abs
-          CALL calc_us
-          CALL calc_surface_fluxes
-          downward = .FALSE.
+!--       Treat downward-facing horizontal surfaces. Note, so far, these are 
+!--       always default type. Stratification is not considered
+!--       in this case, hence, no further distinction between different 
+!--       most_method is required.  
+          IF ( surf_def_h(1)%ns >= 1 )  THEN
+             downward = .TRUE.
+             surf => surf_def_h(1)
+             CALL calc_uvw_abs
+             CALL calc_us
+             CALL calc_surface_fluxes
+             downward = .FALSE.
+          ENDIF
        ENDIF
-       IF ( surf_def_h(2)%ns >= 1 )  THEN
+      
+!
+!--    Treat downward-facing horizontal surface at the top.
+       IF ( surf_def_h(2)%ns >= 1 .AND. TRIM(constant_flux_layer) == 'top' )  THEN
           downward = .TRUE.
           surf => surf_def_h(2)
+          CALL calc_scaling_parameters
           CALL calc_uvw_abs
+          IF ( .NOT. neutral )  CALL calc_ol
           CALL calc_us
           CALL calc_surface_fluxes
           downward = .FALSE.
@@ -469,7 +489,7 @@
 !--    For default-type surfaces
        mom_uv = .TRUE. 
        DO  l = 0, 1
-          IF ( surf_def_v(l)%ns >= 1  )  THEN
+          IF ( surf_def_v(l)%ns >= 1 .AND. TRIM(constant_flux_layer) == 'bottom' )  THEN
              surf => surf_def_v(l)
 !
 !--          Compute surface-parallel velocity
@@ -488,44 +508,64 @@
 !--    scaling parameters and Obukov length are calculated nevertheless in this
 !--    case. This is due to the requirement of ts in parameterization of heat
 !--    flux in land-surface model in case of aero_resist_kray is not true.
-       IF ( .NOT. aero_resist_kray )  THEN
-          IF ( most_method == 'circular' )  THEN
-             DO  l = 0, 1
-                IF ( surf_lsm_v(l)%ns >= 1  )  THEN
-                   surf => surf_lsm_v(l)
+       IF ( TRIM(constant_flux_layer) == 'bottom' ) THEN
+          IF ( .NOT. aero_resist_kray )  THEN
+             IF ( most_method == 'circular' )  THEN
+                DO  l = 0, 1
+                   IF ( surf_lsm_v(l)%ns >= 1 )  THEN
+                      surf => surf_lsm_v(l)
 !
-!--                Compute scaling parameters
-                   CALL calc_scaling_parameters
+!--                   Compute scaling parameters
+                      CALL calc_scaling_parameters
 !
-!--                Compute surface-parallel velocity
-                   CALL calc_uvw_abs_v_ugrid
+!--                   Compute surface-parallel velocity
+                      CALL calc_uvw_abs_v_ugrid
 !
-!--                Compute Obukhov length
-                   IF ( .NOT. neutral )  CALL calc_ol
+!--                   Compute Obukhov length
+                      IF ( .NOT. neutral )  CALL calc_ol
 !
-!--                Compute respective friction velocity on staggered grid
-                   CALL calc_us
+!--                   Compute respective friction velocity on staggered grid
+                      CALL calc_us
 !
-!--                Compute respective surface fluxes for momentum and TKE
-                   CALL calc_surface_fluxes
-                ENDIF
-             ENDDO
+!--                   Compute respective surface fluxes for momentum and TKE
+                      CALL calc_surface_fluxes
+                   ENDIF
+                ENDDO
+             ELSE
+                DO  l = 0, 1
+                   IF ( surf_lsm_v(l)%ns >= 1 )  THEN
+                      surf => surf_lsm_v(l)
+!
+!--                   Compute surface-parallel velocity
+                      CALL calc_uvw_abs_v_ugrid
+!
+!--                   Compute Obukhov length
+                      IF ( .NOT. neutral )  CALL calc_ol
+!
+!--                   Compute respective friction velocity on staggered grid
+                      CALL calc_us
+!
+!--                   Compute scaling parameters
+                      CALL calc_scaling_parameters
+!
+!--                   Compute respective surface fluxes for momentum and TKE
+                      CALL calc_surface_fluxes
+                   ENDIF
+                ENDDO
+             ENDIF
+!
+!--       No ts is required, so scaling parameters and Obukhov length do not need
+!--       to be computed.
           ELSE
              DO  l = 0, 1
-                IF ( surf_lsm_v(l)%ns >= 1  )  THEN
+                IF ( surf_lsm_v(l)%ns >= 1 )  THEN
                    surf => surf_lsm_v(l)
-!
+!   
 !--                Compute surface-parallel velocity
                    CALL calc_uvw_abs_v_ugrid
 !
-!--                Compute Obukhov length
-                   IF ( .NOT. neutral )  CALL calc_ol
-!
 !--                Compute respective friction velocity on staggered grid
                    CALL calc_us
-!
-!--                Compute scaling parameters
-                   CALL calc_scaling_parameters
 !
 !--                Compute respective surface fluxes for momentum and TKE
                    CALL calc_surface_fluxes
@@ -533,13 +573,11 @@
              ENDDO
           ENDIF
 !
-!--    No ts is required, so scaling parameters and Obukhov length do not need
-!--    to be computed.
-       ELSE
+!--       For urban-type surfaces
           DO  l = 0, 1
-             IF ( surf_lsm_v(l)%ns >= 1  )  THEN
-                surf => surf_lsm_v(l)
-!   
+             IF ( surf_usm_v(l)%ns >= 1 )  THEN
+                surf => surf_usm_v(l)
+!
 !--             Compute surface-parallel velocity
                 CALL calc_uvw_abs_v_ugrid
 !
@@ -550,96 +588,14 @@
                 CALL calc_surface_fluxes
              ENDIF
           ENDDO
-       ENDIF
 !
-!--    For urban-type surfaces
-       DO  l = 0, 1
-          IF ( surf_usm_v(l)%ns >= 1  )  THEN
-             surf => surf_usm_v(l)
-!
-!--          Compute surface-parallel velocity
-             CALL calc_uvw_abs_v_ugrid
-!
-!--          Compute respective friction velocity on staggered grid
-             CALL calc_us
-!
-!--          Compute respective surface fluxes for momentum and TKE
-             CALL calc_surface_fluxes
-          ENDIF
-       ENDDO
-!
-!--    Calculate horizontal momentum fluxes at east- and west-facing 
-!--    surfaces (vsus).
-!--    For default-type surfaces
-       DO  l = 2, 3
-          IF ( surf_def_v(l)%ns >= 1  )  THEN
-             surf => surf_def_v(l)
-!
-!--          Compute surface-parallel velocity
-             CALL calc_uvw_abs_v_vgrid
-!
-!--          Compute respective friction velocity on staggered grid
-             CALL calc_us
-!
-!--          Compute respective surface fluxes for momentum and TKE
-             CALL calc_surface_fluxes
-          ENDIF
-       ENDDO
-!
-!--    For natural-type surfaces. Please note, even though stability is not
-!--    considered for the calculation of momentum fluxes at vertical surfaces,
-!--    scaling parameters and Obukov length are calculated nevertheless in this
-!--    case. This is due to the requirement of ts in parameterization of heat
-!--    flux in land-surface model in case of aero_resist_kray is not true.
-       IF ( .NOT. aero_resist_kray )  THEN
-          IF ( most_method == 'circular' )  THEN
-             DO  l = 2, 3
-                IF ( surf_lsm_v(l)%ns >= 1  )  THEN
-                   surf => surf_lsm_v(l)
-!
-!--                Compute scaling parameters
-                   CALL calc_scaling_parameters
-!
-!--                Compute surface-parallel velocity
-                   CALL calc_uvw_abs_v_vgrid
-!
-!--                Compute Obukhov length
-                   IF ( .NOT. neutral )  CALL calc_ol
-!
-!--                Compute respective friction velocity on staggered grid
-                   CALL calc_us
-!
-!--                Compute respective surface fluxes for momentum and TKE
-                   CALL calc_surface_fluxes
-                ENDIF
-             ENDDO
-          ELSE
-             DO  l = 2, 3
-                IF ( surf_lsm_v(l)%ns >= 1  )  THEN
-                   surf => surf_lsm_v(l)
-!
-!--                Compute surface-parallel velocity
-                   CALL calc_uvw_abs_v_vgrid
-!
-!--                Compute Obukhov length
-                   IF ( .NOT. neutral )  CALL calc_ol
-!
-!--                Compute respective friction velocity on staggered grid
-                   CALL calc_us
-!
-!--                Compute scaling parameters
-                   CALL calc_scaling_parameters
-!
-!--                Compute respective surface fluxes for momentum and TKE
-                   CALL calc_surface_fluxes
-                ENDIF
-             ENDDO
-          ENDIF
-       ELSE
+!--       Calculate horizontal momentum fluxes at east- and west-facing 
+!--       surfaces (vsus).
+!--       For default-type surfaces
           DO  l = 2, 3
-             IF ( surf_lsm_v(l)%ns >= 1  )  THEN
-                surf => surf_lsm_v(l)
-!   
+             IF ( surf_def_v(l)%ns >= 1 )  THEN
+                surf => surf_def_v(l)
+!
 !--             Compute surface-parallel velocity
                 CALL calc_uvw_abs_v_vgrid
 !
@@ -650,96 +606,162 @@
                 CALL calc_surface_fluxes
              ENDIF
           ENDDO
-       ENDIF
 !
-!--    For urban-type surfaces
-       DO  l = 2, 3
-          IF ( surf_usm_v(l)%ns >= 1  )  THEN
-             surf => surf_usm_v(l)
+!--       For natural-type surfaces. Please note, even though stability is not
+!--       considered for the calculation of momentum fluxes at vertical surfaces,
+!--       scaling parameters and Obukov length are calculated nevertheless in this
+!--       case. This is due to the requirement of ts in parameterization of heat
+!--       flux in land-surface model in case of aero_resist_kray is not true.
+          IF ( .NOT. aero_resist_kray )  THEN
+             IF ( most_method == 'circular' )  THEN
+                DO  l = 2, 3
+                   IF ( surf_lsm_v(l)%ns >= 1 )  THEN
+                      surf => surf_lsm_v(l)
 !
-!--          Compute surface-parallel velocity
-             CALL calc_uvw_abs_v_vgrid
+!--                   Compute scaling parameters
+                      CALL calc_scaling_parameters
 !
-!--          Compute respective friction velocity on staggered grid
-             CALL calc_us
+!--                   Compute surface-parallel velocity
+                      CALL calc_uvw_abs_v_vgrid
 !
-!--          Compute respective surface fluxes for momentum and TKE
-             CALL calc_surface_fluxes
+!--                   Compute Obukhov length
+                      IF ( .NOT. neutral )  CALL calc_ol
+!
+!--                   Compute respective friction velocity on staggered grid
+                      CALL calc_us
+!
+!--                   Compute respective surface fluxes for momentum and TKE
+                      CALL calc_surface_fluxes
+                   ENDIF
+                ENDDO
+             ELSE
+                DO  l = 2, 3
+                   IF ( surf_lsm_v(l)%ns >= 1 )  THEN
+                      surf => surf_lsm_v(l)
+!
+!--                   Compute surface-parallel velocity
+                      CALL calc_uvw_abs_v_vgrid
+!
+!--                   Compute Obukhov length
+                      IF ( .NOT. neutral )  CALL calc_ol
+!
+!--                   Compute respective friction velocity on staggered grid
+                      CALL calc_us
+!
+!--                   Compute scaling parameters
+                      CALL calc_scaling_parameters
+!
+!--                   Compute respective surface fluxes for momentum and TKE
+                      CALL calc_surface_fluxes
+                   ENDIF
+                ENDDO
+             ENDIF
+          ELSE
+             DO  l = 2, 3
+                IF ( surf_lsm_v(l)%ns >= 1 )  THEN
+                   surf => surf_lsm_v(l)
+!   
+!--                Compute surface-parallel velocity
+                   CALL calc_uvw_abs_v_vgrid
+!
+!--                Compute respective friction velocity on staggered grid
+                   CALL calc_us
+!
+!--                Compute respective surface fluxes for momentum and TKE
+                   CALL calc_surface_fluxes
+                ENDIF
+             ENDDO
           ENDIF
-       ENDDO
-       mom_uv = .FALSE.
 !
-!--    Calculate horizontal momentum fluxes of w (wsus and wsvs) at vertial 
-!--    surfaces.
-       mom_w = .TRUE.
+!--       For urban-type surfaces
+          DO  l = 2, 3
+             IF ( surf_usm_v(l)%ns >= 1 )  THEN
+                surf => surf_usm_v(l)
 !
-!--    Default-type surfaces
-       DO  l = 0, 3
-          IF ( surf_def_v(l)%ns >= 1  )  THEN
-             surf => surf_def_v(l)
-             CALL calc_uvw_abs_v_wgrid
-             CALL calc_us
-             CALL calc_surface_fluxes
-          ENDIF
-       ENDDO 
+!--             Compute surface-parallel velocity
+                CALL calc_uvw_abs_v_vgrid
 !
-!--    Natural-type surfaces
-       DO  l = 0, 3
-          IF ( surf_lsm_v(l)%ns >= 1  )  THEN
-             surf => surf_lsm_v(l)
-             CALL calc_uvw_abs_v_wgrid
-             CALL calc_us
-             CALL calc_surface_fluxes
-          ENDIF
-       ENDDO 
+!--             Compute respective friction velocity on staggered grid
+                CALL calc_us
 !
-!--    Urban-type surfaces
-       DO  l = 0, 3
-          IF ( surf_usm_v(l)%ns >= 1  )  THEN
-             surf => surf_usm_v(l)
-             CALL calc_uvw_abs_v_wgrid
-             CALL calc_us
-             CALL calc_surface_fluxes
-          ENDIF
-       ENDDO 
-       mom_w = .FALSE.   
+!--             Compute respective surface fluxes for momentum and TKE
+                CALL calc_surface_fluxes
+             ENDIF
+          ENDDO
+          mom_uv = .FALSE.
 !
-!--    Calculate momentum fluxes usvs, vsus, wsus and wsvs at vertical 
-!--    surfaces for TKE production. Note, here, momentum fluxes are defined 
-!--    at grid center and are not staggered as before.
-       mom_tke = .TRUE.
+!--       Calculate horizontal momentum fluxes of w (wsus and wsvs) at vertical 
+!--       surfaces.
+          mom_w = .TRUE.
 !
-!--    Default-type surfaces
-       DO  l = 0, 3
-          IF ( surf_def_v(l)%ns >= 1  )  THEN
-             surf => surf_def_v(l)
-             CALL calc_uvw_abs_v_sgrid
-             CALL calc_us
-             CALL calc_surface_fluxes
-          ENDIF
-       ENDDO 
+!--       Default-type surfaces
+          DO  l = 0, 3
+             IF ( surf_def_v(l)%ns >= 1 )  THEN
+                surf => surf_def_v(l)
+                CALL calc_uvw_abs_v_wgrid
+                CALL calc_us
+                CALL calc_surface_fluxes
+             ENDIF
+          ENDDO 
 !
-!--    Natural-type surfaces
-       DO  l = 0, 3
-          IF ( surf_lsm_v(l)%ns >= 1  )  THEN
-             surf => surf_lsm_v(l)
-             CALL calc_uvw_abs_v_sgrid
-             CALL calc_us
-             CALL calc_surface_fluxes
-          ENDIF
-       ENDDO 
+!--       Natural-type surfaces
+          DO  l = 0, 3
+             IF ( surf_lsm_v(l)%ns >= 1 )  THEN
+                surf => surf_lsm_v(l)
+                CALL calc_uvw_abs_v_wgrid
+                CALL calc_us
+                CALL calc_surface_fluxes
+             ENDIF
+          ENDDO 
 !
-!--    Urban-type surfaces
-       DO  l = 0, 3
-          IF ( surf_usm_v(l)%ns >= 1  )  THEN
-             surf => surf_usm_v(l)
-             CALL calc_uvw_abs_v_sgrid
-             CALL calc_us
-             CALL calc_surface_fluxes
-          ENDIF
-       ENDDO 
-       mom_tke = .FALSE.
+!--       Urban-type surfaces
+          DO  l = 0, 3
+             IF ( surf_usm_v(l)%ns >= 1 )  THEN
+                surf => surf_usm_v(l)
+                CALL calc_uvw_abs_v_wgrid
+                CALL calc_us
+                CALL calc_surface_fluxes
+             ENDIF
+          ENDDO 
+          mom_w = .FALSE.   
+!
+!--       Calculate momentum fluxes usvs, vsus, wsus and wsvs at vertical 
+!--       surfaces for TKE production. Note, here, momentum fluxes are defined 
+!--       at grid center and are not staggered as before.
+          mom_tke = .TRUE.
+!
+!--       Default-type surfaces
+          DO  l = 0, 3
+             IF ( surf_def_v(l)%ns >= 1 )  THEN
+                surf => surf_def_v(l)
+                CALL calc_uvw_abs_v_sgrid
+                CALL calc_us
+                CALL calc_surface_fluxes
+             ENDIF
+          ENDDO 
+!
+!--       Natural-type surfaces
+          DO  l = 0, 3
+             IF ( surf_lsm_v(l)%ns >= 1 )  THEN
+                surf => surf_lsm_v(l)
+                CALL calc_uvw_abs_v_sgrid
+                CALL calc_us
+                CALL calc_surface_fluxes
+             ENDIF
+          ENDDO 
+!
+!--       Urban-type surfaces
+          DO  l = 0, 3
+             IF ( surf_usm_v(l)%ns >= 1 )  THEN
+                surf => surf_usm_v(l)
+                CALL calc_uvw_abs_v_sgrid
+                CALL calc_us
+                CALL calc_surface_fluxes
+             ENDIF
+          ENDDO 
+          mom_tke = .FALSE.
   
+       ENDIF
 
     END SUBROUTINE surface_layer_fluxes
 
@@ -804,11 +826,11 @@
           surf => surf_def_h(0)
           CALL init_surface_layer_fluxes_m
        ENDIF
-       IF ( surf_lsm_h%ns    >= 1 ) THEN
+       IF ( surf_lsm_h%ns    >= 1 .AND. TRIM(constant_flux_layer) == 'bottom' ) THEN
           surf => surf_lsm_h
           CALL init_surface_layer_fluxes_m
        ENDIF
-       IF ( surf_usm_h%ns    >= 1 ) THEN
+       IF ( surf_usm_h%ns    >= 1 .AND. TRIM(constant_flux_layer) == 'bottom' ) THEN
           surf => surf_usm_h
           CALL init_surface_layer_fluxes_m
        ENDIF
@@ -2048,7 +2070,7 @@
                 i    = surf%i(m)            
                 j    = surf%j(m)
                 k    = surf%k(m)
-                surf%shf(m) = -surf%ts(m) * surf%us(m) * rho_ref_zw(k)
+                surf%shf(m) = -surf%ts(m) * surf%us(m) * rho_ref_zw(k-1)
                 ! Consider using rho_ref_zw(k-1) for downward and rho_ref_zw(k+1) for upward
              ENDDO
           ENDIF

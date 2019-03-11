@@ -133,12 +133,8 @@
 !
 !--       u-component
           CASE ( 1 )
-             !$acc kernels
-             !$acc loop independent
              DO  i = nxlu, nxr
-                !$acc loop independent
                 DO  j = nys, nyn
-                   !$acc loop independent
                    DO  k = nzb+1, nzt
 !
 !--                   Predetermine flag to mask topography
@@ -156,17 +152,12 @@
                    ENDDO
                 ENDDO
              ENDDO
-             !$acc end kernels
 
 !
 !--       v-component
           CASE ( 2 )
-             !$acc kernels
-             !$acc loop independent
              DO  i = nxl, nxr
-                !$acc loop independent
                 DO  j = nysv, nyn
-                   !$acc loop independent
                    DO  k = nzb+1, nzt
 !
 !--                   Predetermine flag to mask topography
@@ -180,17 +171,12 @@
                    ENDDO
                 ENDDO
              ENDDO
-             !$acc end kernels
 
 !
 !--       w-component
           CASE ( 3 )
-             !$acc kernels
-             !$acc loop independent
              DO  i = nxl, nxr
-                !$acc loop independent
                 DO  j = nys, nyn
-                   !$acc loop independent
                    DO  k = nzb+1, nzt
 !
 !--                   Predetermine flag to mask topography
@@ -203,7 +189,6 @@
                    ENDDO
                 ENDDO
              ENDDO
-             !$acc end kernels
 
           CASE DEFAULT
 

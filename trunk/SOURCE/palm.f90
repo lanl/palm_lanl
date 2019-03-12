@@ -45,6 +45,9 @@
         ONLY:  netcdf_data_input_inquire_file, netcdf_data_input_init,         &
                netcdf_data_input_surface_data, netcdf_data_input_topo
 
+    USE fft_xy,                                                                &
+        ONLY: fft_finalize
+
     USE kinds
 
     USE pegrid
@@ -284,6 +287,7 @@
     CALL cpu_log( log_point(1), 'total', 'stop' )
     CALL cpu_statistics
 
+    CALL fft_finalize
 #if defined( __parallel )
     CALL MPI_FINALIZE( ierr )
 #endif

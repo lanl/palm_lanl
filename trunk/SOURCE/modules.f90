@@ -1126,7 +1126,7 @@
     CHARACTER (LEN=20)   ::  coupling_mode = 'uncoupled'                  !< coupling mode for atmosphere-ocean coupling
     CHARACTER (LEN=20)   ::  coupling_mode_remote = 'uncoupled'           !< coupling mode of the remote process in case of coupled atmosphere-ocean runs
     CHARACTER (LEN=20)   ::  dissipation_1d = 'detering'                  !< namelist parameter
-    CHARACTER (LEN=20)   ::  fft_method = 'temperton-algorithm'           !< namelist parameter
+    CHARACTER (LEN=20)   ::  fft_method = 'fftw'                          !< namelist parameter
     CHARACTER (LEN=20)   ::  mixing_length_1d = 'blackadar'               !< namelist parameter
     CHARACTER (LEN=20)   ::  random_generator = 'random-parallel'         !< namelist parameter
     CHARACTER (LEN=20)   ::  reference_state = 'initial_profile'          !< namelist parameter

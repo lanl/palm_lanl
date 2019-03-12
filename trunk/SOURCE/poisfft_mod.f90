@@ -248,11 +248,16 @@
        INTEGER(iwp) ::  nnz_x        !<
        INTEGER(iwp) ::  nxl_y_bound  !<
        INTEGER(iwp) ::  nxr_y_bound  !<
-
+       INTEGER(iwp) ::  i,j,k
        INTEGER(iwp), DIMENSION(4) ::  isave  !<
 
        REAL(wp), DIMENSION(1:nz,nys:nyn,nxl:nxr) ::  ar      !<
        REAL(wp), DIMENSION(nys:nyn,nxl:nxr,1:nz) ::  ar_inv  !<
+       REAL(wp), DIMENSION(0:nx, nys_x:nyn_x,nzb_x:nzt_x) :: ar_x
+       REAL(wp), DIMENSION(nys_x:nyn_x,nzb_x:nzt_x,0:nx) :: ar_inv_x
+       REAL(wp), DIMENSION(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) :: ar_y
+       REAL(wp), DIMENSION(nxl_y:nxr_y,nzb_y:nzt_y,0:ny) :: ar_inv_y
+       REAL(wp), DIMENSION(nxl_z:nxr_z,nys_z:nyn_z,1:nz) :: ar_z
 
        REAL(wp), DIMENSION(:,:,:),   ALLOCATABLE ::  ar1      !<
        REAL(wp), DIMENSION(:,:,:),   ALLOCATABLE ::  f_in     !<
@@ -298,78 +303,165 @@
 
        ELSEIF ( .NOT. transpose_compute_overlap )  THEN
 
+          call cpu_log(log_point_s(5), 'fft routines', 'start')
+!!$acc enter data copyin(ar(1:nz,nys:nyn,nxl:nxr),ar_inv(nys:nyn,nxl:nxr,1:nz),ar_x(0:nx,nys_x:nyn_x,nzb_x:nzt_x))
+!$acc parallel copy(ar(1:nz,nys:nyn,nxl:nxr), ar_inv(nys:nyn,nxl:nxr,1:nz),ar_x(0:nx, nys_x:nyn_x,nzb_x:nzt_x))
 !
+
+
 !--       2d-domain-decomposition or no decomposition (1 PE run)
 !--       Transposition z --> x
-          CALL cpu_log( log_point_s(5), 'transpo forward', 'start' )
-          CALL resort_for_zx( ar, ar_inv )
-          CALL transpose_zx( ar_inv, ar )
-          CALL cpu_log( log_point_s(5), 'transpo forward', 'pause' )
+!         CALL resort_for_zx( ar, ar_inv )
+!         CALL transpose_zx( ar_inv, ar )
 
-          CALL cpu_log( log_point_s(4), 'fft_x', 'start' )
-          CALL fft_x( ar, 'forward' )
-          CALL cpu_log( log_point_s(4), 'fft_x', 'pause' )
+!$acc loop collapse(3)
+     DO  k = 1,nz
+         DO  i = nxl, nxr
+             DO  j = nys, nyn
+                 ar_inv(j,i,k) = ar(k,j,i)
+             ENDDO
+         ENDDO
+     ENDDO
 
+     !$acc loop collapse(3)
+          DO  k = 1, nz
+             DO  i = nxl, nxr
+                DO  j = nys, nyn
+                   ar_x(i,j,k) = ar_inv(j,i,k)
+                ENDDO
+             ENDDO
+          ENDDO
+!!$acc exit data copyout(ar,ar_inv,ar_x) 
+!$acc end parallel
+
+
+          CALL fft_x( ar_x, 'forward' )
 !
 !--       Transposition x --> y
-          CALL cpu_log( log_point_s(5), 'transpo forward', 'continue' )
-          CALL resort_for_xy( ar, ar_inv )
-          CALL transpose_xy( ar_inv, ar )
-          CALL cpu_log( log_point_s(5), 'transpo forward', 'pause' )
 
-          CALL cpu_log( log_point_s(7), 'fft_y', 'start' )
-          CALL fft_y( ar, 'forward', ar_tr = ar,                &
+     DO  i = 0, nx
+         DO  k = nzb_x, nzt_x
+             DO  j = nys_x, nyn_x
+                 ar_inv_x(j,k,i) = ar_x(i,j,k)
+             ENDDO
+         ENDDO
+     ENDDO
+
+       DO  k = nzb_y, nzt_y
+          DO  i = nxl_y, nxr_y
+             DO  j = 0, ny
+                ar_y(j,i,k) = ar_inv_x(j,k,i)
+             ENDDO
+          ENDDO
+       ENDDO
+!          CALL resort_for_xy( ar_x, ar_inv )
+!          CALL transpose_xy( ar_inv, ar )
+
+          CALL fft_y( ar_y, 'forward', ar_tr = ar_y,                &
                       nxl_y_bound = nxl_y, nxr_y_bound = nxr_y, &
                       nxl_y_l = nxl_y, nxr_y_l = nxr_y )
-          CALL cpu_log( log_point_s(7), 'fft_y', 'pause' )
-
 !
+     DO  j = 0, ny
+         DO  k = nzb_y, nzt_y
+             DO  i = nxl_y, nxr_y
+                 ar_inv_y(i,k,j) = ar_y(j,i,k)
+             ENDDO
+         ENDDO
+     ENDDO
+
+
+      DO  j = 0, ny
+          DO  k = nzb_y, nzt_y
+             DO  i = nxl_y, nxr_y
+                ar_z(i,j,k) = ar_inv_y(i,k,j)
+             ENDDO
+          ENDDO
+       ENDDO
 !--       Transposition y --> z
-          CALL cpu_log( log_point_s(5), 'transpo forward', 'continue' )
-          CALL resort_for_yz( ar, ar_inv )
-          CALL transpose_yz( ar_inv, ar )
-          CALL cpu_log( log_point_s(5), 'transpo forward', 'stop' )
+!          CALL resort_for_yz( ar, ar_inv )
+!          CALL transpose_yz( ar_inv, ar )
 
 !
 !--       Solve the tridiagonal equation system along z
-          CALL cpu_log( log_point_s(6), 'tridia', 'start' )
-          CALL tridia_substi( ar )
-          CALL cpu_log( log_point_s(6), 'tridia', 'stop' )
+          CALL tridia_substi( ar_z )
 
 !
 !--       Inverse Fourier Transformation
 !--       Transposition z --> y
-          CALL cpu_log( log_point_s(8), 'transpo invers', 'start' )
-          CALL transpose_zy( ar, ar_inv )
-          CALL resort_for_zy( ar_inv, ar )
-          CALL cpu_log( log_point_s(8), 'transpo invers', 'pause' )
+       DO  k = nzb_y, nzt_y
+          DO  j = 0, ny
+             DO  i = nxl_y, nxr_y
+                ar_inv_y(i,k,j) = ar_z(i,j,k)
+             ENDDO
+          ENDDO
+       ENDDO
 
-          CALL cpu_log( log_point_s(7), 'fft_y', 'continue' )
-          CALL fft_y( ar, 'backward', ar_tr = ar,               &
+
+      DO  k = nzb_y, nzt_y
+         DO  j = 0, ny
+             DO  i = nxl_y, nxr_y
+                 ar_y(j,i,k) = ar_inv_y(i,k,j)
+             ENDDO
+         ENDDO
+     ENDDO
+
+!          CALL transpose_zy( ar, ar_inv )
+!          CALL resort_for_zy( ar_inv, ar )
+
+          CALL fft_y( ar_y, 'backward', ar_tr = ar_y,               &
                       nxl_y_bound = nxl_y, nxr_y_bound = nxr_y, &
                       nxl_y_l = nxl_y, nxr_y_l = nxr_y )
-          CALL cpu_log( log_point_s(7), 'fft_y', 'stop' )
 
 !
 !--       Transposition y --> x
-          CALL cpu_log( log_point_s(8), 'transpo invers', 'continue' )
-          CALL transpose_yx( ar, ar_inv )
-          CALL resort_for_yx( ar_inv, ar )
-          CALL cpu_log( log_point_s(8), 'transpo invers', 'pause' )
 
-          CALL cpu_log( log_point_s(4), 'fft_x', 'continue' )
-          CALL fft_x( ar, 'backward' )
-          CALL cpu_log( log_point_s(4), 'fft_x', 'stop' )
+       DO  i = nxl_y, nxr_y
+          DO  k = nzb_y, nzt_y
+             DO  j = 0, ny
+                ar_inv_x(j,k,i) = ar_y(j,i,k)
+             ENDDO
+          ENDDO
+       ENDDO
 
+        DO  i = 0, nx
+         DO  k = nzb_x, nzt_x
+             DO  j = nys_x, nyn_x
+                 ar_x(i,j,k) = ar_inv_x(j,k,i)
+             ENDDO
+         ENDDO
+     ENDDO
+
+!          CALL transpose_yx( ar, ar_inv )
+!          CALL resort_for_yx( ar_inv, ar )
+
+          CALL fft_x( ar_x, 'backward' )
 !
 !--       Transposition x --> z
-          CALL cpu_log( log_point_s(8), 'transpo invers', 'continue' )
-          CALL transpose_xz( ar, ar_inv )
-          CALL resort_for_xz( ar_inv, ar )
-          CALL cpu_log( log_point_s(8), 'transpo invers', 'stop' )
+
+DO  i = nxl, nxr
+          DO  j = nys, nyn
+             DO  k = 1, nz
+                ar_inv(j,i,k) = ar_x(i,j,k)
+             ENDDO
+          ENDDO
+       ENDDO
+
+DO  k = 1, nz
+         DO  i = nxl, nxr
+             DO  j = nys, nyn
+                 ar(k,j,i) = ar_inv(j,i,k)
+             ENDDO
+         ENDDO
+     ENDDO
+
+
+!          CALL transpose_xz( ar, ar_inv )
+!          CALL resort_for_xz( ar_inv, ar )
+
+!!!$acc exit data copyout(ar) 
+!!!$acc end kernels
 
        ELSE
-
 !
 !--       2d-domain-decomposition or no decomposition (1 PE run) with
 !--       overlapping transposition / fft

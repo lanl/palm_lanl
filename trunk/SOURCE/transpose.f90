@@ -38,7 +38,7 @@
 ! Forced header and separation lines into 80 columns
 ! 
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
+! Code annotations made doygen readable 
 ! 
 ! 1324 2014-03-21 09:13:16Z suehring
 ! Bugfix: ONLY statement for module pegrid removed 
@@ -764,6 +764,7 @@
 !-- of the data is necessary and no transposition has to be done.
     IF ( pdims(1) == 1 )  THEN
 
+            print *, shape(f_out)
 !$OMP  PARALLEL PRIVATE ( i, j, k )
 !$OMP  DO
        DO  k = 1, nz

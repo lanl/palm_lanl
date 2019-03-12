@@ -336,7 +336,6 @@
 
 
           CALL fft_x( ar_x, 'forward' )
-!
 !--       Transposition x --> y
 
      DO  i = 0, nx

@@ -3242,36 +3242,57 @@ SUBROUTINE diffusion_e( var, var_reference )
 #endif
     REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  dissipation  !< TKE dissipation
 
+!$acc kernels
 
     !
     !-- Calculate the tendency terms
     DO  i = nxl, nxr
-    DO  j = nys, nyn
-    DO  k = nzb+1, nzt
+       DO  j = nys, nyn
+          DO  k = nzb+1, nzt
     !
-    !--          Predetermine flag to mask topography
-flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
+    !--      Predetermine flag to mask topography
+             flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
 
     !
-    !--          Calculate dissipation
-    IF ( les_mw )  THEN
+    !--      Calculate dissipation
+             IF ( les_mw )  THEN
 
-CALL mixing_length_les( i, j, k, l, ll, var, var_reference )
+                dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
+                IF ( dvar_dz > 0.0_wp ) THEN
+                   IF ( use_single_reference_value )  THEN
+                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                         / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
+                   ELSE
+                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                         / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
+                   ENDIF
+                ELSE
+                   l_stable = l_grid(k)
+                ENDIF
+            !
+            !-- Adjustment of the mixing length
+                IF ( wall_adjustment )  THEN
+                   l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
+                   ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
+                ELSE
+                   l  = MIN( l_grid(k), l_stable )
+                   ll = l_grid(k)
+                ENDIF
 
                 dissipation(k,j) = ( 0.19_wp + 0.74_wp * l / ll )              &
                                    * e(k,j,i) * SQRT( e(k,j,i) ) / l
 
-             ELSEIF ( rans_tke_l )  THEN
-
-                CALL mixing_length_rans( i, j, k, l, ll, var, var_reference )
-
-                dissipation(k,j) = c_0**3 * e(k,j,i) * SQRT( e(k,j,i) ) / ll
-
-                diss(k,j,i) = dissipation(k,j) * flag
-
-             ELSEIF ( rans_tke_e )  THEN
-
-                dissipation(k,j) = diss(k,j,i)
+!             ELSEIF ( rans_tke_l )  THEN
+!
+!                CALL mixing_length_rans( i, j, k, l, ll, var, var_reference )
+!
+!                dissipation(k,j) = c_0**3 * e(k,j,i) * SQRT( e(k,j,i) ) / ll
+!
+!                diss(k,j,i) = dissipation(k,j) * flag
+!
+!             ELSEIF ( rans_tke_e )  THEN
+!
+!                dissipation(k,j) = diss(k,j,i)
 
              ENDIF
 
@@ -3297,6 +3318,7 @@ CALL mixing_length_les( i, j, k, l, ll, var, var_reference )
        ENDDO
 
     ENDDO
+!$acc end kernels
 
  END SUBROUTINE diffusion_e
 

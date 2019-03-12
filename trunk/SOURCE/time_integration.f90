@@ -457,7 +457,6 @@
     DO  WHILE ( simulated_time < end_time  .AND.  .NOT. stop_dt  .AND. &
                 .NOT. terminate_run )
 print *, simulated_time
-        MY_DEBUG
        CALL cpu_log( log_point_s(10), 'timesteps', 'start' )
 !
 !--    Start of intermediate step loop
@@ -543,12 +542,9 @@ print *, simulated_time
             ENDIF
           ENDIF
 !
-MY_DEBUG
 !--       Reduce the velocity divergence via the equation for perturbation
 !--       pressure.
           CALL pres
-          print *, maxval(p),minval(p)
-MY_DEBUG
 !
 !--       Compute the diffusion quantities
           IF ( .NOT. constant_diffusion )  THEN
@@ -571,13 +567,11 @@ MY_DEBUG
 
        ENDDO   ! Intermediate step loop
 !
-MY_DEBUG
 !--    Update perturbation pressure to account for the Stokes pressure
 !--    head, if required
        IF ( ocean .AND. stokes_force ) THEN
           CALL stokes_pressure_head
        ENDIF
-MY_DEBUG
 !
 !--    Increase simulation time and output times
        nr_timesteps_this_run      = nr_timesteps_this_run + 1
@@ -587,7 +581,6 @@ MY_DEBUG
        simulated_time_chr         = time_to_string( time_since_reference_point )
 
 
-MY_DEBUG
 
        IF ( simulated_time >= skip_time_data_output_av )  THEN
           time_do_av         = time_do_av       + dt_3d
@@ -615,7 +608,6 @@ MY_DEBUG
        ENDIF
        time_dopr_listing          = time_dopr_listing        + dt_3d
        time_run_control   = time_run_control + dt_3d
-MY_DEBUG
 !
 !--    Check, if restart is necessary (because cpu-time is expiring or
 !--    because it is forced by user) and set stop flag
@@ -625,7 +617,6 @@ MY_DEBUG
 !--    Set a flag indicating that so far no statistics have been created
 !--    for this time step
        flow_statistics_called = .FALSE.
-MY_DEBUG
 !
 !--    If required, call flow_statistics for averaging in time
        IF ( averaging_interval_pr /= 0.0_wp  .AND.  &
@@ -654,7 +645,6 @@ MY_DEBUG
           ENDIF
        ENDIF
 !
-MY_DEBUG
 !--    Graphic output for PROFIL
        IF ( time_dopr >= dt_dopr )  THEN
           IF ( dopr_n /= 0 )  CALL data_output_profiles
@@ -662,7 +652,6 @@ MY_DEBUG
           time_dopr_av = 0.0_wp    ! due to averaging (see above)
        ENDIF
 
-       MY_DEBUG
 !
 !--    Graphic output for time series
        IF ( time_dots >= dt_dots )  THEN
@@ -670,14 +659,12 @@ MY_DEBUG
           time_dots = MOD( time_dots, MAX( dt_dots, dt_3d ) )
        ENDIF
 !
-MY_DEBUG
 !--    3d-data output (volume data)
        IF ( time_do3d >= dt_do3d )  THEN
           CALL data_output_3d( 0 )
           time_do3d = MOD( time_do3d, MAX( dt_do3d, dt_3d ) )
        ENDIF
 
-       MY_DEBUG
 !
 !--    Output of time-averaged 2d/3d/masked data
        IF ( time_do_av >= dt_data_output_av )  THEN
@@ -685,13 +672,11 @@ MY_DEBUG
          CALL data_output_3d( 1 )
          time_do_av = MOD( time_do_av, MAX( dt_data_output_av, dt_3d ) )
        ENDIF
-MY_DEBUG
 !--    Determine size of next time step. Save timestep dt_3d because it is
 !--    newly calculated in routine timestep, but required further below for
 !--    steering the run control output interval
        dt_3d_old = dt_3d
        CALL timestep
-MY_DEBUG
 !--    Computation and output of run control parameters.
 !--    This is also done whenever perturbations have been imposed
        IF ( time_run_control >= dt_run_control  .OR.                     &
@@ -709,7 +694,6 @@ MY_DEBUG
 !       IF ( myid == 0 )  CALL output_progress_bar
 
        CALL cpu_log( log_point_s(10), 'timesteps', 'stop' )
-MY_DEBUG
 
     ENDDO   ! time loop
 

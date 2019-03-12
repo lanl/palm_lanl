@@ -1,0 +1,195 @@
+
+ ******************************    --------------------------------------------
+ *   Rev:                     *    ocean - run without 1D - prerun
+ ******************************    --------------------------------------------
+ Number of PEs:               1    Processor grid (x,y): (   1,   1) calculated
+                                   A 1d-decomposition along x is used
+
+ Numerical Schemes:
+ -----------------
+
+ --> Use the Moeng_Wyngaard turbulence closure (LES mode).
+ --> Use the boussinesq approximation for the model equations.
+ --> Solve perturbation pressure via FFT using temperton-algorithm routines
+     perturbation pressure is calculated at every Runge-Kutta step
+ --> Momentum advection via Wicker-Skamarock-Scheme 5th order
+ --> Scalar advection via Wicker-Skamarock-Scheme 5th order
+ --> Loop optimization method: vector
+ --> Time differencing scheme: runge-kutta-3       
+ ------------------------------------------------------------------------------
+
+
+ Run time and time step information:
+ ----------------------------------
+
+ Timestep:             variable     maximum value: 20.000 s    CFL-factor: 0.90
+ Start time:              0.000 s
+ End time:               60.000 s
+
+ Time reached:           60.945 s
+ CPU-time used:           6.631 s     per timestep:                     0.144 s
+                                      per second of simulated time:     0.109 s
+
+
+ Computational grid and domain size:
+ ----------------------------------
+
+ Grid length:      dx =       4.000 m    dy =       4.000 m
+                dz(1) =       2.000 m
+
+ Domain size:       x =    128.000 m     y =    128.000 m  z(u) =   -128.000 m
+
+
+
+ Number of gridpoints (x,y,z):  (0:  31, 0:  31, 0:  65)
+ Subdomain size (x,y,z):        (    32,     32,     66)
+
+
+    Characteristic levels of the geo. wind component ug:
+
+       Height:         0.0     0.0  m
+       ug:            0.00    0.00  m/s
+       Gradient:    ------    0.00  1/100s
+       Gridpoint:        0      65
+
+    Characteristic levels of the geo. wind component vg:
+
+       Height:         0.0     0.0  m
+       vg:            0.00    0.00  m/s
+       Gradient:    ------    0.00  1/100s
+       Gridpoint:        0      65
+
+
+ Topography information:
+ ----------------------
+
+ Topography: flat                                    
+
+
+ Boundary conditions:
+ -------------------
+
+                     p                    uv                                  pt
+
+ B. bound.: p(0)     = p(1)   | uv(0)     = uv(1)                 | pt(0)     = pt(1)            
+ T. bound.: p(nzt+1) = p(nzt) | uv(nzt+1) = uv(nzt)               | pt(nzt+1) = pt(nzt)          
+
+                     e
+
+ B. bound.: e(0)     = e(1)                                                                      
+ T. bound.: e(nzt+1) = e(nzt) = e(nzt-1)                                                         
+
+                     sa
+
+ B. bound.: sa(0)    = sa(1)                                                                     
+ T. bound.: sa(nzt+1) = sa(nzt)                                                                  
+
+ Top surface fluxes are used in diffusion terms at k=nzt
+       Predefined constant momentumflux:  u:  0.000000 m**2/s**2
+                                          v:  0.000000 m**2/s**2
+       Predefined constant heatflux:    0.000018 K m/s
+       Predefined constant salinityflux:    0.000000 psu m/s
+
+
+ Lateral boundaries:
+       left/right:  cyclic              
+       north/south: cyclic              
+
+
+ Initial profiles:
+ ----------------
+
+    Characteristic levels of the initial temperature profile:
+
+       Height:           0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0  m
+       Temperature:   293.15  293.16  293.14  293.12  293.10  293.08  293.06  293.04  293.02  293.00  292.98  K
+       Gradient:      ------    1.00    1.00    1.00    1.00    1.00    1.00    1.00    1.00    1.00    1.00  K/100m
+       Gridpoint:          0      65      64      63      62      61      60      59      58      57      56
+
+    Characteristic levels of the initial salinity profile:
+
+       Height:        0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0  m
+       Salinity:    35.00   35.00   35.00   35.00   35.00   35.00   35.00   35.00   35.00   35.00   35.00  psu
+       Gradient:   ------    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00  psu/100m
+       Gridpoint:       0      65      64      63      62      61      60      59      58      57      56
+
+
+ List output:
+ -----------
+
+    1D-Profiles:
+       Output every             9999999.90 s
+
+
+ Data output:
+ -----------
+
+
+    1D-Profiles:
+       Output format: netCDF 64bit offset                     
+
+
+       Profile: e, e*, pt, sa, p, hyp, km, kh, l, u, v, w, prho, w"u",       
+
+              : w*u*, w"v", w*v*, w"pt", w*pt*, w"sa", w*sa*, w*e*,          
+
+              : u*2, v*2, w*2, pt*2, w*3, Sw, w*2pt*, w*pt*2, w*u*u*:dz,     
+
+              : w*p*:dz, rho_ocean, alpha_T,                                 
+       Output every                 1.00 s
+       Time averaged over           0.00 s
+       Averaging input every        0.00 s
+
+    3D-Arrays:
+       Output format: netCDF 64bit offset                     
+
+
+       Arrays:  e, pt, sa, u, v, w, rho_ocean, alpha_T,                              
+       Output every                 1.00 s  
+       Upper output limit at        1.00 m  (GP   65)
+
+
+       Number of output time levels allowed: unlimited
+
+
+    Time series:
+       Output format: netCDF 64bit offset                     
+
+       Output every                 0.00 s
+
+ ------------------------------------------------------------------------------
+
+
+ Physical quantities:
+ -------------------
+
+    Geograph. latitude  :   latitude  = 43.5 degr
+    Geograph. longitude :   longitude =  0.0 degr
+    Angular velocity    :   omega  = 0.729E-04 rad/s
+    Coriolis parameter  :   f      =  0.000100 1/s
+                            f*     =  0.000106 1/s
+    Day of the year at model start :   day_init = 172
+    UTC time at model start        :   time_utc_init = 43200.0 s
+
+    Gravity             :   g      =  9.8 m/s**2
+
+    Reference state used in buoyancy terms: initial_profile
+
+
+ LES / Turbulence quantities:
+ ---------------------------
+
+    Mixing length is limited to 1.80 * z
+
+
+ Actions during the simulation:
+ -----------------------------
+
+    Disturbance impulse (u,v) every :   150.00 s
+    Disturbance amplitude           :     0.25 m/s
+    Lower disturbance level         :   -13.00 m (GP   58)
+    Upper disturbance level         :    -1.00 m (GP   64)
+    Disturbances cease as soon as the disturbance energy exceeds 0.010 m**2/s**2
+    Random number generator used    : random-parallel
+
+ ------------------------------------------------------------------------------

@@ -164,9 +164,11 @@
     USE transpose_indices,                                                     &
         ONLY:  nxl_y, nxr_y, nyn_x, nys_x, nzb_x, nzb_y, nzt_x, nzt_y
 
+#ifdef __GPU
     USE cudafor
 
     USE cufft
+    #endif
 
     IMPLICIT NONE
 
@@ -206,6 +208,8 @@
     TYPE(C_PTR), SAVE ::  plan_xf, plan_xi, plan_yf, plan_yi
 #endif
 
+
+#ifdef __GPU
     INTEGER :: nx_cC, ny_cC
 
     INTEGER, PARAMETER, SAVE :: batch = 64
@@ -214,7 +218,7 @@
             x_out_dev, y_out_dev
     REAL(wp), DEVICE, DIMENSION(:), ALLOCATABLE, SAVE :: x_in_dev, y_in_dev
     INTEGER, SAVE :: plan_xf_dev, plan_xi_dev, plan_yf_dev, plan_yi_dev
-
+#endif
     !
 !-- Public interfaces
     INTERFACE fft_init
@@ -296,9 +300,9 @@
     END SUBROUTINE fft_init
 
     SUBROUTINE fft_finalize
-
+            #ifdef __GPU
             DEALLOCATE(x_in_dev, y_in_dev, y_out_dev, x_out_dev)
-
+            #endif
     END SUBROUTINE fft_finalize
 
 
@@ -327,10 +331,10 @@
        INTEGER(iwp) ::  k          !<
 
        LOGICAL ::  forward_fft !<
-      
+       #ifdef __GPU      
        REAL(wp), DEVICE, ALLOCATABLE :: ar_2d_dev(:,:)
        REAL(wp), DEVICE, ALLOCATABLE :: ar_dev(:,:,:)
-
+       #endif
        REAL(wp), DIMENSION(0:nx,nys_x:nyn_x), OPTIONAL   ::                    &
           ar_2d   !<
        REAL(wp), DIMENSION(0:nx,nys_x:nyn_x,nzb_x:nzt_x) ::                    &
@@ -342,10 +346,10 @@
           forward_fft = .FALSE.
        ENDIF
 
-       allocate(ar_dev(0:nx,nys_x:nyn_x,nzb_x:nzt_x))
+#if defined( __GPU)
+   allocate(ar_dev(0:nx,nys_x:nyn_x,nzb_x:nzt_x))
        if( PRESENT(ar_2d) ) allocate(ar_2d_dev(0:nx,nys_x:nyn_x))
 
-#if defined( __GPU)
 
        if ( forward_fft )  THEN
 
@@ -382,18 +386,18 @@
 
                x_out = x_out_dev
 !!$acc parallel
-            !   !$acc loop
+ !             !$acc loop
                DO  i = 0, (nx+1)/2
                    ar(i,j,k) = REAL( x_out(i), KIND=wp ) / ( nx+1 )
                ENDDO
-             !  !$acc loop
+            !  !$acc loop
                DO  i = 1, (nx+1)/2 - 1
                    ar(nx+1-i,j,k) = AIMAG( x_out(i) ) / ( nx+1 )
                ENDDO
-             !  !$acc end parallel
+     !        !$acc end parallel
            ENDDO
         ENDDO
-       ! ar = ar_dev
+      !  ar = ar_dev
      ENDIF
 
      ELSE

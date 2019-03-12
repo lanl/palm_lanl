@@ -19,36 +19,36 @@
 !
 ! Current revisions:
 ! -----------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: fft_xy_mod.f90 3045 2018-05-28 07:55:41Z Giersch $
 ! Error messages revised
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 !
 ! 2300 2017-06-29 13:31:14Z raasch
 ! NEC related code partly removed, host replaced by loop_optimization
-! 
+!
 ! 2274 2017-06-09 13:27:48Z Giersch
 ! Changed error messages
-! 
+!
 ! 2119 2017-01-17 16:51:50Z raasch
 !
 ! 2118 2017-01-17 16:38:49Z raasch
 ! OpenACC directives and CUDA-fft related code removed
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1850 2016-04-08 13:29:27Z maronga
 ! Module renamed
-! 
+!
 ! 1815 2016-04-06 13:49:59Z raasch
 ! cpp-directives for ibmy removed
 !
@@ -66,7 +66,7 @@
 !
 ! 1402 2014-05-09 14:25:13Z raasch
 ! fortran bugfix for r1392
-! 
+!
 ! 1398 2014-05-07 11:15:00Z heinze
 ! bugfix: typo removed for KIND in CMPLX function
 !
@@ -80,8 +80,8 @@
 ! openMP-bugfix for fftw: some arrays defined as threadprivate
 !
 ! 1353 2014-04-08 15:21:23Z heinze
-! REAL constants provided with KIND-attribute 
-! 
+! REAL constants provided with KIND-attribute
+!
 ! 1342 2014-03-26 17:04:47Z kanani
 ! REAL constants defined as wp-kind
 !
@@ -90,12 +90,12 @@
 !
 ! 1320 2014-03-20 08:40:49Z raasch
 ! ONLY-attribute added to USE-statements,
-! kind-parameters added to all INTEGER and REAL declaration statements, 
-! kinds are defined in new module kinds, 
+! kind-parameters added to all INTEGER and REAL declaration statements,
+! kinds are defined in new module kinds,
 ! old module precision_kind is removed,
 ! revision history before 2012 removed,
 ! comment fields (!:) to be used for variable explanations added to
-! all variable declaration statements 
+! all variable declaration statements
 !
 ! 1304 2014-03-12 10:29:42Z raasch
 ! openmp bugfix: work1 used in Temperton algorithm must be private
@@ -147,20 +147,20 @@
 !> Original version: Klaus Ketelsen (May 2002)
 !------------------------------------------------------------------------------!
  MODULE fft_xy
- 
+
 
     USE control_parameters,                                                    &
         ONLY:  fft_method, message_string
-        
+
     USE indices,                                                               &
         ONLY:  nx, ny, nz
-        
+
 #if defined( __fftw )
     USE, INTRINSIC ::  ISO_C_BINDING
 #endif
 
     USE kinds
-   
+
     USE transpose_indices,                                                     &
         ONLY:  nxl_y, nxr_y, nyn_x, nys_x, nzb_x, nzb_y, nzt_x, nzt_y
 
@@ -186,25 +186,25 @@
     REAL(wp), SAVE ::  dny      !<
     REAL(wp), SAVE ::  sqr_dnx  !<
     REAL(wp), SAVE ::  sqr_dny  !<
-    
-    REAL(wp), DIMENSION(:), ALLOCATABLE, SAVE ::  trigs_x  !< 
+
+    REAL(wp), DIMENSION(:), ALLOCATABLE, SAVE ::  trigs_x  !<
     REAL(wp), DIMENSION(:), ALLOCATABLE, SAVE ::  trigs_y  !<
 #if defined( __fftw )
     INCLUDE  'fftw3.f03'
     INTEGER(KIND=C_INT) ::  nx_c  !<
     INTEGER(KIND=C_INT) ::  ny_c  !<
-    
+
     COMPLEX(KIND=C_DOUBLE_COMPLEX), DIMENSION(:), ALLOCATABLE, SAVE ::  x_out  !<
     COMPLEX(KIND=C_DOUBLE_COMPLEX), DIMENSION(:), ALLOCATABLE, SAVE ::         &
        y_out  !<
-    
+
     REAL(KIND=C_DOUBLE), DIMENSION(:), ALLOCATABLE, SAVE ::                    &
        x_in   !<
     REAL(KIND=C_DOUBLE), DIMENSION(:), ALLOCATABLE, SAVE ::                    &
        y_in   !<
     !$OMP THREADPRIVATE( x_out, y_out, x_in, y_in )
-    
-    
+
+
     TYPE(C_PTR), SAVE ::  plan_xf, plan_xi, plan_yf, plan_yi
 #endif
 
@@ -309,29 +309,29 @@
 !------------------------------------------------------------------------------!
 ! Description:
 ! ------------
-!> Fourier-transformation along x-direction.                 
+!> Fourier-transformation along x-direction.
 !> Version for 2D-decomposition.
-!> It uses internal algorithms (Singleton or Temperton) or      
-!> system-specific routines, if they are available           
+!> It uses internal algorithms (Singleton or Temperton) or
+!> system-specific routines, if they are available
 !------------------------------------------------------------------------------!
- 
+
     SUBROUTINE fft_x( ar, direction, ar_2d )
 
 
        IMPLICIT NONE
 
        CHARACTER (LEN=*) ::  direction  !<
-       
+
        COMPLEX(wp), DIMENSION(:), ALLOCATABLE ::  cwork  !<
 
        INTEGER(iwp) :: ierr
-       INTEGER(iwp) ::  i          !< 
+       INTEGER(iwp) ::  i          !<
        INTEGER(iwp) ::  ishape(1)  !<
        INTEGER(iwp) ::  j          !<
        INTEGER(iwp) ::  k          !<
 
        LOGICAL ::  forward_fft !<
-       #ifdef __GPU      
+       #ifdef __GPU
        REAL(wp), DEVICE, ALLOCATABLE :: ar_2d_dev(:,:)
        REAL(wp), DEVICE, ALLOCATABLE :: ar_dev(:,:,:)
        #endif
@@ -381,7 +381,7 @@
          DO k = nzb_x, nzt_x
             DO j = nys_x, nyn_x
                x_in_dev(0:nx) = ar(0:nx,j,k)
-        !       ierr = cudaMemcpy(x_in_dev,ar_dev(:,j,k),nx+1,cudaMemcpyDeviceToDevice) 
+        !       ierr = cudaMemcpy(x_in_dev,ar_dev(:,j,k),nx+1,cudaMemcpyDeviceToDevice)
                ierr = cufftExecD2Z( plan_xf_dev, x_in_dev, x_out_dev)
 
                x_out = x_out_dev
@@ -401,7 +401,7 @@
      ENDIF
 
      ELSE
-     
+
         if ( PRESENT( ar_2d) ) THEN
            DO  k = nzb_x, nzt_x
               DO  j = nys_x, nyn_x
@@ -439,7 +439,7 @@
  !             !$acc end parallel
                  ierr = cufftExecZ2D( plan_xi_dev, x_out_dev, x_in_dev )
   !               ierr = cudaMemcpy(ar_dev(:,j,k),x_in_dev(0:nx),nx+1,cudaMemcpyDeviceToDevice)
-                 ar(0:nx,j,k) = x_in_dev(0:nx)   
+                 ar(0:nx,j,k) = x_in_dev(0:nx)
   ENDDO
           ENDDO
        ENDIF
@@ -528,14 +528,14 @@
 !> It uses internal algorithms (Singleton or Temperton) or
 !> system-specific routines, if they are available
 !------------------------------------------------------------------------------!
- 
+
     SUBROUTINE fft_x_1d( ar, direction )
 
 
        IMPLICIT NONE
 
        CHARACTER (LEN=*) ::  direction  !<
-       
+
        INTEGER(iwp) ::  i               !<
        INTEGER(iwp) ::  ishape(1)       !<
 
@@ -544,7 +544,7 @@
        REAL(wp), DIMENSION(0:nx)   ::  ar     !<
        REAL(wp), DIMENSION(0:nx+2) ::  work   !<
        REAL(wp), DIMENSION(nx+2)   ::  work1  !<
-       
+
        COMPLEX(wp), DIMENSION(:), ALLOCATABLE ::  cwork  !<
        IF ( direction == 'forward' )  THEN
           forward_fft = .TRUE.
@@ -588,23 +588,23 @@
 !> Version for 2D-decomposition.
 !> It uses internal algorithms (Singleton or Temperton) or
 !> system-specific routines, if they are available.
-!> 
+!>
 !> direction:  'forward' or 'backward'
-!> ar, ar_tr:  3D data arrays 
+!> ar, ar_tr:  3D data arrays
 !>             forward:   ar: before  ar_tr: after transformation
 !>             backward:  ar_tr: before  ar: after transfosition
-!> 
+!>
 !> In case of non-overlapping transposition/transformation:
-!> nxl_y_bound = nxl_y_l = nxl_y 
-!> nxr_y_bound = nxr_y_l = nxr_y 
-!> 
+!> nxl_y_bound = nxl_y_l = nxl_y
+!> nxr_y_bound = nxr_y_l = nxr_y
+!>
 !> In case of overlapping transposition/transformation
 !> - nxl_y_bound  and  nxr_y_bound have the original values of
 !>   nxl_y, nxr_y.  ar_tr is dimensioned using these values.
 !> - nxl_y_l = nxr_y_r.  ar is dimensioned with these values, so that
 !>   transformation is carried out for a 2D-plane only.
 !------------------------------------------------------------------------------!
- 
+
     SUBROUTINE fft_y( ar, direction, ar_tr, nxl_y_bound, nxr_y_bound, nxl_y_l, &
                       nxr_y_l )
 
@@ -612,9 +612,10 @@
        IMPLICIT NONE
 
        CHARACTER (LEN=*) ::  direction  !<
-       
+
+       INTEGER(iwp) ::  ierr
        INTEGER(iwp) ::  i            !<
-       INTEGER(iwp) ::  j            !< 
+       INTEGER(iwp) ::  j            !<
        INTEGER(iwp) ::  jshape(1)    !<
        INTEGER(iwp) ::  k            !<
        INTEGER(iwp) ::  nxl_y_bound  !<
@@ -624,21 +625,78 @@
 
        LOGICAL ::  forward_fft  !<
 
-       REAL(wp), DIMENSION(0:ny+2) ::  work   !<
-       REAL(wp), DIMENSION(ny+2)   ::  work1  !<
-       
+       REAL(wp), DEVICE, ALLOCATABLE :: ar_dev(:,:,:)
+       REAL(wp), DEVICE, ALLOCATABLE :: ar_tr_dev(:,:,:)
+
        COMPLEX(wp), DIMENSION(:), ALLOCATABLE ::  cwork  !<
        REAL(wp), DIMENSION(0:ny,nxl_y_l:nxr_y_l,nzb_y:nzt_y)         ::        &
           ar     !<
        REAL(wp), DIMENSION(0:ny,nxl_y_bound:nxr_y_bound,nzb_y:nzt_y) ::        &
           ar_tr  !<
 
+
        IF ( direction == 'forward' )  THEN
           forward_fft = .TRUE.
        ELSE
           forward_fft = .FALSE.
        ENDIF
-#if defined( __fftw )
+
+#if defined( __GPU )
+       allocate(ar_dev(0:ny,nxl_y_l:nxr_y_l,nzb_y:nzt_y))
+       allocate(ar_tr_dev(0:ny,nxl_y_bound:nxr_y_bound,nzb_y:nzt_y))
+       ar_dev = ar
+       ar_tr_dev = ar_tr
+       IF ( forward_fft )  THEN
+
+          !$OMP PARALLEL PRIVATE ( work, i, j, k )
+          !$OMP DO
+          DO  k = nzb_y, nzt_y
+             DO  i = nxl_y_l, nxr_y_l
+
+                y_in_dev(0:ny) = ar(0:ny,i,k)
+                ierr = cufftExecD2Z( plan_yf_dev, y_in_dev, y_out_dev)
+                y_out = y_out_dev
+
+                DO  j = 0, (ny+1)/2
+                   ar_tr(j,i,k) = REAL( y_out(j), KIND=wp ) / (ny+1)
+                ENDDO
+                DO  j = 1, (ny+1)/2 - 1
+                   ar_tr(ny+1-j,i,k) = AIMAG( y_out(j) ) / (ny+1)
+                ENDDO
+
+             ENDDO
+          ENDDO
+          !$OMP END PARALLEL
+
+       ELSE
+
+          !$OMP PARALLEL PRIVATE ( work, i, j, k )
+          !$OMP DO
+          DO  k = nzb_y, nzt_y
+             DO  i = nxl_y_l, nxr_y_l
+
+                y_out(0) = CMPLX( ar_tr(0,i,k), 0.0_wp, KIND=wp )
+                DO  j = 1, (ny+1)/2 - 1
+                   y_out(j) = CMPLX( ar_tr(j,i,k), ar_tr(ny+1-j,i,k),       &
+                                     KIND=wp )
+                ENDDO
+                y_out((ny+1)/2) = CMPLX( ar_tr((ny+1)/2,i,k), 0.0_wp,       &
+                                         KIND=wp )
+
+                y_out_dev = y_out
+                ierr = cufftExecZ2D( plan_yi_dev, y_out_dev, y_in_dev )
+                ar(0:ny,i,k) = y_in_dev(0:ny)
+
+             ENDDO
+          ENDDO
+          !$OMP END PARALLEL
+
+       ENDIF
+
+       deallocate(ar_dev, ar_tr_dev)
+
+#else
+
           IF ( forward_fft )  THEN
 
              !$OMP PARALLEL PRIVATE ( work, i, j, k )
@@ -694,14 +752,14 @@
 !> It uses internal algorithms (Singleton or Temperton) or
 !> system-specific routines, if they are available.
 !------------------------------------------------------------------------------!
- 
+
     SUBROUTINE fft_y_1d( ar, direction )
 
 
        IMPLICIT NONE
 
        CHARACTER (LEN=*) ::  direction
-       
+
        INTEGER(iwp) ::  j          !<
        INTEGER(iwp) ::  jshape(1)  !<
 
@@ -710,7 +768,7 @@
        REAL(wp), DIMENSION(0:ny)    ::  ar     !<
        REAL(wp), DIMENSION(0:ny+2)  ::  work   !<
        REAL(wp), DIMENSION(ny+2)    ::  work1  !<
-       
+
        COMPLEX(wp), DIMENSION(:), ALLOCATABLE ::  cwork  !<
              IF ( direction == 'forward' )  THEN
           forward_fft = .TRUE.
@@ -755,14 +813,14 @@
 !> using multiple 1D FFT from Math Keisan on NEC or Temperton-algorithm
 !> (no singleton-algorithm on NEC because it does not vectorize)
 !------------------------------------------------------------------------------!
- 
+
     SUBROUTINE fft_x_m( ar, direction )
 
 
        IMPLICIT NONE
 
        CHARACTER (LEN=*) ::  direction  !<
-       
+
        INTEGER(iwp) ::  i     !<
        INTEGER(iwp) ::  k     !<
        INTEGER(iwp) ::  siza  !<
@@ -771,7 +829,7 @@
        REAL(wp), DIMENSION(0:nx,nz)       ::  ar     !<
        REAL(wp), DIMENSION(0:nx+3,nz+1)   ::  ai     !<
        REAL(wp), DIMENSION(6*(nx+4),nz+1) ::  work1  !<
-       
+
        COMPLEX(wp), DIMENSION(:,:), ALLOCATABLE ::  work  !< required on NEC only
     END SUBROUTINE fft_x_m
 
@@ -783,15 +841,15 @@
 !> using multiple 1D FFT from Math Keisan on NEC or Temperton-algorithm
 !> (no singleton-algorithm on NEC because it does not vectorize)
 !------------------------------------------------------------------------------!
- 
+
     SUBROUTINE fft_y_m( ar, ny1, direction )
 
 
        IMPLICIT NONE
 
        CHARACTER (LEN=*) ::  direction  !<
-       
-       INTEGER(iwp) ::  j     !< 
+
+       INTEGER(iwp) ::  j     !<
        INTEGER(iwp) ::  k     !<
        INTEGER(iwp) ::  ny1   !<
        INTEGER(iwp) ::  siza  !<
@@ -800,7 +858,7 @@
        REAL(wp), DIMENSION(0:ny1,nz)      ::  ar     !<
        REAL(wp), DIMENSION(0:ny+3,nz+1)   ::  ai     !<
        REAL(wp), DIMENSION(6*(ny+4),nz+1) ::  work1  !<
-       
+
        COMPLEX(wp), DIMENSION(:,:), ALLOCATABLE ::  work !< required on NEC only
 
     END SUBROUTINE fft_y_m

@@ -3661,8 +3661,13 @@ SUBROUTINE diffusion_e( var, var_reference )
  SUBROUTINE tcm_diffusivities( var, var_reference )
 
 
+    USE arrays_3d,                                                             &
+        ONLY:  dd2zu
+
     USE control_parameters,                                                    &
-        ONLY:  e_min, outflow_l, outflow_n, outflow_r, outflow_s
+        ONLY:  e_min, outflow_l, outflow_n, outflow_r, outflow_s,              &
+               atmos_ocean_sign, g, use_single_reference_value,                &
+               wall_adjustment, wall_adjustment_factor
 
     USE grid_variables,                                                        &
         ONLY:  dx, dy
@@ -3685,8 +3690,10 @@ SUBROUTINE diffusion_e( var, var_reference )
     INTEGER(iwp) ::  tn                  !< thread number
 
     REAL(wp)     ::  flag                !< topography flag
+    REAL(wp)     ::  dvar_dz             !< vertical gradient of var
     REAL(wp)     ::  l                   !< mixing length
     REAL(wp)     ::  ll                  !< adjusted mixing length
+    REAL(wp)     ::  l_stable            !< mixing length according to stratification
     REAL(wp)     ::  var_reference       !< reference temperature
 
 #if defined( __nopointer )
@@ -3712,6 +3719,8 @@ SUBROUTINE diffusion_e( var, var_reference )
 !-- Introduce an optional minimum tke
     IF ( e_min > 0.0_wp )  THEN
        !$OMP DO
+       !$acc parallel
+       !$acc loop collapse(3)
        DO  i = nxlg, nxrg
           DO  j = nysg, nyng
              DO  k = nzb+1, nzt
@@ -3720,10 +3729,13 @@ SUBROUTINE diffusion_e( var, var_reference )
              ENDDO
           ENDDO
        ENDDO
+       !$acc end parallel
     ENDIF
 
     IF ( les_mw )  THEN
        !$OMP DO
+       !$acc parallel
+       !$acc loop collapse(3)
        DO  i = nxlg, nxrg
           DO  j = nysg, nyng
              DO  k = nzb+1, nzt
@@ -3732,7 +3744,29 @@ SUBROUTINE diffusion_e( var, var_reference )
 
 !
 !--             Determine the mixing length for LES closure
-                CALL mixing_length_les( i, j, k, l, ll, var, var_reference )
+!                CALL mixing_length_les( i, j, k, l, ll, var, var_reference )
+
+                dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
+                IF ( dvar_dz > 0.0_wp ) THEN
+                   IF ( use_single_reference_value )  THEN
+                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                         / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
+                   ELSE
+                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                         / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
+                   ENDIF
+                ELSE
+                   l_stable = l_grid(k)
+                ENDIF
+!
+!-- Adjustment of the mixing length
+                IF ( wall_adjustment )  THEN
+                   l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
+                   ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
+                ELSE
+                   l  = MIN( l_grid(k), l_stable )
+                   ll = l_grid(k)
+                ENDIF
 !
 !--             Compute diffusion coefficients for momentum and heat
                 km(k,j,i) = c_0 * l * SQRT( e(k,j,i) ) * flag
@@ -3747,10 +3781,13 @@ SUBROUTINE diffusion_e( var, var_reference )
              ENDDO
           ENDDO
        ENDDO
+       !$acc end parallel
 
     ELSEIF ( rans_tke_l )  THEN
 
        !$OMP DO
+       !$acc parallel
+       !$acc loop collapse(3)
        DO  i = nxlg, nxrg
           DO  j = nysg, nyng
              DO  k = nzb+1, nzt
@@ -3758,7 +3795,29 @@ SUBROUTINE diffusion_e( var, var_reference )
                 flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
 !
 !--             Mixing length for RANS mode with TKE-l closure
-                CALL mixing_length_rans( i, j, k, l, ll, var, var_reference )
+!                CALL mixing_length_rans( i, j, k, l, ll, var, var_reference )
+
+                dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
+                IF ( dvar_dz > 0.0_wp ) THEN
+                   IF ( use_single_reference_value )  THEN
+                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                         / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
+                   ELSE
+                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                         / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
+                   ENDIF
+                ELSE
+                   l_stable = l_grid(k)
+                ENDIF
+!
+!-- Adjustment of the mixing length
+                IF ( wall_adjustment )  THEN
+                   l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
+                   ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
+                ELSE
+                   l  = MIN( l_grid(k), l_stable )
+                   ll = l_grid(k)
+                ENDIF
 !
 !--             Compute diffusion coefficients for momentum and heat
                 km(k,j,i) = c_0 * l * SQRT( e(k,j,i) ) * flag
@@ -3773,10 +3832,13 @@ SUBROUTINE diffusion_e( var, var_reference )
              ENDDO
           ENDDO
        ENDDO
+       !$acc end parallel
 
     ELSEIF ( rans_tke_e )  THEN
 
        !$OMP DO
+       !$acc parallel
+       !$acc loop collapse(3)
        DO  i = nxlg, nxrg
           DO  j = nysg, nyng
              DO  k = nzb+1, nzt
@@ -3797,6 +3859,7 @@ SUBROUTINE diffusion_e( var, var_reference )
              ENDDO
           ENDDO
        ENDDO
+       !$acc end parallel
 
     ENDIF
 

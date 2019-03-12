@@ -3242,7 +3242,7 @@ SUBROUTINE diffusion_e( var, var_reference )
 #endif
     REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  dissipation  !< TKE dissipation
 
-!$acc kernels
+    !$acc kernels
 
     !
     !-- Calculate the tendency terms
@@ -3318,7 +3318,8 @@ SUBROUTINE diffusion_e( var, var_reference )
        ENDDO
 
     ENDDO
-!$acc end kernels
+    
+    !$acc end kernels
 
  END SUBROUTINE diffusion_e
 

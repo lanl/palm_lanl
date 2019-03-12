@@ -3278,7 +3278,6 @@ SUBROUTINE diffusion_e( var, var_reference )
                    l  = MIN( l_grid(k), l_stable )
                    ll = l_grid(k)
                 ENDIF
-
                 dissipation(k,j) = ( 0.19_wp + 0.74_wp * l / ll )              &
                                    * e(k,j,i) * SQRT( e(k,j,i) ) / l
 

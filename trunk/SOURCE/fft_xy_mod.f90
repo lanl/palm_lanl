@@ -160,12 +160,7 @@
 #endif
 
     USE kinds
-    
-    USE singleton,                                                             &
-        ONLY: fftn
-    
-    USE temperton_fft
-    
+   
     USE transpose_indices,                                                     &
         ONLY:  nxl_y, nxr_y, nyn_x, nys_x, nzb_x, nzb_y, nzt_x, nzt_y
 
@@ -186,28 +181,6 @@
     
     REAL(wp), DIMENSION(:), ALLOCATABLE, SAVE ::  trigs_x  !< 
     REAL(wp), DIMENSION(:), ALLOCATABLE, SAVE ::  trigs_y  !<
-
-#if defined( __ibm )
-    INTEGER(iwp), PARAMETER ::  nau1 = 20000  !< 
-    INTEGER(iwp), PARAMETER ::  nau2 = 22000  !<
-!
-!-- The following working arrays contain tables and have to be "save" and
-!-- shared in OpenMP sense
-    REAL(wp), DIMENSION(nau1), SAVE ::  aux1  !< 
-    REAL(wp), DIMENSION(nau1), SAVE ::  auy1  !<
-    REAL(wp), DIMENSION(nau1), SAVE ::  aux3  !< 
-    REAL(wp), DIMENSION(nau1), SAVE ::  auy3  !<
-    
-#elif defined( __nec )
-    INTEGER(iwp), SAVE ::  nz1  !<
-    
-    REAL(wp), DIMENSION(:), ALLOCATABLE, SAVE ::  trig_xb  !<
-    REAL(wp), DIMENSION(:), ALLOCATABLE, SAVE ::  trig_xf  !< 
-    REAL(wp), DIMENSION(:), ALLOCATABLE, SAVE ::  trig_yb  !<
-    REAL(wp), DIMENSION(:), ALLOCATABLE, SAVE ::  trig_yf  !<
-    
-#endif
-
 #if defined( __fftw )
     INCLUDE  'fftw3.f03'
     INTEGER(KIND=C_INT) ::  nx_c  !<
@@ -268,24 +241,6 @@
     SUBROUTINE fft_init
 
        IMPLICIT NONE
-
-!
-!--    The following temporary working arrays have to be on stack or private
-!--    in OpenMP sense
-#if defined( __ibm )
-       REAL(wp), DIMENSION(0:nx+2) ::  workx  !<
-       REAL(wp), DIMENSION(0:ny+2) ::  worky  !<
-       REAL(wp), DIMENSION(nau2)   ::  aux2   !< 
-       REAL(wp), DIMENSION(nau2)   ::  auy2   !< 
-       REAL(wp), DIMENSION(nau2)   ::  aux4   !< 
-       REAL(wp), DIMENSION(nau2)   ::  auy4   !<
-#elif defined( __nec )
-       REAL(wp), DIMENSION(0:nx+3,nz+1)   ::  work_x  !<
-       REAL(wp), DIMENSION(0:ny+3,nz+1)   ::  work_y  !<
-       REAL(wp), DIMENSION(6*(nx+3),nz+1) ::  workx   !<
-       REAL(wp), DIMENSION(6*(ny+3),nz+1) ::  worky   !<
-#endif 
-
 !
 !--    Return, if already called
        IF ( init_fft )  THEN
@@ -293,69 +248,6 @@
        ELSE
           init_fft = .TRUE.
        ENDIF
-
-       IF ( fft_method == 'system-specific' )  THEN
-
-          dnx = 1.0_wp / ( nx + 1.0_wp )
-          dny = 1.0_wp / ( ny + 1.0_wp )
-          sqr_dnx = SQRT( dnx )
-          sqr_dny = SQRT( dny )
-#if defined( __ibm )
-!
-!--       Initialize tables for fft along x
-          CALL DRCFT( 1, workx, 1, workx, 1, nx+1, 1,  1, sqr_dnx, aux1, nau1, &
-                      aux2, nau2 )
-          CALL DCRFT( 1, workx, 1, workx, 1, nx+1, 1, -1, sqr_dnx, aux3, nau1, &
-                      aux4, nau2 )
-!
-!--       Initialize tables for fft along y
-          CALL DRCFT( 1, worky, 1, worky, 1, ny+1, 1,  1, sqr_dny, auy1, nau1, &
-                      auy2, nau2 )
-          CALL DCRFT( 1, worky, 1, worky, 1, ny+1, 1, -1, sqr_dny, auy3, nau1, &
-                      auy4, nau2 )
-#elif defined( __nec )
-          message_string = 'fft method "' // TRIM( fft_method) // &
-                           '" currently does not work on NEC'
-          CALL message( 'fft_init', 'PA0187', 1, 2, 0, 6, 0 )
-
-          ALLOCATE( trig_xb(2*(nx+1)), trig_xf(2*(nx+1)),                      &
-                    trig_yb(2*(ny+1)), trig_yf(2*(ny+1)) )
-
-          work_x = 0.0_wp
-          work_y = 0.0_wp
-          nz1  = nz + MOD( nz+1, 2 )  ! odd nz slows down fft significantly
-                                      ! when using the NEC ffts
-
-!
-!--       Initialize tables for fft along x (non-vector and vector case (M))
-          CALL DZFFT( 0, nx+1, sqr_dnx, work_x, work_x, trig_xf, workx, 0 )
-          CALL ZDFFT( 0, nx+1, sqr_dnx, work_x, work_x, trig_xb, workx, 0 )
-          CALL DZFFTM( 0, nx+1, nz1, sqr_dnx, work_x, nx+4, work_x, nx+4,      &
-                       trig_xf, workx, 0 )
-          CALL ZDFFTM( 0, nx+1, nz1, sqr_dnx, work_x, nx+4, work_x, nx+4,      &
-                       trig_xb, workx, 0 )
-!
-!--       Initialize tables for fft along y (non-vector and vector case (M))
-          CALL DZFFT( 0, ny+1, sqr_dny, work_y, work_y, trig_yf, worky, 0 )
-          CALL ZDFFT( 0, ny+1, sqr_dny, work_y, work_y, trig_yb, worky, 0 )
-          CALL DZFFTM( 0, ny+1, nz1, sqr_dny, work_y, ny+4, work_y, ny+4,      &
-                       trig_yf, worky, 0 )
-          CALL ZDFFTM( 0, ny+1, nz1, sqr_dny, work_y, ny+4, work_y, ny+4,      &
-                       trig_yb, worky, 0 )
-#else
-          message_string = 'no system-specific fft-call available'
-          CALL message( 'fft_init', 'PA0188', 1, 2, 0, 6, 0 )
-#endif
-       ELSEIF ( fft_method == 'temperton-algorithm' )  THEN
-!
-!--       Temperton-algorithm
-!--       Initialize tables for fft along x and y
-          ALLOCATE( ifax_x(nx+1), ifax_y(ny+1), trigs_x(nx+1), trigs_y(ny+1) )
-
-          CALL set99( trigs_x, ifax_x, nx+1 )
-          CALL set99( trigs_y, ifax_y, ny+1 )
-
-       ELSEIF ( fft_method == 'fftw' )  THEN
 !
 !--       FFTW
 #if defined( __fftw )
@@ -373,17 +265,6 @@
           message_string = 'preprocessor switch for fftw is missing'
           CALL message( 'fft_init', 'PA0080', 1, 2, 0, 6, 0 )
 #endif
-
-       ELSEIF ( fft_method == 'singleton-algorithm' )  THEN
-
-          CONTINUE
-
-       ELSE
-
-          message_string = 'fft method "' // TRIM( fft_method) // &
-                           '" not available'
-          CALL message( 'fft_init', 'PA0189', 1, 2, 0, 6, 0 )
-       ENDIF
 
     END SUBROUTINE fft_init
 
@@ -415,14 +296,6 @@
        
        REAL(wp), DIMENSION(0:nx+2) ::  work   !<
        REAL(wp), DIMENSION(nx+2)   ::  work1  !<
-       
-#if defined( __ibm )
-       REAL(wp), DIMENSION(nau2) ::  aux2  !< 
-       REAL(wp), DIMENSION(nau2) ::  aux4  !<
-#elif defined( __nec )
-       REAL(wp), DIMENSION(6*(nx+1)) ::  work2  !<
-#endif
-
        REAL(wp), DIMENSION(0:nx,nys_x:nyn_x), OPTIONAL   ::                    &
           ar_2d   !<
        REAL(wp), DIMENSION(0:nx,nys_x:nyn_x,nzb_x:nzt_x) ::                    &
@@ -433,122 +306,6 @@
        ELSE
           forward_fft = .FALSE.
        ENDIF
-
-       IF ( fft_method == 'singleton-algorithm' )  THEN
-
-!
-!--       Performing the fft with singleton's software works on every system,
-!--       since it is part of the model
-          ALLOCATE( cwork(0:nx) )
-      
-          IF ( forward_fft )   then
-
-             !$OMP PARALLEL PRIVATE ( cwork, i, ishape, j, k )
-             !$OMP DO
-             DO  k = nzb_x, nzt_x
-                DO  j = nys_x, nyn_x
-
-                   DO  i = 0, nx
-                      cwork(i) = CMPLX( ar(i,j,k), KIND=wp )
-                   ENDDO
-
-                   ishape = SHAPE( cwork )
-                   CALL FFTN( cwork, ishape )
-
-                   DO  i = 0, (nx+1)/2
-                      ar(i,j,k) = REAL( cwork(i), KIND=wp )
-                   ENDDO
-                   DO  i = 1, (nx+1)/2 - 1
-                      ar(nx+1-i,j,k) = -AIMAG( cwork(i) )
-                   ENDDO
-
-                ENDDO
-             ENDDO
-             !$OMP END PARALLEL
-
-          ELSE
-
-             !$OMP PARALLEL PRIVATE ( cwork, i, ishape, j, k )
-             !$OMP DO
-             DO  k = nzb_x, nzt_x
-                DO  j = nys_x, nyn_x
-
-                   cwork(0) = CMPLX( ar(0,j,k), 0.0_wp, KIND=wp )
-                   DO  i = 1, (nx+1)/2 - 1
-                      cwork(i)      = CMPLX( ar(i,j,k), -ar(nx+1-i,j,k),       &
-                                             KIND=wp )
-                      cwork(nx+1-i) = CMPLX( ar(i,j,k),  ar(nx+1-i,j,k),       &
-                                             KIND=wp )
-                   ENDDO
-                   cwork((nx+1)/2) = CMPLX( ar((nx+1)/2,j,k), 0.0_wp, KIND=wp )
-
-                   ishape = SHAPE( cwork )
-                   CALL FFTN( cwork, ishape, inv = .TRUE. )
-
-                   DO  i = 0, nx
-                      ar(i,j,k) = REAL( cwork(i), KIND=wp )
-                   ENDDO
-
-                ENDDO
-             ENDDO
-             !$OMP END PARALLEL
-
-          ENDIF
-
-          DEALLOCATE( cwork )
-
-       ELSEIF ( fft_method == 'temperton-algorithm' )  THEN
-
-!
-!--       Performing the fft with Temperton's software works on every system,
-!--       since it is part of the model
-          IF ( forward_fft )  THEN
-
-             !$OMP PARALLEL PRIVATE ( work, work1, i, j, k )
-             !$OMP DO
-             DO  k = nzb_x, nzt_x
-                DO  j = nys_x, nyn_x
-
-                   work(0:nx) = ar(0:nx,j,k)
-                   CALL fft991cy( work, work1, trigs_x, ifax_x, 1, nx+1, nx+1, 1, -1 )
-
-                   DO  i = 0, (nx+1)/2
-                      ar(i,j,k) = work(2*i)
-                   ENDDO
-                   DO  i = 1, (nx+1)/2 - 1
-                      ar(nx+1-i,j,k) = work(2*i+1)
-                   ENDDO
-
-                ENDDO
-             ENDDO
-             !$OMP END PARALLEL
-
-          ELSE
-
-             !$OMP PARALLEL PRIVATE ( work, work1, i, j, k )
-             !$OMP DO
-             DO  k = nzb_x, nzt_x
-                DO  j = nys_x, nyn_x
-
-                   DO  i = 0, (nx+1)/2
-                      work(2*i) = ar(i,j,k)
-                   ENDDO
-                   DO  i = 1, (nx+1)/2 - 1
-                      work(2*i+1) = ar(nx+1-i,j,k)
-                   ENDDO
-                   work(1)    = 0.0_wp
-                   work(nx+2) = 0.0_wp
-
-                   CALL fft991cy( work, work1, trigs_x, ifax_x, 1, nx+1, nx+1, 1, 1 )
-                   ar(0:nx,j,k) = work(0:nx)
-
-                ENDDO
-             ENDDO
-             !$OMP END PARALLEL
-
-          ENDIF
-
-       ELSEIF ( fft_method == 'fftw' )  THEN
 
 #if defined( __fftw )
           IF ( forward_fft )  THEN
@@ -621,114 +378,6 @@
 
           ENDIF
 #endif
-
-       ELSEIF ( fft_method == 'system-specific' )  THEN
-
-#if defined( __ibm )
-          IF ( forward_fft )  THEN
-
-             !$OMP PARALLEL PRIVATE ( work, i, j, k )
-             !$OMP DO
-             DO  k = nzb_x, nzt_x
-                DO  j = nys_x, nyn_x
-
-                   CALL DRCFT( 0, ar, 1, work, 1, nx+1, 1, 1, sqr_dnx, aux1,   &
-                               nau1, aux2, nau2 )
-
-                   DO  i = 0, (nx+1)/2
-                      ar(i,j,k) = work(2*i)
-                   ENDDO
-                   DO  i = 1, (nx+1)/2 - 1
-                      ar(nx+1-i,j,k) = work(2*i+1)
-                   ENDDO
-
-                ENDDO
-             ENDDO
-             !$OMP END PARALLEL
-
-          ELSE
-
-             !$OMP PARALLEL PRIVATE ( work, i, j, k )
-             !$OMP DO
-             DO  k = nzb_x, nzt_x
-                DO  j = nys_x, nyn_x
-
-                   DO  i = 0, (nx+1)/2
-                      work(2*i) = ar(i,j,k)
-                   ENDDO
-                   DO  i = 1, (nx+1)/2 - 1
-                      work(2*i+1) = ar(nx+1-i,j,k)
-                   ENDDO
-                   work(1) = 0.0_wp
-                   work(nx+2) = 0.0_wp
-
-                   CALL DCRFT( 0, work, 1, work, 1, nx+1, 1, -1, sqr_dnx,      & 
-                               aux3, nau1, aux4, nau2 )
-
-                   DO  i = 0, nx
-                      ar(i,j,k) = work(i)
-                   ENDDO
-
-                ENDDO
-             ENDDO
-             !$OMP END PARALLEL
-
-          ENDIF
-
-#elif defined( __nec )
-
-          IF ( forward_fft )  THEN
-
-             !$OMP PARALLEL PRIVATE ( work, i, j, k )
-             !$OMP DO
-             DO  k = nzb_x, nzt_x
-                DO  j = nys_x, nyn_x
-
-                   work(0:nx) = ar(0:nx,j,k)
-
-                   CALL DZFFT( 1, nx+1, sqr_dnx, work, work, trig_xf, work2, 0 )
-      
-                   DO  i = 0, (nx+1)/2
-                      ar(i,j,k) = work(2*i)
-                   ENDDO
-                   DO  i = 1, (nx+1)/2 - 1
-                      ar(nx+1-i,j,k) = work(2*i+1)
-                   ENDDO
-
-                ENDDO
-             ENDDO
-             !$END OMP PARALLEL
-
-          ELSE
-
-             !$OMP PARALLEL PRIVATE ( work, i, j, k )
-             !$OMP DO
-             DO  k = nzb_x, nzt_x
-                DO  j = nys_x, nyn_x
-
-                   DO  i = 0, (nx+1)/2
-                      work(2*i) = ar(i,j,k)
-                   ENDDO
-                   DO  i = 1, (nx+1)/2 - 1
-                      work(2*i+1) = ar(nx+1-i,j,k)
-                   ENDDO
-                   work(1) = 0.0_wp
-                   work(nx+2) = 0.0_wp
-
-                   CALL ZDFFT( -1, nx+1, sqr_dnx, work, work, trig_xb, work2, 0 )
-
-                   ar(0:nx,j,k) = work(0:nx)
-
-                ENDDO
-             ENDDO
-             !$OMP END PARALLEL
-
-          ENDIF
-
-#endif
-
-       ENDIF
-
     END SUBROUTINE fft_x
 
 !------------------------------------------------------------------------------!
@@ -757,97 +406,13 @@
        REAL(wp), DIMENSION(nx+2)   ::  work1  !<
        
        COMPLEX(wp), DIMENSION(:), ALLOCATABLE ::  cwork  !<
-       
-#if defined( __ibm )
-       REAL(wp), DIMENSION(nau2) ::  aux2       !<
-       REAL(wp), DIMENSION(nau2) ::  aux4       !<
-#elif defined( __nec )
-       REAL(wp), DIMENSION(6*(nx+1)) ::  work2  !<
-#endif
-
        IF ( direction == 'forward' )  THEN
           forward_fft = .TRUE.
        ELSE
           forward_fft = .FALSE.
        ENDIF
 
-       IF ( fft_method == 'singleton-algorithm' )  THEN
-
-!
-!--       Performing the fft with singleton's software works on every system,
-!--       since it is part of the model
-          ALLOCATE( cwork(0:nx) )
-      
-          IF ( forward_fft )   then
-
-             DO  i = 0, nx
-                cwork(i) = CMPLX( ar(i), KIND=wp )
-             ENDDO
-             ishape = SHAPE( cwork )
-             CALL FFTN( cwork, ishape )
-             DO  i = 0, (nx+1)/2
-                ar(i) = REAL( cwork(i), KIND=wp )
-             ENDDO
-             DO  i = 1, (nx+1)/2 - 1
-                ar(nx+1-i) = -AIMAG( cwork(i) )
-             ENDDO
-
-          ELSE
-
-             cwork(0) = CMPLX( ar(0), 0.0_wp, KIND=wp )
-             DO  i = 1, (nx+1)/2 - 1
-                cwork(i)      = CMPLX( ar(i), -ar(nx+1-i), KIND=wp )
-                cwork(nx+1-i) = CMPLX( ar(i),  ar(nx+1-i), KIND=wp )
-             ENDDO
-             cwork((nx+1)/2) = CMPLX( ar((nx+1)/2), 0.0_wp, KIND=wp )
-
-             ishape = SHAPE( cwork )
-             CALL FFTN( cwork, ishape, inv = .TRUE. )
-
-             DO  i = 0, nx
-                ar(i) = REAL( cwork(i), KIND=wp )
-             ENDDO
-
-          ENDIF
-
-          DEALLOCATE( cwork )
-
-       ELSEIF ( fft_method == 'temperton-algorithm' )  THEN
-
-!
-!--       Performing the fft with Temperton's software works on every system,
-!--       since it is part of the model
-          IF ( forward_fft )  THEN
-
-             work(0:nx) = ar
-             CALL fft991cy( work, work1, trigs_x, ifax_x, 1, nx+1, nx+1, 1, -1 )
-
-             DO  i = 0, (nx+1)/2
-                ar(i) = work(2*i)
-             ENDDO
-             DO  i = 1, (nx+1)/2 - 1
-                ar(nx+1-i) = work(2*i+1)
-             ENDDO
-
-          ELSE
-
-             DO  i = 0, (nx+1)/2
-                work(2*i) = ar(i)
-             ENDDO
-             DO  i = 1, (nx+1)/2 - 1
-                work(2*i+1) = ar(nx+1-i)
-             ENDDO
-             work(1)    = 0.0_wp
-             work(nx+2) = 0.0_wp
-
-             CALL fft991cy( work, work1, trigs_x, ifax_x, 1, nx+1, nx+1, 1, 1 )
-             ar = work(0:nx)
-
-          ENDIF
-
-       ELSEIF ( fft_method == 'fftw' )  THEN
-
-#if defined( __fftw )
+      #if defined( __fftw )
           IF ( forward_fft )  THEN
 
              x_in(0:nx) = ar(0:nx)
@@ -874,75 +439,7 @@
          ENDIF
 #endif
 
-       ELSEIF ( fft_method == 'system-specific' )  THEN
-
-#if defined( __ibm )
-          IF ( forward_fft )  THEN
-
-             CALL DRCFT( 0, ar, 1, work, 1, nx+1, 1, 1, sqr_dnx, aux1, nau1,   &
-                         aux2, nau2 )
-
-             DO  i = 0, (nx+1)/2
-                ar(i) = work(2*i)
-             ENDDO
-             DO  i = 1, (nx+1)/2 - 1
-                ar(nx+1-i) = work(2*i+1)
-             ENDDO
-
-          ELSE
-
-             DO  i = 0, (nx+1)/2
-                work(2*i) = ar(i)
-             ENDDO
-             DO  i = 1, (nx+1)/2 - 1
-                work(2*i+1) = ar(nx+1-i)
-             ENDDO
-             work(1) = 0.0_wp
-             work(nx+2) = 0.0_wp
-
-             CALL DCRFT( 0, work, 1, work, 1, nx+1, 1, -1, sqr_dnx, aux3, nau1, &
-                         aux4, nau2 )
-
-             DO  i = 0, nx
-                ar(i) = work(i)
-             ENDDO
-
-          ENDIF
-#elif defined( __nec )
-          IF ( forward_fft )  THEN
-
-             work(0:nx) = ar(0:nx)
-
-             CALL DZFFT( 1, nx+1, sqr_dnx, work, work, trig_xf, work2, 0 )
-      
-             DO  i = 0, (nx+1)/2
-                ar(i) = work(2*i)
-             ENDDO
-             DO  i = 1, (nx+1)/2 - 1
-                ar(nx+1-i) = work(2*i+1)
-             ENDDO
-
-          ELSE
-
-             DO  i = 0, (nx+1)/2
-                work(2*i) = ar(i)
-             ENDDO
-             DO  i = 1, (nx+1)/2 - 1
-                work(2*i+1) = ar(nx+1-i)
-             ENDDO
-             work(1) = 0.0_wp
-             work(nx+2) = 0.0_wp
-
-             CALL ZDFFT( -1, nx+1, sqr_dnx, work, work, trig_xb, work2, 0 )
-
-             ar(0:nx) = work(0:nx)
-
-          ENDIF
-#endif
-
-       ENDIF
-
-    END SUBROUTINE fft_x_1d
+          END SUBROUTINE fft_x_1d
 
 !------------------------------------------------------------------------------!
 ! Description:
@@ -991,14 +488,6 @@
        REAL(wp), DIMENSION(ny+2)   ::  work1  !<
        
        COMPLEX(wp), DIMENSION(:), ALLOCATABLE ::  cwork  !<
-       
-#if defined( __ibm )
-       REAL(wp), DIMENSION(nau2) ::  auy2  !<
-       REAL(wp), DIMENSION(nau2) ::  auy4  !<
-#elif defined( __nec )
-       REAL(wp), DIMENSION(6*(ny+1)) ::  work2  !<
-#endif
-
        REAL(wp), DIMENSION(0:ny,nxl_y_l:nxr_y_l,nzb_y:nzt_y)         ::        &
           ar     !<
        REAL(wp), DIMENSION(0:ny,nxl_y_bound:nxr_y_bound,nzb_y:nzt_y) ::        &
@@ -1009,124 +498,6 @@
        ELSE
           forward_fft = .FALSE.
        ENDIF
-
-       IF ( fft_method == 'singleton-algorithm' )  THEN
-
-!
-!--       Performing the fft with singleton's software works on every system,
-!--       since it is part of the model
-          ALLOCATE( cwork(0:ny) )
-
-          IF ( forward_fft )   then
-
-             !$OMP PARALLEL PRIVATE ( cwork, i, jshape, j, k )
-             !$OMP DO
-             DO  k = nzb_y, nzt_y
-                DO  i = nxl_y_l, nxr_y_l
-
-                   DO  j = 0, ny
-                      cwork(j) = CMPLX( ar(j,i,k), KIND=wp )
-                   ENDDO
-
-                   jshape = SHAPE( cwork )
-                   CALL FFTN( cwork, jshape )
-
-                   DO  j = 0, (ny+1)/2
-                      ar_tr(j,i,k) = REAL( cwork(j), KIND=wp )
-                   ENDDO
-                   DO  j = 1, (ny+1)/2 - 1
-                      ar_tr(ny+1-j,i,k) = -AIMAG( cwork(j) )
-                   ENDDO
-
-                ENDDO
-             ENDDO
-             !$OMP END PARALLEL
-
-          ELSE
-
-             !$OMP PARALLEL PRIVATE ( cwork, i, jshape, j, k )
-             !$OMP DO
-             DO  k = nzb_y, nzt_y
-                DO  i = nxl_y_l, nxr_y_l
-
-                   cwork(0) = CMPLX( ar_tr(0,i,k), 0.0_wp, KIND=wp )
-                   DO  j = 1, (ny+1)/2 - 1
-                      cwork(j)      = CMPLX( ar_tr(j,i,k), -ar_tr(ny+1-j,i,k), &
-                                             KIND=wp )
-                      cwork(ny+1-j) = CMPLX( ar_tr(j,i,k),  ar_tr(ny+1-j,i,k), &
-                                             KIND=wp )
-                   ENDDO
-                   cwork((ny+1)/2) = CMPLX( ar_tr((ny+1)/2,i,k), 0.0_wp,       &
-                                            KIND=wp )
-
-                   jshape = SHAPE( cwork )
-                   CALL FFTN( cwork, jshape, inv = .TRUE. )
-
-                   DO  j = 0, ny
-                      ar(j,i,k) = REAL( cwork(j), KIND=wp )
-                   ENDDO
-
-                ENDDO
-             ENDDO
-             !$OMP END PARALLEL
-
-          ENDIF
-
-          DEALLOCATE( cwork )
-
-       ELSEIF ( fft_method == 'temperton-algorithm' )  THEN
-
-!
-!--       Performing the fft with Temperton's software works on every system,
-!--       since it is part of the model
-          IF ( forward_fft )  THEN
-
-             !$OMP PARALLEL PRIVATE ( work, work1, i, j, k )
-             !$OMP DO
-             DO  k = nzb_y, nzt_y
-                DO  i = nxl_y_l, nxr_y_l
-
-                   work(0:ny) = ar(0:ny,i,k)
-                   CALL fft991cy( work, work1, trigs_y, ifax_y, 1, ny+1, ny+1, 1, -1 )
-
-                   DO  j = 0, (ny+1)/2
-                      ar_tr(j,i,k) = work(2*j)
-                   ENDDO
-                   DO  j = 1, (ny+1)/2 - 1
-                      ar_tr(ny+1-j,i,k) = work(2*j+1)
-                   ENDDO
-
-                ENDDO
-             ENDDO
-             !$OMP END PARALLEL
-
-          ELSE
-
-             !$OMP PARALLEL PRIVATE ( work, work1, i, j, k )
-             !$OMP DO
-             DO  k = nzb_y, nzt_y
-                DO  i = nxl_y_l, nxr_y_l
-
-                   DO  j = 0, (ny+1)/2
-                      work(2*j) = ar_tr(j,i,k)
-                   ENDDO
-                   DO  j = 1, (ny+1)/2 - 1
-                      work(2*j+1) = ar_tr(ny+1-j,i,k)
-                   ENDDO
-                   work(1)    = 0.0_wp
-                   work(ny+2) = 0.0_wp
-
-                   CALL fft991cy( work, work1, trigs_y, ifax_y, 1, ny+1, ny+1, 1, 1 )
-                   ar(0:ny,i,k) = work(0:ny)
-
-                ENDDO
-             ENDDO
-             !$OMP END PARALLEL
-
-          ENDIF
-
-       ELSEIF ( fft_method == 'fftw' )  THEN
-
 #if defined( __fftw )
           IF ( forward_fft )  THEN
 
@@ -1173,111 +544,6 @@
 
           ENDIF
 #endif
-
-       ELSEIF ( fft_method == 'system-specific' )  THEN
-
-#if defined( __ibm )
-          IF ( forward_fft)  THEN
-
-             !$OMP PARALLEL PRIVATE ( work, i, j, k )
-             !$OMP DO
-             DO  k = nzb_y, nzt_y
-                DO  i = nxl_y_l, nxr_y_l
-
-                   CALL DRCFT( 0, ar, 1, work, 1, ny+1, 1, 1, sqr_dny, auy1,   & 
-                               nau1, auy2, nau2 )
-
-                   DO  j = 0, (ny+1)/2
-                      ar_tr(j,i,k) = work(2*j)
-                   ENDDO
-                   DO  j = 1, (ny+1)/2 - 1
-                      ar_tr(ny+1-j,i,k) = work(2*j+1)
-                   ENDDO
-
-                ENDDO
-             ENDDO
-             !$OMP END PARALLEL
-
-          ELSE
-
-             !$OMP PARALLEL PRIVATE ( work, i, j, k )
-             !$OMP DO
-             DO  k = nzb_y, nzt_y
-                DO  i = nxl_y_l, nxr_y_l
-
-                   DO  j = 0, (ny+1)/2
-                      work(2*j) = ar_tr(j,i,k)
-                   ENDDO
-                   DO  j = 1, (ny+1)/2 - 1
-                      work(2*j+1) = ar_tr(ny+1-j,i,k)
-                   ENDDO
-                   work(1)    = 0.0_wp
-                   work(ny+2) = 0.0_wp
-
-                   CALL DCRFT( 0, work, 1, work, 1, ny+1, 1, -1, sqr_dny,      &
-                               auy3, nau1, auy4, nau2 )
-
-                   DO  j = 0, ny
-                      ar(j,i,k) = work(j)
-                   ENDDO
-
-                ENDDO
-             ENDDO
-             !$OMP END PARALLEL
-
-          ENDIF
-#elif defined( __nec )
-          IF ( forward_fft )  THEN
-
-             !$OMP PARALLEL PRIVATE ( work, i, j, k )
-             !$OMP DO
-             DO  k = nzb_y, nzt_y
-                DO  i = nxl_y_l, nxr_y_l
-
-                   work(0:ny) = ar(0:ny,i,k)
-
-                   CALL DZFFT( 1, ny+1, sqr_dny, work, work, trig_yf, work2, 0 )
-
-                   DO  j = 0, (ny+1)/2
-                      ar_tr(j,i,k) = work(2*j)
-                   ENDDO
-                   DO  j = 1, (ny+1)/2 - 1
-                      ar_tr(ny+1-j,i,k) = work(2*j+1)
-                   ENDDO
-
-                ENDDO
-             ENDDO
-             !$END OMP PARALLEL
-
-          ELSE
-
-             !$OMP PARALLEL PRIVATE ( work, i, j, k )
-             !$OMP DO
-             DO  k = nzb_y, nzt_y
-                DO  i = nxl_y_l, nxr_y_l
-
-                   DO  j = 0, (ny+1)/2
-                      work(2*j) = ar_tr(j,i,k)
-                   ENDDO
-                   DO  j = 1, (ny+1)/2 - 1
-                      work(2*j+1) = ar_tr(ny+1-j,i,k)
-                   ENDDO
-                   work(1) = 0.0_wp
-                   work(ny+2) = 0.0_wp
-
-                   CALL ZDFFT( -1, ny+1, sqr_dny, work, work, trig_yb, work2, 0 )
-
-                   ar(0:ny,i,k) = work(0:ny)
-
-                ENDDO
-             ENDDO
-             !$OMP END PARALLEL
-
-          ENDIF
-#endif
-
-       ENDIF
-
     END SUBROUTINE fft_y
 
 !------------------------------------------------------------------------------!
@@ -1306,99 +572,13 @@
        REAL(wp), DIMENSION(ny+2)    ::  work1  !<
        
        COMPLEX(wp), DIMENSION(:), ALLOCATABLE ::  cwork  !<
-       
-#if defined( __ibm )
-       REAL(wp), DIMENSION(nau2) ::  auy2  !<
-       REAL(wp), DIMENSION(nau2) ::  auy4  !<
-#elif defined( __nec )
-       REAL(wp), DIMENSION(6*(ny+1)) ::  work2  !<
-#endif
-
-       IF ( direction == 'forward' )  THEN
+             IF ( direction == 'forward' )  THEN
           forward_fft = .TRUE.
        ELSE
           forward_fft = .FALSE.
        ENDIF
 
-       IF ( fft_method == 'singleton-algorithm' )  THEN
-
-!
-!--       Performing the fft with singleton's software works on every system,
-!--       since it is part of the model
-          ALLOCATE( cwork(0:ny) )
-
-          IF ( forward_fft )  THEN
-
-             DO  j = 0, ny
-                cwork(j) = CMPLX( ar(j), KIND=wp )
-             ENDDO
-
-             jshape = SHAPE( cwork )
-             CALL FFTN( cwork, jshape )
-
-             DO  j = 0, (ny+1)/2
-                ar(j) = REAL( cwork(j), KIND=wp )
-             ENDDO
-             DO  j = 1, (ny+1)/2 - 1
-                ar(ny+1-j) = -AIMAG( cwork(j) )
-             ENDDO
-
-          ELSE
-
-             cwork(0) = CMPLX( ar(0), 0.0_wp, KIND=wp )
-             DO  j = 1, (ny+1)/2 - 1
-                cwork(j)      = CMPLX( ar(j), -ar(ny+1-j), KIND=wp )
-                cwork(ny+1-j) = CMPLX( ar(j),  ar(ny+1-j), KIND=wp )
-             ENDDO
-             cwork((ny+1)/2) = CMPLX( ar((ny+1)/2), 0.0_wp, KIND=wp )
-
-             jshape = SHAPE( cwork )
-             CALL FFTN( cwork, jshape, inv = .TRUE. )
-
-             DO  j = 0, ny
-                ar(j) = REAL( cwork(j), KIND=wp )
-             ENDDO
-
-          ENDIF
-
-          DEALLOCATE( cwork )
-
-       ELSEIF ( fft_method == 'temperton-algorithm' )  THEN
-
-!
-!--       Performing the fft with Temperton's software works on every system,
-!--       since it is part of the model
-          IF ( forward_fft )  THEN
-
-             work(0:ny) = ar
-             CALL fft991cy( work, work1, trigs_y, ifax_y, 1, ny+1, ny+1, 1, -1 )
-
-             DO  j = 0, (ny+1)/2
-                ar(j) = work(2*j)
-             ENDDO
-             DO  j = 1, (ny+1)/2 - 1
-                ar(ny+1-j) = work(2*j+1)
-             ENDDO
-
-          ELSE
-
-             DO  j = 0, (ny+1)/2
-                work(2*j) = ar(j)
-             ENDDO
-             DO  j = 1, (ny+1)/2 - 1
-                work(2*j+1) = ar(ny+1-j)
-             ENDDO
-             work(1)    = 0.0_wp
-             work(ny+2) = 0.0_wp
-
-             CALL fft991cy( work, work1, trigs_y, ifax_y, 1, ny+1, ny+1, 1, 1 )
-             ar = work(0:ny)
-
-          ENDIF
-
-       ELSEIF ( fft_method == 'fftw' )  THEN
-
-#if defined( __fftw )
+      #if defined( __fftw )
           IF ( forward_fft )  THEN
 
              y_in(0:ny) = ar(0:ny)
@@ -1425,75 +605,7 @@
           ENDIF
 #endif
 
-       ELSEIF ( fft_method == 'system-specific' )  THEN
-
-#if defined( __ibm )
-          IF ( forward_fft )  THEN
-
-             CALL DRCFT( 0, ar, 1, work, 1, ny+1, 1, 1, sqr_dny, auy1, nau1,   &
-                         auy2, nau2 )
-
-             DO  j = 0, (ny+1)/2
-                ar(j) = work(2*j)
-             ENDDO
-             DO  j = 1, (ny+1)/2 - 1
-                ar(ny+1-j) = work(2*j+1)
-             ENDDO
-
-          ELSE
-
-             DO  j = 0, (ny+1)/2
-                work(2*j) = ar(j)
-             ENDDO
-             DO  j = 1, (ny+1)/2 - 1
-                work(2*j+1) = ar(ny+1-j)
-             ENDDO
-             work(1)    = 0.0_wp
-             work(ny+2) = 0.0_wp
-
-             CALL DCRFT( 0, work, 1, work, 1, ny+1, 1, -1, sqr_dny, auy3,      &
-                         nau1, auy4, nau2 )
-
-             DO  j = 0, ny
-                ar(j) = work(j)
-             ENDDO
-
-          ENDIF
-#elif defined( __nec )
-          IF ( forward_fft )  THEN
-
-             work(0:ny) = ar(0:ny)
-
-             CALL DZFFT( 1, ny+1, sqr_dny, work, work, trig_yf, work2, 0 )
-
-             DO  j = 0, (ny+1)/2
-                ar(j) = work(2*j)
-             ENDDO
-             DO  j = 1, (ny+1)/2 - 1
-                ar(ny+1-j) = work(2*j+1)
-             ENDDO
-
-          ELSE
-
-             DO  j = 0, (ny+1)/2
-                work(2*j) = ar(j)
-             ENDDO
-             DO  j = 1, (ny+1)/2 - 1
-                work(2*j+1) = ar(ny+1-j)
-             ENDDO
-             work(1) = 0.0_wp
-             work(ny+2) = 0.0_wp
-
-             CALL ZDFFT( -1, ny+1, sqr_dny, work, work, trig_yb, work2, 0 )
-
-             ar(0:ny) = work(0:ny)
-
-          ENDIF
-#endif
-
-       ENDIF
-
-    END SUBROUTINE fft_y_1d
+          END SUBROUTINE fft_y_1d
 
 !------------------------------------------------------------------------------!
 ! Description:
@@ -1521,109 +633,6 @@
        REAL(wp), DIMENSION(6*(nx+4),nz+1) ::  work1  !<
        
        COMPLEX(wp), DIMENSION(:,:), ALLOCATABLE ::  work  !< required on NEC only
-
-       IF ( fft_method == 'temperton-algorithm' )  THEN
-
-          siza = SIZE( ai, 1 )
-
-          IF ( direction == 'forward')  THEN
-
-             ai(0:nx,1:nz) = ar(0:nx,1:nz)
-             ai(nx+1:,:)   = 0.0_wp
-
-             CALL fft991cy( ai, work1, trigs_x, ifax_x, 1, siza, nx+1, nz, -1 )
-
-             DO  k = 1, nz
-                DO  i = 0, (nx+1)/2
-                   ar(i,k) = ai(2*i,k)
-                ENDDO
-                DO  i = 1, (nx+1)/2 - 1
-                   ar(nx+1-i,k) = ai(2*i+1,k)
-                ENDDO
-             ENDDO
-
-          ELSE
-
-             DO  k = 1, nz
-                DO  i = 0, (nx+1)/2
-                   ai(2*i,k) = ar(i,k)
-                ENDDO
-                DO  i = 1, (nx+1)/2 - 1
-                   ai(2*i+1,k) = ar(nx+1-i,k)
-                ENDDO
-                ai(1,k) = 0.0_wp
-                ai(nx+2,k) = 0.0_wp
-             ENDDO
-
-             CALL fft991cy( ai, work1, trigs_x, ifax_x, 1, siza, nx+1, nz, 1 )
-
-             ar(0:nx,1:nz) = ai(0:nx,1:nz)
-
-          ENDIF
-
-       ELSEIF ( fft_method == 'system-specific' )  THEN
-
-#if defined( __nec )
-          ALLOCATE( work((nx+4)/2+1,nz+1) )
-          siza = SIZE( ai, 1 )
-          sizw = SIZE( work, 1 )
-
-          IF ( direction == 'forward')  THEN
-
-!
-!--          Tables are initialized once more. This call should not be
-!--          necessary, but otherwise program aborts in asymmetric case
-             CALL DZFFTM( 0, nx+1, nz1, sqr_dnx, work, nx+4, work, nx+4,       &
-                          trig_xf, work1, 0 )
-
-             ai(0:nx,1:nz) = ar(0:nx,1:nz)
-             IF ( nz1 > nz )  THEN
-                ai(:,nz1) = 0.0_wp
-             ENDIF
-
-             CALL DZFFTM( 1, nx+1, nz1, sqr_dnx, ai, siza, work, sizw,         &
-                          trig_xf, work1, 0 )
-
-             DO  k = 1, nz
-                DO  i = 0, (nx+1)/2
-                   ar(i,k) = REAL( work(i+1,k), KIND=wp )
-                ENDDO
-                DO  i = 1, (nx+1)/2 - 1
-                   ar(nx+1-i,k) = AIMAG( work(i+1,k) )
-                ENDDO
-             ENDDO
-
-          ELSE
-
-!
-!--          Tables are initialized once more. This call should not be
-!--          necessary, but otherwise program aborts in asymmetric case
-             CALL ZDFFTM( 0, nx+1, nz1, sqr_dnx, work, nx+4, work, nx+4,       &
-                          trig_xb, work1, 0 )
-
-             IF ( nz1 > nz )  THEN
-                work(:,nz1) = 0.0_wp
-             ENDIF
-             DO  k = 1, nz
-                work(1,k) = CMPLX( ar(0,k), 0.0_wp, KIND=wp )
-                DO  i = 1, (nx+1)/2 - 1
-                   work(i+1,k) = CMPLX( ar(i,k), ar(nx+1-i,k), KIND=wp )
-                ENDDO
-                work(((nx+1)/2)+1,k) = CMPLX( ar((nx+1)/2,k), 0.0_wp, KIND=wp )
-             ENDDO
-
-             CALL ZDFFTM( -1, nx+1, nz1, sqr_dnx, work, sizw, ai, siza, &
-                          trig_xb, work1, 0 )
-
-             ar(0:nx,1:nz) = ai(0:nx,1:nz)
-
-          ENDIF
-
-          DEALLOCATE( work )
-#endif
-
-       ENDIF
-
     END SUBROUTINE fft_x_m
 
 !------------------------------------------------------------------------------!
@@ -1653,109 +662,6 @@
        REAL(wp), DIMENSION(6*(ny+4),nz+1) ::  work1  !<
        
        COMPLEX(wp), DIMENSION(:,:), ALLOCATABLE ::  work !< required on NEC only
-
-
-       IF ( fft_method == 'temperton-algorithm' )  THEN
-
-          siza = SIZE( ai, 1 )
-
-          IF ( direction == 'forward')  THEN
-
-             ai(0:ny,1:nz) = ar(0:ny,1:nz)
-             ai(ny+1:,:)   = 0.0_wp
-
-             CALL fft991cy( ai, work1, trigs_y, ifax_y, 1, siza, ny+1, nz, -1 )
-
-             DO  k = 1, nz
-                DO  j = 0, (ny+1)/2
-                   ar(j,k) = ai(2*j,k)
-                ENDDO
-                DO  j = 1, (ny+1)/2 - 1
-                   ar(ny+1-j,k) = ai(2*j+1,k)
-                ENDDO
-             ENDDO
-
-          ELSE
-
-             DO  k = 1, nz
-                DO  j = 0, (ny+1)/2
-                   ai(2*j,k) = ar(j,k)
-                ENDDO
-                DO  j = 1, (ny+1)/2 - 1
-                   ai(2*j+1,k) = ar(ny+1-j,k)
-                ENDDO
-                ai(1,k) = 0.0_wp
-                ai(ny+2,k) = 0.0_wp
-             ENDDO
-
-             CALL fft991cy( ai, work1, trigs_y, ifax_y, 1, siza, ny+1, nz, 1 )
-
-             ar(0:ny,1:nz) = ai(0:ny,1:nz)
-
-          ENDIF
-
-       ELSEIF ( fft_method == 'system-specific' )  THEN
-
-#if defined( __nec )
-          ALLOCATE( work((ny+4)/2+1,nz+1) )
-          siza = SIZE( ai, 1 )
-          sizw = SIZE( work, 1 )
-
-          IF ( direction == 'forward')  THEN
-
-!
-!--          Tables are initialized once more. This call should not be
-!--          necessary, but otherwise program aborts in asymmetric case
-             CALL DZFFTM( 0, ny+1, nz1, sqr_dny, work, ny+4, work, ny+4, &
-                          trig_yf, work1, 0 )
-
-             ai(0:ny,1:nz) = ar(0:ny,1:nz)
-             IF ( nz1 > nz )  THEN
-                ai(:,nz1) = 0.0_wp
-             ENDIF
-
-             CALL DZFFTM( 1, ny+1, nz1, sqr_dny, ai, siza, work, sizw, &
-                          trig_yf, work1, 0 )
-
-             DO  k = 1, nz
-                DO  j = 0, (ny+1)/2
-                   ar(j,k) = REAL( work(j+1,k), KIND=wp )
-                ENDDO
-                DO  j = 1, (ny+1)/2 - 1
-                   ar(ny+1-j,k) = AIMAG( work(j+1,k) )
-                ENDDO
-             ENDDO
-
-          ELSE
-
-!
-!--          Tables are initialized once more. This call should not be
-!--          necessary, but otherwise program aborts in asymmetric case
-             CALL ZDFFTM( 0, ny+1, nz1, sqr_dny, work, ny+4, work, ny+4, &
-                          trig_yb, work1, 0 )
-
-             IF ( nz1 > nz )  THEN
-                work(:,nz1) = 0.0_wp
-             ENDIF
-             DO  k = 1, nz
-                work(1,k) = CMPLX( ar(0,k), 0.0_wp, KIND=wp )
-                DO  j = 1, (ny+1)/2 - 1
-                   work(j+1,k) = CMPLX( ar(j,k), ar(ny+1-j,k), KIND=wp )
-                ENDDO
-                work(((ny+1)/2)+1,k) = CMPLX( ar((ny+1)/2,k), 0.0_wp, KIND=wp )
-             ENDDO
-
-             CALL ZDFFTM( -1, ny+1, nz1, sqr_dny, work, sizw, ai, siza, &
-                          trig_yb, work1, 0 )
-
-             ar(0:ny,1:nz) = ai(0:ny,1:nz)
-
-          ENDIF
-
-          DEALLOCATE( work )
-#endif
-
-       ENDIF
 
     END SUBROUTINE fft_y_m
 

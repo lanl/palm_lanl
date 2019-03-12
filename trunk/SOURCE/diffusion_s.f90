@@ -181,7 +181,8 @@
 #endif
 
        REAL(wp), DIMENSION(1:surf_def_h(2)%ns),INTENT(IN),OPTIONAL :: s_flux_solar_t  !<solar flux at sfc
-       DO  i = nxl, nxr
+!$acc kernels       
+        DO  i = nxl, nxr
           DO  j = nys,nyn
 !
 !--          Compute horizontal diffusion
@@ -344,6 +345,7 @@
 
           ENDDO
        ENDDO
+!$acc end kernels
     END SUBROUTINE diffusion_s
 
 !------------------------------------------------------------------------------!

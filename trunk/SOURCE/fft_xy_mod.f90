@@ -164,10 +164,16 @@
     USE transpose_indices,                                                     &
         ONLY:  nxl_y, nxr_y, nyn_x, nys_x, nzb_x, nzb_y, nzt_x, nzt_y
 
+    USE cudafor
+
+    USE cufft
+
     IMPLICIT NONE
 
     PRIVATE
-    PUBLIC fft_x, fft_x_1d, fft_y, fft_y_1d, fft_init, fft_x_m, fft_y_m
+    PUBLIC fft_x, fft_x_1d, fft_y, fft_y_1d, fft_init, fft_x_m, fft_y_m,    &
+            fft_finalize
+#define MY_DEBUG print *,"DEBUG",__LINE__,__FILE__
 
     INTEGER(iwp), DIMENSION(:), ALLOCATABLE, SAVE ::  ifax_x  !<
     INTEGER(iwp), DIMENSION(:), ALLOCATABLE, SAVE ::  ifax_y  !<
@@ -200,7 +206,16 @@
     TYPE(C_PTR), SAVE ::  plan_xf, plan_xi, plan_yf, plan_yi
 #endif
 
-!
+    INTEGER :: nx_cC, ny_cC
+
+    INTEGER, PARAMETER, SAVE :: batch = 64
+
+    COMPLEX, DEVICE, DIMENSION(:), ALLOCATABLE, SAVE ::       &
+            x_out_dev, y_out_dev
+    REAL(wp), DEVICE, DIMENSION(:), ALLOCATABLE, SAVE :: x_in_dev, y_in_dev
+    INTEGER, SAVE :: plan_xf_dev, plan_xi_dev, plan_yf_dev, plan_yi_dev
+
+    !
 !-- Public interfaces
     INTERFACE fft_init
        MODULE PROCEDURE fft_init
@@ -242,6 +257,7 @@
 
        IMPLICIT NONE
 !
+       INTEGER(iwp) :: ierr
 !--    Return, if already called
        IF ( init_fft )  THEN
           RETURN
@@ -266,7 +282,24 @@
           CALL message( 'fft_init', 'PA0080', 1, 2, 0, 6, 0 )
 #endif
 
+#if defined ( __GPU )
+       nx_cC = nx+1
+       ny_cC = ny+1
+       ALLOCATE( x_in_dev(0:nx+2), y_in_dev(0:ny+2), x_out_dev(0:(nx+1)/2),    &
+               y_out_dev(0:(ny+1)/2) )
+
+       ierr = cufftPlan1d( plan_xf_dev, nx_cC, CUFFT_D2Z, batch)
+       ierr = cufftPlan1d( plan_xi_dev, nx_cC, CUFFT_Z2D, batch)
+       ierr = cufftPlan1d( plan_yf_dev, ny_cC, CUFFT_D2Z, batch)
+       ierr = cufftPlan1d( plan_yi_dev, ny_cC, CUFFT_Z2D, batch)
+#endif
     END SUBROUTINE fft_init
+
+    SUBROUTINE fft_finalize
+
+            DEALLOCATE(x_in_dev, y_in_dev, y_out_dev, x_out_dev)
+
+    END SUBROUTINE fft_finalize
 
 
 !------------------------------------------------------------------------------!
@@ -287,15 +320,17 @@
        
        COMPLEX(wp), DIMENSION(:), ALLOCATABLE ::  cwork  !<
 
+       INTEGER(iwp) :: ierr
        INTEGER(iwp) ::  i          !< 
        INTEGER(iwp) ::  ishape(1)  !<
        INTEGER(iwp) ::  j          !<
        INTEGER(iwp) ::  k          !<
 
        LOGICAL ::  forward_fft !<
-       
-       REAL(wp), DIMENSION(0:nx+2) ::  work   !<
-       REAL(wp), DIMENSION(nx+2)   ::  work1  !<
+      
+       REAL(wp), DEVICE, ALLOCATABLE :: ar_2d_dev(:,:)
+       REAL(wp), DEVICE, ALLOCATABLE :: ar_dev(:,:,:)
+
        REAL(wp), DIMENSION(0:nx,nys_x:nyn_x), OPTIONAL   ::                    &
           ar_2d   !<
        REAL(wp), DIMENSION(0:nx,nys_x:nyn_x,nzb_x:nzt_x) ::                    &
@@ -307,7 +342,108 @@
           forward_fft = .FALSE.
        ENDIF
 
-#if defined( __fftw )
+       allocate(ar_dev(0:nx,nys_x:nyn_x,nzb_x:nzt_x))
+       if( PRESENT(ar_2d) ) allocate(ar_2d_dev(0:nx,nys_x:nyn_x))
+
+#if defined( __GPU)
+
+       if ( forward_fft )  THEN
+
+       ar_dev = ar
+       if ( PRESENT( ar_2d ) ) then
+          ar_2d_dev = ar_2d
+          DO k=nzb_x, nzt_x
+             DO j = nys_x, nyn_x
+
+                 x_in_dev(0:nx) = ar(0:nx,j,k)
+             !                 ierr = cudaMemcpy(x_in_dev,ar_dev(:,j,k),nx+1,cudaMemcpyDeviceToDevice)
+                 ierr = cufftExecD2Z( plan_xf_dev, x_in_dev, x_out_dev)
+
+          !       !$acc parallel
+          !       !$acc loop
+                 do i = 0, (nx+1)/2
+                    ar_2d(i,j) = REAL( x_out_dev(i), KIND=wp) / ( nx+1 )
+                 ENDDO
+             !    !$acc loop
+                 DO i=1, (nx+1)/2 - 1
+                    ar_2d(nx+1-i,j) = AIMAG( x_out_dev(i) ) / (nx + 1)
+                 ENDDO
+              !   !$acc end parallel
+             ENDDO
+          ENDDO
+       !   ar_2d = ar_2d_dev
+
+       ELSE
+         DO k = nzb_x, nzt_x
+            DO j = nys_x, nyn_x
+               x_in_dev(0:nx) = ar(0:nx,j,k)
+        !       ierr = cudaMemcpy(x_in_dev,ar_dev(:,j,k),nx+1,cudaMemcpyDeviceToDevice) 
+               ierr = cufftExecD2Z( plan_xf_dev, x_in_dev, x_out_dev)
+
+               x_out = x_out_dev
+!!$acc parallel
+            !   !$acc loop
+               DO  i = 0, (nx+1)/2
+                   ar(i,j,k) = REAL( x_out(i), KIND=wp ) / ( nx+1 )
+               ENDDO
+             !  !$acc loop
+               DO  i = 1, (nx+1)/2 - 1
+                   ar(nx+1-i,j,k) = AIMAG( x_out(i) ) / ( nx+1 )
+               ENDDO
+             !  !$acc end parallel
+           ENDDO
+        ENDDO
+       ! ar = ar_dev
+     ENDIF
+
+     ELSE
+     
+        if ( PRESENT( ar_2d) ) THEN
+           DO  k = nzb_x, nzt_x
+              DO  j = nys_x, nyn_x
+
+       !       !$acc parallel
+                  x_out_dev(0) = CMPLX( ar_2d(0,j), 0.0_wp, KIND=wp )
+        !        !$acc loop
+                  DO  i = 1, (nx+1)/2 - 1
+                      x_out_dev(i) = CMPLX( ar_2d(i,j), ar_2d(nx+1-i,j),        &
+                                         KIND=wp )
+                  ENDDO
+                  x_out_dev((nx+1)/2) = CMPLX( ar_2d((nx+1)/2,j), 0.0_wp,      &
+                                               KIND=wp )
+
+             !    !$acc end parallel
+                  ierr = cufftExecZ2D( plan_xi_dev, x_out_dev, x_in_dev )
+                 ! ierr = cudaMemcpy(ar_dev(:,j,k),x_in_dev(0:nx),nx+1,cudaMemcpyDeviceToDevice)
+                   ar(0:nx,j,k) = x_in_dev(0:nx)
+              ENDDO
+           ENDDO
+       ELSE
+          DO  k = nzb_x, nzt_x
+             DO  j = nys_x, nyn_x
+
+         !    !$acc parallel
+
+                 x_out_dev(0) = CMPLX( ar(0,j,k), 0.0_wp, KIND=wp )
+         !        !$acc loop
+                 DO  i = 1, (nx+1)/2 - 1
+                     x_out_dev(i) = CMPLX( ar(i,j,k), ar(nx+1-i,j,k), KIND=wp )
+                 ENDDO
+                     x_out_dev((nx+1)/2) = CMPLX( ar((nx+1)/2,j,k), 0.0_wp,       &
+                                               KIND=wp )
+!
+ !             !$acc end parallel
+                 ierr = cufftExecZ2D( plan_xi_dev, x_out_dev, x_in_dev )
+  !               ierr = cudaMemcpy(ar_dev(:,j,k),x_in_dev(0:nx),nx+1,cudaMemcpyDeviceToDevice)
+                 ar(0:nx,j,k) = x_in_dev(0:nx)   
+  ENDDO
+          ENDDO
+       ENDIF
+    ENDIF
+    deallocate(ar_dev)
+    if( ALLOCATED(ar_2d_dev) ) deallocate(ar_2d_dev)
+
+#else
           IF ( forward_fft )  THEN
 
              !$OMP PARALLEL PRIVATE ( work, i, j, k )

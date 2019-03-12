@@ -6,6 +6,8 @@ PROG=palm
 F90=pgf90
 F90_SER=pgf90
 NETCDF=/usr/projects/hpcsoft/toss3/common/netcdf/4.4.0_pgi-18.10
-COPT= -Mpreprocess -r8 -D__netcdf -D__lc -D__cudaProfiler
-F90FLAGS= -r8 -fast -acc -ta=tesla:deepcopy -Minfo=accel -Mcuda -I $(NETCDF)/include
-LDFLAGS= -fast -acc -ta=tesla -Minfo=accel -Mcuda -L $(NETCDF)/lib -lnetcdff -lnetcdf -lhdf5 -lhdf5_hl -lm -lz
+FFTW=/usr/projects/climate/lvanroekel/fftw_3
+CUFFT=/opt/cudatoolkit/9.1
+COPT= -Mpreprocess -r8 -D__netcdf -D__lc -D__cudaProfiler -D__fftw -D__GPU
+F90FLAGS= -r8 -g -O0 -acc -ta=tesla:cc60 -Minfo=accel -Mcuda -I $(NETCDF)/include -I $(FFTW)/include -I $(CUFFT)/include
+LDFLAGS= -g -O0 -acc -Minfo=accel -Mcuda -L $(NETCDF)/lib -lnetcdff -lnetcdf -lhdf5 -lhdf5_hl -lm -lz -L$(FFTW)/lib -lfftw3 -L$(CUFFT)/lib64 -lcufft

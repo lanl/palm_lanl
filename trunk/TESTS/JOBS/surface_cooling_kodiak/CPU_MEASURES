@@ -1,0 +1,62 @@
+  Rev:  run: test_run.0011-03-1911:36:40
+-----------
+
+CPU measures for     1 PEs (    1(x) *     1(y) tasks *    1 threads):
+
+gridpoints (x/y/z):                        32 *    32 *    64
+nr of timesteps:                           46
+cpu time per grid point and timestep:       2.15666 * 10**-6 s
+----------------------------------------------------------------------
+
+place:                              mean        counts      min       max       rms
+                                sec.      %                sec.      sec.      sec.
+-----------------------------------------------------------------------------------
+total                          6.705   100.00       1     6.705     6.705     0.000
+tke-equation                   0.931    13.88     138     0.931     0.931     0.000
+pres                           0.818    12.20     139     0.818     0.818     0.000
+pt-equation                    0.791    11.80     138     0.791     0.791     0.000
+data_output_3d                 0.654     9.75      44     0.654     0.654     0.000
+u-equation                     0.527     7.86     138     0.527     0.527     0.000
+disturb_field                  0.507     7.57     140     0.507     0.507     0.000
+v-equation                     0.507     7.57     138     0.507     0.507     0.000
+w-equation                     0.498     7.42     138     0.498     0.498     0.000
+sa-equation                    0.468     6.98     138     0.468     0.468     0.000
+pt diffusion                   0.462     6.88     138     0.462     0.462     0.000
+diffusivities                  0.398     5.94     138     0.398     0.398     0.000
+u advec                        0.308     4.60     138     0.308     0.308     0.000
+pt advection                   0.295     4.40     138     0.295     0.295     0.000
+eqns-seawater                  0.195     2.91     138     0.195     0.195     0.000
+flow_statistics                0.164     2.45      47     0.164     0.164     0.000
+u diffusion                    0.144     2.15     138     0.144     0.144     0.000
+exchange-horiz-progn           0.061     0.92     138     0.061     0.061     0.000
+initialisation                 0.056     0.84       1     0.056     0.056     0.000
+data_output_profiles           0.043     0.65      44     0.043     0.043     0.000
+u coriolis                     0.040     0.60     138     0.040     0.040     0.000
+calculate_timestep             0.033     0.50      47     0.033     0.033     0.000
+data_output_tseries            0.033     0.49      46     0.033     0.033     0.000
+w buoy                         0.028     0.42     138     0.028     0.028     0.000
+last actions                   0.010     0.14       1     0.010     0.010     0.000
+run_control                    0.002     0.03      47     0.002     0.002     0.000
+swap_timelevel                 0.000     0.00     138     0.000     0.000     0.000
+pt stokes                      0.000     0.00     138     0.000     0.000     0.000
+u stokes                       0.000     0.00     138     0.000     0.000     0.000
+
+special measures:
+-----------------------------------------------------------------------------------
+timesteps                      6.631    98.89      46     6.631     6.631     0.000
+poisfft                        0.631     9.42     139     0.631     0.631     0.000
+fft_x                          0.164     2.45     139     0.164     0.164     0.000
+fft_y                          0.164     2.45     139     0.164     0.164     0.000
+transpo invers                 0.143     2.13     139     0.143     0.143     0.000
+transpo forward                0.118     1.77     139     0.118     0.118     0.000
+exchange_horiz                 0.091     1.35    2215     0.091     0.091     0.000
+divergence                     0.060     0.90     186     0.060     0.060     0.000
+tridia                         0.040     0.59     139     0.040     0.040     0.000
+exchange_horiz_2d              0.000     0.00      10     0.000     0.000     0.000
+
+No barriers are set in front of collective operations
+
+Exchange of ghostpoints via MPI_ISEND/MPI_IRECV
+
+
+

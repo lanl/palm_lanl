@@ -113,17 +113,19 @@
 
 #if defined( __nopointer )
     USE arrays_3d,                                                             &
-        ONLY:  diss, diss_p, dzu, e, e_p, kh, km,                              &
+        ONLY:  dd2zu, diss, diss_p, dzu, e, e_p, kh, km,                       &
                mean_inflow_profiles, prho, pt, tdiss_m, te_m, tend, u, v, vpt, w
 #else
     USE arrays_3d,                                                             &
-        ONLY:  diss, diss_1, diss_2, diss_3, diss_p, dzu, e, e_1, e_2, e_3,    &
+        ONLY:  dd2zu, diss, diss_1, diss_2, diss_3, diss_p, dzu, e, e_1, e_2, e_3,    &
                e_p, kh, km, mean_inflow_profiles, prho, pt, tdiss_m,           &
                te_m, tend, u, v, vpt, w
 #endif
 
     USE control_parameters,                                                    &
         ONLY:  constant_diffusion, dt_3d, e_init, humidity, inflow_l,          &
+               atmos_ocean_sign, g, use_single_reference_value,                &
+               wall_adjustment, wall_adjustment_factor,                        &
                initializing_actions, intermediate_timestep_count,              &
                intermediate_timestep_count_max, kappa, km_constant, les_mw,    &
                ocean, plant_canopy, prandtl_number, prho_reference,            &
@@ -172,10 +174,15 @@
     REAL(wp), DIMENSION(2) :: rans_const_sigma = &     !< model constants for RANS mode, sigma values (sigma_e, sigma_diss) (namelist param)
        (/ 1.0_wp, 1.30_wp /)
 
+    REAL(wp)     :: dvar_dz         !< vertical gradient of var
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  l_black    !< mixing length according to Blackadar
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  l_grid     !< geometric mean of grid sizes dx, dy, dz
 
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  l_wall !< near-wall mixing length
+    REAL(wp)     :: l               !< mixing length
+    REAL(wp)     :: l_stable        !< mixing length according to stratification
+    REAL(wp)     :: ll              !< adjusted l_grid
+    REAL(wp)     :: var_reference   !< var at reference height
 
     !> @todo remove debug variables
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE :: diss_prod1, diss_adve1, diss_diff1, &
@@ -3200,21 +3207,21 @@
   END SUBROUTINE production_e_ij
 
 
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Diffusion and dissipation terms for the TKE.
-!> Vector-optimized version
-!------------------------------------------------------------------------------!
- SUBROUTINE diffusion_e( var, var_reference )
+  !------------------------------------------------------------------------------!
+  ! Description:
+  ! ------------
+  !> Diffusion and dissipation terms for the TKE.
+  !> Vector-optimized version
+    !------------------------------------------------------------------------------!
+SUBROUTINE diffusion_e( var, var_reference )
 
     USE arrays_3d,                                                             &
-        ONLY:  ddzu, ddzw, drho_air, rho_air_zw
+    ONLY:  ddzu, ddzw, drho_air, rho_air_zw
 
     USE grid_variables,                                                        &
-        ONLY:  ddx2, ddy2
+    ONLY:  ddx2, ddy2
     USE surface_mod,                                                           &
-       ONLY :  bc_h
+    ONLY :  bc_h
 
     IMPLICIT NONE
 
@@ -3235,36 +3242,57 @@
 #endif
     REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  dissipation  !< TKE dissipation
 
+!$acc kernels
 
-!
-!-- Calculate the tendency terms
+    !
+    !-- Calculate the tendency terms
     DO  i = nxl, nxr
        DO  j = nys, nyn
           DO  k = nzb+1, nzt
-!
-!--          Predetermine flag to mask topography
+    !
+    !--      Predetermine flag to mask topography
              flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
 
-!
-!--          Calculate dissipation
+    !
+    !--      Calculate dissipation
              IF ( les_mw )  THEN
 
-                CALL mixing_length_les( i, j, k, l, ll, var, var_reference )
+                dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
+                IF ( dvar_dz > 0.0_wp ) THEN
+                   IF ( use_single_reference_value )  THEN
+                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                         / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
+                   ELSE
+                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                         / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
+                   ENDIF
+                ELSE
+                   l_stable = l_grid(k)
+                ENDIF
+            !
+            !-- Adjustment of the mixing length
+                IF ( wall_adjustment )  THEN
+                   l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
+                   ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
+                ELSE
+                   l  = MIN( l_grid(k), l_stable )
+                   ll = l_grid(k)
+                ENDIF
 
                 dissipation(k,j) = ( 0.19_wp + 0.74_wp * l / ll )              &
                                    * e(k,j,i) * SQRT( e(k,j,i) ) / l
 
-             ELSEIF ( rans_tke_l )  THEN
-
-                CALL mixing_length_rans( i, j, k, l, ll, var, var_reference )
-
-                dissipation(k,j) = c_0**3 * e(k,j,i) * SQRT( e(k,j,i) ) / ll
-
-                diss(k,j,i) = dissipation(k,j) * flag
-
-             ELSEIF ( rans_tke_e )  THEN
-
-                dissipation(k,j) = diss(k,j,i)
+!             ELSEIF ( rans_tke_l )  THEN
+!
+!                CALL mixing_length_rans( i, j, k, l, ll, var, var_reference )
+!
+!                dissipation(k,j) = c_0**3 * e(k,j,i) * SQRT( e(k,j,i) ) / ll
+!
+!                diss(k,j,i) = dissipation(k,j) * flag
+!
+!             ELSEIF ( rans_tke_e )  THEN
+!
+!                dissipation(k,j) = diss(k,j,i)
 
              ENDIF
 
@@ -3290,6 +3318,7 @@
        ENDDO
 
     ENDDO
+!$acc end kernels
 
  END SUBROUTINE diffusion_e
 

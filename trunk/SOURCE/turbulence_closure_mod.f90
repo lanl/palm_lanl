@@ -3279,6 +3279,7 @@ SUBROUTINE diffusion_e( var, var_reference )
                    l  = MIN( l_grid(k), l_stable )
                    ll = l_grid(k)
                 ENDIF
+
                 dissipation(k,j) = ( 0.19_wp + 0.74_wp * l / ll )              &
                                    * e(k,j,i) * SQRT( e(k,j,i) ) / l
 
@@ -3318,9 +3319,7 @@ SUBROUTINE diffusion_e( var, var_reference )
        ENDDO
 
     ENDDO
-    
     !$acc end kernels
-
     !$acc end data
 
  END SUBROUTINE diffusion_e
@@ -3705,7 +3704,6 @@ SUBROUTINE diffusion_e( var, var_reference )
     REAL(wp), DIMENSION(:,:,:), POINTER ::  var  !< temperature
 #endif
 
-
 !
 !-- Default thread number in case of one thread
     tn = 0
@@ -3723,6 +3721,7 @@ SUBROUTINE diffusion_e( var, var_reference )
 !-- Introduce an optional minimum tke
     IF ( e_min > 0.0_wp )  THEN
        !$OMP DO
+       !$acc data copy(wall_flags_0(nzb+1:nzt,nysg:nyng,nxlg:nxrg),e(nzb+1:nzt,nysg:nyng,nxlg:nxrg)) 
        !$acc parallel
        !$acc loop collapse(3)
        DO  i = nxlg, nxrg
@@ -3734,10 +3733,12 @@ SUBROUTINE diffusion_e( var, var_reference )
           ENDDO
        ENDDO
        !$acc end parallel
+       !$acc end data
     ENDIF
 
-    IF ( les_mw )  THEN
+!    IF ( les_mw )  THEN
        !$OMP DO
+       !$acc data copy(dd2zu(nzb+1:nzt),kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb+1:nzt,nysg:nyng,nxlg:nxrg),e(nzb+1:nzt,nysg:nyng,nxlg:nxrg),var,sums_l_l(nzb+1:nzt,0:statistic_regions,0),wall_flags_0(nzb+1:nzt,nysg:nyng,nxlg:nxrg),l_grid(nzb+1:nzt),rmask(nysg:nyng,nxlg:nxrg,0:statistic_regions),l_wall(nzb+1:nzt,nysg:nyng,nxlg:nxrg))
        !$acc parallel
        !$acc loop collapse(3)
        DO  i = nxlg, nxrg
@@ -3786,86 +3787,91 @@ SUBROUTINE diffusion_e( var, var_reference )
           ENDDO
        ENDDO
        !$acc end parallel
+       !$acc end data
 
-    ELSEIF ( rans_tke_l )  THEN
-
-       !$OMP DO
-       !$acc parallel
-       !$acc loop collapse(3)
-       DO  i = nxlg, nxrg
-          DO  j = nysg, nyng
-             DO  k = nzb+1, nzt
-
-                flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
+!    ELSEIF ( rans_tke_l )  THEN
 !
-!--             Mixing length for RANS mode with TKE-l closure
-!                CALL mixing_length_rans( i, j, k, l, ll, var, var_reference )
-
-                dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
-                IF ( dvar_dz > 0.0_wp ) THEN
-                   IF ( use_single_reference_value )  THEN
-                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
-                                         / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
-                   ELSE
-                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
-                                         / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
-                   ENDIF
-                ELSE
-                   l_stable = l_grid(k)
-                ENDIF
+!       !$OMP DO
+!       !$acc data copy(dd2zu,kh,km,e,var,wall_flags_0,sums_l_l,l_grid,rmask,l_wall)
+!       !$acc parallel
+!       !$acc loop collapse(3)
+!       DO  i = nxlg, nxrg
+!          DO  j = nysg, nyng
+!             DO  k = nzb+1, nzt
 !
-!-- Adjustment of the mixing length
-                IF ( wall_adjustment )  THEN
-                   l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
-                   ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
-                ELSE
-                   l  = MIN( l_grid(k), l_stable )
-                   ll = l_grid(k)
-                ENDIF
+!                flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
+!!
+!!--             Mixing length for RANS mode with TKE-l closure
+!!                CALL mixing_length_rans( i, j, k, l, ll, var, var_reference )
 !
-!--             Compute diffusion coefficients for momentum and heat
-                km(k,j,i) = c_0 * l * SQRT( e(k,j,i) ) * flag
-                kh(k,j,i) = km(k,j,i) / prandtl_number * flag
+!                dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
+!                IF ( dvar_dz > 0.0_wp ) THEN
+!                   IF ( use_single_reference_value )  THEN
+!                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+!                                         / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
+!                   ELSE
+!                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+!                                         / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
+!                   ENDIF
+!                ELSE
+!                   l_stable = l_grid(k)
+!                ENDIF
+!!
+!!-- Adjustment of the mixing length
+!                IF ( wall_adjustment )  THEN
+!                   l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
+!                   ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
+!                ELSE
+!                   l  = MIN( l_grid(k), l_stable )
+!                   ll = l_grid(k)
+!                ENDIF
+!!
+!!--             Compute diffusion coefficients for momentum and heat
+!                km(k,j,i) = c_0 * l * SQRT( e(k,j,i) ) * flag
+!                kh(k,j,i) = km(k,j,i) / prandtl_number * flag
+!!
+!!--             Summation for averaged profile (cf. flow_statistics)
+!                DO  sr = 0, statistic_regions
+!                   sums_l_l(k,sr,tn) = sums_l_l(k,sr,tn) + l * rmask(j,i,sr)   &
+!                                                             * flag
+!                ENDDO
 !
-!--             Summation for averaged profile (cf. flow_statistics)
-                DO  sr = 0, statistic_regions
-                   sums_l_l(k,sr,tn) = sums_l_l(k,sr,tn) + l * rmask(j,i,sr)   &
-                                                             * flag
-                ENDDO
-
-             ENDDO
-          ENDDO
-       ENDDO
-       !$acc end parallel
-
-    ELSEIF ( rans_tke_e )  THEN
-
-       !$OMP DO
-       !$acc parallel
-       !$acc loop collapse(3)
-       DO  i = nxlg, nxrg
-          DO  j = nysg, nyng
-             DO  k = nzb+1, nzt
-
-                flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
+!             ENDDO
+!          ENDDO
+!       ENDDO
+!       !$acc end parallel
+!       !$acc end data
 !
-!--             Compute diffusion coefficients for momentum and heat
-                km(k,j,i) = c_0**4 * e(k,j,i)**2 / ( diss(k,j,i) + 1.0E-30_wp ) * flag
-                kh(k,j,i) = km(k,j,i) / prandtl_number * flag
+!    ELSEIF ( rans_tke_e )  THEN
 !
-!--             Summation for averaged profile of mixing length (cf. flow_statistics)
-                DO  sr = 0, statistic_regions
-                   sums_l_l(k,sr,tn) = sums_l_l(k,sr,tn) +                     &
-                      c_0**3 * e(k,j,i) * SQRT(e(k,j,i)) /                     &
-                      ( diss(k,j,i) + 1.0E-30_wp ) * rmask(j,i,sr) * flag
-                ENDDO
-
-             ENDDO
-          ENDDO
-       ENDDO
-       !$acc end parallel
-
-    ENDIF
+!       !$OMP DO
+!       !$acc data copy(kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),e(nzb+1:nzt,nysg:nyng,nxlg:nxrg),diss(nzb+1:nzt,nysg:nyng,nxlg:nxrg),wall_flags_0(nzb+1:nzt,nysg:nyng,nxlg:nxrg),sums_l_l(nzb+1:nzt,0:statistic_regions,0),rmask(nysg:nyng,nxlg:nxrg,0:statistic_regions),km(nzb+1:nzt,nysg:nyng,nxlg:nxrg))
+!       !$acc parallel
+!       !$acc loop collapse(3)
+!       DO  i = nxlg, nxrg
+!          DO  j = nysg, nyng
+!             DO  k = nzb+1, nzt
+!
+!                flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
+!!
+!!--             Compute diffusion coefficients for momentum and heat
+!                km(k,j,i) = c_0**4 * e(k,j,i)**2 / ( diss(k,j,i) + 1.0E-30_wp ) * flag
+!                kh(k,j,i) = km(k,j,i) / prandtl_number * flag
+!!
+!!--             Summation for averaged profile of mixing length (cf. flow_statistics)
+!                DO  sr = 0, statistic_regions
+!                   sums_l_l(k,sr,tn) = sums_l_l(k,sr,tn) +                     &
+!                      c_0**3 * e(k,j,i) * SQRT(e(k,j,i)) /                     &
+!                      ( diss(k,j,i) + 1.0E-30_wp ) * rmask(j,i,sr) * flag
+!                ENDDO
+!
+!             ENDDO
+!          ENDDO
+!       ENDDO
+!       !$acc end parallel
+!       !$acc end data
+!
+!    ENDIF
 
     sums_l_l(nzt+1,:,tn) = sums_l_l(nzt,:,tn)   ! quasi boundary-condition for
                                                 ! data output

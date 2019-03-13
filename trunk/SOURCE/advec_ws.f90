@@ -3154,7 +3154,7 @@
 
 !
 !--    Compute the fluxes for the whole left boundary of the processor domain.
-!$acc kernels
+!!$acc kernels
        i = nxl
        DO  j = nys, nyn
 
@@ -3197,10 +3197,10 @@
 
           ENDDO
       ENDDO
-!$acc end kernels
+!!$acc end kernels
 
       
-!$acc kernels
+!!$acc kernels
      DO j= nys, nyn
           DO  k = nzb_max+1, nzt
 
@@ -3219,9 +3219,9 @@
 
           ENDDO
      ENDDO
-!$acc end kernels
+!!$acc end kernels
 
-!$acc kernels
+!!$acc kernels
        DO  i = nxl, nxr
 
           j = nys
@@ -3264,9 +3264,9 @@
 
           ENDDO
      ENDDO
-!$acc end kernels
+!!$acc end kernels
 
-!$acc kernels
+!!$acc kernels
       DO i=nxl, nxr
 !--       Above to the top of the highest topography. No degradation necessary.
           DO  k = nzb_max+1, nzt
@@ -3285,9 +3285,9 @@
 
           ENDDO
       ENDDO
-!$acc end kernels
+!!$acc end kernels
 
-!$acc kernels
+!!$acc kernels
      DO i=nxl,nxr
 
           DO  j = nys, nyn
@@ -3454,9 +3454,9 @@
              ENDDO
        ENDDO
 ENDDO
-!$acc end kernels
+!!$acc end kernels
 
-!$acc kernels
+!!$acc kernels
 
     DO i=nxl, nxr
        DO j=nys, nyn
@@ -3551,9 +3551,9 @@ ENDDO
              ENDDO
       ENDDO
 ENDDO
-!$acc end kernels
+!!$acc end kernels
 
-!$acc kernels
+!!$acc kernels
      DO i=nxl, nxr
          DO j=nys, nyn
 !
@@ -3586,7 +3586,7 @@ ENDDO
 
          ENDDO
       ENDDO
- !$acc end kernels
+! !$acc end kernels
     END SUBROUTINE advec_s_ws
 
 

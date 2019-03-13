@@ -165,6 +165,7 @@
        REAL(wp) ::  mask_south        !< flag to mask vertical surface south of the grid point 
        REAL(wp) ::  mask_west         !< flag to mask vertical surface west of the grid point
        REAL(wp) ::  mask_top          !< flag to mask vertical downward-facing surface  
+
        REAL(wp), DIMENSION(1:surf_def_v(0)%ns) ::  s_flux_def_v_north !< flux at north-facing vertical default-type surfaces
        REAL(wp), DIMENSION(1:surf_def_v(1)%ns) ::  s_flux_def_v_south !< flux at south-facing vertical default-type surfaces
        REAL(wp), DIMENSION(1:surf_def_v(2)%ns) ::  s_flux_def_v_east  !< flux at east-facing vertical default-type surfaces
@@ -180,8 +181,7 @@
 #endif
 
        REAL(wp), DIMENSION(1:surf_def_h(2)%ns),INTENT(IN),OPTIONAL :: s_flux_solar_t  !<solar flux at sfc
-!$acc parallel    
-!$acc loop collapse (3)    
+!$acc kernels       
         DO  i = nxl, nxr
           DO  j = nys,nyn
 !
@@ -212,13 +212,8 @@
                                    * ( s(k,j,i)   - s(k,j-1,i) )               &
                                                      ) * ddy2 * flag
              ENDDO
-          ENDDO
-     ENDDO
-!$acc end parallel
-!$acc parallel
-!$acc loop collapse (2)
-        DO i=nxl, nxr
-          DO j= nys, nyn
+
+!
 !--          Apply prescribed horizontal wall heatflux where necessary. First,
 !--          determine start and end index for respective (j,i)-index. Please
 !--          note, in the flat case following loop will not be entered, as
@@ -256,15 +251,7 @@
                 k           = surf_def_v(3)%k(m)
                 tend(k,j,i) = tend(k,j,i) + s_flux_def_v_west(m) * ddx
              ENDDO
-
-      ENDDO
-ENDDO
-!$acc end parallel
-
-!$acc parallel
-!$acc loop collapse (3)
-    DO i=nxl, nxr
-       DO j=nys, nyn
+!
 !--          Compute vertical diffusion. In case that surface fluxes have been
 !--          prescribed or computed at bottom and/or top, index k starts/ends at
 !--          nzb+2 or nzt-1, respectively. Model top is also mask if top flux
@@ -297,14 +284,7 @@ ENDDO
                                                   ) * ddzw(k) * drho_air(k)    &
                                                               * flag
              ENDDO
-        ENDDO
-ENDDO
-!$acc end parallel
 
-!$acc parallel
-!$acc loop collapse (2)
-   DO i=nxl, nxr
-       DO j=nys, nyn
 !--          Vertical diffusion at horizontal walls.
              IF ( use_surface_fluxes )  THEN
 !
@@ -365,7 +345,7 @@ ENDDO
 
           ENDDO
        ENDDO
-!$acc end parallel
+!$acc end kernels
     END SUBROUTINE diffusion_s
 
 !------------------------------------------------------------------------------!

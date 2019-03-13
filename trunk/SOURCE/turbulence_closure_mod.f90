@@ -3792,7 +3792,6 @@ SUBROUTINE diffusion_e( var, var_reference )
 !    ELSEIF ( rans_tke_l )  THEN
 !
 !       !$OMP DO
-!       !$acc data copy(dd2zu,kh,km,e,var,wall_flags_0,sums_l_l,l_grid,rmask,l_wall)
 !       !$acc parallel
 !       !$acc loop collapse(3)
 !       DO  i = nxlg, nxrg
@@ -3840,12 +3839,10 @@ SUBROUTINE diffusion_e( var, var_reference )
 !          ENDDO
 !       ENDDO
 !       !$acc end parallel
-!       !$acc end data
 !
 !    ELSEIF ( rans_tke_e )  THEN
 !
 !       !$OMP DO
-!       !$acc data copy(kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),e(nzb+1:nzt,nysg:nyng,nxlg:nxrg),diss(nzb+1:nzt,nysg:nyng,nxlg:nxrg),wall_flags_0(nzb+1:nzt,nysg:nyng,nxlg:nxrg),sums_l_l(nzb+1:nzt,0:statistic_regions,0),rmask(nysg:nyng,nxlg:nxrg,0:statistic_regions),km(nzb+1:nzt,nysg:nyng,nxlg:nxrg))
 !       !$acc parallel
 !       !$acc loop collapse(3)
 !       DO  i = nxlg, nxrg
@@ -3869,7 +3866,6 @@ SUBROUTINE diffusion_e( var, var_reference )
 !          ENDDO
 !       ENDDO
 !       !$acc end parallel
-!       !$acc end data
 !
 !    ENDIF
 

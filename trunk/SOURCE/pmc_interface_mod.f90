@@ -1962,20 +1962,20 @@
        IF ( nest_bound_r )  THEN
            
           IF ( TRIM(constant_flux_layer) == 'bottom') THEN
-             ALLOCATE( logc_u_r      (1:2,          nzb:nzt_topo_nestbc_l,nys:nyn) )
-             ALLOCATE( logc_v_r      (1:2,          nzb:nzt_topo_nestbc_l,nys:nyn) )
-             ALLOCATE( logc_w_r      (1:2,          nzb:nzt_topo_nestbc_l,nys:nyn) )
-             ALLOCATE( logc_ratio_u_r(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nys:nyn) )
-             ALLOCATE( logc_ratio_v_r(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nys:nyn) )
-             ALLOCATE( logc_ratio_w_r(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nys:nyn) )
+             ALLOCATE( logc_u_r      (1:2,          nzb:nzt_topo_nestbc_r,nys:nyn) )
+             ALLOCATE( logc_v_r      (1:2,          nzb:nzt_topo_nestbc_r,nys:nyn) )
+             ALLOCATE( logc_w_r      (1:2,          nzb:nzt_topo_nestbc_r,nys:nyn) )
+             ALLOCATE( logc_ratio_u_r(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_r,nys:nyn) )
+             ALLOCATE( logc_ratio_v_r(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_r,nys:nyn) )
+             ALLOCATE( logc_ratio_w_r(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_r,nys:nyn) )
           ENDIF
           IF ( TRIM(constant_flux_layer) == 'top') THEN
-             ALLOCATE( logc_u_r      (1:2,          nzt_topo_nestbc_l:nzt+1,nys:nyn) )
-             ALLOCATE( logc_v_r      (1:2,          nzt_topo_nestbc_l:nzt+1,nys:nyn) )
-             ALLOCATE( logc_w_r      (1:2,          nzt_topo_nestbc_l:nzt+1,nys:nyn) )
-             ALLOCATE( logc_ratio_u_r(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nys:nyn) )
-             ALLOCATE( logc_ratio_v_r(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nys:nyn) )
-             ALLOCATE( logc_ratio_w_r(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nys:nyn) )
+             ALLOCATE( logc_u_r      (1:2,          nzt_topo_nestbc_r:nzt+1,nys:nyn) )
+             ALLOCATE( logc_v_r      (1:2,          nzt_topo_nestbc_r:nzt+1,nys:nyn) )
+             ALLOCATE( logc_w_r      (1:2,          nzt_topo_nestbc_r:nzt+1,nys:nyn) )
+             ALLOCATE( logc_ratio_u_r(1:2,0:ncorr-1,nzt_topo_nestbc_r:nzt+1,nys:nyn) )
+             ALLOCATE( logc_ratio_v_r(1:2,0:ncorr-1,nzt_topo_nestbc_r:nzt+1,nys:nyn) )
+             ALLOCATE( logc_ratio_w_r(1:2,0:ncorr-1,nzt_topo_nestbc_r:nzt+1,nys:nyn) )
           ENDIF
           ALLOCATE( logc_kbounds_u_r(1:2,nys:nyn) )
           ALLOCATE( logc_kbounds_v_r(1:2,nys:nyn) )
@@ -2036,20 +2036,20 @@
        IF ( nest_bound_s )  THEN
 
           IF ( TRIM(constant_flux_layer) == 'bottom') THEN
-             ALLOCATE( logc_u_s      (1:2,          nzb:nzt_topo_nestbc_l,nxl:nxr) )
-             ALLOCATE( logc_v_s      (1:2,          nzb:nzt_topo_nestbc_l,nxl:nxr) )
-             ALLOCATE( logc_w_s      (1:2,          nzb:nzt_topo_nestbc_l,nxl:nxr) )
-             ALLOCATE( logc_ratio_u_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nxl:nxr) )
-             ALLOCATE( logc_ratio_v_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nxl:nxr) )
-             ALLOCATE( logc_ratio_w_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nxl:nxr) )
+             ALLOCATE( logc_u_s      (1:2,          nzb:nzt_topo_nestbc_s,nxl:nxr) )
+             ALLOCATE( logc_v_s      (1:2,          nzb:nzt_topo_nestbc_s,nxl:nxr) )
+             ALLOCATE( logc_w_s      (1:2,          nzb:nzt_topo_nestbc_s,nxl:nxr) )
+             ALLOCATE( logc_ratio_u_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_s,nxl:nxr) )
+             ALLOCATE( logc_ratio_v_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_s,nxl:nxr) )
+             ALLOCATE( logc_ratio_w_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_s,nxl:nxr) )
           ENDIF
           IF ( TRIM(constant_flux_layer) == 'top') THEN
-             ALLOCATE( logc_u_s      (1:2,          nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
-             ALLOCATE( logc_v_s      (1:2,          nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
-             ALLOCATE( logc_w_s      (1:2,          nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
-             ALLOCATE( logc_ratio_u_s(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
-             ALLOCATE( logc_ratio_v_s(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
-             ALLOCATE( logc_ratio_w_s(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_u_s      (1:2,          nzt_topo_nestbc_s:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_v_s      (1:2,          nzt_topo_nestbc_s:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_w_s      (1:2,          nzt_topo_nestbc_s:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_ratio_u_s(1:2,0:ncorr-1,nzt_topo_nestbc_s:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_ratio_v_s(1:2,0:ncorr-1,nzt_topo_nestbc_s:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_ratio_w_s(1:2,0:ncorr-1,nzt_topo_nestbc_s:nzt+1,nxl:nxr) )
           ENDIF
           ALLOCATE( logc_kbounds_u_s(1:2,nxl:nxr) )
           ALLOCATE( logc_kbounds_v_s(1:2,nxl:nxr) )
@@ -2107,24 +2107,24 @@
        IF ( nest_bound_n )  THEN
 
           IF ( TRIM(constant_flux_layer) == 'bottom') THEN
-             ALLOCATE( logc_u_n      (1:2,          nzb:nzt_topo_nestbc_l,nxl:nxr) )
-             ALLOCATE( logc_v_s      (1:2,          nzb:nzt_topo_nestbc_l,nxl:nxr) )
-             ALLOCATE( logc_w_s      (1:2,          nzb:nzt_topo_nestbc_l,nxl:nxr) )
-             ALLOCATE( logc_ratio_u_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nxl:nxr) )
-             ALLOCATE( logc_ratio_v_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nxl:nxr) )
-             ALLOCATE( logc_ratio_w_s(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_l,nxl:nxr) )
+             ALLOCATE( logc_u_n      (1:2,          nzb:nzt_topo_nestbc_n,nxl:nxr) )
+             ALLOCATE( logc_v_n      (1:2,          nzb:nzt_topo_nestbc_n,nxl:nxr) )
+             ALLOCATE( logc_w_n      (1:2,          nzb:nzt_topo_nestbc_n,nxl:nxr) )
+             ALLOCATE( logc_ratio_u_n(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_n,nxl:nxr) )
+             ALLOCATE( logc_ratio_v_n(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_n,nxl:nxr) )
+             ALLOCATE( logc_ratio_w_n(1:2,0:ncorr-1,nzb:nzt_topo_nestbc_n,nxl:nxr) )
           ENDIF
           IF ( TRIM(constant_flux_layer) == 'top') THEN
-             ALLOCATE( logc_u_s      (1:2,          nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
-             ALLOCATE( logc_v_s      (1:2,          nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
-             ALLOCATE( logc_w_s      (1:2,          nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
-             ALLOCATE( logc_ratio_u_s(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
-             ALLOCATE( logc_ratio_v_s(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
-             ALLOCATE( logc_ratio_w_s(1:2,0:ncorr-1,nzt_topo_nestbc_l:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_u_n      (1:2,          nzt_topo_nestbc_n:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_v_n      (1:2,          nzt_topo_nestbc_n:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_w_n      (1:2,          nzt_topo_nestbc_n:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_ratio_u_n(1:2,0:ncorr-1,nzt_topo_nestbc_n:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_ratio_v_n(1:2,0:ncorr-1,nzt_topo_nestbc_n:nzt+1,nxl:nxr) )
+             ALLOCATE( logc_ratio_w_n(1:2,0:ncorr-1,nzt_topo_nestbc_n:nzt+1,nxl:nxr) )
           ENDIF
-          ALLOCATE( logc_kbounds_u_s(1:2,nxl:nxr) )
-          ALLOCATE( logc_kbounds_v_s(1:2,nxl:nxr) )
-          ALLOCATE( logc_kbounds_w_s(1:2,nxl:nxr) )
+          ALLOCATE( logc_kbounds_u_n(1:2,nxl:nxr) )
+          ALLOCATE( logc_kbounds_v_n(1:2,nxl:nxr) )
+          ALLOCATE( logc_kbounds_w_n(1:2,nxl:nxr) )
           logc_u_n       = 0
           logc_v_n       = 0
           logc_w_n       = 0
@@ -2174,7 +2174,7 @@
        ENDIF
 !       
 !--    Then vertical walls and corners if necessary
-       IF ( topography /= 'flat' )  THEN
+       IF ( topography /= 'flat' ) THEN 
 !
 !--       Workaround, set z0 at vertical surfaces simply to the given roughness
 !--       lenth, which is required to determine the logarithmic correction 
@@ -5357,10 +5357,9 @@ SUBROUTINE pmci_create_child_arrays( name, is, ie, js, je, nzc,n  )
 !--   treated. Only single and double wall nodes are corrected. Triple and
 !--   higher-multiple wall nodes are not corrected as the log law would not be
 !--   valid anyway in such locations.
-      IF ( topography /= 'flat' )  THEN
+      IF ( TRIM(constant_flux_layer) == 'bottom' .AND. topography /= 'flat' )  THEN
 
-         IF ( .NOT. TRIM(constant_flux_layer) == 'none' .AND.                  &
-              ( var == 'u' .OR. var == 'w' )                 )  THEN           
+         IF (  var == 'u' .OR. var == 'w' )  THEN           
 !
 !--         Solid surface only on south/north side of the node                   
             DO  j = nys, nyn
@@ -5383,7 +5382,7 @@ SUBROUTINE pmci_create_child_arrays( name, is, ie, js, je, nzc,n  )
          ENDIF
 !
 !--      Solid surface on both below and on south/north side of the node           
-         IF ( .NOT. TRIM(constant_flux_layer) == 'none' .AND. var == 'u' )  THEN
+         IF ( var == 'u' )  THEN
             DO  j = nys, nyn
                k = logc_kbounds(1,j)
                IF ( ( logc(2,k,j) /= 0 )  .AND.  ( logc(1,k,j) /= 0 ) )  THEN
@@ -5577,10 +5576,9 @@ SUBROUTINE pmci_create_child_arrays( name, is, ie, js, je, nzc,n  )
 !--   Triple and higher-multiple wall nodes are not corrected as it would be
 !--   extremely complicated and the log law would not be valid anyway in such
 !--   locations.
-      IF ( topography /= 'flat' )  THEN
+      IF (  TRIM(constant_flux_layer) == 'bottom' .AND. topography /= 'flat' )  THEN
 
-         IF ( .NOT. TRIM(constant_flux_layer) == 'none' .AND.                  &
-              ( var == 'v' .OR. var == 'w' )                  )  THEN
+         IF ( var == 'v' .OR. var == 'w' )  THEN
             DO  i = nxl, nxr
                DO  k = logc_kbounds(1,i), logc_kbounds(2,i)
 !
@@ -5603,7 +5601,7 @@ SUBROUTINE pmci_create_child_arrays( name, is, ie, js, je, nzc,n  )
          ENDIF
 !
 !--      Solid surface on both below and on left/right side of the node           
-         IF ( .NOT. TRIM(constant_flux_layer) == 'none' .AND. var == 'v' )  THEN
+         IF ( var == 'v' )  THEN
             DO  i = nxl, nxr
                k = logc_kbounds(1,i)
                IF ( ( logc(2,k,i) /= 0 )  .AND.  ( logc(1,k,i) /= 0 ) )  THEN

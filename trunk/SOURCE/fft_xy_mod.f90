@@ -292,10 +292,10 @@
        ALLOCATE( x_in_dev(0:nx+2), y_in_dev(0:ny+2), x_out_dev(0:(nx+1)/2),    &
                y_out_dev(0:(ny+1)/2) )
 
-       ierr = cufftPlan1d( plan_xf_dev, nx_cC, CUFFT_D2Z, batch)
-       ierr = cufftPlan1d( plan_xi_dev, nx_cC, CUFFT_Z2D, batch)
-       ierr = cufftPlan1d( plan_yf_dev, ny_cC, CUFFT_D2Z, batch)
-       ierr = cufftPlan1d( plan_yi_dev, ny_cC, CUFFT_Z2D, batch)
+       ierr = cufftPlan1d( plan_xf_dev, nx_cC, CUFFT_R2C, batch)
+       ierr = cufftPlan1d( plan_xi_dev, nx_cC, CUFFT_C2R, batch)
+       ierr = cufftPlan1d( plan_yf_dev, ny_cC, CUFFT_R2C, batch)
+       ierr = cufftPlan1d( plan_yi_dev, ny_cC, CUFFT_C2R, batch)
 #endif
     END SUBROUTINE fft_init
 
@@ -329,11 +329,12 @@
        INTEGER(iwp) ::  ishape(1)  !<
        INTEGER(iwp) ::  j          !<
        INTEGER(iwp) ::  k          !<
-
+       Integer(iwp) :: sizeArray
        LOGICAL ::  forward_fft !<
        #ifdef __GPU
        REAL(wp), DEVICE, ALLOCATABLE :: ar_2d_dev(:,:)
-       REAL(wp), DEVICE, ALLOCATABLE :: ar_dev(:,:,:)
+       REAL(wp), DEVICE, ALLOCATABLE, TARGET :: ar_dev(:,:,:)
+       REAL(wp), DEVICE, POINTER :: ar_ptr_d(:)
        #endif
        REAL(wp), DIMENSION(0:nx,nys_x:nyn_x), OPTIONAL   ::                    &
           ar_2d   !<
@@ -353,15 +354,18 @@
 
        if ( forward_fft )  THEN
 
-       ar_dev = ar
+               sizeArray = (nx+1)*(nyn_x-nys_x+1)*(nzt_x-nzb_x+1)*8
+       !ierr = cudaMemcpy(ar_dev,ar,sizeArray,cudaMemcpyHostToDevice)
+       ar_dev(0:nx,nys_x:nyn_x,nzb_x:nzt_x) = ar(0:nx,nys_x:nyn_x,nzb_x:nzt_x)
        if ( PRESENT( ar_2d ) ) then
           ar_2d_dev = ar_2d
           DO k=nzb_x, nzt_x
              DO j = nys_x, nyn_x
 
-                 x_in_dev(0:nx) = ar(0:nx,j,k)
-             !                 ierr = cudaMemcpy(x_in_dev,ar_dev(:,j,k),nx+1,cudaMemcpyDeviceToDevice)
-                 ierr = cufftExecD2Z( plan_xf_dev, x_in_dev, x_out_dev)
+              
+          !       x_in_dev(0:nx) = ar(0:nx,j,k)
+      !           ierr = cudaMemcpy(x_in_dev,ar_dev(:,j,k),sizeArray,cudaMemcpyDeviceToDevice)
+                 ierr = cufftExecR2C( plan_xf_dev, ar_dev(0:nx,j,k), x_out_dev)
 
           !       !$acc parallel
           !       !$acc loop
@@ -380,9 +384,11 @@
        ELSE
          DO k = nzb_x, nzt_x
             DO j = nys_x, nyn_x
-               x_in_dev(0:nx) = ar(0:nx,j,k)
-        !       ierr = cudaMemcpy(x_in_dev,ar_dev(:,j,k),nx+1,cudaMemcpyDeviceToDevice)
-               ierr = cufftExecD2Z( plan_xf_dev, x_in_dev, x_out_dev)
+
+            ar_ptr_d => ar_dev(:,j,k)
+        !       x_in_dev(0:nx) = ar(0:nx,j,k)
+            !   ierr = cudaMemcpy(x_in_dev,ar_dev(:,j,k),nx+1,cudaMemcpyDeviceToDevice)
+               ierr = cufftExecR2C( plan_xf_dev, ar_dev(:,j,k), x_out_dev)
 
                x_out = x_out_dev
 !!$acc parallel
@@ -417,7 +423,7 @@
                                                KIND=wp )
 
              !    !$acc end parallel
-                  ierr = cufftExecZ2D( plan_xi_dev, x_out_dev, x_in_dev )
+                  ierr = cufftExecC2R( plan_xi_dev, x_out_dev, x_in_dev )
                  ! ierr = cudaMemcpy(ar_dev(:,j,k),x_in_dev(0:nx),nx+1,cudaMemcpyDeviceToDevice)
                    ar(0:nx,j,k) = x_in_dev(0:nx)
               ENDDO
@@ -437,7 +443,7 @@
                                                KIND=wp )
 !
  !             !$acc end parallel
-                 ierr = cufftExecZ2D( plan_xi_dev, x_out_dev, x_in_dev )
+                 ierr = cufftExecC2R( plan_xi_dev, x_out_dev, x_in_dev )
   !               ierr = cudaMemcpy(ar_dev(:,j,k),x_in_dev(0:nx),nx+1,cudaMemcpyDeviceToDevice)
                  ar(0:nx,j,k) = x_in_dev(0:nx)
   ENDDO
@@ -654,7 +660,7 @@
              DO  i = nxl_y_l, nxr_y_l
 
                 y_in_dev(0:ny) = ar(0:ny,i,k)
-                ierr = cufftExecD2Z( plan_yf_dev, y_in_dev, y_out_dev)
+                ierr = cufftExecR2C( plan_yf_dev, y_in_dev, y_out_dev)
                 y_out = y_out_dev
 
                 DO  j = 0, (ny+1)/2
@@ -684,7 +690,7 @@
                                          KIND=wp )
 
                 y_out_dev = y_out
-                ierr = cufftExecZ2D( plan_yi_dev, y_out_dev, y_in_dev )
+                ierr = cufftExecC2R( plan_yi_dev, y_out_dev, y_in_dev )
                 ar(0:ny,i,k) = y_in_dev(0:ny)
 
              ENDDO

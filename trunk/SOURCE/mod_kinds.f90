@@ -66,7 +66,7 @@
 
 !
 !-- Set kinds to be used as defaults
-    INTEGER, PARAMETER ::   wp =  dp          !< default real kind
+    INTEGER, PARAMETER ::   wp =  sp          !< default real kind
     INTEGER, PARAMETER ::  iwp = isp          !< default integer kind
 
     SAVE

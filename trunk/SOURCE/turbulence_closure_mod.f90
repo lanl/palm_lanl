@@ -3241,8 +3241,9 @@ SUBROUTINE diffusion_e( var, var_reference )
     REAL(wp), DIMENSION(:,:,:), POINTER ::  var  !< temperature
 #endif
     REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  dissipation  !< TKE dissipation
-
-    !$acc kernels
+    
+    !$acc data copy(drho_air(nzb+1:nzt),dd2zu(nzb+1:nzt),ddzu(nzb+1:nzt+1),ddzw(nzb+1:nzt),dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),var(:,:,:),kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr),wall_flags_0(nzb+1:nzt,nys:nyn,nxl:nxr)) 
+    !$acc kernels default(present)
 
     !
     !-- Calculate the tendency terms
@@ -3319,6 +3320,8 @@ SUBROUTINE diffusion_e( var, var_reference )
     ENDDO
     
     !$acc end kernels
+
+    !$acc end data
 
  END SUBROUTINE diffusion_e
 
@@ -3701,6 +3704,7 @@ SUBROUTINE diffusion_e( var, var_reference )
 #else
     REAL(wp), DIMENSION(:,:,:), POINTER ::  var  !< temperature
 #endif
+
 
 !
 !-- Default thread number in case of one thread

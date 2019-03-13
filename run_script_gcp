@@ -9,8 +9,8 @@ scratch_path="${PWD}/build"
 
 # Build configuration
 ## - Single process
-build_config="pgi.gcp"
-#build_config="pgi.gcp_openacc"
+#build_config="pgi.gcp"
+build_config="pgi.gcp_openacc"
 ## - Multiprocess
 mpi_ranks=1
 

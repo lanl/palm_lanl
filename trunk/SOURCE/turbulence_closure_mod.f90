@@ -2041,13 +2041,16 @@
  SUBROUTINE tcm_prognostic
 
     USE arrays_3d,                                                             &
-        ONLY:  ddzu
+        ONLY:  ddzu, ddzw, drho_air, rho_air_zw
 
     USE control_parameters,                                                    &
         ONLY:  f, scalar_advec, tsc
 
+    USE grid_variables,                                                        &
+        ONLY:  ddx2, ddy2
+
     USE surface_mod,                                                           &
-        ONLY :  surf_def_h, surf_def_v, surf_lsm_h, surf_lsm_v, surf_usm_h,    &
+        ONLY :   bc_h, surf_def_h, surf_def_v, surf_lsm_h, surf_lsm_v, surf_usm_h,    &
                 surf_usm_v
 
     IMPLICIT NONE
@@ -2060,6 +2063,11 @@
     INTEGER(iwp) ::  surf_s  !< start index of surface elements at given i-j position
 
     REAL(wp)     ::  sbt     !< wheighting factor for sub-time step
+    REAL(wp)     ::  flag           !< flag to mask topography
+    REAL(wp)     ::  l              !< mixing length
+    REAL(wp)     ::  ll             !< adjusted l
+
+    REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  dissipation  !< TKE dissipation
 
     REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) :: advec  !< advection term of TKE tendency
     REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) :: produc !< production term of TKE tendency
@@ -2094,16 +2102,66 @@
 !
 !--    Save production term for prognostic equation of TKE dissipation rate
        IF ( rans_tke_e )  produc = tend - advec
-
-       CALL diffusion_e( prho, prho_reference )
+    
+    !$acc data copy(drho_air(nzb+1:nzt),dd2zu(nzb+1:nzt),ddzu(nzb+1:nzt+1),ddzw(nzb+1:nzt),dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),e_p(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),g,kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho_reference,rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr),tsc(3),te_m(nzb+1:nzt,nys:nyn,nxl:nxr),wall_flags_0(nzb+1:nzt,nys:nyn,nxl:nxr)) 
+    !$acc kernels default(present)
 !
-!--    Prognostic equation for TKE.
-!--    Eliminate negative TKE values, which can occur due to numerical
-!--    reasons in the course of the integration. In such cases the old TKE
-!--    value is reduced by 90%.
+    !-- Calculate the tendency terms
        DO  i = nxl, nxr
           DO  j = nys, nyn
              DO  k = nzb+1, nzt
+       !
+       !--      Predetermine flag to mask topography
+                flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
+   
+       !
+       !--      Calculate dissipation
+                dvar_dz = atmos_ocean_sign * (prho(k+1,j,i) - prho(k-1,j,i) ) * dd2zu(k)
+                IF ( dvar_dz > 0.0_wp ) THEN
+                   IF ( use_single_reference_value )  THEN
+                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                         / SQRT( g / prho_reference * dvar_dz ) + 1E-5_wp
+                   ELSE
+                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                         / SQRT( g / prho(k,j,i) * dvar_dz ) + 1E-5_wp
+                   ENDIF
+                ELSE
+                   l_stable = l_grid(k)
+                ENDIF
+            !
+            !-- Adjustment of the mixing length
+                IF ( wall_adjustment )  THEN
+                   l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
+                   ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
+                ELSE
+                   l  = MIN( l_grid(k), l_stable )
+                   ll = l_grid(k)
+                ENDIF
+                dissipation(k,j) = ( 0.19_wp + 0.74_wp * l / ll )              &
+                                   * e(k,j,i) * SQRT( e(k,j,i) ) / l
+                tend(k,j,i) = tend(k,j,i) + (                                     &
+                                              (                                   &
+                          ( km(k,j,i)+km(k,j,i+1) ) * ( e(k,j,i+1)-e(k,j,i) )     &
+                        - ( km(k,j,i)+km(k,j,i-1) ) * ( e(k,j,i)-e(k,j,i-1) )     &
+                                              ) * ddx2  * flag                    &
+                                            + (                                   &
+                          ( km(k,j,i)+km(k,j+1,i) ) * ( e(k,j+1,i)-e(k,j,i) )     &
+                        - ( km(k,j,i)+km(k,j-1,i) ) * ( e(k,j,i)-e(k,j-1,i) )     &
+                                              ) * ddy2  * flag                    &
+                                            + (                                   &
+               ( km(k,j,i)+km(k+1,j,i) ) * ( e(k+1,j,i)-e(k,j,i) ) * ddzu(k+1)    &
+                                                             * rho_air_zw(k)      &
+             - ( km(k,j,i)+km(k-1,j,i) ) * ( e(k,j,i)-e(k-1,j,i) ) * ddzu(k)      &
+                                                             * rho_air_zw(k-1)    &
+                                              ) * ddzw(k) * drho_air(k)           &
+                                            ) * flag * dsig_e                     &
+                             - dissipation(k,j) * flag
+
+         !
+         !--    Prognostic equation for TKE.
+         !--    Eliminate negative TKE values, which can occur due to numerical
+         !--    reasons in the course of the integration. In such cases the old TKE
+         !--    value is reduced by 90%.
                 e_p(k,j,i) = e(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +        &
                                                  tsc(3) * te_m(k,j,i) )        &
                                         )                                      &
@@ -2111,9 +2169,15 @@
                                              BTEST( wall_flags_0(k,j,i), 0 )   &
                                           )
                 IF ( e_p(k,j,i) < 0.0_wp )  e_p(k,j,i) = 0.1_wp * e(k,j,i)
+             
              ENDDO
           ENDDO
+   
        ENDDO
+    
+    !$acc end kernels
+
+    !$acc end data
 
 !
 !--    Use special boundary condition in case of TKE-e closure

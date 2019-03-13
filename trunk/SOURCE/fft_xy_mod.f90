@@ -212,7 +212,7 @@
 #ifdef __GPU
     INTEGER :: nx_cC, ny_cC
 
-    INTEGER, PARAMETER, SAVE :: batch = 64
+    INTEGER, PARAMETER, SAVE :: batch = 1
 
     COMPLEX, DEVICE, DIMENSION(:), ALLOCATABLE, SAVE ::       &
             x_out_dev, y_out_dev
@@ -289,7 +289,7 @@
 #if defined ( __GPU )
        nx_cC = nx+1
        ny_cC = ny+1
-       ALLOCATE( x_in_dev(0:nx+2), y_in_dev(0:ny+2), x_out_dev(0:(nx+1)/2),    &
+       ALLOCATE( x_in_dev(0:nx), y_in_dev(0:ny), x_out_dev(0:(nx+1)/2),    &
                y_out_dev(0:(ny+1)/2) )
 
        ierr = cufftPlan1d( plan_xf_dev, nx_cC, CUFFT_R2C, batch)
@@ -333,7 +333,6 @@
        LOGICAL ::  forward_fft !<
        #ifdef __GPU
        REAL(wp), DEVICE, ALLOCATABLE, TARGET :: ar_dev(:,:,:)
-       REAL(wp), DEVICE, POINTER :: ar_ptr_d(:)
        #endif
        REAL(wp), DIMENSION(0:nx,nys_x:nyn_x,nzb_x:nzt_x) ::                    &
           ar      !<
@@ -355,7 +354,6 @@
         DO k = nzb_x, nzt_x
             DO j = nys_x, nyn_x
 
-            ar_ptr_d => ar_dev(:,j,k)
         !       x_in_dev(0:nx) = ar(0:nx,j,k)
             !   ierr = cudaMemcpy(x_in_dev,ar_dev(:,j,k),nx+1,cudaMemcpyDeviceToDevice)
                ierr = cufftExecR2C( plan_xf_dev, ar_dev(:,j,k), x_out_dev)

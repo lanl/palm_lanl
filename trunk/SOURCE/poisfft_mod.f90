@@ -166,6 +166,12 @@
     USE tridia_solver,                                                         &
         ONLY:  tridia_1dd, tridia_init, tridia_substi, tridia_substi_overlap
 
+#ifdef __GPU
+    USE cudafor
+#endif
+
+#define MY_DEBUG print *,"DEBUG",__LINE__,__FILE__
+
     IMPLICIT NONE
 
     PRIVATE
@@ -252,8 +258,14 @@
        INTEGER(iwp), DIMENSION(4) ::  isave  !<
 
        REAL(wp), DIMENSION(1:nz,nys:nyn,nxl:nxr) ::  ar      !<
+       REAL(wp), DEVICE, ALLOCATABLE ::      &
+                ar_inv_d(:,:,:), ar_x_d(:,:,:),         &
+                ar_inv_x_d(:,:,:), ar_d(:,:,:),         &
+                ar_y_d(:,:,:), ar_inv_y_d(:,:,:),       &
+                ar_z_d(:,:,:)
+
        REAL(wp), DIMENSION(nys:nyn,nxl:nxr,1:nz) ::  ar_inv  !<
-       REAL(wp), DIMENSION(0:nx, nys_x:nyn_x,nzb_x:nzt_x) :: ar_x
+       REAL(wp), DIMENSION(0:nx,nys_x:nyn_x,nzb_x:nzt_x) :: ar_x
        REAL(wp), DIMENSION(nys_x:nyn_x,nzb_x:nzt_x,0:nx) :: ar_inv_x
        REAL(wp), DIMENSION(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) :: ar_y
        REAL(wp), DIMENSION(nxl_y:nxr_y,nzb_y:nzt_y,0:ny) :: ar_inv_y
@@ -269,6 +281,14 @@
 
        IF ( .NOT. poisfft_initialized )  CALL poisfft_init
 
+#ifdef __GPU
+    allocate(ar_d(1:nz,nys:nyn,nxl:nxr), ar_inv_d(nys:nyn,nxl:nxr,1:nz))
+    allocate(ar_inv_x_d(nys_x:nyn_x,nzb_x:nzt_x,0:nx))
+    allocate(ar_y_d(0:ny,nxl_y:nxr_y,nzb_y:nzt_y))
+    allocate(ar_inv_y_d(nxl_y:nxr_y,nzb_y:nzt_y,0:ny))
+    allocate(ar_z_d(nxl_z:nxr_z,nys_z:nyn_z,1:nz))
+    allocate(ar_x_d(0:nx,nys_x:nyn_x,nzb_x:nzt_x))
+#endif
 !
 !--    Two-dimensional Fourier Transformation in x- and y-direction.
        IF ( pdims(2) == 1  .AND.  pdims(1) > 1 )  THEN
@@ -304,17 +324,11 @@
        ELSE
 
           call cpu_log(log_point_s(5), 'fft routines', 'start')
-!!$acc enter data copyin(ar(1:nz,nys:nyn,nxl:nxr),ar_inv(nys:nyn,nxl:nxr,1:nz),ar_x(0:nx,nys_x:nyn_x,nzb_x:nzt_x))
-!$acc parallel copy(ar(1:nz,nys:nyn,nxl:nxr), ar_inv(nys:nyn,nxl:nxr,1:nz),ar_x(0:nx, nys_x:nyn_x,nzb_x:nzt_x))
+
+    !      ar_d = ar
+!!$acc parallel 
 !
-
-
-!--       2d-domain-decomposition or no decomposition (1 PE run)
-!--       Transposition z --> x
-!         CALL resort_for_zx( ar, ar_inv )
-!         CALL transpose_zx( ar_inv, ar )
-
-!$acc loop collapse(3)
+!!$acc loop collapse(3)
      DO  k = 1,nz
          DO  i = nxl, nxr
              DO  j = nys, nyn
@@ -323,7 +337,7 @@
          ENDDO
      ENDDO
 
-     !$acc loop collapse(3)
+!     !$acc loop collapse(3)
           DO  k = 1, nz
              DO  i = nxl, nxr
                 DO  j = nys, nyn
@@ -331,10 +345,9 @@
                 ENDDO
              ENDDO
           ENDDO
-!!$acc exit data copyout(ar,ar_inv,ar_x) 
-!$acc end parallel
+!!$acc end parallel
 
-
+!ar_x = ar_x_d
           CALL fft_x( ar_x, 'forward' )
 !--       Transposition x --> y
 
@@ -461,6 +474,7 @@ DO  k = 1, nz
 !!!$acc end kernels
 ENDIF
        CALL cpu_log( log_point_s(3), 'poisfft', 'stop' )
+   deallocate(ar_inv_d, ar_x_d, ar_inv_x_d,ar_d,ar_y_d, ar_inv_y_d, ar_z_d)
 
     END SUBROUTINE poisfft
 

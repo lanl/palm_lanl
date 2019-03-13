@@ -3154,6 +3154,7 @@
 
 !
 !--    Compute the fluxes for the whole left boundary of the processor domain.
+!$acc kernels
        i = nxl
        DO  j = nys, nyn
 
@@ -3195,7 +3196,12 @@
                                                         )
 
           ENDDO
+      ENDDO
+!$acc end kernels
 
+      
+!$acc kernels
+     DO j= nys, nyn
           DO  k = nzb_max+1, nzt
 
              u_comp                 = u(k,j,i) - u_gtrans
@@ -3212,9 +3218,10 @@
                                                        ) * adv_sca_5
 
           ENDDO
+     ENDDO
+!$acc end kernels
 
-       ENDDO
-
+!$acc kernels
        DO  i = nxl, nxr
 
           j = nys
@@ -3256,7 +3263,11 @@
                                                      )
 
           ENDDO
-!
+     ENDDO
+!$acc end kernels
+
+!$acc kernels
+      DO i=nxl, nxr
 !--       Above to the top of the highest topography. No degradation necessary.
           DO  k = nzb_max+1, nzt
 
@@ -3273,6 +3284,11 @@
                                                       ) * adv_sca_5
 
           ENDDO
+      ENDDO
+!$acc end kernels
+
+!$acc kernels
+     DO i=nxl,nxr
 
           DO  j = nys, nyn
 
@@ -3436,7 +3452,14 @@
                 diss_d                 = diss_t(k)
 
              ENDDO
+       ENDDO
+ENDDO
+!$acc end kernels
 
+!$acc kernels
+
+    DO i=nxl, nxr
+       DO j=nys, nyn
              DO  k = nzb_max+1, nzt
 
                 u_comp    = u(k,j,i+1) - u_gtrans
@@ -3526,6 +3549,13 @@
                 diss_d                 = diss_t(k)
 
              ENDDO
+      ENDDO
+ENDDO
+!$acc end kernels
+
+!$acc kernels
+     DO i=nxl, nxr
+         DO j=nys, nyn
 !
 !--          Evaluation of statistics. 
              SELECT CASE ( sk_char )
@@ -3556,7 +3586,7 @@
 
          ENDDO
       ENDDO
-
+ !$acc end kernels
     END SUBROUTINE advec_s_ws
 
 

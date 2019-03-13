@@ -19,36 +19,36 @@
 !
 ! Current revisions:
 ! -----------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: poisfft_mod.f90 2718 2018-01-02 08:49:38Z maronga $
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 !
 ! 2300 2017-06-29 13:31:14Z raasch
 ! settings depending on host variable removed or replaced by loop_optimization
-! 
+!
 ! 2119 2017-01-17 16:51:50Z raasch
 !
 ! 2118 2017-01-17 16:38:49Z raasch
 ! OpenACC directives and related code removed
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1850 2016-04-08 13:29:27Z maronga
 ! Module renamed
-! 
-! 
+!
+!
 ! 1804 2016-04-05 16:30:18Z maronga
 ! Removed code for parameter file check (__check)
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
+! Code annotations made doxygen readable
 !
 ! 1482 2014-10-18 12:34:45Z raasch
 ! use 2d-decomposition, if accelerator boards are used
@@ -151,7 +151,7 @@
 !> real    ar   contains the solution for perturbation pressure p
 !------------------------------------------------------------------------------!
  MODULE poisfft_mod
- 
+
 
     USE fft_xy,                                                                &
         ONLY:  fft_init, fft_y, fft_y_1d, fft_y_m, fft_x, fft_x_1d, fft_x_m
@@ -304,9 +304,10 @@
        ELSEIF ( .NOT. transpose_compute_overlap )  THEN
 
           call cpu_log(log_point_s(5), 'fft routines', 'start')
-!!$acc enter data copyin(ar(1:nz,nys:nyn,nxl:nxr),ar_inv(nys:nyn,nxl:nxr,1:nz),ar_x(0:nx,nys_x:nyn_x,nzb_x:nzt_x))
-!$acc parallel copy(ar(1:nz,nys:nyn,nxl:nxr), ar_inv(nys:nyn,nxl:nxr,1:nz),ar_x(0:nx, nys_x:nyn_x,nzb_x:nzt_x))
-!
+!$acc enter data copyin(ar(1:nz,nys:nyn,nxl:nxr)) &
+!$acc create(ar_inv(nys:nyn,nxl:nxr,1:nz),ar_x(0:nx,nys_x:nyn_x,nzb_x:nzt_x)) &
+!$acc create(ar_inv_x(nys_x:nyn_x,nzb_x:nzt_x,0:nx),ar_y(0:ny,nxl_y:nxr_y,nzb_y:nzt_y)) &
+!$acc create(ar_inv_y(nxl_y:nxr_y,nzb_y:nzt_y,0:ny),ar_z(nxl_z:nxr_z,nys_z:nyn_z,1:nz))
 
 
 !--       2d-domain-decomposition or no decomposition (1 PE run)
@@ -314,6 +315,7 @@
 !         CALL resort_for_zx( ar, ar_inv )
 !         CALL transpose_zx( ar_inv, ar )
 
+!$acc parallel present(ar, ar_inv, ar_x)
 !$acc loop collapse(3)
      DO  k = 1,nz
          DO  i = nxl, nxr
@@ -323,7 +325,7 @@
          ENDDO
      ENDDO
 
-     !$acc loop collapse(3)
+!$acc loop collapse(3)
           DO  k = 1, nz
              DO  i = nxl, nxr
                 DO  j = nys, nyn
@@ -331,13 +333,16 @@
                 ENDDO
              ENDDO
           ENDDO
-!!$acc exit data copyout(ar,ar_inv,ar_x) 
 !$acc end parallel
 
-
+!$acc host_data use_device(ar_x)
           CALL fft_x( ar_x, 'forward' )
+!$acc end host_data
+
 !--       Transposition x --> y
 
+!$acc parallel present(ar_x, ar_inv_x, ar_y)
+!$acc loop collapse(3)
      DO  i = 0, nx
          DO  k = nzb_x, nzt_x
              DO  j = nys_x, nyn_x
@@ -346,6 +351,7 @@
          ENDDO
      ENDDO
 
+!$acc loop collapse(3)
        DO  k = nzb_y, nzt_y
           DO  i = nxl_y, nxr_y
              DO  j = 0, ny
@@ -353,8 +359,11 @@
              ENDDO
           ENDDO
        ENDDO
+!$acc end parallel
 !          CALL resort_for_xy( ar_x, ar_inv )
 !          CALL transpose_xy( ar_inv, ar )
+
+!$acc exit data copyout(ar_y)
 
           CALL fft_y( ar_y, 'forward', ar_tr = ar_y,                &
                       nxl_y_bound = nxl_y, nxr_y_bound = nxr_y, &
@@ -433,10 +442,16 @@
 !          CALL transpose_yx( ar, ar_inv )
 !          CALL resort_for_yx( ar_inv, ar )
 
+!$acc enter data copyin(ar_x(0:nx,nys_x:nyn_x,nzb_x:nzt_x))
+
+!$acc host_data use_device(ar_x)
           CALL fft_x( ar_x, 'backward' )
+!$acc end host_data
 !
 !--       Transposition x --> z
 
+!$acc parallel present(ar_x, ar_inv, ar)
+!$acc loop collapse(3)
 DO  i = nxl, nxr
           DO  j = nys, nyn
              DO  k = 1, nz
@@ -445,6 +460,7 @@ DO  i = nxl, nxr
           ENDDO
        ENDDO
 
+!$acc loop collapse(3)
 DO  k = 1, nz
          DO  i = nxl, nxr
              DO  j = nys, nyn
@@ -452,13 +468,13 @@ DO  k = 1, nz
              ENDDO
          ENDDO
      ENDDO
+!$acc end parallel
 
 
 !          CALL transpose_xz( ar, ar_inv )
 !          CALL resort_for_xz( ar_inv, ar )
 
-!!!$acc exit data copyout(ar) 
-!!!$acc end kernels
+!$acc exit data copyout(ar)
 
        ELSE
 !
@@ -512,7 +528,7 @@ DO  k = 1, nz
              ENDIF
 
              n = isave(2) + kk - 1
-             CALL fft_x( ar1(:,:,:), 'forward',  ar_2d = f_out_z(:,:,n))
+             ! CALL fft_x( ar1(:,:,:), 'forward',  ar_2d = f_out_z(:,:,n))
              CALL cpu_log( log_point_s(4), 'fft_x', 'pause' )
 
           ENDDO
@@ -755,7 +771,7 @@ DO  k = 1, nz
              CALL cpu_log( log_point_s(4), 'fft_x', 'continue', cpu_log_nowait )
 
              n = isave(2) + kk - 1
-             CALL fft_x( ar1(:,:,:), 'backward', f_out_z(:,:,n))
+             ! CALL fft_x( ar1(:,:,:), 'backward', f_out_z(:,:,n))
 
              IF ( kk == nblk )  THEN
                 CALL cpu_log( log_point_s(4), 'fft_x', 'stop' )

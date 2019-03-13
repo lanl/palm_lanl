@@ -315,7 +315,7 @@
 !> system-specific routines, if they are available
 !------------------------------------------------------------------------------!
 
-    SUBROUTINE fft_x( ar, direction, ar_2d )
+    SUBROUTINE fft_x( ar, direction )
 
 
        IMPLICIT NONE
@@ -332,12 +332,9 @@
        Integer(iwp) :: sizeArray
        LOGICAL ::  forward_fft !<
        #ifdef __GPU
-       REAL(wp), DEVICE, ALLOCATABLE :: ar_2d_dev(:,:)
        REAL(wp), DEVICE, ALLOCATABLE, TARGET :: ar_dev(:,:,:)
        REAL(wp), DEVICE, POINTER :: ar_ptr_d(:)
        #endif
-       REAL(wp), DIMENSION(0:nx,nys_x:nyn_x), OPTIONAL   ::                    &
-          ar_2d   !<
        REAL(wp), DIMENSION(0:nx,nys_x:nyn_x,nzb_x:nzt_x) ::                    &
           ar      !<
 
@@ -349,40 +346,13 @@
 
 #if defined( __GPU)
    allocate(ar_dev(0:nx,nys_x:nyn_x,nzb_x:nzt_x))
-       if( PRESENT(ar_2d) ) allocate(ar_2d_dev(0:nx,nys_x:nyn_x))
-
 
        if ( forward_fft )  THEN
 
                sizeArray = (nx+1)*(nyn_x-nys_x+1)*(nzt_x-nzb_x+1)*8
        !ierr = cudaMemcpy(ar_dev,ar,sizeArray,cudaMemcpyHostToDevice)
        ar_dev(0:nx,nys_x:nyn_x,nzb_x:nzt_x) = ar(0:nx,nys_x:nyn_x,nzb_x:nzt_x)
-       if ( PRESENT( ar_2d ) ) then
-          ar_2d_dev = ar_2d
-          DO k=nzb_x, nzt_x
-             DO j = nys_x, nyn_x
-
-              
-          !       x_in_dev(0:nx) = ar(0:nx,j,k)
-      !           ierr = cudaMemcpy(x_in_dev,ar_dev(:,j,k),sizeArray,cudaMemcpyDeviceToDevice)
-                 ierr = cufftExecR2C( plan_xf_dev, ar_dev(0:nx,j,k), x_out_dev)
-
-          !       !$acc parallel
-          !       !$acc loop
-                 do i = 0, (nx+1)/2
-                    ar_2d(i,j) = REAL( x_out_dev(i), KIND=wp) / ( nx+1 )
-                 ENDDO
-             !    !$acc loop
-                 DO i=1, (nx+1)/2 - 1
-                    ar_2d(nx+1-i,j) = AIMAG( x_out_dev(i) ) / (nx + 1)
-                 ENDDO
-              !   !$acc end parallel
-             ENDDO
-          ENDDO
-       !   ar_2d = ar_2d_dev
-
-       ELSE
-         DO k = nzb_x, nzt_x
+        DO k = nzb_x, nzt_x
             DO j = nys_x, nyn_x
 
             ar_ptr_d => ar_dev(:,j,k)
@@ -404,32 +374,10 @@
            ENDDO
         ENDDO
       !  ar = ar_dev
-     ENDIF
 
      ELSE
 
-        if ( PRESENT( ar_2d) ) THEN
-           DO  k = nzb_x, nzt_x
-              DO  j = nys_x, nyn_x
-
-       !       !$acc parallel
-                  x_out_dev(0) = CMPLX( ar_2d(0,j), 0.0_wp, KIND=wp )
-        !        !$acc loop
-                  DO  i = 1, (nx+1)/2 - 1
-                      x_out_dev(i) = CMPLX( ar_2d(i,j), ar_2d(nx+1-i,j),        &
-                                         KIND=wp )
-                  ENDDO
-                  x_out_dev((nx+1)/2) = CMPLX( ar_2d((nx+1)/2,j), 0.0_wp,      &
-                                               KIND=wp )
-
-             !    !$acc end parallel
-                  ierr = cufftExecC2R( plan_xi_dev, x_out_dev, x_in_dev )
-                 ! ierr = cudaMemcpy(ar_dev(:,j,k),x_in_dev(0:nx),nx+1,cudaMemcpyDeviceToDevice)
-                   ar(0:nx,j,k) = x_in_dev(0:nx)
-              ENDDO
-           ENDDO
-       ELSE
-          DO  k = nzb_x, nzt_x
+         DO  k = nzb_x, nzt_x
              DO  j = nys_x, nyn_x
 
          !    !$acc parallel
@@ -448,10 +396,8 @@
                  ar(0:nx,j,k) = x_in_dev(0:nx)
   ENDDO
           ENDDO
-       ENDIF
     ENDIF
     deallocate(ar_dev)
-    if( ALLOCATED(ar_2d_dev) ) deallocate(ar_2d_dev)
 
 #else
           IF ( forward_fft )  THEN
@@ -464,25 +410,13 @@
                    x_in(0:nx) = ar(0:nx,j,k)
                    CALL FFTW_EXECUTE_DFT_R2C( plan_xf, x_in, x_out )
 
-                   IF ( PRESENT( ar_2d ) )  THEN
-
-                      DO  i = 0, (nx+1)/2
-                         ar_2d(i,j) = REAL( x_out(i), KIND=wp ) / ( nx+1 )
-                      ENDDO
-                      DO  i = 1, (nx+1)/2 - 1
-                         ar_2d(nx+1-i,j) = AIMAG( x_out(i) ) / ( nx+1 )
-                      ENDDO
-
-                   ELSE
-
-                      DO  i = 0, (nx+1)/2
+                     DO  i = 0, (nx+1)/2
                          ar(i,j,k) = REAL( x_out(i), KIND=wp ) / ( nx+1 )
                       ENDDO
                       DO  i = 1, (nx+1)/2 - 1
                          ar(nx+1-i,j,k) = AIMAG( x_out(i) ) / ( nx+1 )
                       ENDDO
 
-                   ENDIF
 
                 ENDDO
              ENDDO
@@ -494,18 +428,6 @@
              DO  k = nzb_x, nzt_x
                 DO  j = nys_x, nyn_x
 
-                   IF ( PRESENT( ar_2d ) )  THEN
-
-                      x_out(0) = CMPLX( ar_2d(0,j), 0.0_wp, KIND=wp )
-                      DO  i = 1, (nx+1)/2 - 1
-                         x_out(i) = CMPLX( ar_2d(i,j), ar_2d(nx+1-i,j),        &
-                                           KIND=wp )
-                      ENDDO
-                      x_out((nx+1)/2) = CMPLX( ar_2d((nx+1)/2,j), 0.0_wp,      &
-                                               KIND=wp )
-
-                   ELSE
-
                       x_out(0) = CMPLX( ar(0,j,k), 0.0_wp, KIND=wp )
                       DO  i = 1, (nx+1)/2 - 1
                          x_out(i) = CMPLX( ar(i,j,k), ar(nx+1-i,j,k), KIND=wp )
@@ -513,7 +435,6 @@
                       x_out((nx+1)/2) = CMPLX( ar((nx+1)/2,j,k), 0.0_wp,       &
                                                KIND=wp )
 
-                   ENDIF
 
                    CALL FFTW_EXECUTE_DFT_C2R( plan_xi, x_out, x_in)
                    ar(0:nx,j,k) = x_in(0:nx)

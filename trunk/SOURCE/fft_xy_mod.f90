@@ -510,8 +510,7 @@
 !>   transformation is carried out for a 2D-plane only.
 !------------------------------------------------------------------------------!
 
-    SUBROUTINE fft_y( ar, direction, ar_tr, nxl_y_bound, nxr_y_bound, nxl_y_l, &
-                      nxr_y_l )
+    SUBROUTINE fft_y( ar, direction )
 
 
        IMPLICIT NONE
@@ -521,24 +520,17 @@
        INTEGER(iwp) ::  ierr
        INTEGER(iwp) ::  i            !<
        INTEGER(iwp) ::  j            !<
-       INTEGER(iwp) ::  jshape(1)    !<
        INTEGER(iwp) ::  k            !<
-       INTEGER(iwp) ::  nxl_y_bound  !<
-       INTEGER(iwp) ::  nxl_y_l      !<
-       INTEGER(iwp) ::  nxr_y_bound  !<
-       INTEGER(iwp) ::  nxr_y_l      !<
 
        LOGICAL ::  forward_fft  !<
 
-       REAL(wp), DEVICE, ALLOCATABLE :: ar_dev(:,:,:)
-       REAL(wp), DEVICE, ALLOCATABLE :: ar_tr_dev(:,:,:)
 
-       COMPLEX(wp), DIMENSION(:), ALLOCATABLE ::  cwork  !<
-       REAL(wp), DIMENSION(0:ny,nxl_y_l:nxr_y_l,nzb_y:nzt_y)         ::        &
-          ar     !<
-       REAL(wp), DIMENSION(0:ny,nxl_y_bound:nxr_y_bound,nzb_y:nzt_y) ::        &
-          ar_tr  !<
-
+! #if defined( __GPU)
+       ! REAL(wp), DEVICE, DIMENSION(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) :: ar
+! #else
+       REAL(wp), DIMENSION(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) ::  ar
+       REAL(wp), DEVICE, DIMENSION(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) :: ar_dev
+! #endif
 
        IF ( direction == 'forward' )  THEN
           forward_fft = .TRUE.
@@ -547,26 +539,23 @@
        ENDIF
 
 #if defined( __GPU )
-       allocate(ar_dev(0:ny,nxl_y_l:nxr_y_l,nzb_y:nzt_y))
-       allocate(ar_tr_dev(0:ny,nxl_y_bound:nxr_y_bound,nzb_y:nzt_y))
        ar_dev = ar
-       ar_tr_dev = ar_tr
        IF ( forward_fft )  THEN
 
           !$OMP PARALLEL PRIVATE ( work, i, j, k )
           !$OMP DO
           DO  k = nzb_y, nzt_y
-             DO  i = nxl_y_l, nxr_y_l
+             DO  i = nxl_y, nxr_y
 
                 y_in_dev(0:ny) = ar(0:ny,i,k)
                 ierr = cufftExecR2C( plan_yf_dev, y_in_dev, y_out_dev)
                 y_out = y_out_dev
 
                 DO  j = 0, (ny+1)/2
-                   ar_tr(j,i,k) = REAL( y_out(j), KIND=wp ) / (ny+1)
+                   ar(j,i,k) = REAL( y_out(j), KIND=wp ) / (ny+1)
                 ENDDO
                 DO  j = 1, (ny+1)/2 - 1
-                   ar_tr(ny+1-j,i,k) = AIMAG( y_out(j) ) / (ny+1)
+                   ar(ny+1-j,i,k) = AIMAG( y_out(j) ) / (ny+1)
                 ENDDO
 
              ENDDO
@@ -578,14 +567,14 @@
           !$OMP PARALLEL PRIVATE ( work, i, j, k )
           !$OMP DO
           DO  k = nzb_y, nzt_y
-             DO  i = nxl_y_l, nxr_y_l
+             DO  i = nxl_y, nxr_y
 
-                y_out(0) = CMPLX( ar_tr(0,i,k), 0.0_wp, KIND=wp )
+                y_out(0) = CMPLX( ar(0,i,k), 0.0_wp, KIND=wp )
                 DO  j = 1, (ny+1)/2 - 1
-                   y_out(j) = CMPLX( ar_tr(j,i,k), ar_tr(ny+1-j,i,k),       &
+                   y_out(j) = CMPLX( ar(j,i,k), ar(ny+1-j,i,k),       &
                                      KIND=wp )
                 ENDDO
-                y_out((ny+1)/2) = CMPLX( ar_tr((ny+1)/2,i,k), 0.0_wp,       &
+                y_out((ny+1)/2) = CMPLX( ar((ny+1)/2,i,k), 0.0_wp,       &
                                          KIND=wp )
 
                 y_out_dev = y_out
@@ -598,8 +587,6 @@
 
        ENDIF
 
-       deallocate(ar_dev, ar_tr_dev)
-
 #else
 
           IF ( forward_fft )  THEN
@@ -607,16 +594,16 @@
              !$OMP PARALLEL PRIVATE ( work, i, j, k )
              !$OMP DO
              DO  k = nzb_y, nzt_y
-                DO  i = nxl_y_l, nxr_y_l
+                DO  i = nxl_y, nxr_y
 
                    y_in(0:ny) = ar(0:ny,i,k)
                    CALL FFTW_EXECUTE_DFT_R2C( plan_yf, y_in, y_out )
 
                    DO  j = 0, (ny+1)/2
-                      ar_tr(j,i,k) = REAL( y_out(j), KIND=wp ) / (ny+1)
+                      ar(j,i,k) = REAL( y_out(j), KIND=wp ) / (ny+1)
                    ENDDO
                    DO  j = 1, (ny+1)/2 - 1
-                      ar_tr(ny+1-j,i,k) = AIMAG( y_out(j) ) / (ny+1)
+                      ar(ny+1-j,i,k) = AIMAG( y_out(j) ) / (ny+1)
                    ENDDO
 
                 ENDDO
@@ -628,14 +615,14 @@
              !$OMP PARALLEL PRIVATE ( work, i, j, k )
              !$OMP DO
              DO  k = nzb_y, nzt_y
-                DO  i = nxl_y_l, nxr_y_l
+                DO  i = nxl_y, nxr_y
 
-                   y_out(0) = CMPLX( ar_tr(0,i,k), 0.0_wp, KIND=wp )
+                   y_out(0) = CMPLX( ar(0,i,k), 0.0_wp, KIND=wp )
                    DO  j = 1, (ny+1)/2 - 1
-                      y_out(j) = CMPLX( ar_tr(j,i,k), ar_tr(ny+1-j,i,k),       &
+                      y_out(j) = CMPLX( ar(j,i,k), ar(ny+1-j,i,k),       &
                                         KIND=wp )
                    ENDDO
-                   y_out((ny+1)/2) = CMPLX( ar_tr((ny+1)/2,i,k), 0.0_wp,       &
+                   y_out((ny+1)/2) = CMPLX( ar((ny+1)/2,i,k), 0.0_wp,       &
                                             KIND=wp )
 
                    CALL FFTW_EXECUTE_DFT_C2R( plan_yi, y_out, y_in )

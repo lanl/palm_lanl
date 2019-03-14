@@ -16,8 +16,11 @@ export PATH="$repo_path/trunk/SCRIPTS:$PATH"
 module purge
 
 module load pgi/18.10
-module load openmpi/3.1.2/pgi/18.10
-module load hdf5/1.10.3/parallel/openmpi/3.1.2/pgi/18.10
-module load netcdf/4.6.1/parallel/openmpi/3.1.2/pgi/18.10
+module load hdf5/1.10.3/serial/pgi/18.10
+module load netcdf/4.6.1/serial/pgi/18.10
+
+#module load openmpi/3.1.2/pgi/18.10
+#module load hdf5/1.10.3/parallel/openmpi/3.1.2/pgi/18.10
+#module load netcdf/4.6.1/parallel/openmpi/3.1.2/pgi/18.10
 
 palm_simple_build -b $build_config -w $build_path $build_flags -s $script_path

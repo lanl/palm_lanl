@@ -264,11 +264,8 @@
                 ar_y_d(:,:,:), ar_inv_y_d(:,:,:),       &
                 ar_z_d(:,:,:)
 
-       REAL(wp), DIMENSION(nys:nyn,nxl:nxr,1:nz) ::  ar_inv  !<
        REAL(wp), DIMENSION(0:nx,nys_x:nyn_x,nzb_x:nzt_x) :: ar_x
-       REAL(wp), DIMENSION(nys_x:nyn_x,nzb_x:nzt_x,0:nx) :: ar_inv_x
        REAL(wp), DIMENSION(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) :: ar_y
-       REAL(wp), DIMENSION(nxl_y:nxr_y,nzb_y:nzt_y,0:ny) :: ar_inv_y
        REAL(wp), DIMENSION(nxl_z:nxr_z,nys_z:nyn_z,1:nz) :: ar_z
 
        REAL(wp), DIMENSION(:,:,:),   ALLOCATABLE ::  ar1      !<
@@ -282,10 +279,8 @@
        IF ( .NOT. poisfft_initialized )  CALL poisfft_init
 
 #ifdef __GPU
-    allocate(ar_d(1:nz,nys:nyn,nxl:nxr), ar_inv_d(nys:nyn,nxl:nxr,1:nz))
-    allocate(ar_inv_x_d(nys_x:nyn_x,nzb_x:nzt_x,0:nx))
+    allocate(ar_d(1:nz,nys:nyn,nxl:nxr))
     allocate(ar_y_d(0:ny,nxl_y:nxr_y,nzb_y:nzt_y))
-    allocate(ar_inv_y_d(nxl_y:nxr_y,nzb_y:nzt_y,0:ny))
     allocate(ar_z_d(nxl_z:nxr_z,nys_z:nyn_z,1:nz))
     allocate(ar_x_d(0:nx,nys_x:nyn_x,nzb_x:nzt_x))
 #endif
@@ -325,154 +320,123 @@
 
           call cpu_log(log_point_s(5), 'fft routines', 'start')
 
-    !      ar_d = ar
-!!$acc parallel 
-!
-!!$acc loop collapse(3)
+          ar_d = ar
+!$acc parallel 
+
+!$acc loop collapse(3)
      DO  k = 1,nz
          DO  i = nxl, nxr
              DO  j = nys, nyn
-                 ar_inv(j,i,k) = ar(k,j,i)
+                 ar_x_d(i,j,k) = ar_d(k,j,i)
              ENDDO
          ENDDO
      ENDDO
 
-!     !$acc loop collapse(3)
-          DO  k = 1, nz
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   ar_x(i,j,k) = ar_inv(j,i,k)
-                ENDDO
-             ENDDO
-          ENDDO
-!!$acc end parallel
+!$acc end parallel
 
-!ar_x = ar_x_d
+ar_x = ar_x_d
           CALL fft_x( ar_x, 'forward' )
 !--       Transposition x --> y
+ar_x_d = ar_x
+!$acc parallel
 
+!$acc loop collapse(3)
      DO  i = 0, nx
          DO  k = nzb_x, nzt_x
              DO  j = nys_x, nyn_x
-                 ar_inv_x(j,k,i) = ar_x(i,j,k)
+                 ar_y_d(j,i,k) = ar_x_d(i,j,k)
              ENDDO
          ENDDO
      ENDDO
 
-       DO  k = nzb_y, nzt_y
-          DO  i = nxl_y, nxr_y
-             DO  j = 0, ny
-                ar_y(j,i,k) = ar_inv_x(j,k,i)
-             ENDDO
-          ENDDO
-       ENDDO
-!          CALL resort_for_xy( ar_x, ar_inv )
-!          CALL transpose_xy( ar_inv, ar )
+!$acc end parallel
 
+ar_y = ar_y_d
           CALL fft_y( ar_y, 'forward', ar_tr = ar_y,                &
                       nxl_y_bound = nxl_y, nxr_y_bound = nxr_y, &
                       nxl_y_l = nxl_y, nxr_y_l = nxr_y )
 !
+ar_y_d = ar_y
+
+!$acc parallel
+
+!$acc loop collapse(3)
      DO  j = 0, ny
          DO  k = nzb_y, nzt_y
              DO  i = nxl_y, nxr_y
-                 ar_inv_y(i,k,j) = ar_y(j,i,k)
+                 ar_z_d(i,j,k) = ar_y_d(j,i,k)
              ENDDO
          ENDDO
      ENDDO
 
+!$acc end parallel
 
-      DO  j = 0, ny
-          DO  k = nzb_y, nzt_y
-             DO  i = nxl_y, nxr_y
-                ar_z(i,j,k) = ar_inv_y(i,k,j)
-             ENDDO
-          ENDDO
-       ENDDO
-!--       Transposition y --> z
-!          CALL resort_for_yz( ar, ar_inv )
-!          CALL transpose_yz( ar_inv, ar )
-
+ar_z = ar_z_d
 !
 !--       Solve the tridiagonal equation system along z
           CALL tridia_substi( ar_z )
 
+          ar_z_d = ar_z
 !
 !--       Inverse Fourier Transformation
 !--       Transposition z --> y
+!$acc parallel
+
+!$acc loop collapse(3)
        DO  k = nzb_y, nzt_y
           DO  j = 0, ny
              DO  i = nxl_y, nxr_y
-                ar_inv_y(i,k,j) = ar_z(i,j,k)
+                ar_y_d(j,i,k) = ar_z_d(i,j,k)
              ENDDO
           ENDDO
        ENDDO
 
-
-      DO  k = nzb_y, nzt_y
-         DO  j = 0, ny
-             DO  i = nxl_y, nxr_y
-                 ar_y(j,i,k) = ar_inv_y(i,k,j)
-             ENDDO
-         ENDDO
-     ENDDO
+    !$acc end parallel
 
 !          CALL transpose_zy( ar, ar_inv )
 !          CALL resort_for_zy( ar_inv, ar )
 
+ar_y = ar_y_d
           CALL fft_y( ar_y, 'backward', ar_tr = ar_y,               &
                       nxl_y_bound = nxl_y, nxr_y_bound = nxr_y, &
                       nxl_y_l = nxl_y, nxr_y_l = nxr_y )
 
+ar_y_d = ar_y
 !
 !--       Transposition y --> x
 
+!$acc parallel
+
+!$acc loop collapse(3)
        DO  i = nxl_y, nxr_y
           DO  k = nzb_y, nzt_y
              DO  j = 0, ny
-                ar_inv_x(j,k,i) = ar_y(j,i,k)
+                ar_x_d(i,j,k) = ar_y_d(j,i,k)
              ENDDO
           ENDDO
        ENDDO
 
-        DO  i = 0, nx
-         DO  k = nzb_x, nzt_x
-             DO  j = nys_x, nyn_x
-                 ar_x(i,j,k) = ar_inv_x(j,k,i)
-             ENDDO
-         ENDDO
-     ENDDO
+    !$acc end parallel
 
-!          CALL transpose_yx( ar, ar_inv )
-!          CALL resort_for_yx( ar_inv, ar )
-
+ar_x = ar_x_d
           CALL fft_x( ar_x, 'backward' )
 !
+ar_x_d = ar_x
 !--       Transposition x --> z
 
+!$acc parallel
+!$acc loop collapse(3)
 DO  i = nxl, nxr
           DO  j = nys, nyn
              DO  k = 1, nz
-                ar_inv(j,i,k) = ar_x(i,j,k)
+                ar_d(k,j,i) = ar_x_d(i,j,k)
+             !   ar_d(k,j,i) = ar_inv_d(j,i,k)
              ENDDO
           ENDDO
        ENDDO
-
-DO  k = 1, nz
-         DO  i = nxl, nxr
-             DO  j = nys, nyn
-                 ar(k,j,i) = ar_inv(j,i,k)
-             ENDDO
-         ENDDO
-     ENDDO
-
-
-!          CALL transpose_xz( ar, ar_inv )
-!          CALL resort_for_xz( ar_inv, ar )
-
-!!!$acc exit data copyout(ar) 
-!!!$acc end kernels
-ENDIF
+       !$acc end parallel
+       ar = ar_d
+ ENDIF
        CALL cpu_log( log_point_s(3), 'poisfft', 'stop' )
    deallocate(ar_inv_d, ar_x_d, ar_inv_x_d,ar_d,ar_y_d, ar_inv_y_d, ar_z_d)
 

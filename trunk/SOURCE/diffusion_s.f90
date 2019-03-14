@@ -182,6 +182,7 @@
 
        REAL(wp), DIMENSION(1:surf_def_h(2)%ns),INTENT(IN),OPTIONAL :: s_flux_solar_t  !<solar flux at sfc
 !$acc parallel
+!$acc loop gang vector collapse(3)
         DO  i = nxl, nxr
           DO  j = nys,nyn
 !
@@ -216,7 +217,8 @@
        ENDDO
 !$acc end parallel
 
-!$acc loop gang
+!$acc parallel
+!$acc loop gang vector collapse(2)
      DO i=nxl,nxr
        DO j=nys,nyn
 !
@@ -230,6 +232,7 @@
 !--          North-facing vertical default-type surfaces
              surf_s = surf_def_v(0)%start_index(j,i)
              surf_e = surf_def_v(0)%end_index(j,i)
+        !$acc loop vector
              DO  m = surf_s, surf_e
                 k           = surf_def_v(0)%k(m)
                 tend(k,j,i) = tend(k,j,i) + s_flux_def_v_north(m) * ddy
@@ -238,6 +241,7 @@
 !--          South-facing vertical default-type surfaces
              surf_s = surf_def_v(1)%start_index(j,i)
              surf_e = surf_def_v(1)%end_index(j,i)
+       !$acc loop vector
              DO  m = surf_s, surf_e
                 k           = surf_def_v(1)%k(m)
                 tend(k,j,i) = tend(k,j,i) + s_flux_def_v_south(m) * ddy
@@ -246,6 +250,7 @@
 !--          East-facing vertical default-type surfaces
              surf_s = surf_def_v(2)%start_index(j,i)
              surf_e = surf_def_v(2)%end_index(j,i)
+       !$acc loop vector
              DO  m = surf_s, surf_e
                 k           = surf_def_v(2)%k(m)
                 tend(k,j,i) = tend(k,j,i) + s_flux_def_v_east(m) * ddx
@@ -254,15 +259,17 @@
 !--          West-facing vertical default-type surfaces
              surf_s = surf_def_v(3)%start_index(j,i)
              surf_e = surf_def_v(3)%end_index(j,i)
+        !$acc loop vector
              DO  m = surf_s, surf_e
                 k           = surf_def_v(3)%k(m)
                 tend(k,j,i) = tend(k,j,i) + s_flux_def_v_west(m) * ddx
              ENDDO
       ENDDO
 ENDDO
-!$acc end loop 
+!$acc end parallel
 
-!$acc loop gang 
+!$acc parallel
+!$acc loop gang vector collapse(2)
      DO i=nxl,nxr
        DO j=nys,nyn
 
@@ -360,7 +367,7 @@ ENDDO
 
           ENDDO
        ENDDO
-!$acc end loop
+!$acc end parallel
     END SUBROUTINE diffusion_s
 
 !------------------------------------------------------------------------------!

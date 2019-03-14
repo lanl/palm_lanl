@@ -1,0 +1,23 @@
+#!/bin/bash
+
+use_hdf5="True"
+repo_path=$PWD
+build_path="$repo_path/build"
+script_path="$repo_path/trunk/SCRIPTS"
+compile_debug="False"
+build_flags=""
+build_config="pgi.gcp_openacc"
+hname=$(hostname | cut -c 1-2)
+if [[ $compile_debug == "True" ]]; then
+    build_flags="-D"
+fi
+
+export PATH="$repo_path/trunk/SCRIPTS:$PATH"
+module purge
+
+module load pgi/18.10
+module load openmpi/3.1.2/pgi/18.10
+module load hdf5/1.10.3/parallel/openmpi/3.1.2/pgi/18.10
+module load netcdf/4.6.1/parallel/openmpi/3.1.2/pgi/18.10
+
+palm_simple_build -b $build_config -w $build_path $build_flags -s $script_path

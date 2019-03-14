@@ -19,36 +19,36 @@
 !
 ! Current revisions:
 ! -----------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: poisfft_mod.f90 2718 2018-01-02 08:49:38Z maronga $
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 !
 ! 2300 2017-06-29 13:31:14Z raasch
 ! settings depending on host variable removed or replaced by loop_optimization
-! 
+!
 ! 2119 2017-01-17 16:51:50Z raasch
 !
 ! 2118 2017-01-17 16:38:49Z raasch
 ! OpenACC directives and related code removed
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1850 2016-04-08 13:29:27Z maronga
 ! Module renamed
-! 
-! 
+!
+!
 ! 1804 2016-04-05 16:30:18Z maronga
 ! Removed code for parameter file check (__check)
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
+! Code annotations made doxygen readable
 !
 ! 1482 2014-10-18 12:34:45Z raasch
 ! use 2d-decomposition, if accelerator boards are used
@@ -151,7 +151,7 @@
 !> real    ar   contains the solution for perturbation pressure p
 !------------------------------------------------------------------------------!
  MODULE poisfft_mod
- 
+
 
     USE fft_xy,                                                                &
         ONLY:  fft_init, fft_y, fft_y_1d, fft_y_m, fft_x, fft_x_1d, fft_x_m
@@ -316,14 +316,17 @@
 !--       Transposition y --> x and backward FFT along x
           CALL tr_yx_fftx( ar, ar )
 
+       ! ELSEIF ( .NOT. transpose_compute_overlap )  THEN
        ELSE
 
           call cpu_log(log_point_s(5), 'fft routines', 'start')
 
           ar_d = ar
-!$acc parallel 
 
-!$acc loop collapse(3)
+!--       2d-domain-decomposition or no decomposition (1 PE run)
+!--       Transposition z --> x
+
+!$acc parallel
      DO  k = 1,nz
          DO  i = nxl, nxr
              DO  j = nys, nyn
@@ -331,15 +334,13 @@
              ENDDO
          ENDDO
      ENDDO
-
 !$acc end parallel
 
-ar_x = ar_x_d
-          CALL fft_x( ar_x, 'forward' )
-!--       Transposition x --> y
-ar_x_d = ar_x
-!$acc parallel
+          CALL fft_x( ar_x_d, 'forward' )
 
+!--       Transposition x --> y
+
+!$acc parallel
 !$acc loop collapse(3)
      DO  i = 0, nx
          DO  k = nzb_x, nzt_x
@@ -348,18 +349,11 @@ ar_x_d = ar_x
              ENDDO
          ENDDO
      ENDDO
-
 !$acc end parallel
 
-ar_y = ar_y_d
-          CALL fft_y( ar_y, 'forward', ar_tr = ar_y,                &
-                      nxl_y_bound = nxl_y, nxr_y_bound = nxr_y, &
-                      nxl_y_l = nxl_y, nxr_y_l = nxr_y )
-!
-ar_y_d = ar_y
+          CALL fft_y( ar_y_d, 'forward' )
 
 !$acc parallel
-
 !$acc loop collapse(3)
      DO  j = 0, ny
          DO  k = nzb_y, nzt_y
@@ -376,12 +370,12 @@ ar_z = ar_z_d
 !--       Solve the tridiagonal equation system along z
           CALL tridia_substi( ar_z )
 
-          ar_z_d = ar_z
+ar_z_d = ar_z
 !
 !--       Inverse Fourier Transformation
 !--       Transposition z --> y
-!$acc parallel
 
+!$acc parallel
 !$acc loop collapse(3)
        DO  k = nzb_y, nzt_y
           DO  j = 0, ny
@@ -391,22 +385,16 @@ ar_z = ar_z_d
           ENDDO
        ENDDO
 
-    !$acc end parallel
+!$acc end parallel
 
 !          CALL transpose_zy( ar, ar_inv )
 !          CALL resort_for_zy( ar_inv, ar )
 
-ar_y = ar_y_d
-          CALL fft_y( ar_y, 'backward', ar_tr = ar_y,               &
-                      nxl_y_bound = nxl_y, nxr_y_bound = nxr_y, &
-                      nxl_y_l = nxl_y, nxr_y_l = nxr_y )
-
-ar_y_d = ar_y
+          CALL fft_y( ar_y_d, 'backward')
 !
 !--       Transposition y --> x
 
 !$acc parallel
-
 !$acc loop collapse(3)
        DO  i = nxl_y, nxr_y
           DO  k = nzb_y, nzt_y
@@ -415,30 +403,29 @@ ar_y_d = ar_y
              ENDDO
           ENDDO
        ENDDO
+!$acc end parallel
 
-    !$acc end parallel
+          CALL fft_x( ar_x_d, 'backward' )
 
-ar_x = ar_x_d
-          CALL fft_x( ar_x, 'backward' )
-!
-ar_x_d = ar_x
 !--       Transposition x --> z
 
 !$acc parallel
 !$acc loop collapse(3)
-DO  i = nxl, nxr
+       DO  i = nxl, nxr
           DO  j = nys, nyn
              DO  k = 1, nz
                 ar_d(k,j,i) = ar_x_d(i,j,k)
-             !   ar_d(k,j,i) = ar_inv_d(j,i,k)
              ENDDO
           ENDDO
        ENDDO
-       !$acc end parallel
+!$acc end parallel
+
        ar = ar_d
- ENDIF
-       CALL cpu_log( log_point_s(3), 'poisfft', 'stop' )
-   deallocate(ar_inv_d, ar_x_d, ar_inv_x_d,ar_d,ar_y_d, ar_inv_y_d, ar_z_d)
+
+    ENDIF
+
+    CALL cpu_log( log_point_s(3), 'poisfft', 'stop' )
+    deallocate(ar_inv_d, ar_x_d, ar_inv_x_d,ar_d,ar_y_d, ar_inv_y_d, ar_z_d)
 
     END SUBROUTINE poisfft
 

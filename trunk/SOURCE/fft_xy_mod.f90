@@ -212,7 +212,7 @@
 #ifdef __GPU
     INTEGER :: nx_cC, ny_cC
 
-    INTEGER, PARAMETER, SAVE :: batch = 64
+    INTEGER, PARAMETER, SAVE :: batch = 1
 
     COMPLEX, DEVICE, DIMENSION(:), ALLOCATABLE, SAVE ::       &
             x_out_dev, y_out_dev
@@ -381,7 +381,7 @@
 
         !       x_in_dev(0:nx) = ar(0:nx,j,k)
             !   ierr = cudaMemcpy(x_in_dev,ar_dev(:,j,k),nx+1,cudaMemcpyDeviceToDevice)
-               ierr = cufftExecR2C( plan_xf_dev, ar(:,j,k), x_out_dev)
+               ierr = cufftExecR2C( plan_xf_dev, ar(0:nx,j,k), x_out_dev)
 
                ! x_out = x_out_dev
 

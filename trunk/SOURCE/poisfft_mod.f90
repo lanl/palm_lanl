@@ -166,6 +166,10 @@
     USE tridia_solver,                                                         &
         ONLY:  tridia_1dd, tridia_init, tridia_substi, tridia_substi_overlap
 
+#ifdef __GPU
+    USE cudafor
+#endif
+
     IMPLICIT NONE
 
     PRIVATE
@@ -258,6 +262,16 @@
        REAL(wp), DIMENSION(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) :: ar_y
        REAL(wp), DIMENSION(nxl_y:nxr_y,nzb_y:nzt_y,0:ny) :: ar_inv_y
        REAL(wp), DIMENSION(nxl_z:nxr_z,nys_z:nyn_z,1:nz) :: ar_z
+#ifdef __GPU
+       REAL(wp), DEVICE, DIMENSION(1:nz,nys:nyn,nxl:nxr) ::  ar_dev      !<
+       REAL(wp), DEVICE, DIMENSION(nys:nyn,nxl:nxr,1:nz) ::  ar_inv_dev  !<
+       REAL(wp), DEVICE, DIMENSION(0:nx, nys_x:nyn_x,nzb_x:nzt_x) :: ar_x_dev
+       REAL(wp), DEVICE, DIMENSION(nys_x:nyn_x,nzb_x:nzt_x,0:nx) :: ar_inv_x_dev
+       REAL(wp), DEVICE, DIMENSION(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) :: ar_y_dev
+       REAL(wp), DEVICE, DIMENSION(nxl_y:nxr_y,nzb_y:nzt_y,0:ny) :: ar_inv_y_dev
+       REAL(wp), DEVICE, DIMENSION(nxl_z:nxr_z,nys_z:nyn_z,1:nz) :: ar_z_dev
+#endif
+
 
        REAL(wp), DIMENSION(:,:,:),   ALLOCATABLE ::  ar1      !<
        REAL(wp), DIMENSION(:,:,:),   ALLOCATABLE ::  f_in     !<
@@ -304,10 +318,6 @@
        ELSEIF ( .NOT. transpose_compute_overlap )  THEN
 
           call cpu_log(log_point_s(5), 'fft routines', 'start')
-!$acc enter data copyin(ar(1:nz,nys:nyn,nxl:nxr)) &
-!$acc create(ar_inv(nys:nyn,nxl:nxr,1:nz),ar_x(0:nx,nys_x:nyn_x,nzb_x:nzt_x)) &
-!$acc create(ar_inv_x(nys_x:nyn_x,nzb_x:nzt_x,0:nx),ar_y(0:ny,nxl_y:nxr_y,nzb_y:nzt_y)) &
-!$acc create(ar_inv_y(nxl_y:nxr_y,nzb_y:nzt_y,0:ny),ar_z(nxl_z:nxr_z,nys_z:nyn_z,1:nz))
 
 
 !--       2d-domain-decomposition or no decomposition (1 PE run)
@@ -315,12 +325,13 @@
 !         CALL resort_for_zx( ar, ar_inv )
 !         CALL transpose_zx( ar_inv, ar )
 
-!$acc parallel present(ar, ar_inv, ar_x)
+         ar_dev = ar
+!$acc parallel
 !$acc loop collapse(3)
      DO  k = 1,nz
          DO  i = nxl, nxr
              DO  j = nys, nyn
-                 ar_inv(j,i,k) = ar(k,j,i)
+                 ar_inv_dev(j,i,k) = ar_dev(k,j,i)
              ENDDO
          ENDDO
      ENDDO
@@ -329,24 +340,22 @@
           DO  k = 1, nz
              DO  i = nxl, nxr
                 DO  j = nys, nyn
-                   ar_x(i,j,k) = ar_inv(j,i,k)
+                   ar_x_dev(i,j,k) = ar_inv_dev(j,i,k)
                 ENDDO
              ENDDO
           ENDDO
 !$acc end parallel
 
-!$acc host_data use_device(ar_x)
-          CALL fft_x( ar_x, 'forward' )
-!$acc end host_data
+          CALL fft_x( ar_x_dev, 'forward' )
 
 !--       Transposition x --> y
 
-!$acc parallel present(ar_x, ar_inv_x, ar_y)
+!$acc parallel
 !$acc loop collapse(3)
      DO  i = 0, nx
          DO  k = nzb_x, nzt_x
              DO  j = nys_x, nyn_x
-                 ar_inv_x(j,k,i) = ar_x(i,j,k)
+                 ar_inv_x_dev(j,k,i) = ar_x_dev(i,j,k)
              ENDDO
          ENDDO
      ENDDO
@@ -355,16 +364,16 @@
        DO  k = nzb_y, nzt_y
           DO  i = nxl_y, nxr_y
              DO  j = 0, ny
-                ar_y(j,i,k) = ar_inv_x(j,k,i)
+                ar_y_dev(j,i,k) = ar_inv_x_dev(j,k,i)
              ENDDO
           ENDDO
        ENDDO
 !$acc end parallel
 !          CALL resort_for_xy( ar_x, ar_inv )
 !          CALL transpose_xy( ar_inv, ar )
+      ar_y = ar_y_dev
 
-!$acc exit data copyout(ar_y)
-
+!!$acc update self(ar_y)
           CALL fft_y( ar_y, 'forward', ar_tr = ar_y,                &
                       nxl_y_bound = nxl_y, nxr_y_bound = nxr_y, &
                       nxl_y_l = nxl_y, nxr_y_l = nxr_y )
@@ -442,17 +451,21 @@
 !          CALL transpose_yx( ar, ar_inv )
 !          CALL resort_for_yx( ar_inv, ar )
 
-!$acc enter data copyin(ar_x(0:nx,nys_x:nyn_x,nzb_x:nzt_x))
+!!$acc update device(ar_x)
 
-!$acc host_data use_device(ar_x)
-          CALL fft_x( ar_x, 'backward' )
-!$acc end host_data
+!!$acc data copy(ar_x(1:nz,nys:nyn,nxl:nxr))
+!!$acc host_data use_device(ar_x)
+          ar_x_dev = ar_x
+          CALL fft_x( ar_x_dev, 'backward' )
+          ar_x = ar_x_dev
+!!$acc end host_data
+!!$acc end data
 !
 !--       Transposition x --> z
 
-!$acc parallel present(ar_x, ar_inv, ar)
-!$acc loop collapse(3)
-DO  i = nxl, nxr
+!!$acc parallel present(ar_x, ar_inv, ar)
+!!$acc loop collapse(3)
+      DO  i = nxl, nxr
           DO  j = nys, nyn
              DO  k = 1, nz
                 ar_inv(j,i,k) = ar_x(i,j,k)
@@ -460,7 +473,7 @@ DO  i = nxl, nxr
           ENDDO
        ENDDO
 
-!$acc loop collapse(3)
+!!$acc loop collapse(3)
 DO  k = 1, nz
          DO  i = nxl, nxr
              DO  j = nys, nyn
@@ -468,13 +481,14 @@ DO  k = 1, nz
              ENDDO
          ENDDO
      ENDDO
-!$acc end parallel
+!!$acc end parallel
 
 
 !          CALL transpose_xz( ar, ar_inv )
 !          CALL resort_for_xz( ar_inv, ar )
 
-!$acc exit data copyout(ar)
+!!$acc update self(ar)
+!!$acc end data
 
        ELSE
 !

@@ -181,7 +181,7 @@
 #endif
 
        REAL(wp), DIMENSION(1:surf_def_h(2)%ns),INTENT(IN),OPTIONAL :: s_flux_solar_t  !<solar flux at sfc
-!$acc kernels       
+!$acc parallel
         DO  i = nxl, nxr
           DO  j = nys,nyn
 !
@@ -212,8 +212,15 @@
                                    * ( s(k,j,i)   - s(k,j-1,i) )               &
                                                      ) * ddy2 * flag
              ENDDO
+          ENDDO
+       ENDDO
+!$acc end parallel
 
+!$acc loop gang
+     DO i=nxl,nxr
+       DO j=nys,nyn
 !
+
 !--          Apply prescribed horizontal wall heatflux where necessary. First,
 !--          determine start and end index for respective (j,i)-index. Please
 !--          note, in the flat case following loop will not be entered, as
@@ -251,6 +258,14 @@
                 k           = surf_def_v(3)%k(m)
                 tend(k,j,i) = tend(k,j,i) + s_flux_def_v_west(m) * ddx
              ENDDO
+      ENDDO
+ENDDO
+!$acc end loop 
+
+!$acc loop gang 
+     DO i=nxl,nxr
+       DO j=nys,nyn
+
 !
 !--          Compute vertical diffusion. In case that surface fluxes have been
 !--          prescribed or computed at bottom and/or top, index k starts/ends at
@@ -345,7 +360,7 @@
 
           ENDDO
        ENDDO
-!$acc end kernels
+!$acc end loop
     END SUBROUTINE diffusion_s
 
 !------------------------------------------------------------------------------!

@@ -297,17 +297,26 @@
           INTEGER(iwp) ::  j !< 
           INTEGER(iwp) ::  k !< 
 
-          REAL(wp)     ::  ar(nxl_z:nxr_z,nys_z:nyn_z,1:nz) !< 
-          REAL(wp), DEVICE, ALLOCATABLE :: ar_d(:,:,:), ar1(:,:,:), tri_d(:,:,:,:)
+          #ifdef __GPU
+             REAL(wp), DEVICE :: ar(nxl_z:nxr_z,nys_z:nyn_z,1:nz)
+          #else
+             REAL(wp)     ::  ar(nxl_z:nxr_z,nys_z:nyn_z,1:nz) !< 
+             REAL(wp), DEVICE, ALLOCATABLE :: ar_d(:,:,:)
+          #endif
+          REAL(wp), DEVICE, ALLOCATABLE :: ar1(:,:,:), tri_d(:,:,:,:)
           REAL(wp), DEVICE, ALLOCATABLE :: ddzuw_d(:,:)
 
-          allocate(ar_d(nxl_z:nxr_z,nys_z:nyn_z,1:nz))
+          #ifndef __GPU
+            
+            allocate(ar_d(nxl_z:nxr_z,nys_z:nyn_z,1:nz))
+            ar_d = ar
+          #endif
+
           allocate(ar1(nxl_z:nxr_z,nys_z:nyn_z,0:nz-1)) !< 
           allocate(tri_d(nxl_z:nxr_z,nys_z:nyn_z,0:nz-1,2))
            ALLOCATE( ddzuw_d(0:nz-1,3) )
 !
 !--       Forward substitution
-          ar_d = ar
           tri_d = tri
           ddzuw_d = ddzuw
           !$acc parallel 
@@ -317,12 +326,21 @@
              DO  j = nys_z, nyn_z
                 DO  i = nxl_z, nxr_z
 
+                #ifdef __GPU
+                    IF ( k == 0 )  THEN
+                      ar1(i,j,k) = ar(i,j,k+1)
+                   ELSE
+                      ar1(i,j,k) = ar(i,j,k+1) - tri_d(i,j,k,2) * ar1(i,j,k-1)
+                   ENDIF
+                #else
+
                    IF ( k == 0 )  THEN
                       ar1(i,j,k) = ar_d(i,j,k+1)
                    ELSE
                       ar1(i,j,k) = ar_d(i,j,k+1) - tri_d(i,j,k,2) * ar1(i,j,k-1)
                    ENDIF
 
+                 #endif
                 ENDDO
              ENDDO
           ENDDO
@@ -338,12 +356,21 @@
               DO  j = nys_z, nyn_z
                 DO  i = nxl_z, nxr_z
 
+                 #ifdef __GPU
+                   IF ( k == nz-1 )  THEN
+                      ar(i,j,k+1) = ar1(i,j,k) / ( tri_d(i,j,k,1) + 1.0E-20_wp )
+                   ELSE
+                      ar(i,j,k+1) = ( ar1(i,j,k) - ddzuw(k,2) * ar(i,j,k+2) ) &
+                              / tri_d(i,j,k,1)
+                   ENDIF
+                 #else
                    IF ( k == nz-1 )  THEN
                       ar_d(i,j,k+1) = ar1(i,j,k) / ( tri_d(i,j,k,1) + 1.0E-20_wp )
                    ELSE
                       ar_d(i,j,k+1) = ( ar1(i,j,k) - ddzuw(k,2) * ar_d(i,j,k+2) ) &
                               / tri_d(i,j,k,1)
                    ENDIF
+                 #endif
                 ENDDO
              ENDDO
           ENDDO
@@ -356,13 +383,20 @@
              IF ( nys_z == 0  .AND.  nxl_z == 0 )  THEN
                 !$acc loop
                 DO  k = 1, nz
+                #ifdef __GPU
+                   ar(nxl_z,nys_z,k) = 0.0_wp
+                #else
                    ar_d(nxl_z,nys_z,k) = 0.0_wp
+                #endif
                 ENDDO
              ENDIF
           ENDIF
 
           !$acc end parallel
-          ar = ar_d
+          #ifndef __GPU
+             ar = ar_d
+          #endif
+
     END SUBROUTINE tridia_substi
 
 

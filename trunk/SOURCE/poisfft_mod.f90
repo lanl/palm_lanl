@@ -365,12 +365,11 @@
 
 !$acc end parallel
 
-ar_z = ar_z_d
+!ar_z = ar_z_d
 !
 !--       Solve the tridiagonal equation system along z
-          CALL tridia_substi( ar_z )
+          CALL tridia_substi( ar_z_d )
 
-ar_z_d = ar_z
 !
 !--       Inverse Fourier Transformation
 !--       Transposition z --> y

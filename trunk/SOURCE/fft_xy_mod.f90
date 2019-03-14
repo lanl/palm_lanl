@@ -289,7 +289,7 @@
 #if defined ( __GPU )
        nx_cC = nx+1
        ny_cC = ny+1
-       ALLOCATE( x_in_dev(0:nx+2), y_in_dev(0:ny+2), x_out_dev(0:(nx+1)/2),    &
+       ALLOCATE( x_in_dev(0:nx), y_in_dev(0:ny), x_out_dev(0:(nx+1)/2),    &
                y_out_dev(0:(ny+1)/2) )
 
        ierr = cufftPlan1d( plan_xf_dev, nx_cC, CUFFT_R2C, batch)
@@ -322,11 +322,8 @@
 
        CHARACTER (LEN=*) ::  direction  !<
 
-       COMPLEX(wp), DIMENSION(:), ALLOCATABLE ::  cwork  !<
-
        INTEGER(iwp) :: ierr
        INTEGER(iwp) ::  i          !<
-       INTEGER(iwp) ::  ishape(1)  !<
        INTEGER(iwp) ::  j          !<
        INTEGER(iwp) ::  k          !<
        LOGICAL ::  forward_fft !<
@@ -350,15 +347,10 @@
 
        if ( forward_fft )  THEN
 
-       !ierr = cudaMemcpy(ar_dev,ar,sizeArray,cudaMemcpyHostToDevice)
-       ! ar_dev(0:nx,nys_x:nyn_x,nzb_x:nzt_x) = ar(0:nx,nys_x:nyn_x,nzb_x:nzt_x)
        if ( PRESENT( ar_2d ) ) then
           DO k=nzb_x, nzt_x
              DO j = nys_x, nyn_x
 
-
-          !       x_in_dev(0:nx) = ar(0:nx,j,k)
-      !           ierr = cudaMemcpy(x_in_dev,ar_dev(:,j,k),sizeArray,cudaMemcpyDeviceToDevice)
                  ierr = cufftExecR2C( plan_xf_dev, ar(0:nx,j,k), x_out_dev)
 
           !       !$acc parallel
@@ -373,17 +365,12 @@
               !   !$acc end parallel
              ENDDO
           ENDDO
-       !   ar_2d = ar_2d_dev
 
        ELSE
          DO k = nzb_x, nzt_x
             DO j = nys_x, nyn_x
 
-        !       x_in_dev(0:nx) = ar(0:nx,j,k)
-            !   ierr = cudaMemcpy(x_in_dev,ar_dev(:,j,k),nx+1,cudaMemcpyDeviceToDevice)
                ierr = cufftExecR2C( plan_xf_dev, ar(0:nx,j,k), x_out_dev)
-
-               ! x_out = x_out_dev
 
                !$acc kernels deviceptr(x_out_dev, ar)
                DO  i = 0, (nx+1)/2
@@ -395,7 +382,6 @@
                !$acc end kernels
            ENDDO
         ENDDO
-      !  ar = ar_dev
      ENDIF
 
      ELSE

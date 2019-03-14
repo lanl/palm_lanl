@@ -322,56 +322,58 @@
 
 !--       2d-domain-decomposition or no decomposition (1 PE run)
 !--       Transposition z --> x
-!         CALL resort_for_zx( ar, ar_inv )
-!         CALL transpose_zx( ar_inv, ar )
 
-         ar_dev = ar
-!$acc parallel
-!$acc loop collapse(3)
+!         ar_dev = ar
+!!$acc parallel deviceptr(ar_inv_dev, ar_dev, ar_x_dev)
+!!$acc loop collapse(3)
      DO  k = 1,nz
          DO  i = nxl, nxr
              DO  j = nys, nyn
-                 ar_inv_dev(j,i,k) = ar_dev(k,j,i)
+                 ! ar_inv_dev(j,i,k) = ar_dev(k,j,i)
+                 ar_inv(j,i,k) = ar(k,j,i)
              ENDDO
          ENDDO
      ENDDO
 
-!$acc loop collapse(3)
+!!$acc loop collapse(3)
           DO  k = 1, nz
              DO  i = nxl, nxr
                 DO  j = nys, nyn
-                   ar_x_dev(i,j,k) = ar_inv_dev(j,i,k)
+                   ! ar_x_dev(i,j,k) = ar_inv_dev(j,i,k)
+                   ar_x(i,j,k) = ar_inv(j,i,k)
                 ENDDO
              ENDDO
           ENDDO
-!$acc end parallel
+!!$acc end parallel
 
+ar_x_dev = ar_x
           CALL fft_x( ar_x_dev, 'forward' )
+ar_x = ar_x_dev
 
 !--       Transposition x --> y
 
-!$acc parallel
-!$acc loop collapse(3)
+!!$acc parallel deviceptr(ar_inv_x_dev, ar_x_dev, ar_y_dev)
+!!$acc loop collapse(3)
      DO  i = 0, nx
          DO  k = nzb_x, nzt_x
              DO  j = nys_x, nyn_x
-                 ar_inv_x_dev(j,k,i) = ar_x_dev(i,j,k)
+                 ! ar_inv_x_dev(j,k,i) = ar_x_dev(i,j,k)
+                 ar_inv_x(j,k,i) = ar_x(i,j,k)
              ENDDO
          ENDDO
      ENDDO
 
-!$acc loop collapse(3)
+!!$acc loop collapse(3)
        DO  k = nzb_y, nzt_y
           DO  i = nxl_y, nxr_y
              DO  j = 0, ny
-                ar_y_dev(j,i,k) = ar_inv_x_dev(j,k,i)
+                ! ar_y_dev(j,i,k) = ar_inv_x_dev(j,k,i)
+                ar_y(j,i,k) = ar_inv_x(j,k,i)
              ENDDO
           ENDDO
        ENDDO
-!$acc end parallel
-!          CALL resort_for_xy( ar_x, ar_inv )
-!          CALL transpose_xy( ar_inv, ar )
-      ar_y = ar_y_dev
+!!$acc end parallel
+      ! ar_y = ar_y_dev
 
 !!$acc update self(ar_y)
           CALL fft_y( ar_y, 'forward', ar_tr = ar_y,                &
@@ -451,15 +453,10 @@
 !          CALL transpose_yx( ar, ar_inv )
 !          CALL resort_for_yx( ar_inv, ar )
 
-!!$acc update device(ar_x)
 
-!!$acc data copy(ar_x(1:nz,nys:nyn,nxl:nxr))
-!!$acc host_data use_device(ar_x)
           ar_x_dev = ar_x
           CALL fft_x( ar_x_dev, 'backward' )
           ar_x = ar_x_dev
-!!$acc end host_data
-!!$acc end data
 !
 !--       Transposition x --> z
 

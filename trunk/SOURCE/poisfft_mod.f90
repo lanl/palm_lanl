@@ -327,6 +327,7 @@
 !--       Transposition z --> x
 
 !$acc parallel
+!$acc loop collapse(3)
      DO  k = 1,nz
          DO  i = nxl, nxr
              DO  j = nys, nyn

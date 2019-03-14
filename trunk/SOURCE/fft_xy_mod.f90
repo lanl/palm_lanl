@@ -189,12 +189,25 @@
 
     REAL(wp), DIMENSION(:), ALLOCATABLE, SAVE ::  trigs_x  !<
     REAL(wp), DIMENSION(:), ALLOCATABLE, SAVE ::  trigs_y  !<
-#if defined( __fftw )
+
+#ifdef __GPU
+    INTEGER :: nx_cC, ny_cC
+
+    INTEGER, PARAMETER, SAVE :: batch = 1
+
+    COMPLEX, DEVICE, DIMENSION(:,:,:), ALLOCATABLE, SAVE ::       &
+            x_out_dev, y_out_dev
+    REAL(wp), DEVICE, DIMENSION(:), ALLOCATABLE, SAVE :: x_in_dev, y_in_dev
+    INTEGER, SAVE :: plan_xf_dev, plan_xi_dev, plan_yf_dev, plan_yi_dev
+#endif
+
+#ifdef __fftw
     INCLUDE  'fftw3.f03'
     INTEGER(KIND=C_INT) ::  nx_c  !<
     INTEGER(KIND=C_INT) ::  ny_c  !<
 
-    COMPLEX(KIND=C_DOUBLE_COMPLEX), DIMENSION(:), ALLOCATABLE, SAVE ::  x_out  !<
+    COMPLEX(KIND=C_DOUBLE_COMPLEX), DIMENSION(:), ALLOCATABLE, SAVE ::         &
+       x_out  !<
     COMPLEX(KIND=C_DOUBLE_COMPLEX), DIMENSION(:), ALLOCATABLE, SAVE ::         &
        y_out  !<
 
@@ -204,20 +217,7 @@
        y_in   !<
     !$OMP THREADPRIVATE( x_out, y_out, x_in, y_in )
 
-
     TYPE(C_PTR), SAVE ::  plan_xf, plan_xi, plan_yf, plan_yi
-#endif
-
-
-#ifdef __GPU
-    INTEGER :: nx_cC, ny_cC
-
-    INTEGER, PARAMETER, SAVE :: batch = 1
-
-    COMPLEX, DEVICE, DIMENSION(:), ALLOCATABLE, SAVE ::       &
-            x_out_dev, y_out_dev
-    REAL(wp), DEVICE, DIMENSION(:), ALLOCATABLE, SAVE :: x_in_dev, y_in_dev
-    INTEGER, SAVE :: plan_xf_dev, plan_xi_dev, plan_yf_dev, plan_yi_dev
 #endif
     !
 !-- Public interfaces
@@ -269,8 +269,18 @@
           init_fft = .TRUE.
        ENDIF
 !
-!--       FFTW
-#if defined( __fftw )
+#if defined ( __GPU )
+       nx_cC = nx+1
+       ny_cC = ny+1
+       ALLOCATE( x_in_dev(0:nx), y_in_dev(0:ny))
+       ALLOCATE( x_out_dev(0:(nx+1)/2,nys_x:nyn_x,nzb_x:nzt_x) )
+       ALLOCATE( y_out_dev(0:(ny+1)/2,nxl_y:nxr_y,nzb_y:nzt_y) )
+
+       ierr = cufftPlan1d( plan_xf_dev, nx_cC, CUFFT_R2C, batch)
+       ierr = cufftPlan1d( plan_xi_dev, nx_cC, CUFFT_C2R, batch)
+       ierr = cufftPlan1d( plan_yf_dev, ny_cC, CUFFT_R2C, batch)
+       ierr = cufftPlan1d( plan_yi_dev, ny_cC, CUFFT_C2R, batch)
+#else
           nx_c = nx+1
           ny_c = ny+1
           !$OMP PARALLEL
@@ -281,22 +291,9 @@
           plan_xi = FFTW_PLAN_DFT_C2R_1D( nx_c, x_out, x_in, FFTW_ESTIMATE )
           plan_yf = FFTW_PLAN_DFT_R2C_1D( ny_c, y_in, y_out, FFTW_ESTIMATE )
           plan_yi = FFTW_PLAN_DFT_C2R_1D( ny_c, y_out, y_in, FFTW_ESTIMATE )
-#else
-          message_string = 'preprocessor switch for fftw is missing'
-          CALL message( 'fft_init', 'PA0080', 1, 2, 0, 6, 0 )
 #endif
 
-#if defined ( __GPU )
-       nx_cC = nx+1
-       ny_cC = ny+1
-       ALLOCATE( x_in_dev(0:nx), y_in_dev(0:ny), x_out_dev(0:(nx+1)/2),    &
-               y_out_dev(0:(ny+1)/2) )
 
-       ierr = cufftPlan1d( plan_xf_dev, nx_cC, CUFFT_R2C, batch)
-       ierr = cufftPlan1d( plan_xi_dev, nx_cC, CUFFT_C2R, batch)
-       ierr = cufftPlan1d( plan_yf_dev, ny_cC, CUFFT_R2C, batch)
-       ierr = cufftPlan1d( plan_yi_dev, ny_cC, CUFFT_C2R, batch)
-#endif
     END SUBROUTINE fft_init
 
     SUBROUTINE fft_finalize
@@ -327,11 +324,11 @@
        INTEGER(iwp) ::  j          !<
        INTEGER(iwp) ::  k          !<
        LOGICAL ::  forward_fft !<
-       #ifdef __GPU
+#ifdef __GPU
        REAL(wp), DEVICE, DIMENSION(0:nx,nys_x:nyn_x,nzb_x:nzt_x) :: ar      !<
-       #else
+#else
        REAL(wp), DIMENSION(0:nx,nys_x:nyn_x,nzb_x:nzt_x) :: ar      !<
-       #endif
+#endif
 
        IF ( direction == 'forward' )  THEN
           forward_fft = .TRUE.
@@ -343,40 +340,56 @@
 
        if ( forward_fft )  THEN
 
-         DO k = nzb_x, nzt_x
-            DO j = nys_x, nyn_x
+          DO k = nzb_x, nzt_x
+             DO j = nys_x, nyn_x
 
-               ierr = cufftExecR2C( plan_xf_dev, ar(0:nx,j,k), x_out_dev)
+                ierr = cufftExecR2C( plan_xf_dev, ar(0:nx,j,k), x_out_dev(0:nx,j,k))
 
-               !$acc kernels deviceptr(x_out_dev, ar)
-               DO  i = 0, (nx+1)/2
-                   ar(i,j,k) = REAL( x_out_dev(i), KIND=wp ) / ( nx+1 )
-               ENDDO
-               DO  i = 1, (nx+1)/2 - 1
-                   ar(nx+1-i,j,k) = AIMAG( x_out_dev(i) ) / ( nx+1 )
-               ENDDO
-               !$acc end kernels
-           ENDDO
-        ENDDO
+             ENDDO
+          ENDDO
+          !$acc parallel deviceptr(x_out_dev, ar)
+          !$acc loop collapse(2)
+          DO k = nzb_x, nzt_x
+             DO j = nys_x, nyn_x
+                !$acc loop
+                DO  i = 0, (nx+1)/2
+                   ar(i,j,k) = REAL( x_out_dev(i,j,k), KIND=wp ) / ( nx+1 )
+                ENDDO
+                !$acc loop
+                DO  i = 1, (nx+1)/2 - 1
+                   ar(nx+1-i,j,k) = AIMAG( x_out_dev(i,j,k) ) / ( nx+1 )
+                ENDDO
+             ENDDO
+          ENDDO
+          !$acc end parallel
 
-     ELSE
+       ELSE
 
-        DO  k = nzb_x, nzt_x
-           DO  j = nys_x, nyn_x
+          !$acc parallel deviceptr(ar, x_out_dev)
+          !$acc loop collapse(2)
+          DO  k = nzb_x, nzt_x
+             DO  j = nys_x, nyn_x
 
-               !$acc kernels deviceptr(ar, x_out_dev)
-               x_out_dev(0) = CMPLX( ar(0,j,k), 0.0_wp, KIND=wp )
-               DO  i = 1, (nx+1)/2 - 1
-                   x_out_dev(i) = CMPLX( ar(i,j,k), ar(nx+1-i,j,k), KIND=wp )
-               ENDDO
-                   x_out_dev((nx+1)/2) = CMPLX( ar((nx+1)/2,j,k), 0.0_wp,       &
-                                             KIND=wp )
-               !$acc end kernels
-               ierr = cufftExecC2R( plan_xi_dev, x_out_dev, ar(0:nx,j,k) )
+                x_out_dev(0,j,k) = CMPLX( ar(0,j,k), 0.0_wp, KIND=wp )
+                !$acc loop
+                DO  i = 1, (nx+1)/2 - 1
+                    x_out_dev(i,j,k) = CMPLX( ar(i,j,k), ar(nx+1-i,j,k), KIND=wp )
+                ENDDO
+                    x_out_dev((nx+1)/2,j,k) = CMPLX( ar((nx+1)/2,j,k), 0.0_wp,       &
+                                              KIND=wp )
 
-           ENDDO
-        ENDDO
-    ENDIF
+             ENDDO
+          ENDDO
+          !$acc end parallel
+
+          DO  k = nzb_x, nzt_x
+             DO  j = nys_x, nyn_x
+
+                ierr = cufftExecC2R( plan_xi_dev, x_out_dev(0:nx,j,k), ar(0:nx,j,k) )
+
+             ENDDO
+          ENDDO
+       ENDIF
 
 #else
 
@@ -540,48 +553,58 @@
 #if defined( __GPU )
        IF ( forward_fft )  THEN
 
-          !$OMP PARALLEL PRIVATE ( work, i, j, k )
-          !$OMP DO
           DO  k = nzb_y, nzt_y
              DO  i = nxl_y, nxr_y
 
-                ierr = cufftExecR2C( plan_yf_dev, ar(0:ny,i,k), y_out_dev)
-
-                !$acc kernels deviceptr(ar, y_out_dev)
-                DO  j = 0, (ny+1)/2
-                   ar(j,i,k) = REAL( y_out_dev(j), KIND=wp ) / (ny+1)
-                ENDDO
-                DO  j = 1, (ny+1)/2 - 1
-                   ar(ny+1-j,i,k) = AIMAG( y_out_dev(j) ) / (ny+1)
-                ENDDO
-                !$acc end kernels
+                ierr = cufftExecR2C( plan_yf_dev, ar(0:ny,i,k), y_out_dev(0:ny,i,k))
 
              ENDDO
           ENDDO
-          !$OMP END PARALLEL
+
+          !$acc parallel deviceptr(ar, y_out_dev)
+          !$acc loop collapse(2)
+          DO  k = nzb_y, nzt_y
+             DO  i = nxl_y, nxr_y
+
+                !$acc loop
+                DO  j = 0, (ny+1)/2
+                   ar(j,i,k) = REAL( y_out_dev(j,i,k), KIND=wp ) / (ny+1)
+                ENDDO
+                !$acc loop
+                DO  j = 1, (ny+1)/2 - 1
+                   ar(ny+1-j,i,k) = AIMAG( y_out_dev(j,i,k) ) / (ny+1)
+                ENDDO
+
+             ENDDO
+          ENDDO
+          !$acc end parallel
 
        ELSE
 
-          !$OMP PARALLEL PRIVATE ( work, i, j, k )
-          !$OMP DO
+          !$acc parallel deviceptr(ar, y_out_dev)
+          !$acc loop collapse(2)
           DO  k = nzb_y, nzt_y
              DO  i = nxl_y, nxr_y
 
-               !$acc kernels deviceptr(ar, y_out_dev)
-                y_out_dev(0) = CMPLX( ar(0,i,k), 0.0_wp, KIND=wp )
+                y_out_dev(0,i,k) = CMPLX( ar(0,i,k), 0.0_wp, KIND=wp )
+                !$acc loop
                 DO  j = 1, (ny+1)/2 - 1
-                   y_out_dev(j) = CMPLX( ar(j,i,k), ar(ny+1-j,i,k),       &
+                   y_out_dev(j,i,k) = CMPLX( ar(j,i,k), ar(ny+1-j,i,k),       &
                                      KIND=wp )
                 ENDDO
-                y_out_dev((ny+1)/2) = CMPLX( ar((ny+1)/2,i,k), 0.0_wp,       &
+                y_out_dev((ny+1)/2,i,k) = CMPLX( ar((ny+1)/2,i,k), 0.0_wp,       &
                                          KIND=wp )
-                !$acc end kernels
+             ENDDO
+          ENDDO
+          !$acc end parallel
 
-                ierr = cufftExecC2R( plan_yi_dev, y_out_dev, ar(0:ny,i,k) )
+          DO  k = nzb_y, nzt_y
+             DO  i = nxl_y, nxr_y
+
+                ierr = cufftExecC2R( plan_yi_dev, y_out_dev(0:ny,i,k), ar(0:ny,i,k) )
 
              ENDDO
           ENDDO
-          !$OMP END PARALLEL
 
        ENDIF
 

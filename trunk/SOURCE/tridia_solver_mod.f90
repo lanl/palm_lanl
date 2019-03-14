@@ -113,9 +113,13 @@
     USE transpose_indices,                                                     &
         ONLY:  nxl_z, nyn_z, nxr_z, nys_z
 
+#ifdef __GPU
+    USE cudafor
+#endif
+
     IMPLICIT NONE
 
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  ddzuw !< 
+    REAL(wp), ALLOCATABLE ::  ddzuw(:,:) !< 
 
     PRIVATE
 
@@ -154,14 +158,15 @@
 
        INTEGER(iwp) ::  k !< 
 
+
        ALLOCATE( ddzuw(0:nz-1,3) )
 
        DO  k = 0, nz-1
-          ddzuw(k,1) = ddzu_pres(k+1) * ddzw(k+1) * rho_air_zw(k)
-          ddzuw(k,2) = ddzu_pres(k+2) * ddzw(k+1) * rho_air_zw(k+1)
+          ddzuw(k,1) = ddzu_pres(k+1) * ddzw(k+1) !* rho_air_zw(k)
+          ddzuw(k,2) = ddzu_pres(k+2) * ddzw(k+1) !* rho_air_zw(k+1)
           ddzuw(k,3) = -1.0_wp * &
-                       ( ddzu_pres(k+2) * ddzw(k+1) * rho_air_zw(k+1) +        &
-                         ddzu_pres(k+1) * ddzw(k+1) * rho_air_zw(k) )
+                       ( ddzu_pres(k+2) * ddzw(k+1)  +        &
+                         ddzu_pres(k+1) * ddzw(k+1) )
        ENDDO
 !
 !--    Calculate constant coefficients of the tridiagonal matrix
@@ -293,39 +298,51 @@
           INTEGER(iwp) ::  k !< 
 
           REAL(wp)     ::  ar(nxl_z:nxr_z,nys_z:nyn_z,1:nz) !< 
+          REAL(wp), DEVICE, ALLOCATABLE :: ar_d(:,:,:), ar1(:,:,:), tri_d(:,:,:,:)
+          REAL(wp), DEVICE, ALLOCATABLE :: ddzuw_d(:,:)
 
-          REAL(wp), DIMENSION(nxl_z:nxr_z,nys_z:nyn_z,0:nz-1)   ::  ar1 !< 
-
+          allocate(ar_d(nxl_z:nxr_z,nys_z:nyn_z,1:nz))
+          allocate(ar1(nxl_z:nxr_z,nys_z:nyn_z,0:nz-1)) !< 
+          allocate(tri_d(nxl_z:nxr_z,nys_z:nyn_z,0:nz-1,2))
+           ALLOCATE( ddzuw_d(0:nz-1,3) )
 !
 !--       Forward substitution
+          ar_d = ar
+          tri_d = tri
+          ddzuw_d = ddzuw
+          !$acc parallel 
+          !$acc loop 
           DO  k = 0, nz - 1
+            !$acc loop collapse(2)
              DO  j = nys_z, nyn_z
                 DO  i = nxl_z, nxr_z
 
                    IF ( k == 0 )  THEN
-                      ar1(i,j,k) = ar(i,j,k+1)
+                      ar1(i,j,k) = ar_d(i,j,k+1)
                    ELSE
-                      ar1(i,j,k) = ar(i,j,k+1) - tri(i,j,k,2) * ar1(i,j,k-1)
+                      ar1(i,j,k) = ar_d(i,j,k+1) - tri_d(i,j,k,2) * ar1(i,j,k-1)
                    ENDIF
 
                 ENDDO
              ENDDO
           ENDDO
-
+          
 !
 !--       Backward substitution
 !--       Note, the 1.0E-20 in the denominator is due to avoid divisions
 !--       by zero appearing if the pressure bc is set to neumann at the top of
 !--       the model domain.
+         !$acc loop 
           DO  k = nz-1, 0, -1
-             DO  j = nys_z, nyn_z
+             !$acc loop collapse(2)
+              DO  j = nys_z, nyn_z
                 DO  i = nxl_z, nxr_z
 
                    IF ( k == nz-1 )  THEN
-                      ar(i,j,k+1) = ar1(i,j,k) / ( tri(i,j,k,1) + 1.0E-20_wp )
+                      ar_d(i,j,k+1) = ar1(i,j,k) / ( tri_d(i,j,k,1) + 1.0E-20_wp )
                    ELSE
-                      ar(i,j,k+1) = ( ar1(i,j,k) - ddzuw(k,2) * ar(i,j,k+2) ) &
-                              / tri(i,j,k,1)
+                      ar_d(i,j,k+1) = ( ar1(i,j,k) - ddzuw(k,2) * ar_d(i,j,k+2) ) &
+                              / tri_d(i,j,k,1)
                    ENDIF
                 ENDDO
              ENDDO
@@ -337,12 +354,15 @@
 !--       acceleration of horizontally averaged vertical velocity is zero.
           IF ( ibc_p_b == 1  .AND.  ibc_p_t == 1 )  THEN
              IF ( nys_z == 0  .AND.  nxl_z == 0 )  THEN
+                !$acc loop
                 DO  k = 1, nz
-                   ar(nxl_z,nys_z,k) = 0.0_wp
+                   ar_d(nxl_z,nys_z,k) = 0.0_wp
                 ENDDO
              ENDIF
           ENDIF
 
+          !$acc end parallel
+          ar = ar_d
     END SUBROUTINE tridia_substi
 
 

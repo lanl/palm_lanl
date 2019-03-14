@@ -3137,7 +3137,6 @@
        REAL(wp) ::  flux_d !<
        REAL(wp) ::  u_comp !<
        REAL(wp) ::  v_comp !<
-       REAL(wp) ::  temp_i
        
        REAL(wp), DIMENSION(nzb:nzt)   ::  diss_n !<
        REAL(wp), DIMENSION(nzb:nzt)   ::  diss_r !<

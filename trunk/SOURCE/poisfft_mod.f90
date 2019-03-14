@@ -377,7 +377,9 @@ ar_x = ar_x_dev
       ! ar_y = ar_y_dev
 
 !!$acc update self(ar_y)
-          CALL fft_y( ar_y, 'forward' )
+ar_y_dev = ar_y
+          CALL fft_y( ar_y_dev, 'forward' )
+ar_y = ar_y_dev
 !
      DO  j = 0, ny
          DO  k = nzb_y, nzt_y
@@ -426,7 +428,9 @@ ar_x = ar_x_dev
 !          CALL transpose_zy( ar, ar_inv )
 !          CALL resort_for_zy( ar_inv, ar )
 
-          CALL fft_y( ar_y, 'backward')
+ar_y_dev = ar_y
+          CALL fft_y( ar_y_dev, 'backward')
+ar_y = ar_y_dev
 
 !
 !--       Transposition y --> x

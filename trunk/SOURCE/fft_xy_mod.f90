@@ -525,12 +525,11 @@
        LOGICAL ::  forward_fft  !<
 
 
-! #if defined( __GPU)
-       ! REAL(wp), DEVICE, DIMENSION(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) :: ar
-! #else
+#if defined( __GPU)
+       REAL(wp), DEVICE, DIMENSION(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) :: ar
+#else
        REAL(wp), DIMENSION(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) ::  ar
-       REAL(wp), DEVICE, DIMENSION(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) :: ar_dev
-! #endif
+#endif
 
        IF ( direction == 'forward' )  THEN
           forward_fft = .TRUE.
@@ -539,7 +538,6 @@
        ENDIF
 
 #if defined( __GPU )
-       ar_dev = ar
        IF ( forward_fft )  THEN
 
           !$OMP PARALLEL PRIVATE ( work, i, j, k )
@@ -547,16 +545,16 @@
           DO  k = nzb_y, nzt_y
              DO  i = nxl_y, nxr_y
 
-                y_in_dev(0:ny) = ar(0:ny,i,k)
-                ierr = cufftExecR2C( plan_yf_dev, y_in_dev, y_out_dev)
-                y_out = y_out_dev
+                ierr = cufftExecR2C( plan_yf_dev, ar(0:ny,i,k), y_out_dev)
 
+                !$acc kernels deviceptr(ar, y_out_dev)
                 DO  j = 0, (ny+1)/2
-                   ar(j,i,k) = REAL( y_out(j), KIND=wp ) / (ny+1)
+                   ar(j,i,k) = REAL( y_out_dev(j), KIND=wp ) / (ny+1)
                 ENDDO
                 DO  j = 1, (ny+1)/2 - 1
-                   ar(ny+1-j,i,k) = AIMAG( y_out(j) ) / (ny+1)
+                   ar(ny+1-j,i,k) = AIMAG( y_out_dev(j) ) / (ny+1)
                 ENDDO
+                !$acc end kernels
 
              ENDDO
           ENDDO
@@ -569,17 +567,17 @@
           DO  k = nzb_y, nzt_y
              DO  i = nxl_y, nxr_y
 
-                y_out(0) = CMPLX( ar(0,i,k), 0.0_wp, KIND=wp )
+               !$acc kernels deviceptr(ar, y_out_dev)
+                y_out_dev(0) = CMPLX( ar(0,i,k), 0.0_wp, KIND=wp )
                 DO  j = 1, (ny+1)/2 - 1
-                   y_out(j) = CMPLX( ar(j,i,k), ar(ny+1-j,i,k),       &
+                   y_out_dev(j) = CMPLX( ar(j,i,k), ar(ny+1-j,i,k),       &
                                      KIND=wp )
                 ENDDO
-                y_out((ny+1)/2) = CMPLX( ar((ny+1)/2,i,k), 0.0_wp,       &
+                y_out_dev((ny+1)/2) = CMPLX( ar((ny+1)/2,i,k), 0.0_wp,       &
                                          KIND=wp )
+                !$acc end kernels
 
-                y_out_dev = y_out
-                ierr = cufftExecC2R( plan_yi_dev, y_out_dev, y_in_dev )
-                ar(0:ny,i,k) = y_in_dev(0:ny)
+                ierr = cufftExecC2R( plan_yi_dev, y_out_dev, ar(0:ny,i,k) )
 
              ENDDO
           ENDDO

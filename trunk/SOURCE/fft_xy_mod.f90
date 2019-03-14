@@ -193,7 +193,7 @@
 #ifdef __GPU
     INTEGER :: nx_cC, ny_cC
 
-    INTEGER, PARAMETER, SAVE :: batch = 1
+    INTEGER, SAVE :: batch1, batch2
 
     COMPLEX, DEVICE, DIMENSION(:,:,:), ALLOCATABLE, SAVE ::       &
             x_out_dev, y_out_dev
@@ -276,10 +276,12 @@
        ALLOCATE( x_out_dev(0:(nx+1)/2,nys_x:nyn_x,nzb_x:nzt_x) )
        ALLOCATE( y_out_dev(0:(ny+1)/2,nxl_y:nxr_y,nzb_y:nzt_y) )
 
-       ierr = cufftPlan1d( plan_xf_dev, nx_cC, CUFFT_R2C, batch)
-       ierr = cufftPlan1d( plan_xi_dev, nx_cC, CUFFT_C2R, batch)
-       ierr = cufftPlan1d( plan_yf_dev, ny_cC, CUFFT_R2C, batch)
-       ierr = cufftPlan1d( plan_yi_dev, ny_cC, CUFFT_C2R, batch)
+       batch1 = (nyn_x-nys_x+1)*(nzt_x-nzb_x+1)
+       batch2 = (nxr_y-nxl_y+1)*(nzt_x-nzb_x+1)
+       ierr = cufftPlan1d( plan_xf_dev, nx_cC, CUFFT_R2C, batch1)
+       ierr = cufftPlan1d( plan_xi_dev, nx_cC, CUFFT_C2R, batch1)
+       ierr = cufftPlan1d( plan_yf_dev, ny_cC, CUFFT_R2C, batch2)
+       ierr = cufftPlan1d( plan_yi_dev, ny_cC, CUFFT_C2R, batch2)
 #else
           nx_c = nx+1
           ny_c = ny+1
@@ -340,13 +342,7 @@
 
        if ( forward_fft )  THEN
 
-          DO k = nzb_x, nzt_x
-             DO j = nys_x, nyn_x
-
-                ierr = cufftExecR2C( plan_xf_dev, ar(0:nx,j,k), x_out_dev(0:nx,j,k))
-
-             ENDDO
-          ENDDO
+          ierr = cufftExecR2C( plan_xf_dev, ar, x_out_dev)
           !$acc parallel deviceptr(x_out_dev, ar)
           !$acc loop collapse(2)
           DO k = nzb_x, nzt_x
@@ -382,13 +378,7 @@
           ENDDO
           !$acc end parallel
 
-          DO  k = nzb_x, nzt_x
-             DO  j = nys_x, nyn_x
-
-                ierr = cufftExecC2R( plan_xi_dev, x_out_dev(0:nx,j,k), ar(0:nx,j,k) )
-
-             ENDDO
-          ENDDO
+          ierr = cufftExecC2R( plan_xi_dev, x_out_dev, ar)
        ENDIF
 
 #else
@@ -553,13 +543,7 @@
 #if defined( __GPU )
        IF ( forward_fft )  THEN
 
-          DO  k = nzb_y, nzt_y
-             DO  i = nxl_y, nxr_y
-
-                ierr = cufftExecR2C( plan_yf_dev, ar(0:ny,i,k), y_out_dev(0:ny,i,k))
-
-             ENDDO
-          ENDDO
+          ierr = cufftExecR2C( plan_yf_dev, ar, y_out_dev)
 
           !$acc parallel deviceptr(ar, y_out_dev)
           !$acc loop collapse(2)
@@ -598,13 +582,7 @@
           ENDDO
           !$acc end parallel
 
-          DO  k = nzb_y, nzt_y
-             DO  i = nxl_y, nxr_y
-
-                ierr = cufftExecC2R( plan_yi_dev, y_out_dev(0:ny,i,k), ar(0:ny,i,k) )
-
-             ENDDO
-          ENDDO
+          ierr = cufftExecC2R( plan_yi_dev, y_out_dev, ar )
 
        ENDIF
 

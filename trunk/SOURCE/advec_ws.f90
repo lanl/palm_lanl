@@ -3137,6 +3137,7 @@
        REAL(wp) ::  flux_d !<
        REAL(wp) ::  u_comp !<
        REAL(wp) ::  v_comp !<
+       REAL(wp) ::  temp_i
        
        REAL(wp), DIMENSION(nzb:nzt)   ::  diss_n !<
        REAL(wp), DIMENSION(nzb:nzt)   ::  diss_r !<
@@ -3154,7 +3155,8 @@
 
 !
 !--    Compute the fluxes for the whole left boundary of the processor domain.
-       i = nxl
+!$acc parallel    
+     i = nxl
        DO  j = nys, nyn
 
           DO  k = nzb+1, nzb_max
@@ -3195,7 +3197,11 @@
                                                         )
 
           ENDDO
+        ENDDO
 
+!$acc end parallel
+!$acc parallel
+     DO j=nys,nyn
           DO  k = nzb_max+1, nzt
 
              u_comp                 = u(k,j,i) - u_gtrans
@@ -3214,6 +3220,8 @@
           ENDDO
 
        ENDDO
+!$acc end parallel
+!$acc parallel
 
        DO  i = nxl, nxr
 
@@ -3256,7 +3264,10 @@
                                                      )
 
           ENDDO
-!
+       ENDDO
+!$acc end parallel
+
+    DO i=nxl,nxr
 !--       Above to the top of the highest topography. No degradation necessary.
           DO  k = nzb_max+1, nzt
 
@@ -3271,16 +3282,13 @@
                                   -  5.0_wp * ( sk(k,j+1,i) - sk(k,j-2,i) )  &
                                   +             sk(k,j+2,i) - sk(k,j-3,i)    &
                                                       ) * adv_sca_5
-
-          ENDDO
-
-          DO  j = nys, nyn
+           ENDDO
 
              flux_t(0) = 0.0_wp
              diss_t(0) = 0.0_wp
              flux_d    = 0.0_wp
              diss_d    = 0.0_wp
-
+         DO j= nys, nyn    
              DO  k = nzb+1, nzb_max
 
                 ibit2 = IBITS(advc_flags_1(k,j,i),2,1)
@@ -3436,7 +3444,6 @@
                 diss_d                 = diss_t(k)
 
              ENDDO
-
              DO  k = nzb_max+1, nzt
 
                 u_comp    = u(k,j,i+1) - u_gtrans
@@ -3526,19 +3533,19 @@
                 diss_d                 = diss_t(k)
 
              ENDDO
-!
-!--          Evaluation of statistics. 
-             SELECT CASE ( sk_char )
 
-                 CASE ( 'pt' )
-                    DO  k = nzb, nzt
+!--          Evaluation of statistics. 
+           SELECT CASE ( sk_char )
+
+                CASE ( 'pt' )
+                   DO  k = nzb, nzt
                        sums_wspts_ws_l(k,tn) = sums_wspts_ws_l(k,tn)           &
-                          + ( flux_t(k)                                        &
+                        + ( flux_t(k)                                        &
                                 / ( w(k,j,i) + SIGN( 1.0E-20_wp, w(k,j,i) ) )  &
                                 * ( w(k,j,i) - hom(k,1,3,0)                 )  &
                             + diss_t(k)                                        &
                                 / ( ABS(w(k,j,i)) + 1.0E-20_wp              )  &
-                                *   ABS(w(k,j,i) - hom(k,1,3,0)             )  &
+                               *   ABS(w(k,j,i) - hom(k,1,3,0)             )  &
                             ) * weight_substep(intermediate_timestep_count)
                     ENDDO
                  CASE ( 'sa' )
@@ -3553,10 +3560,8 @@
                             ) * weight_substep(intermediate_timestep_count)
                     ENDDO
               END SELECT
-
          ENDDO
-      ENDDO
-
+ENDDO
     END SUBROUTINE advec_s_ws
 
 

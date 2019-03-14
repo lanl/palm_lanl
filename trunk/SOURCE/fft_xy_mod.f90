@@ -315,7 +315,7 @@
 !> system-specific routines, if they are available
 !------------------------------------------------------------------------------!
 
-    SUBROUTINE fft_x( ar, direction, ar_2d )
+    SUBROUTINE fft_x( ar, direction )
 
 
        IMPLICIT NONE
@@ -329,12 +329,8 @@
        LOGICAL ::  forward_fft !<
        #ifdef __GPU
        REAL(wp), DEVICE, DIMENSION(0:nx,nys_x:nyn_x,nzb_x:nzt_x) :: ar      !<
-       REAL(wp), DEVICE, DIMENSION(0:nx,nys_x:nyn_x), OPTIONAL   ::                    &
-          ar_2d   !<
        #else
        REAL(wp), DIMENSION(0:nx,nys_x:nyn_x,nzb_x:nzt_x) :: ar      !<
-       REAL(wp), DIMENSION(0:nx,nys_x:nyn_x), OPTIONAL   ::                    &
-          ar_2d   !<
        #endif
 
        IF ( direction == 'forward' )  THEN
@@ -347,26 +343,6 @@
 
        if ( forward_fft )  THEN
 
-       if ( PRESENT( ar_2d ) ) then
-          DO k=nzb_x, nzt_x
-             DO j = nys_x, nyn_x
-
-                 ierr = cufftExecR2C( plan_xf_dev, ar(0:nx,j,k), x_out_dev)
-
-          !       !$acc parallel
-          !       !$acc loop
-                 do i = 0, (nx+1)/2
-                    ar_2d(i,j) = REAL( x_out_dev(i), KIND=wp) / ( nx+1 )
-                 ENDDO
-             !    !$acc loop
-                 DO i=1, (nx+1)/2 - 1
-                    ar_2d(nx+1-i,j) = AIMAG( x_out_dev(i) ) / (nx + 1)
-                 ENDDO
-              !   !$acc end parallel
-             ENDDO
-          ENDDO
-
-       ELSE
          DO k = nzb_x, nzt_x
             DO j = nys_x, nyn_x
 
@@ -382,50 +358,24 @@
                !$acc end kernels
            ENDDO
         ENDDO
-     ENDIF
 
      ELSE
 
-        if ( PRESENT( ar_2d) ) THEN
-           DO  k = nzb_x, nzt_x
-              DO  j = nys_x, nyn_x
+        DO  k = nzb_x, nzt_x
+           DO  j = nys_x, nyn_x
 
-       !       !$acc parallel
-                  x_out_dev(0) = CMPLX( ar_2d(0,j), 0.0_wp, KIND=wp )
-        !        !$acc loop
-                  DO  i = 1, (nx+1)/2 - 1
-                      x_out_dev(i) = CMPLX( ar_2d(i,j), ar_2d(nx+1-i,j),        &
-                                         KIND=wp )
-                  ENDDO
-                  x_out_dev((nx+1)/2) = CMPLX( ar_2d((nx+1)/2,j), 0.0_wp,      &
-                                               KIND=wp )
+               !$acc kernels deviceptr(ar, x_out_dev)
+               x_out_dev(0) = CMPLX( ar(0,j,k), 0.0_wp, KIND=wp )
+               DO  i = 1, (nx+1)/2 - 1
+                   x_out_dev(i) = CMPLX( ar(i,j,k), ar(nx+1-i,j,k), KIND=wp )
+               ENDDO
+                   x_out_dev((nx+1)/2) = CMPLX( ar((nx+1)/2,j,k), 0.0_wp,       &
+                                             KIND=wp )
+               !$acc end kernels
+               ierr = cufftExecC2R( plan_xi_dev, x_out_dev, ar(0:nx,j,k) )
 
-             !    !$acc end parallel
-                  ierr = cufftExecC2R( plan_xi_dev, x_out_dev, ar(0:nx,j,k) )
-                 ! ierr = cudaMemcpy(ar_dev(:,j,k),x_in_dev(0:nx),nx+1,cudaMemcpyDeviceToDevice)
-                   ! ar(0:nx,j,k) = x_in_dev(0:nx)
-              ENDDO
            ENDDO
-       ELSE
-          DO  k = nzb_x, nzt_x
-             DO  j = nys_x, nyn_x
-
-         !$acc kernels deviceptr(ar, x_out_dev)
-                 x_out_dev(0) = CMPLX( ar(0,j,k), 0.0_wp, KIND=wp )
-                 DO  i = 1, (nx+1)/2 - 1
-                     x_out_dev(i) = CMPLX( ar(i,j,k), ar(nx+1-i,j,k), KIND=wp )
-                 ENDDO
-                     x_out_dev((nx+1)/2) = CMPLX( ar((nx+1)/2,j,k), 0.0_wp,       &
-                                               KIND=wp )
-         !$acc end kernels
-!
- !             !$acc end parallel
-                 ierr = cufftExecC2R( plan_xi_dev, x_out_dev, ar(0:nx,j,k) )
-  !               ierr = cudaMemcpy(ar_dev(:,j,k),x_in_dev(0:nx),nx+1,cudaMemcpyDeviceToDevice)
-                 ! ar(0:nx,j,k) = x_in_dev(0:nx)
-  ENDDO
-          ENDDO
-       ENDIF
+        ENDDO
     ENDIF
 
 #else
@@ -439,25 +389,12 @@
                    x_in(0:nx) = ar(0:nx,j,k)
                    CALL FFTW_EXECUTE_DFT_R2C( plan_xf, x_in, x_out )
 
-                   IF ( PRESENT( ar_2d ) )  THEN
-
-                      DO  i = 0, (nx+1)/2
-                         ar_2d(i,j) = REAL( x_out(i), KIND=wp ) / ( nx+1 )
-                      ENDDO
-                      DO  i = 1, (nx+1)/2 - 1
-                         ar_2d(nx+1-i,j) = AIMAG( x_out(i) ) / ( nx+1 )
-                      ENDDO
-
-                   ELSE
-
-                      DO  i = 0, (nx+1)/2
-                         ar(i,j,k) = REAL( x_out(i), KIND=wp ) / ( nx+1 )
-                      ENDDO
-                      DO  i = 1, (nx+1)/2 - 1
-                         ar(nx+1-i,j,k) = AIMAG( x_out(i) ) / ( nx+1 )
-                      ENDDO
-
-                   ENDIF
+                   DO  i = 0, (nx+1)/2
+                      ar(i,j,k) = REAL( x_out(i), KIND=wp ) / ( nx+1 )
+                   ENDDO
+                   DO  i = 1, (nx+1)/2 - 1
+                      ar(nx+1-i,j,k) = AIMAG( x_out(i) ) / ( nx+1 )
+                   ENDDO
 
                 ENDDO
              ENDDO
@@ -469,26 +406,13 @@
              DO  k = nzb_x, nzt_x
                 DO  j = nys_x, nyn_x
 
-                   IF ( PRESENT( ar_2d ) )  THEN
 
-                      x_out(0) = CMPLX( ar_2d(0,j), 0.0_wp, KIND=wp )
-                      DO  i = 1, (nx+1)/2 - 1
-                         x_out(i) = CMPLX( ar_2d(i,j), ar_2d(nx+1-i,j),        &
-                                           KIND=wp )
-                      ENDDO
-                      x_out((nx+1)/2) = CMPLX( ar_2d((nx+1)/2,j), 0.0_wp,      &
+                   x_out(0) = CMPLX( ar(0,j,k), 0.0_wp, KIND=wp )
+                   DO  i = 1, (nx+1)/2 - 1
+                      x_out(i) = CMPLX( ar(i,j,k), ar(nx+1-i,j,k), KIND=wp )
+                   ENDDO
+                   x_out((nx+1)/2) = CMPLX( ar((nx+1)/2,j,k), 0.0_wp,       &
                                                KIND=wp )
-
-                   ELSE
-
-                      x_out(0) = CMPLX( ar(0,j,k), 0.0_wp, KIND=wp )
-                      DO  i = 1, (nx+1)/2 - 1
-                         x_out(i) = CMPLX( ar(i,j,k), ar(nx+1-i,j,k), KIND=wp )
-                      ENDDO
-                      x_out((nx+1)/2) = CMPLX( ar((nx+1)/2,j,k), 0.0_wp,       &
-                                               KIND=wp )
-
-                   ENDIF
 
                    CALL FFTW_EXECUTE_DFT_C2R( plan_xi, x_out, x_in)
                    ar(0:nx,j,k) = x_in(0:nx)

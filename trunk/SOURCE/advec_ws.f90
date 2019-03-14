@@ -3154,7 +3154,7 @@
 
 !
 !--    Compute the fluxes for the whole left boundary of the processor domain.
-!$acc parallel    
+!$acc kernels   
      i = nxl
        DO  j = nys, nyn
 
@@ -3198,8 +3198,8 @@
           ENDDO
         ENDDO
 
-!$acc end parallel
-!$acc parallel
+!$acc end kernels
+!$acc kernels
      DO j=nys,nyn
           DO  k = nzb_max+1, nzt
 
@@ -3219,8 +3219,8 @@
           ENDDO
 
        ENDDO
-!$acc end parallel
-!$acc parallel
+!$acc end kernels
+!$acc kernels
 
        DO  i = nxl, nxr
 
@@ -3264,7 +3264,7 @@
 
           ENDDO
        ENDDO
-!$acc end parallel
+!$acc end kernels
 
     DO i=nxl,nxr
 !--       Above to the top of the highest topography. No degradation necessary.

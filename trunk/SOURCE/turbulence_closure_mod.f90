@@ -2041,13 +2041,16 @@
  SUBROUTINE tcm_prognostic
 
     USE arrays_3d,                                                             &
-        ONLY:  ddzu
+        ONLY:  ddzu, ddzw, drho_air, rho_air_zw
 
     USE control_parameters,                                                    &
         ONLY:  f, scalar_advec, tsc
 
+    USE grid_variables,                                                        &
+        ONLY:  ddx2, ddy2
+
     USE surface_mod,                                                           &
-        ONLY :  surf_def_h, surf_def_v, surf_lsm_h, surf_lsm_v, surf_usm_h,    &
+        ONLY :   bc_h, surf_def_h, surf_def_v, surf_lsm_h, surf_lsm_v, surf_usm_h,    &
                 surf_usm_v
 
     IMPLICIT NONE
@@ -2060,6 +2063,11 @@
     INTEGER(iwp) ::  surf_s  !< start index of surface elements at given i-j position
 
     REAL(wp)     ::  sbt     !< wheighting factor for sub-time step
+    REAL(wp)     ::  flag           !< flag to mask topography
+    REAL(wp)     ::  l              !< mixing length
+    REAL(wp)     ::  ll             !< adjusted l
+
+    REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  dissipation  !< TKE dissipation
 
     REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) :: advec  !< advection term of TKE tendency
     REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) :: produc !< production term of TKE tendency
@@ -2094,16 +2102,66 @@
 !
 !--    Save production term for prognostic equation of TKE dissipation rate
        IF ( rans_tke_e )  produc = tend - advec
-
-       CALL diffusion_e( prho, prho_reference )
+    
+    !$acc data copy(drho_air(nzb+1:nzt),dd2zu(nzb+1:nzt),ddzu(nzb+1:nzt+1),ddzw(nzb+1:nzt),dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),e_p(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),g,kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho_reference,rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr),tsc(3),te_m(nzb+1:nzt,nys:nyn,nxl:nxr),wall_flags_0(nzb+1:nzt,nys:nyn,nxl:nxr)) 
+    !$acc kernels default(present)
 !
-!--    Prognostic equation for TKE.
-!--    Eliminate negative TKE values, which can occur due to numerical
-!--    reasons in the course of the integration. In such cases the old TKE
-!--    value is reduced by 90%.
+    !-- Calculate the tendency terms
        DO  i = nxl, nxr
           DO  j = nys, nyn
              DO  k = nzb+1, nzt
+       !
+       !--      Predetermine flag to mask topography
+                flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
+   
+       !
+       !--      Calculate dissipation
+                dvar_dz = atmos_ocean_sign * (prho(k+1,j,i) - prho(k-1,j,i) ) * dd2zu(k)
+                IF ( dvar_dz > 0.0_wp ) THEN
+                   IF ( use_single_reference_value )  THEN
+                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                         / SQRT( g / prho_reference * dvar_dz ) + 1E-5_wp
+                   ELSE
+                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                         / SQRT( g / prho(k,j,i) * dvar_dz ) + 1E-5_wp
+                   ENDIF
+                ELSE
+                   l_stable = l_grid(k)
+                ENDIF
+            !
+            !-- Adjustment of the mixing length
+                IF ( wall_adjustment )  THEN
+                   l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
+                   ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
+                ELSE
+                   l  = MIN( l_grid(k), l_stable )
+                   ll = l_grid(k)
+                ENDIF
+                dissipation(k,j) = ( 0.19_wp + 0.74_wp * l / ll )              &
+                                   * e(k,j,i) * SQRT( e(k,j,i) ) / l
+                tend(k,j,i) = tend(k,j,i) + (                                     &
+                                              (                                   &
+                          ( km(k,j,i)+km(k,j,i+1) ) * ( e(k,j,i+1)-e(k,j,i) )     &
+                        - ( km(k,j,i)+km(k,j,i-1) ) * ( e(k,j,i)-e(k,j,i-1) )     &
+                                              ) * ddx2  * flag                    &
+                                            + (                                   &
+                          ( km(k,j,i)+km(k,j+1,i) ) * ( e(k,j+1,i)-e(k,j,i) )     &
+                        - ( km(k,j,i)+km(k,j-1,i) ) * ( e(k,j,i)-e(k,j-1,i) )     &
+                                              ) * ddy2  * flag                    &
+                                            + (                                   &
+               ( km(k,j,i)+km(k+1,j,i) ) * ( e(k+1,j,i)-e(k,j,i) ) * ddzu(k+1)    &
+                                                             * rho_air_zw(k)      &
+             - ( km(k,j,i)+km(k-1,j,i) ) * ( e(k,j,i)-e(k-1,j,i) ) * ddzu(k)      &
+                                                             * rho_air_zw(k-1)    &
+                                              ) * ddzw(k) * drho_air(k)           &
+                                            ) * flag * dsig_e                     &
+                             - dissipation(k,j) * flag
+
+         !
+         !--    Prognostic equation for TKE.
+         !--    Eliminate negative TKE values, which can occur due to numerical
+         !--    reasons in the course of the integration. In such cases the old TKE
+         !--    value is reduced by 90%.
                 e_p(k,j,i) = e(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +        &
                                                  tsc(3) * te_m(k,j,i) )        &
                                         )                                      &
@@ -2111,9 +2169,15 @@
                                              BTEST( wall_flags_0(k,j,i), 0 )   &
                                           )
                 IF ( e_p(k,j,i) < 0.0_wp )  e_p(k,j,i) = 0.1_wp * e(k,j,i)
+             
              ENDDO
           ENDDO
+   
        ENDDO
+    
+    !$acc end kernels
+
+    !$acc end data
 
 !
 !--    Use special boundary condition in case of TKE-e closure
@@ -3241,8 +3305,9 @@ SUBROUTINE diffusion_e( var, var_reference )
     REAL(wp), DIMENSION(:,:,:), POINTER ::  var  !< temperature
 #endif
     REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  dissipation  !< TKE dissipation
-
-!$acc kernels
+    
+    !$acc data copy(drho_air(nzb+1:nzt),dd2zu(nzb+1:nzt),ddzu(nzb+1:nzt+1),ddzw(nzb+1:nzt),dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),var(:,:,:),kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr),wall_flags_0(nzb+1:nzt,nys:nyn,nxl:nxr)) 
+    !$acc kernels default(present)
 
     !
     !-- Calculate the tendency terms
@@ -3318,7 +3383,8 @@ SUBROUTINE diffusion_e( var, var_reference )
        ENDDO
 
     ENDDO
-!$acc end kernels
+    !$acc end kernels
+    !$acc end data
 
  END SUBROUTINE diffusion_e
 
@@ -3661,8 +3727,13 @@ SUBROUTINE diffusion_e( var, var_reference )
  SUBROUTINE tcm_diffusivities( var, var_reference )
 
 
+    USE arrays_3d,                                                             &
+        ONLY:  dd2zu
+
     USE control_parameters,                                                    &
-        ONLY:  e_min, outflow_l, outflow_n, outflow_r, outflow_s
+        ONLY:  e_min, outflow_l, outflow_n, outflow_r, outflow_s,              &
+               atmos_ocean_sign, g, use_single_reference_value,                &
+               wall_adjustment, wall_adjustment_factor
 
     USE grid_variables,                                                        &
         ONLY:  dx, dy
@@ -3685,8 +3756,10 @@ SUBROUTINE diffusion_e( var, var_reference )
     INTEGER(iwp) ::  tn                  !< thread number
 
     REAL(wp)     ::  flag                !< topography flag
+    REAL(wp)     ::  dvar_dz             !< vertical gradient of var
     REAL(wp)     ::  l                   !< mixing length
     REAL(wp)     ::  ll                  !< adjusted mixing length
+    REAL(wp)     ::  l_stable            !< mixing length according to stratification
     REAL(wp)     ::  var_reference       !< reference temperature
 
 #if defined( __nopointer )
@@ -3712,6 +3785,9 @@ SUBROUTINE diffusion_e( var, var_reference )
 !-- Introduce an optional minimum tke
     IF ( e_min > 0.0_wp )  THEN
        !$OMP DO
+       !$acc data copy(wall_flags_0(nzb+1:nzt,nysg:nyng,nxlg:nxrg),e(nzb+1:nzt,nysg:nyng,nxlg:nxrg)) 
+       !$acc parallel
+       !$acc loop collapse(3)
        DO  i = nxlg, nxrg
           DO  j = nysg, nyng
              DO  k = nzb+1, nzt
@@ -3720,10 +3796,15 @@ SUBROUTINE diffusion_e( var, var_reference )
              ENDDO
           ENDDO
        ENDDO
+       !$acc end parallel
+       !$acc end data
     ENDIF
 
-    IF ( les_mw )  THEN
+!    IF ( les_mw )  THEN
        !$OMP DO
+       !$acc data copy(dd2zu(nzb+1:nzt),kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb+1:nzt,nysg:nyng,nxlg:nxrg),e(nzb+1:nzt,nysg:nyng,nxlg:nxrg),var,sums_l_l(nzb+1:nzt,0:statistic_regions,0),wall_flags_0(nzb+1:nzt,nysg:nyng,nxlg:nxrg),l_grid(nzb+1:nzt),rmask(nysg:nyng,nxlg:nxrg,0:statistic_regions),l_wall(nzb+1:nzt,nysg:nyng,nxlg:nxrg))
+       !$acc parallel
+       !$acc loop collapse(3)
        DO  i = nxlg, nxrg
           DO  j = nysg, nyng
              DO  k = nzb+1, nzt
@@ -3732,7 +3813,29 @@ SUBROUTINE diffusion_e( var, var_reference )
 
 !
 !--             Determine the mixing length for LES closure
-                CALL mixing_length_les( i, j, k, l, ll, var, var_reference )
+!                CALL mixing_length_les( i, j, k, l, ll, var, var_reference )
+
+                dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
+                IF ( dvar_dz > 0.0_wp ) THEN
+                   IF ( use_single_reference_value )  THEN
+                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                         / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
+                   ELSE
+                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                         / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
+                   ENDIF
+                ELSE
+                   l_stable = l_grid(k)
+                ENDIF
+!
+!-- Adjustment of the mixing length
+                IF ( wall_adjustment )  THEN
+                   l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
+                   ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
+                ELSE
+                   l  = MIN( l_grid(k), l_stable )
+                   ll = l_grid(k)
+                ENDIF
 !
 !--             Compute diffusion coefficients for momentum and heat
                 km(k,j,i) = c_0 * l * SQRT( e(k,j,i) ) * flag
@@ -3747,58 +3850,88 @@ SUBROUTINE diffusion_e( var, var_reference )
              ENDDO
           ENDDO
        ENDDO
+       !$acc end parallel
+       !$acc end data
 
-    ELSEIF ( rans_tke_l )  THEN
-
-       !$OMP DO
-       DO  i = nxlg, nxrg
-          DO  j = nysg, nyng
-             DO  k = nzb+1, nzt
-
-                flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
+!    ELSEIF ( rans_tke_l )  THEN
 !
-!--             Mixing length for RANS mode with TKE-l closure
-                CALL mixing_length_rans( i, j, k, l, ll, var, var_reference )
+!       !$OMP DO
+!       !$acc parallel
+!       !$acc loop collapse(3)
+!       DO  i = nxlg, nxrg
+!          DO  j = nysg, nyng
+!             DO  k = nzb+1, nzt
 !
-!--             Compute diffusion coefficients for momentum and heat
-                km(k,j,i) = c_0 * l * SQRT( e(k,j,i) ) * flag
-                kh(k,j,i) = km(k,j,i) / prandtl_number * flag
+!                flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
+!!
+!!--             Mixing length for RANS mode with TKE-l closure
+!!                CALL mixing_length_rans( i, j, k, l, ll, var, var_reference )
 !
-!--             Summation for averaged profile (cf. flow_statistics)
-                DO  sr = 0, statistic_regions
-                   sums_l_l(k,sr,tn) = sums_l_l(k,sr,tn) + l * rmask(j,i,sr)   &
-                                                             * flag
-                ENDDO
-
-             ENDDO
-          ENDDO
-       ENDDO
-
-    ELSEIF ( rans_tke_e )  THEN
-
-       !$OMP DO
-       DO  i = nxlg, nxrg
-          DO  j = nysg, nyng
-             DO  k = nzb+1, nzt
-
-                flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
+!                dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
+!                IF ( dvar_dz > 0.0_wp ) THEN
+!                   IF ( use_single_reference_value )  THEN
+!                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+!                                         / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
+!                   ELSE
+!                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+!                                         / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
+!                   ENDIF
+!                ELSE
+!                   l_stable = l_grid(k)
+!                ENDIF
+!!
+!!-- Adjustment of the mixing length
+!                IF ( wall_adjustment )  THEN
+!                   l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
+!                   ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
+!                ELSE
+!                   l  = MIN( l_grid(k), l_stable )
+!                   ll = l_grid(k)
+!                ENDIF
+!!
+!!--             Compute diffusion coefficients for momentum and heat
+!                km(k,j,i) = c_0 * l * SQRT( e(k,j,i) ) * flag
+!                kh(k,j,i) = km(k,j,i) / prandtl_number * flag
+!!
+!!--             Summation for averaged profile (cf. flow_statistics)
+!                DO  sr = 0, statistic_regions
+!                   sums_l_l(k,sr,tn) = sums_l_l(k,sr,tn) + l * rmask(j,i,sr)   &
+!                                                             * flag
+!                ENDDO
 !
-!--             Compute diffusion coefficients for momentum and heat
-                km(k,j,i) = c_0**4 * e(k,j,i)**2 / ( diss(k,j,i) + 1.0E-30_wp ) * flag
-                kh(k,j,i) = km(k,j,i) / prandtl_number * flag
+!             ENDDO
+!          ENDDO
+!       ENDDO
+!       !$acc end parallel
 !
-!--             Summation for averaged profile of mixing length (cf. flow_statistics)
-                DO  sr = 0, statistic_regions
-                   sums_l_l(k,sr,tn) = sums_l_l(k,sr,tn) +                     &
-                      c_0**3 * e(k,j,i) * SQRT(e(k,j,i)) /                     &
-                      ( diss(k,j,i) + 1.0E-30_wp ) * rmask(j,i,sr) * flag
-                ENDDO
-
-             ENDDO
-          ENDDO
-       ENDDO
-
-    ENDIF
+!    ELSEIF ( rans_tke_e )  THEN
+!
+!       !$OMP DO
+!       !$acc parallel
+!       !$acc loop collapse(3)
+!       DO  i = nxlg, nxrg
+!          DO  j = nysg, nyng
+!             DO  k = nzb+1, nzt
+!
+!                flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
+!!
+!!--             Compute diffusion coefficients for momentum and heat
+!                km(k,j,i) = c_0**4 * e(k,j,i)**2 / ( diss(k,j,i) + 1.0E-30_wp ) * flag
+!                kh(k,j,i) = km(k,j,i) / prandtl_number * flag
+!!
+!!--             Summation for averaged profile of mixing length (cf. flow_statistics)
+!                DO  sr = 0, statistic_regions
+!                   sums_l_l(k,sr,tn) = sums_l_l(k,sr,tn) +                     &
+!                      c_0**3 * e(k,j,i) * SQRT(e(k,j,i)) /                     &
+!                      ( diss(k,j,i) + 1.0E-30_wp ) * rmask(j,i,sr) * flag
+!                ENDDO
+!
+!             ENDDO
+!          ENDDO
+!       ENDDO
+!       !$acc end parallel
+!
+!    ENDIF
 
     sums_l_l(nzt+1,:,tn) = sums_l_l(nzt,:,tn)   ! quasi boundary-condition for
                                                 ! data output

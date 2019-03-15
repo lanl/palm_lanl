@@ -181,8 +181,9 @@
 #endif
 
        REAL(wp), DIMENSION(1:surf_def_h(2)%ns),INTENT(IN),OPTIONAL :: s_flux_solar_t  !<solar flux at sfc
-
-       DO  i = nxl, nxr
+!$acc parallel
+!$acc loop gang vector collapse(3)
+        DO  i = nxl, nxr
           DO  j = nys,nyn
 !
 !--          Compute horizontal diffusion
@@ -212,8 +213,14 @@
                                    * ( s(k,j,i)   - s(k,j-1,i) )               &
                                                      ) * ddy2 * flag
              ENDDO
+          ENDDO
+       ENDDO
 
+!$acc loop gang vector collapse(2)
+     DO i=nxl,nxr
+       DO j=nys,nyn
 !
+
 !--          Apply prescribed horizontal wall heatflux where necessary. First,
 !--          determine start and end index for respective (j,i)-index. Please
 !--          note, in the flat case following loop will not be entered, as
@@ -223,6 +230,7 @@
 !--          North-facing vertical default-type surfaces
              surf_s = surf_def_v(0)%start_index(j,i)
              surf_e = surf_def_v(0)%end_index(j,i)
+             !$acc loop vector
              DO  m = surf_s, surf_e
                 k           = surf_def_v(0)%k(m)
                 tend(k,j,i) = tend(k,j,i) + s_flux_def_v_north(m) * ddy
@@ -231,6 +239,7 @@
 !--          South-facing vertical default-type surfaces
              surf_s = surf_def_v(1)%start_index(j,i)
              surf_e = surf_def_v(1)%end_index(j,i)
+             !$acc loop vector
              DO  m = surf_s, surf_e
                 k           = surf_def_v(1)%k(m)
                 tend(k,j,i) = tend(k,j,i) + s_flux_def_v_south(m) * ddy
@@ -239,6 +248,7 @@
 !--          East-facing vertical default-type surfaces
              surf_s = surf_def_v(2)%start_index(j,i)
              surf_e = surf_def_v(2)%end_index(j,i)
+             !$acc loop vector
              DO  m = surf_s, surf_e
                 k           = surf_def_v(2)%k(m)
                 tend(k,j,i) = tend(k,j,i) + s_flux_def_v_east(m) * ddx
@@ -247,10 +257,18 @@
 !--          West-facing vertical default-type surfaces
              surf_s = surf_def_v(3)%start_index(j,i)
              surf_e = surf_def_v(3)%end_index(j,i)
+             !$acc loop vector
              DO  m = surf_s, surf_e
                 k           = surf_def_v(3)%k(m)
                 tend(k,j,i) = tend(k,j,i) + s_flux_def_v_west(m) * ddx
              ENDDO
+      ENDDO
+ENDDO
+
+!$acc loop gang vector collapse(3)
+     DO i=nxl,nxr
+       DO j=nys,nyn
+
 !
 !--          Compute vertical diffusion. In case that surface fluxes have been
 !--          prescribed or computed at bottom and/or top, index k starts/ends at
@@ -284,6 +302,14 @@
                                                   ) * ddzw(k) * drho_air(k)    &
                                                               * flag
              ENDDO
+          ENDDO
+       ENDDO
+!$acc end parallel
+
+!$acc parallel copyin(s_flux_solar_t(:),s_flux_def_h_up(:),s_flux_t(:),s_flux_def_h_down(:),ddzw(:)) copy(tend(:,nys:nyn,nxl:nxr))  copyin(surf_def_h(:),dzw(nzb+1:nzt))  copy(solar3d(nzb+1:nzt,nys:nyn,nxl:nxr))  copyin(drho_air(:)) 
+!$acc loop gang vector collapse(2)
+     DO i=nxl,nxr
+       DO j=nys,nyn
 
 !--          Vertical diffusion at horizontal walls.
              IF ( use_surface_fluxes )  THEN
@@ -291,6 +317,7 @@
 !--             Default-type surfaces, upward-facing               
                 surf_s = surf_def_h(0)%start_index(j,i)
                 surf_e = surf_def_h(0)%end_index(j,i)
+                !$acc loop vector
                 DO  m = surf_s, surf_e
 
                    k   = surf_def_h(0)%k(m)
@@ -302,6 +329,7 @@
 !--             Default-type surfaces, downward-facing               
                 surf_s = surf_def_h(1)%start_index(j,i)
                 surf_e = surf_def_h(1)%end_index(j,i)
+                !$acc loop vector
                 DO  m = surf_s, surf_e
 
                    k   = surf_def_h(1)%k(m)
@@ -315,6 +343,7 @@
                   m = surf_def_h(2)%start_index(j,i)
 
                   zval = 0.0_wp
+                  !$acc loop vector
                   DO k = nzt,nzb+1,-1
                       flux1 = (1.0_wp - ideal_solar_division)*exp(ideal_solar_efolding2*zval) + &
                                 ideal_solar_division*exp(ideal_solar_efolding1*zval)
@@ -335,6 +364,7 @@
              IF ( use_top_fluxes )  THEN
                 surf_s = surf_def_h(2)%start_index(j,i)
                 surf_e = surf_def_h(2)%end_index(j,i)
+                !$acc loop vector
                 DO  m = surf_s, surf_e
 
                    k   = surf_def_h(2)%k(m)
@@ -345,7 +375,7 @@
 
           ENDDO
        ENDDO
-
+!$acc end parallel
     END SUBROUTINE diffusion_s
 
 !------------------------------------------------------------------------------!

@@ -19,9 +19,12 @@ mpi_ranks=1
 # Set environment
 export PATH="${script_path}:${PATH}"
 module load pgi/18.10
-module load openmpi/3.1.2/pgi/18.10
-module load hdf5/1.10.3/parallel/openmpi/3.1.2/pgi/18.10
-module load netcdf/4.6.1/parallel/openmpi/3.1.2/pgi/18.10
+module load hdf5/1.10.3/serial/pgi/18.10
+module load netcdf/4.6.1/serial/pgi/18.10
+
+#module load openmpi/3.1.2/pgi/18.10
+#module load hdf5/1.10.3/parallel/openmpi/3.1.2/pgi/18.10
+#module load netcdf/4.6.1/parallel/openmpi/3.1.2/pgi/18.10
 
 # Paths
 build_path=${scratch_path}/BUILD_${build_config}
@@ -76,6 +79,7 @@ EOF
 echo "no_coupling"  >  ${execution_path}/runfile
 
 # Switch to run directory
+cp  ${REPO_PATH}/palm_gcp.slurm ${execution_path}
 cd  ${execution_path}
 
 # Profiling
@@ -92,6 +96,7 @@ cd  ${execution_path}
 #else
 #mpirun -n ${mpi_ranks} pgprof -o ${test_case}.%h.%p.pgprof ./palm
 #fi
+
 
 echo "*** PALM Run Setup Complete:"
 echo "    \"${execution_path}\""

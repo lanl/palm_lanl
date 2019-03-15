@@ -215,9 +215,7 @@
              ENDDO
           ENDDO
        ENDDO
-!$acc end parallel
 
-!$acc parallel
 !$acc loop gang vector collapse(2)
      DO i=nxl,nxr
        DO j=nys,nyn
@@ -266,9 +264,7 @@
              ENDDO
       ENDDO
 ENDDO
-!$acc end parallel
 
-!$acc parallel
 !$acc loop gang vector collapse(3)
      DO i=nxl,nxr
        DO j=nys,nyn
@@ -310,7 +306,7 @@ ENDDO
        ENDDO
 !$acc end parallel
 
-!$acc parallel
+!$acc parallel copyin(s_flux_solar_t(:),s_flux_def_h_up(:),s_flux_t(:),s_flux_def_h_down(:),ddzw(:)) copy(tend(:,nys:nyn,nxl:nxr))  copyin(surf_def_h(:),dzw(nzb+1:nzt))  copy(solar3d(nzb+1:nzt,nys:nyn,nxl:nxr))  copyin(drho_air(:)) 
 !$acc loop gang vector collapse(2)
      DO i=nxl,nxr
        DO j=nys,nyn

@@ -2346,9 +2346,12 @@
        IF ( use_surface_fluxes  .AND.  constant_heatflux  .AND.                &
             random_heatflux )  THEN
           IF ( surf_def_h(0)%ns >= 1 )  CALL disturb_heatflux( surf_def_h(0) )
-          IF ( surf_def_h(2)%ns >= 1 )  CALL disturb_heatflux( surf_def_h(2) )
           IF ( surf_lsm_h%ns    >= 1 )  CALL disturb_heatflux( surf_lsm_h    )
           IF ( surf_usm_h%ns    >= 1 )  CALL disturb_heatflux( surf_usm_h    )
+       ENDIF
+       IF ( use_top_fluxes  .AND.  constant_top_heatflux  .AND.                &
+            random_heatflux )  THEN
+          IF ( surf_def_h(2)%ns >= 1 )  CALL disturb_heatflux( surf_def_h(2) )
        ENDIF
     ENDIF
 

@@ -2103,10 +2103,10 @@
 !--    Save production term for prognostic equation of TKE dissipation rate
        IF ( rans_tke_e )  produc = tend - advec
     
-    !$acc data copy(drho_air(nzb+1:nzt),dd2zu(nzb+1:nzt),ddzu(nzb+1:nzt+1),ddzw(nzb+1:nzt),dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),e_p(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),g,kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho_reference,rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr),tsc(3),te_m(nzb+1:nzt,nys:nyn,nxl:nxr),wall_flags_0(nzb+1:nzt,nys:nyn,nxl:nxr)) 
+!    !$acc data copy(drho_air(nzb+1:nzt),dd2zu(nzb+1:nzt),ddzu(nzb+1:nzt+1),ddzw(nzb+1:nzt),dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),e_p(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),g,kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho_reference,rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr),tsc(3),te_m(nzb+1:nzt,nys:nyn,nxl:nxr),wall_flags_0(nzb+1:nzt,nys:nyn,nxl:nxr)) 
 
-    !$acc parallel default(present)
-    !$acc loop collapse(3)
+ !   !$acc parallel default(present)
+ !   !$acc loop collapse(3)
 !
     !-- Calculate the tendency terms
        DO  i = nxl, nxr
@@ -2177,9 +2177,9 @@
    
        ENDDO
     
-    !$acc end parallel
+ !   !$acc end parallel
 
-    !$acc end data
+ !   !$acc end data
 
 !
 !--    Use special boundary condition in case of TKE-e closure
@@ -3308,8 +3308,8 @@ SUBROUTINE diffusion_e( var, var_reference )
 #endif
     REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  dissipation  !< TKE dissipation
     
-    !$acc data copy(drho_air(nzb+1:nzt),dd2zu(nzb+1:nzt),ddzu(nzb+1:nzt+1),ddzw(nzb+1:nzt),dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),var(:,:,:),kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr),wall_flags_0(nzb+1:nzt,nys:nyn,nxl:nxr)) 
-    !$acc kernels default(present)
+!    !$acc data copy(drho_air(nzb+1:nzt),dd2zu(nzb+1:nzt),ddzu(nzb+1:nzt+1),ddzw(nzb+1:nzt),dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),var(:,:,:),kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr),wall_flags_0(nzb+1:nzt,nys:nyn,nxl:nxr)) 
+!   !$acc kernels default(present)
 
     !
     !-- Calculate the tendency terms
@@ -3385,8 +3385,8 @@ SUBROUTINE diffusion_e( var, var_reference )
        ENDDO
 
     ENDDO
-    !$acc end kernels
-    !$acc end data
+!    !$acc end kernels
+  !  !$acc end data
 
  END SUBROUTINE diffusion_e
 

@@ -19,13 +19,13 @@
 !
 ! Current revisions:
 ! ------------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: mod_kinds.f90 2718 2018-01-02 08:49:38Z maronga $
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 !
@@ -33,7 +33,7 @@
 !
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
 ! Code annotations made doxygen readable
 !
@@ -50,7 +50,7 @@
 !> appropriately by assigning other kinds below.
 !------------------------------------------------------------------------------!
  MODULE kinds
- 
+
 
     IMPLICIT NONE
 
@@ -66,7 +66,7 @@
 
 !
 !-- Set kinds to be used as defaults
-    INTEGER, PARAMETER ::   wp =  sp          !< default real kind
+    INTEGER, PARAMETER ::   wp =  dp          !< default real kind
     INTEGER, PARAMETER ::  iwp = isp          !< default integer kind
 
     SAVE

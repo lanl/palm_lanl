@@ -195,7 +195,7 @@
 
     INTEGER, SAVE :: batch1, batch2
 
-    COMPLEX, DEVICE, DIMENSION(:,:,:), ALLOCATABLE, SAVE ::       &
+    COMPLEX(wp), DEVICE, DIMENSION(:,:,:), ALLOCATABLE, SAVE ::       &
             x_out_dev, y_out_dev
     REAL(wp), DEVICE, DIMENSION(:), ALLOCATABLE, SAVE :: x_in_dev, y_in_dev
     INTEGER, SAVE :: plan_xf_dev, plan_xi_dev, plan_yf_dev, plan_yi_dev
@@ -278,10 +278,10 @@
 
        batch1 = (nyn_x-nys_x+1)*(nzt_x-nzb_x+1)
        batch2 = (nxr_y-nxl_y+1)*(nzt_x-nzb_x+1)
-       ierr = cufftPlan1d( plan_xf_dev, nx_cC, CUFFT_R2C, batch1)
-       ierr = cufftPlan1d( plan_xi_dev, nx_cC, CUFFT_C2R, batch1)
-       ierr = cufftPlan1d( plan_yf_dev, ny_cC, CUFFT_R2C, batch2)
-       ierr = cufftPlan1d( plan_yi_dev, ny_cC, CUFFT_C2R, batch2)
+       ierr = cufftPlan1d( plan_xf_dev, nx_cC, CUFFT_D2Z, batch1)
+       ierr = cufftPlan1d( plan_xi_dev, nx_cC, CUFFT_Z2D, batch1)
+       ierr = cufftPlan1d( plan_yf_dev, ny_cC, CUFFT_D2Z, batch2)
+       ierr = cufftPlan1d( plan_yi_dev, ny_cC, CUFFT_Z2D, batch2)
 #else
           nx_c = nx+1
           ny_c = ny+1
@@ -342,7 +342,7 @@
 
        if ( forward_fft )  THEN
 
-          ierr = cufftExecR2C( plan_xf_dev, ar, x_out_dev)
+          ierr = cufftExecD2Z( plan_xf_dev, ar, x_out_dev)
           !$acc parallel deviceptr(x_out_dev, ar)
           !$acc loop collapse(2)
           DO k = nzb_x, nzt_x
@@ -378,7 +378,7 @@
           ENDDO
           !$acc end parallel
 
-          ierr = cufftExecC2R( plan_xi_dev, x_out_dev, ar)
+          ierr = cufftExecZ2D( plan_xi_dev, x_out_dev, ar)
        ENDIF
 
 #else
@@ -543,7 +543,7 @@
 #if defined( __GPU )
        IF ( forward_fft )  THEN
 
-          ierr = cufftExecR2C( plan_yf_dev, ar, y_out_dev)
+          ierr = cufftExecD2Z( plan_yf_dev, ar, y_out_dev)
 
           !$acc parallel deviceptr(ar, y_out_dev)
           !$acc loop collapse(2)
@@ -582,7 +582,7 @@
           ENDDO
           !$acc end parallel
 
-          ierr = cufftExecC2R( plan_yi_dev, y_out_dev, ar )
+          ierr = cufftExecZ2D( plan_yi_dev, y_out_dev, ar )
 
        ENDIF
 

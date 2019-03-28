@@ -2095,6 +2095,13 @@
     ELSE
        IF ( bc_pt_b == 'dirichlet' )  THEN
           ibc_pt_b = 0
+          IF ( TRIM( constant_flux_layer ) == 'bottom' )  THEN
+             message_string = 'boundary condition: bc_pt_b = "' //                &
+                  TRIM( bc_pt_b ) // '" is not allowed with constant_flux_layer'  &
+                  // ' = bottom. bc_pt_b set to "neumann".'
+             CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
+             bc_pt_b = 'neumann'
+          ENDIF
        ELSEIF ( bc_pt_b == 'neumann' )  THEN
           ibc_pt_b = 1
        ELSE
@@ -2106,6 +2113,13 @@
 
     IF ( bc_pt_t == 'dirichlet' )  THEN
        ibc_pt_t = 0
+       IF ( TRIM( constant_flux_layer ) == 'top' )  THEN
+          message_string = 'boundary condition: bc_pt_t = "' //                &
+               TRIM( bc_pt_t ) // '" is not allowed with constant_flux_layer'  &
+               // ' = bottom. bc_pt_t set to "neumann".'
+          CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
+          bc_pt_t = 'neumann'
+       ENDIF
     ELSEIF ( bc_pt_t == 'neumann' )  THEN
        ibc_pt_t = 1
     ELSEIF ( bc_pt_t == 'initial_gradient' )  THEN
@@ -2211,6 +2225,13 @@
     IF ( ocean )  THEN
        IF ( bc_sa_t == 'dirichlet' )  THEN
           ibc_sa_t = 0
+          IF ( TRIM( constant_flux_layer ) == 'top' )  THEN
+             message_string = 'boundary condition: bc_sa_t = "' //                &
+                  TRIM( bc_sa_t ) // '" is not allowed with constant_flux_layer'  &
+                  // ' = bottom. bc_sa_t set to "neumann".'
+             CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
+             bc_sa_t = 'neumann'
+          ENDIF
        ELSEIF ( bc_sa_t == 'neumann' )  THEN
           ibc_sa_t = 1
        ELSE
@@ -2221,6 +2242,13 @@
 
        IF ( bc_sa_b == 'dirichlet' )  THEN
           ibc_sa_b = 0
+          IF ( TRIM( constant_flux_layer ) == 'bottom' )  THEN
+             message_string = 'boundary condition: bc_sa_b = "' //                &
+                  TRIM( bc_sa_b ) // '" is not allowed with constant_flux_layer'  &
+                  // ' = bottom. bc_sa_b set to "neumann".'
+             CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
+             bc_sa_b = 'neumann'
+          ENDIF
        ELSEIF ( bc_sa_b == 'neumann' )  THEN
           ibc_sa_b = 1
        ELSE
@@ -2350,10 +2378,6 @@
                         TRIM( bc_uv_b ) // '"'
        CALL message( 'check_parameters', 'PA0076', 1, 2, 0, 6, 0 )
     ENDIF
-
-!
-!-- Boundary conditions for horizontal components of wind speed
-
 !
 !-- In case of coupled simulations u and v at the ground in atmosphere will be
 !-- assigned with the u and v values of the ocean surface

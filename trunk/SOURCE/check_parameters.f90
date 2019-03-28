@@ -1065,14 +1065,14 @@
        IF ( cloud_droplets )  THEN
           WRITE( action, '(A)' )  'cloud_droplets = .TRUE.'
        ENDIF
-       IF ( TRIM(constant_flux_layer) == 'none' )  THEN
-          WRITE( action, '(A)' )  'constant_flux_layer = none '
-       ENDIF
-       IF ( TRIM(constant_flux_layer) == 'top' )  THEN
-          WRITE( action, '(A)' )  'constant_flux_layer = top '
-       ENDIF
-       IF ( TRIM(constant_flux_layer) == 'bottom' )  THEN
-          WRITE( action, '(A)' )  'constant_flux_layer = bottom '
+       IF ( TRIM(constant_flux_layer) == 'none' .OR.                           &
+            TRIM(constant_flux_layer) == 'top'  .OR.                           &
+            TRIM(constant_flux_layer) == 'bottom'    ) THEN
+          WRITE( action, '(A,A)' )  'constant_flux_layer = ', TRIM(constant_flux_layer)
+       ELSE
+          message_string = 'unknown constant_flux_layer: constant_flux_layer  = "' // &
+                            TRIM(constant_flux_layer) // '"'
+          CALL message( 'check_parameters', 'PA0014', 1, 2, 0, 6, 0 )
        ENDIF
        IF ( action /= ' ' )  THEN
           message_string = 'a non-flat topography does not allow ' //          &
@@ -2257,6 +2257,30 @@
           CALL message( 'check_parameters', 'PA0068', 1, 2, 0, 6, 0 )
        ENDIF
 
+       IF ( top_salinityflux     == 9999999.9_wp )  THEN
+          constant_top_salinityflux = .FALSE.
+          IF ( ibc_sa_t == 0 )  THEN
+                constant_top_salinityflux = .FALSE.
+          ELSEIF ( ibc_sa_t == 1 )  THEN
+             constant_top_salinityflux = .TRUE.
+             top_salinityflux = 0.0_wp
+          ENDIF
+       ELSE
+          constant_top_salinityflux = .TRUE.
+       ENDIF
+       
+       IF ( bottom_salinityflux     == 9999999.9_wp )  THEN
+          constant_bottom_salinityflux = .FALSE.
+          IF ( ibc_sa_b == 0 )  THEN
+                constant_bottom_salinityflux = .FALSE.
+          ELSEIF ( ibc_sa_b == 1 )  THEN
+             constant_bottom_salinityflux = .TRUE.
+             bottom_salinityflux = 0.0_wp
+          ENDIF
+       ELSE
+          constant_bottom_salinityflux = .TRUE.
+       ENDIF
+       
        IF ( ibc_sa_t == 1  .AND.  top_salinityflux == 9999999.9_wp )  THEN
           message_string = 'boundary condition: bc_sa_t = "' //                &
                            TRIM( bc_sa_t ) // '" requires to set ' //          &
@@ -2285,7 +2309,7 @@
        IF ( ibc_sa_b == 0  .AND.  constant_bottom_salinityflux  .AND.             &
             bottom_salinityflux /= 0.0_wp )  THEN
           message_string = 'boundary condition: bc_sa_b = "' //                &
-                           TRIM( bc_sa_t ) // '" is not allowed with ' //      &
+                           TRIM( bc_sa_b ) // '" is not allowed with ' //      &
                            'bottom_salinityflux /= 0.0'
           CALL message( 'check_parameters', 'PA0070', 1, 2, 0, 6, 0 )
        ENDIF

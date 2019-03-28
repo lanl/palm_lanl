@@ -1446,7 +1446,7 @@
     REAL(wp) ::  bc_pt_t_val                                   !< vertical gradient of pt near domain top
     REAL(wp) ::  bc_q_t_val                                    !< vertical gradient of humidity near domain top
     REAL(wp) ::  bc_s_t_val                                    !< vertical gradient of passive scalar near domain top
-    REAL(wp) ::  bottom_salinityflux = 0.0_wp                  !< namelist parameter
+    REAL(wp) ::  bottom_salinityflux = 9999999.9_wp            !< namelist parameter
     REAL(wp) ::  bubble_center_x = 9999999.9_wp                !< namelist parameter
     REAL(wp) ::  bubble_center_y = 9999999.9_wp                !< namelist parameter
     REAL(wp) ::  bubble_center_z = 9999999.9_wp                !< namelist parameter

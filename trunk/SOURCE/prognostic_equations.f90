@@ -567,7 +567,7 @@
           CALL cpu_log( log_point(5), 'u-equation', 'start' )
           IF ( i >= nxlu )  THEN
 
-             IF ( time_prog_terms ) CALL cpu_log( log_point(43), 'advec-uvw', 'start' )
+             CALL cpu_log( log_point(43), 'uvw-advec', 'start' )
              tend(:,j,i) = 0.0_wp
 
              IF ( timestep_scheme(1:5) == 'runge' )  THEN
@@ -579,31 +579,31 @@
              ELSE
                 CALL advec_u_up( i, j )
              ENDIF
-             IF ( time_prog_terms ) CALL cpu_log( log_point(43), 'advec-uvw', 'stop' )
+             CALL cpu_log( log_point(43), 'uvw-advec', 'stop' )
              
-             IF ( time_prog_terms ) CALL cpu_log( log_point(44), 'diffusion', 'start' )
+             CALL cpu_log( log_point(44), 'uvw-diffusion', 'start' )
              CALL diffusion_u( i, j )
-             IF ( time_prog_terms ) CALL cpu_log( log_point(44), 'diffusion', 'stop' )
+             CALL cpu_log( log_point(44), 'uvw-diffusion', 'stop' )
 
-             IF ( time_prog_terms ) CALL cpu_log( log_point(45), 'coriolis', 'start' )
+             CALL cpu_log( log_point(45), 'uvw-coriolis', 'start' )
              CALL coriolis( i, j, 1 )
-             IF ( time_prog_terms ) CALL cpu_log( log_point(45), 'coriolis', 'stop' )
+             CALL cpu_log( log_point(45), 'uvw-coriolis', 'stop' )
              
              IF ( sloping_surface  .AND.  .NOT. neutral )  THEN
-                IF ( time_prog_terms ) CALL cpu_log( log_point(46), 'buoyancy', 'start' )
+                CALL cpu_log( log_point(46), 'uvw-buoyancy', 'start' )
                 IF ( ocean ) THEN
                    CALL buoyancy( i, j, rho_ocean, 1 )
                 ELSE
                    CALL buoyancy( i, j, pt, 1 )
                 ENDIF
-                IF ( time_prog_terms ) CALL cpu_log( log_point(46), 'buoyancy', 'stop' )
+                CALL cpu_log( log_point(46), 'uvw-buoyancy', 'stop' )
              ENDIF
 !
 !--          If required, compute Stokes forces
              IF ( ocean .AND. stokes_force ) THEN
-                IF ( time_prog_terms ) CALL cpu_log( log_point(47), 'stokes', 'start' )
+                CALL cpu_log( log_point(47), 'uvw-stokes', 'start' )
                 CALL stokes_force_uvw( i, j, 1 )
-                IF ( time_prog_terms ) CALL cpu_log( log_point(47), 'stokes', 'stop' )
+                CALL cpu_log( log_point(47), 'uvw-stokes', 'stop' )
              ENDIF
 
 !
@@ -670,7 +670,7 @@
           CALL cpu_log( log_point(6), 'v-equation', 'start' )
           IF ( j >= nysv )  THEN
 
-             IF ( time_prog_terms ) CALL cpu_log( log_point(43), 'advec-uvw', 'start' )
+             CALL cpu_log( log_point(43), 'uvw-advec', 'start' )
              tend(:,j,i) = 0.0_wp
              IF ( timestep_scheme(1:5) == 'runge' )  THEN
                 IF ( ws_scheme_mom )  THEN
@@ -681,22 +681,22 @@
              ELSE
                 CALL advec_v_up( i, j )
              ENDIF
-             IF ( time_prog_terms ) CALL cpu_log( log_point(43), 'advec-uvw', 'stop' )
+             CALL cpu_log( log_point(43), 'uvw-advec', 'stop' )
              
-             IF ( time_prog_terms ) CALL cpu_log( log_point(44), 'diffusion', 'start' )
+             CALL cpu_log( log_point(44), 'uvw-diffusion', 'start' )
              CALL diffusion_v( i, j )
-             IF ( time_prog_terms ) CALL cpu_log( log_point(44), 'diffusion', 'stop' )
+             CALL cpu_log( log_point(44), 'uvw-diffusion', 'stop' )
              
-             IF ( time_prog_terms ) CALL cpu_log( log_point(45), 'coriolis', 'start' )
+             CALL cpu_log( log_point(45), 'uvw-coriolis', 'start' )
              CALL coriolis( i, j, 2 )
-             IF ( time_prog_terms ) CALL cpu_log( log_point(45), 'coriolis', 'stop' )
+             CALL cpu_log( log_point(45), 'uvw-coriolis', 'stop' )
 
 !
 !--          If required, compute Stokes forces
              IF ( ocean .AND. stokes_force ) THEN
-                IF ( time_prog_terms ) CALL cpu_log( log_point(47), 'stokes', 'start' )
+                CALL cpu_log( log_point(47), 'uvw-stokes', 'start' )
                 CALL stokes_force_uvw( i, j, 2 )
-                IF ( time_prog_terms ) CALL cpu_log( log_point(47), 'stokes', 'stop' )
+                CALL cpu_log( log_point(47), 'uvw-stokes', 'stop' )
              ENDIF
 
 !
@@ -759,7 +759,7 @@
 !--       Tendency terms for w-velocity component
           CALL cpu_log( log_point(7), 'w-equation', 'start' )
           
-          IF ( time_prog_terms ) CALL cpu_log( log_point(43), 'advec-uvw', 'start' )
+          CALL cpu_log( log_point(43), 'uvw-advec', 'start' )
           tend(:,j,i) = 0.0_wp
           IF ( timestep_scheme(1:5) == 'runge' )  THEN
              IF ( ws_scheme_mom )  THEN
@@ -770,18 +770,18 @@
           ELSE
              CALL advec_w_up( i, j )
           ENDIF
-          IF ( time_prog_terms ) CALL cpu_log( log_point(43), 'advec-uvw', 'stop' )
+          CALL cpu_log( log_point(43), 'uvw-advec', 'stop' )
           
-          IF ( time_prog_terms ) CALL cpu_log( log_point(44), 'diffusion', 'start' )
+          CALL cpu_log( log_point(44), 'uvw-diffusion', 'start' )
           CALL diffusion_w( i, j )
-          IF ( time_prog_terms ) CALL cpu_log( log_point(44), 'diffusion', 'stop' )
+          CALL cpu_log( log_point(44), 'uvw-diffusion', 'stop' )
           
-          IF ( time_prog_terms ) CALL cpu_log( log_point(45), 'coriolis', 'start' )
+          CALL cpu_log( log_point(45), 'uvw-coriolis', 'start' )
           CALL coriolis( i, j, 3 )
-          IF ( time_prog_terms ) CALL cpu_log( log_point(45), 'coriolis', 'stop' )
+          CALL cpu_log( log_point(45), 'uvw-coriolis', 'stop' )
 
           IF ( .NOT. neutral )  THEN
-             IF ( time_prog_terms ) CALL cpu_log( log_point(46), 'buoyancy', 'start' )
+             CALL cpu_log( log_point(46), 'uvw-buoyancy', 'start' )
              IF ( ocean )  THEN
                 CALL buoyancy( i, j, rho_ocean, 3 )
              ELSE
@@ -791,15 +791,15 @@
                    CALL buoyancy( i, j, vpt, 3 )
                 ENDIF
              ENDIF
-             IF ( time_prog_terms ) CALL cpu_log( log_point(46), 'buoyancy', 'stop' )
+             CALL cpu_log( log_point(46), 'uvw-buoyancy', 'stop' )
           ENDIF
 
 !
 !--       If required, compute Stokes forces
           IF ( ocean .AND. stokes_force ) THEN
-             IF ( time_prog_terms ) CALL cpu_log( log_point(47), 'stokes', 'start' )
+             CALL cpu_log( log_point(47), 'uvw-stokes', 'start' )
              CALL stokes_force_uvw( i, j, 3 )
-             IF ( time_prog_terms ) CALL cpu_log( log_point(47), 'stokes', 'stop' )
+             CALL cpu_log( log_point(47), 'uvw-stokes', 'stop' )
           ENDIF
 
 !
@@ -848,6 +848,7 @@
 !
 !--          Tendency terms for potential temperature
              tend(:,j,i) = 0.0_wp
+             CALL cpu_log( log_point(61), 'pt-advec', 'start' )
              IF ( timestep_scheme(1:5) == 'runge' )  THEN
                    IF ( ws_scheme_sca )  THEN
                       CALL advec_s_ws( i, j, pt, 'pt', flux_s_pt, diss_s_pt,   &
@@ -858,6 +859,9 @@
              ELSE
                 CALL advec_s_up( i, j, pt )
              ENDIF
+             CALL cpu_log( log_point(61), 'pt-advec', 'stop' )
+
+             CALL cpu_log( log_point(62), 'pt-diffusion', 'start' )
              CALL diffusion_s( i, j, pt,                                       &
                                surf_def_h(0)%shf, surf_def_h(1)%shf,           &
                                surf_def_h(2)%shf,                              &
@@ -869,11 +873,14 @@
                                surf_usm_v(0)%shf, surf_usm_v(1)%shf,           &
                                surf_usm_v(2)%shf, surf_usm_v(3)%shf,           &
                                surf_def_h(2)%shf_sol )
+             CALL cpu_log( log_point(62), 'pt-diffusion', 'stop' )
 
 !
 !--          If required, compute Stokes-advection term
              IF ( ocean .AND. stokes_force ) THEN
+                CALL cpu_log( log_point(63), 'pt-stokes', 'start' )
                 CALL stokes_force_s( i, j, pt )
+                CALL cpu_log( log_point(63), 'pt-stokes', 'stop' )
              ENDIF
 
 !
@@ -960,8 +967,8 @@
 !
 !--          Tendency-terms for salinity
              tend(:,j,i) = 0.0_wp
-             IF ( timestep_scheme(1:5) == 'runge' ) &
-             THEN
+             CALL cpu_log( log_point(64), 'sa-advec', 'start' )
+             IF ( timestep_scheme(1:5) == 'runge' ) THEN
                 IF ( ws_scheme_sca )  THEN
                     CALL advec_s_ws( i, j, sa, 'sa', flux_s_sa,  &
                                 diss_s_sa, flux_l_sa, diss_l_sa, i_omp_start, tn  )
@@ -971,7 +978,9 @@
              ELSE
                 CALL advec_s_up( i, j, sa )
              ENDIF
+             CALL cpu_log( log_point(64), 'sa-advec', 'stop' )
 
+             CALL cpu_log( log_point(65), 'sa-diffusion', 'start' )
              CALL diffusion_s( i, j, sa,                                       &
                                surf_def_h(0)%sasws, surf_def_h(1)%sasws,       &
                                surf_def_h(2)%sasws,                            &
@@ -982,11 +991,14 @@
                                surf_lsm_v(2)%sasws, surf_lsm_v(3)%sasws,       &
                                surf_usm_v(0)%sasws, surf_usm_v(1)%sasws,       &
                                surf_usm_v(2)%sasws, surf_usm_v(3)%sasws )
+             CALL cpu_log( log_point(65), 'sa-diffusion', 'stop' )
 
 !
 !--          If required, compute Stokes-advection term
              IF ( stokes_force ) THEN
+                CALL cpu_log( log_point(66), 'sa-stokes', 'start' )
                 CALL stokes_force_s( i, j, sa )
+                CALL cpu_log( log_point(66), 'sa-stokes', 'stop' )
              ENDIF
 
 

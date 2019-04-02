@@ -2416,17 +2416,17 @@
           DO  k = nzb, nzt+1
 !
 !--          scalar grid
-             IF ( BTEST( topo(k,j,i), 0 ) )                                 &
+             IF ( BTEST( topo(k,j,i), 0 ) )                                    &
                 wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 0 )
 !
 !--          u grid
-             IF ( BTEST( topo(k,j,i),   0 )  .AND.                          &
-                  BTEST( topo(k,j,i-1), 0 ) )                               &
+             IF ( BTEST( topo(k,j,i),   0 )  .AND.                             &
+                  BTEST( topo(k,j,i-1), 0 ) )                                  &
                 wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 1 )
 !
 !--          v grid
-             IF ( BTEST( topo(k,j,i),   0 )  .AND.                          &
-                  BTEST( topo(k,j-1,i), 0 ) )                               &
+             IF ( BTEST( topo(k,j,i),   0 )  .AND.                             &
+                  BTEST( topo(k,j-1,i), 0 ) )                                  &
                  wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 2 )
 
           ENDDO
@@ -2434,11 +2434,12 @@
           DO k = nzb, nzt
 !
 !--          w grid
-             IF ( BTEST( topo(k,j,i),   0 )  .AND.                          &
-                  BTEST( topo(k+1,j,i), 0 ) )                               &
+             IF ( BTEST( topo(k,j,i),   0 )  .AND.                             &
+                  BTEST( topo(k+1,j,i), 0 ) )                                  &
                 wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 3 )
           ENDDO
-          wall_flags_0(nzt+1,j,i) = IBSET( wall_flags_0(nzt+1,j,i), 3 )
+          IF ( TRIM(constant_flux_layer) /= 'top' )                            &
+             wall_flags_0(nzt+1,j,i) = IBSET( wall_flags_0(nzt+1,j,i), 3 )
 
        ENDDO
     ENDDO
@@ -2450,13 +2451,13 @@
     DO i = nxl, nxr
        DO j = nys, nyn
           DO k = nzb, nzt+1
-             IF ( BTEST( wall_flags_0(k,j-1,i), 0 )  .AND.                       &
-                  BTEST( wall_flags_0(k,j+1,i), 0 )  .AND.                       &
-                  BTEST( wall_flags_0(k,j,i-1), 0 )  .AND.                       &
-                  BTEST( wall_flags_0(k,j-1,i-1), 0 )  .AND.                       &
-                  BTEST( wall_flags_0(k,j+1,i-1), 0 )  .AND.                       &
-                  BTEST( wall_flags_0(k,j-1,i+1), 0 )  .AND.                       &
-                  BTEST( wall_flags_0(k,j+1,i+1), 0 ) )                            &
+             IF ( BTEST( wall_flags_0(k,j-1,i), 0 )  .AND.                     &
+                  BTEST( wall_flags_0(k,j+1,i), 0 )  .AND.                     &
+                  BTEST( wall_flags_0(k,j,i-1), 0 )  .AND.                     &
+                  BTEST( wall_flags_0(k,j-1,i-1), 0 )  .AND.                   &
+                  BTEST( wall_flags_0(k,j+1,i-1), 0 )  .AND.                   &
+                  BTEST( wall_flags_0(k,j-1,i+1), 0 )  .AND.                   &
+                  BTEST( wall_flags_0(k,j+1,i+1), 0 ) )                        &
                 wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 24 )
           ENDDO
        ENDDO
@@ -2480,8 +2481,7 @@
 !--          treat edges (u(k,j,i+1)) simply by a gradient approach, i.e. these
 !--          points are not masked within diffusion_u. Tests had shown that the
 !--          effect on the flow is negligible. 
-             IF ( TRIM(constant_flux_layer) /= 'none' .OR.                     &
-                  use_surface_fluxes .OR. use_top_fluxes )  THEN
+             IF ( TRIM(constant_flux_layer) /= 'none' .OR. use_surface_fluxes )  THEN
                 IF ( BTEST( wall_flags_0(k,j,i), 0 ) ) THEN
                    wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 8 )
                 ENDIF
@@ -2527,6 +2527,7 @@
 !
 !--          Special flag on scalar grid, nzb_diff_s_outer - 1, required in 
 !--          in production_e
+!--          CB: but bit 29 isn't even used if constant_flux_layer is on
              IF ( TRIM(constant_flux_layer) /= 'none' .OR.                     &
                   use_surface_fluxes .OR. use_top_fluxes )  THEN
                 IF ( BTEST( wall_flags_0(k,j,i),   24 )  .AND.                 &
@@ -2553,7 +2554,7 @@
           ENDDO
 !
 !--       Flags indicating downward facing walls
-          DO k = nzb+1, nzt
+          DO k = nzb+1, nzt+1
 !
 !--          Scalar grid
              IF ( BTEST( wall_flags_0(k-1,j,i), 0 )  .AND.                     &
@@ -2625,8 +2626,12 @@
              ENDIF
 
           ENDDO
-          wall_flags_0(nzt+1,j,i) = IBSET( wall_flags_0(nzt+1,j,i), 22 )
-          wall_flags_0(nzt+1,j,i) = IBSET( wall_flags_0(nzt+1,j,i), 23 )
+          
+          IF ( TRIM(constant_flux_layer) /= 'top' ) THEN
+             wall_flags_0(nzt+1,j,i) = IBSET( wall_flags_0(nzt+1,j,i), 22 )
+             wall_flags_0(nzt+1,j,i) = IBSET( wall_flags_0(nzt+1,j,i), 23 )
+          ENDIF
+
        ENDDO
     ENDDO
 !

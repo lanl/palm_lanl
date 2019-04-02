@@ -3009,6 +3009,7 @@
 
              IF ( def < 0.0_wp )  def = 0.0_wp
 
+!--          CB: Given definition in init_grid, flag is equal in either case
              IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
                 flag        = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
              ELSE

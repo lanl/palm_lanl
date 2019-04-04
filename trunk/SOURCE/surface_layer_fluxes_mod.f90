@@ -992,8 +992,9 @@
        INTEGER(iwp) ::  m             !< running index surface elements
 
 !
-!--    ibit is 1 for upward-facing surfaces, zero for downward-facing surfaces.
-       ibit = MERGE( 1, 0, .NOT. downward )
+!--    Reference velocity is at k+1 for downward-facing surfaces, 
+!--    k-1 for upward-facing surfaces.
+       ibit = MERGE( 1, -1, downward )
 
        DO  m = 1, surf%ns
 
@@ -1013,13 +1014,11 @@
 !--       use ibit, which checks for upward/downward-facing surfaces. 
           surf%uvw_abs(m) = SQRT(                                              &
                               ( 0.5_wp * (   u(k,j,i)   + u(k,j,i+1)           &
-                                        -  ( u(k-1,j,i) + u(k-1,j,i+1)         &
-                                           ) * ibit                            &
+                                        -  ( u(k+ibit,j,i) + u(k+ibit,j,i+1) ) &
                                          )                                     &
                               )**2 +                                           &
                               ( 0.5_wp * (   v(k,j,i)   + v(k,j+1,i)           &
-                                        -  ( v(k-1,j,i) + v(k-1,j+1,i)         &
-                                           ) * ibit                            &
+                                        -  ( v(k+ibit,j,i) + v(k+ibit,j+1,i) ) &
                                          )                                     &
                               )**2                                             &
                                 )
@@ -1211,6 +1210,7 @@
 
        IMPLICIT NONE
 
+       INTEGER(iwp) ::  ibit          !< flag to mask computation of relative velocity in case of downward-facing surfaces
        INTEGER(iwp) ::  iter    !< Newton iteration step
        INTEGER(iwp) ::  li      !< look index
        INTEGER(iwp) ::  m       !< loop variable over all horizontal wall elements 
@@ -1222,7 +1222,13 @@
                        ol_old, & !< Previous time step value of L
                        ol_u      !< Upper bound of L for Newton iteration
 
+!
+!--    Reference velocity is at k+1 for downward-facing surfaces, 
+!--    k-1 for upward-facing surfaces.
+       ibit = MERGE( 1, -1, downward )
+
        IF ( TRIM( most_method ) /= 'circular' )  THEN
+
 !
 !--       Evaluate bulk Richardson number (calculation depends on
 !--       definition based on setting of boundary conditions
@@ -1238,7 +1244,7 @@
                    z_mo = surf%z_mo(m)
 
                    surf%rib(m) = g * z_mo *                                    &
-                                         ( vpt(k,j,i) - vpt(k-1,j,i) ) /       &
+                                         ( vpt(k,j,i) - vpt(k+ibit,j,i) ) /    &
                       ( surf%uvw_abs(m)**2 * vpt(k,j,i) + 1.0E-20_wp )
                 ENDDO
              ELSE
@@ -1252,11 +1258,11 @@
                    z_mo = surf%z_mo(m)
 
                    surf%rib(m) = g * z_mo *                                    &
-                                         ( pt(k,j,i) - pt(k-1,j,i)   ) /       &
+                                         ( pt(k,j,i) - pt(k+ibit,j,i)   ) /    &
                       ( surf%uvw_abs(m)**2 * pt(k,j,i)  + 1.0E-20_wp )
                 ENDDO
              ENDIF
-          ELSE
+          ELSE ! not circular
              IF ( humidity )  THEN
                 !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
                 DO  m = 1, surf%ns
@@ -1270,11 +1276,11 @@
                    surf%rib(m) = - g * z_mo * ( ( 1.0_wp + 0.61_wp             &
                            * q(k,j,i) ) * surf%shf(m) + 0.61_wp                &
                            * pt(k,j,i) * surf%qsws(m) ) *                      &
-                             drho_ref_zw(k-1)                /                 &
+                             drho_ref_zw(k+ibit)                /              &
                          ( surf%uvw_abs(m)**3 * vpt(k,j,i) * kappa**2          &
                            + 1.0E-20_wp )
                 ENDDO
-             ELSE
+             ELSE ! not humidity
                 !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
                 DO  m = 1, surf%ns
 
@@ -1285,7 +1291,7 @@
                    z_mo = surf%z_mo(m)
 
                    surf%rib(m) = - g * z_mo * surf%shf(m) *                    &
-                                        drho_ref_zw(k-1)            /          &
+                                        drho_ref_zw(k+ibit)            /       &
                         ( surf%uvw_abs(m)**3 * pt(k,j,i) * kappa**2            &
                            + 1.0E-20_wp )
                 ENDDO
@@ -1670,8 +1676,15 @@
        IMPLICIT NONE
 
 
+       INTEGER(iwp) ::  ibit          !< flag to mask computation of relative velocity in case of downward-facing surfaces
        INTEGER(iwp)  ::  m       !< loop variable over all horizontal surf elements 
        INTEGER(iwp)  ::  lsp     !< running index for chemical species
+
+!
+!--    Reference velocity is at k+1 for downward-facing surfaces, 
+!--    k-1 for upward-facing surfaces.
+       ibit = MERGE( 1, -1, downward )
+
 ! 
 !--    Compute theta* at horizontal surfaces
        IF ( constant_heatflux  .AND.  .NOT. surf_vertical )  THEN
@@ -1685,8 +1698,8 @@
              j   = surf%j(m)
              k   = surf%k(m)
 
-             surf%ts(m) = -surf%shf(m) * drho_ref_zw(k-1) /                    &
-                                  ( surf%us(m) + 1E-30_wp )
+             surf%ts(m) = -surf%shf(m) * drho_ref_zw(k+ibit) /                 &
+                                  ( surf%us(m) + 1E-30_wp ) 
 
 !
 !--          ts must be limited, because otherwise overflow may occur in case
@@ -1707,7 +1720,7 @@
                 j   = surf%j(m)
                 k   = surf%k(m)
 
-                pt(k-1,j,i) = pt_surface
+                pt(k+ibit,j,i) = pt_surface
              ENDDO
           ENDIF
 
@@ -1755,7 +1768,7 @@
                 i   = surf%i(m)            
                 j   = surf%j(m)
                 k   = surf%k(m)
-                surf%qs(m) = -surf%qsws(m) * drho_ref_zw(k-1) /                &
+                surf%qs(m) = -surf%qsws(m) * drho_ref_zw(k+ibit) /             &
                                                ( surf%us(m) + 1E-30_wp )
 
              ENDDO
@@ -1771,7 +1784,7 @@
                    i   = surf%i(m)           
                    j   = surf%j(m)
                    k   = surf%k(m)
-                   q(k-1,j,i) = q_surface
+                   q(k+ibit,j,i) = q_surface
                    
                 ENDDO
              ENDIF
@@ -1786,9 +1799,9 @@
                    j   = surf%j(m)
                    k   = surf%k(m)
                    e_s = 6.1_wp * &
-                              EXP( 0.07_wp * ( MIN(pt(k-1,j,i),pt(k,j,i))      &
+                              EXP( 0.07_wp * ( MIN(pt(k+ibit,j,i),pt(k,j,i))   &
                                                - 273.15_wp ) )
-                   q(k-1,j,i) = 0.622_wp * e_s / ( surface_pressure - e_s )
+                   q(k+ibit,j,i) = 0.622_wp * e_s / ( surface_pressure - e_s )
                 ENDDO
              ENDIF
 
@@ -1802,7 +1815,7 @@
    
                    z_mo = surf%z_mo(m)
 
-                   surf%qs(m) = kappa * ( surf%qv1(m) - q(k-1,j,i) )           &
+                   surf%qs(m) = kappa * ( surf%qv1(m) - q(k+ibit,j,i) )        &
                                         / ( LOG( z_mo / surf%z0q(m) )          &
                                             - psi_h( z_mo / surf%ol(m) )       &
                                             + psi_h( surf%z0q(m) /             &
@@ -1959,6 +1972,7 @@
 
        IMPLICIT NONE
 
+       INTEGER(iwp) ::  ibit          !< flag to mask computation of relative velocity in case of downward-facing surfaces
        INTEGER(iwp)  ::  m       !< loop variable over all horizontal surf elements
        INTEGER(iwp)  ::  lsp     !< running index for chemical species
 
@@ -1968,6 +1982,11 @@
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  u_i     !< u-component interpolated onto scalar grid point, required for momentum fluxes at vertical surfaces 
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  v_i     !< v-component interpolated onto scalar grid point, required for momentum fluxes at vertical surfaces 
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  w_i     !< w-component interpolated onto scalar grid point, required for momentum fluxes at vertical surfaces 
+
+!
+!--    Reference velocity is at k+1 for downward-facing surfaces, 
+!--    k-1 for upward-facing surfaces.
+       ibit = MERGE( 1, -1, downward )
 
 !
 !--    Calcuate surface fluxes at horizontal walls
@@ -2013,7 +2032,11 @@
                 z_mo = surf%z_mo(m)
 
                 surf%usws(m) = kappa * u(k,j,i) / LOG( z_mo / surf%z0(m) )
-                surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k)
+!                surf%usws(m) = kappa * ( u(k+1,j,i) - u(k,j,i) )               &
+!                              / ( LOG( z_mo / surf%z0(m) )                     &
+!                                  - psi_m( z_mo / surf%ol(m) )                 &
+!                                  + psi_m( surf%z0(m) / surf%ol(m) ) )
+                surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k+1)
 
              ENDDO     
           ENDIF
@@ -2057,7 +2080,11 @@
                 z_mo = surf%z_mo(m)
 
                 surf%vsws(m) = kappa * v(k,j,i) / LOG( z_mo / surf%z0(m) )
-                surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k)
+!                surf%vsws(m) = kappa * ( v(k+1,j,i) - v(k,j,i) )               &
+!                           / ( LOG( z_mo / surf%z0(m) )                        &
+!                               - psi_m( z_mo / surf%ol(m) )                    &
+!                               + psi_m( surf%z0(m) / surf%ol(m) ) )
+                surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k+1)
              ENDDO
           ENDIF
 !
@@ -2070,8 +2097,7 @@
                 i    = surf%i(m)            
                 j    = surf%j(m)
                 k    = surf%k(m)
-                surf%shf(m) = -surf%ts(m) * surf%us(m) * rho_ref_zw(k-1)
-                ! Consider using rho_ref_zw(k-1) for downward and rho_ref_zw(k+1) for upward
+                surf%shf(m) = -surf%ts(m) * surf%us(m) * rho_ref_zw(k+ibit)
              ENDDO
           ENDIF
 !
@@ -2085,7 +2111,7 @@
                 i    = surf%i(m)            
                 j    = surf%j(m)
                 k    = surf%k(m)
-                surf%qsws(m) = -surf%qs(m) * surf%us(m) * rho_ref_zw(k-1)
+                surf%qsws(m) = -surf%qs(m) * surf%us(m) * rho_ref_zw(k+ibit)
              ENDDO
           ENDIF
 !
@@ -2146,7 +2172,7 @@
 
 !
 !--       Bottom boundary condition for the TKE. 
-          IF ( ibc_e_b == 2 )  THEN
+          IF ( ibc_e_b == 2 .AND. .NOT. downward )  THEN
              !$OMP PARALLEL DO PRIVATE( i, j, k )
              DO  m = 1, surf%ns   
 
@@ -2159,6 +2185,21 @@
 !--             As a test: cm = 0.4
 !               e(k,j,i) = ( us(j,i) / 0.4_wp )**2
                 e(k-1,j,i)   = e(k,j,i)
+
+             ENDDO
+          ENDIF
+!
+!--       Top boundary condition for the TKE. 
+          IF ( ibc_e_t == 2 .AND. downward )  THEN
+             !$OMP PARALLEL DO PRIVATE( i, j, k )
+             DO  m = 1, surf%ns   
+
+                i    = surf%i(m)            
+                j    = surf%j(m)
+                k    = surf%k(m)
+
+                e(k,j,i) = ( surf%us(m) / 0.1_wp )**2
+                e(k+1,j,i)   = e(k,j,i)
 
              ENDDO
           ENDIF

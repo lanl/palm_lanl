@@ -128,8 +128,7 @@
            ONLY:  ddzu, ddzw, km, tend, u, v, w, drho_ref_zu, rho_ref_zw
        
        USE control_parameters,                                                 &
-           ONLY:  constant_top_momentumflux, use_surface_fluxes,               &
-                  use_top_fluxes
+           ONLY:  use_surface_fluxes, use_top_fluxes
        
        USE grid_variables,                                                     &
            ONLY:  ddx, ddx2, ddy
@@ -336,7 +335,7 @@
              ENDIF
 !
 !--          Add momentum flux at model top
-             IF ( use_top_fluxes  .AND.  constant_top_momentumflux )  THEN
+             IF ( use_top_fluxes )  THEN
                 surf_s = surf_def_h(2)%start_index(j,i)
                 surf_e = surf_def_h(2)%end_index(j,i)
                 DO  m = surf_s, surf_e
@@ -365,8 +364,7 @@
            ONLY:  ddzu, ddzw, km, tend, u, v, w, drho_ref_zu, rho_ref_zw
        
        USE control_parameters,                                                 &
-           ONLY:  constant_top_momentumflux, use_surface_fluxes,               &
-                  use_top_fluxes
+           ONLY:  use_surface_fluxes, use_top_fluxes
        
        USE grid_variables,                                                     &
            ONLY:  ddx, ddx2, ddy
@@ -558,7 +556,7 @@
        ENDIF
 !
 !--    Add momentum flux at model top
-       IF ( use_top_fluxes  .AND.  constant_top_momentumflux )  THEN
+       IF ( use_top_fluxes ) THEN 
           surf_s = surf_def_h(2)%start_index(j,i)
           surf_e = surf_def_h(2)%end_index(j,i)
           DO  m = surf_s, surf_e

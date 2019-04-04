@@ -1232,7 +1232,7 @@
 !
 !--       Evaluate bulk Richardson number (calculation depends on
 !--       definition based on setting of boundary conditions
-          IF ( ibc_pt_b /= 1 )  THEN
+          IF ( ibc_pt_b /= 1 .OR. ibc_pt_t /= 1 )  THEN
              IF ( humidity )  THEN
                 !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
                 DO  m = 1, surf%ns
@@ -1342,7 +1342,7 @@
                 ol_u = ol_m + 0.001_wp * ol_m
 
 
-                IF ( ibc_pt_b /= 1 )  THEN
+                IF ( ibc_pt_b /= 1 .OR. ibc_pt_t /= 1 )  THEN
 !
 !--                Calculate f = Ri - [...]/[...]^2 = 0
                    f = surf%rib(m) - ( z_mo / ol_m ) * (                       &

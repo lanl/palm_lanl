@@ -4585,10 +4585,32 @@
 !-- Check for valid setting of most_method
     IF ( TRIM( most_method ) /= 'circular'  .AND.                              &
          TRIM( most_method ) /= 'newton'    .AND.                              &
-         TRIM( most_method ) /= 'lookup' )  THEN
+         TRIM( most_method ) /= 'lookup'    .AND.                              &
+         TRIM( most_method ) /= 'mcphee'            )  THEN
        message_string = 'most_method = "' // TRIM( most_method ) //            &
                         '" is unknown'
        CALL message( 'check_parameters', 'PA0416', 1, 2, 0, 6, 0 )
+    ENDIF
+    IF ( TRIM( most_method ) == 'mcphee' .AND. .NOT. ( ocean ) )  THEN
+       message_string = 'most_method = mcphee is incompatible with atmosphere runs'
+       CALL message( 'check_parameters', 'PA0416', 1, 2, 0, 6, 0 )
+    ENDIF
+    IF ( k_offset .LT. 0 )  THEN
+       message_string = 'k_offset is less than 0. k_offset must be >= 0'
+       CALL message( 'check_parameters', 'PA0416', 1, 2, 0, 6, 0 )
+    ENDIF
+    IF ( k_offset == 9999 .AND. TRIM( most_method ) == 'mcphee' )  THEN
+       k_offset = 0 ! set to default value
+    ENDIF
+    IF ( k_offset /= 9999 .AND. TRIM( most_method ) == 'mcphee')  THEN
+       z_offset = k_offset * dz(1) + dz(1)/2.0_wp
+    ENDIF
+
+!
+!-- If drag_coefficient is specified, convert to roughness length
+    IF ( TRIM(constant_flux_layer) /= 'none' .AND. drag_coeff /= 9999999.9_wp )&
+       THEN
+       roughness_length = z_offset / EXP( kappa/SQRT(drag_coeff) )
     ENDIF
 
 !

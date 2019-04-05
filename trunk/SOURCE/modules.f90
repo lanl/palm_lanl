@@ -1265,6 +1265,7 @@
     INTEGER(iwp) ::  domask_time_count(max_masks,0:1)            !< number of output intervals for masked data
     INTEGER(iwp) ::  dz_stretch_level_end_index(9)               !< vertical grid level index until which the vertical grid spacing is stretched
     INTEGER(iwp) ::  dz_stretch_level_start_index(9)             !< vertical grid level index above which the vertical grid spacing is stretched
+    INTEGER(iwp) ::  k_offset = 9999                             !< namelist parameter, offset for most_method mcphee
     INTEGER(iwp) ::  mask_size(max_masks,3) = -1                 !< size of mask array per mask and dimension (for netcdf output)
     INTEGER(iwp) ::  mask_size_l(max_masks,3) = -1               !< subdomain size of mask array per mask and dimension (for netcdf output)
     INTEGER(iwp) ::  mask_start_l(max_masks,3) = -1              !< subdomain start index of mask array (for netcdf output)
@@ -1373,17 +1374,8 @@
     LOGICAL ::  nudging = .FALSE.                                !< namelist parameter
     LOGICAL ::  ocean = .FALSE.                                  !< namelist parameter
     LOGICAL ::  linear_eqnOfState = .FALSE.                      !< namelist parmaeter for linear equation of state in ocean
-    REAL(wp) :: rho_ref = 1000.0_wp                              !< reference density for linear eos
     LOGICAL ::  fixed_alpha = .TRUE.                             !< use fixed thermal and haline expansion coefficients
-    REAL(wp) :: alpha_const = 2.0E-4                             !< fixed alpha_T value
-    REAL(wp) :: beta_const = 8.0E-4                              !< fixed beta_S value
-    REAL(wp) :: pt_ref = 15.0_wp                                 !< potential temperature reference falue
-    REAL(wp) :: sa_ref = 35.0_wp                                 !< salinity reerence value for fixed linear density equation
     LOGICAL ::  idealized_diurnal = .FALSE.                      !< flag for diurnal cycle
-    REAL(wp) :: ideal_solar_division = 0.67_wp                   !< value for breakdown of double exponential
-    REAL(wp) :: ideal_solar_efolding1 = 1.0_wp/1.0_wp            !< efolding depth for IR in solar (m^-1)
-    REAL(wp) :: ideal_solar_efolding2 = 1.0_wp/17.0_wp           !< efolding depth for blue in solar (m^-1)
-    REAL(wp) :: wb_solar = 0.0_wp
     LOGICAL ::  outflow_l = .FALSE.                              !< left domain boundary has non-cyclic outflow?
     LOGICAL ::  outflow_n = .FALSE.                              !< north domain boundary has non-cyclic outflow?
     LOGICAL ::  outflow_r = .FALSE.                              !< right domain boundary has non-cyclic outflow?
@@ -1438,18 +1430,20 @@
     LOGICAL ::  data_output_xz(0:1) = .FALSE.                !< output of xz cross-section data?
     LOGICAL ::  data_output_yz(0:1) = .FALSE.                !< output of yz cross-section data?
 
-    REAL(wp) ::  advected_distance_x = 0.0_wp                  !< advected distance of model domain along x
-                                                               !< (galilei transformation)
-    REAL(wp) ::  advected_distance_y = 0.0_wp                  !< advected distance of model domain along y
+    REAL(wp) ::  advected_distance_x = 0.0_wp                  !< advected distance of model domain along x 
+                                                               !< (galilei transformation) 
+    REAL(wp) ::  advected_distance_y = 0.0_wp                  !< advected distance of model domain along y 
                                                                !< (galilei transformation)
     REAL(wp) ::  alpha_surface = 0.0_wp                        !< namelist parameter
-    REAL(wp) ::  atmos_ocean_sign = 1.0_wp                     !< vertical-grid conversion factor
+    REAL(wp) ::  alpha_const = 2.0E-4                          !< fixed alpha_T value
+    REAL(wp) ::  atmos_ocean_sign = 1.0_wp                     !< vertical-grid conversion factor 
                                                                !< (=1.0 in atmosphere, =-1.0 in ocean)
     REAL(wp) ::  averaging_interval = 0.0_wp                   !< namelist parameter
     REAL(wp) ::  averaging_interval_pr = 9999999.9_wp          !< namelist parameter
     REAL(wp) ::  bc_pt_t_val                                   !< vertical gradient of pt near domain top
     REAL(wp) ::  bc_q_t_val                                    !< vertical gradient of humidity near domain top
     REAL(wp) ::  bc_s_t_val                                    !< vertical gradient of passive scalar near domain top
+    REAL(wp) ::  beta_const = 8.0E-4                           !< fixed beta_S value !CB is this needed?
     REAL(wp) ::  bottom_salinityflux = 9999999.9_wp            !< namelist parameter
     REAL(wp) ::  bubble_center_x = 9999999.9_wp                !< namelist parameter
     REAL(wp) ::  bubble_center_y = 9999999.9_wp                !< namelist parameter
@@ -1462,6 +1456,9 @@
     REAL(wp) ::  building_length_y = 50.0_wp                   !< namelist parameter
     REAL(wp) ::  building_wall_left = 9999999.9_wp             !< namelist parameter
     REAL(wp) ::  building_wall_south = 9999999.9_wp            !< namelist parameter
+    REAL(wp) ::  c1 = 0.0939_wp                                !< freezing point coefficient [K]
+    REAL(wp) ::  c2 = -0.0573_wp                               !< freezing point coefficient [K/(g/kg)]
+    REAL(wp) ::  c3 = -7.53E-8                                 !< freezing point coefficient [K/Pa]
     REAL(wp) ::  canyon_height = 50.0_wp                       !< namelist parameter
     REAL(wp) ::  canyon_width_x = 9999999.9_wp                 !< namelist parameter
     REAL(wp) ::  canyon_width_y = 9999999.9_wp                 !< namelist parameter
@@ -1475,6 +1472,7 @@
     REAL(wp) ::  disturbance_level_b = -9999999.9_wp           !< namelist parameter
     REAL(wp) ::  disturbance_level_t = -9999999.9_wp           !< namelist parameter
     REAL(wp) ::  dp_level_b = 0.0_wp                           !< namelist parameter
+    REAL(wp) ::  drag_coeff = 9999999.9_wp                     !< namelist parameter
     REAL(wp) ::  dt = -1.0_wp                                  !< namelist parameter
     REAL(wp) ::  dt_averaging_input = 0.0_wp                   !< namelist parameter
     REAL(wp) ::  dt_averaging_input_pr = 9999999.9_wp          !< namelist parameter
@@ -1506,10 +1504,14 @@
     REAL(wp) ::  fx = 0.0_wp                                   !< Coriolis parameter
     REAL(wp) ::  fy = 0.0_wp                                   !< Coriolis parameter
     REAL(wp) ::  g = 9.81_wp                                   !< gravitational acceleration
+    REAL(wp) ::  ideal_solar_division = 0.67_wp                !< value for breakdown of double exponential
+    REAL(wp) ::  ideal_solar_efolding1 = 1.0_wp/1.0_wp         !< efolding depth for IR in solar (m^-1)
+    REAL(wp) ::  ideal_solar_efolding2 = 1.0_wp/17.0_wp        !< efolding depth for blue in solar (m^-1)
     REAL(wp) ::  inflow_damping_height = 9999999.9_wp          !< namelist parameter
     REAL(wp) ::  inflow_damping_width = 9999999.9_wp           !< namelist parameter
     REAL(wp) ::  kappa = 0.4_wp                                !< von Karman constant
     REAL(wp) ::  km_constant = -1.0_wp                         !< namelist parameter
+    REAL(wp) ::  l_m = 330000_wp                               !< latent heat of fusion of ice, should be a function of sa,p J/kg
     REAL(wp) ::  latitude = 55.0_wp                            !< namelist parameter
     REAL(wp) ::  longitude = 0.0_wp                            !< namelist parameter
     REAL(wp) ::  mask_scale_x = 1.0_wp                         !< namelist parameter
@@ -1532,6 +1534,7 @@
                                                                !< boundary of total domain
     REAL(wp) ::  pt_surface = 300.0_wp                         !< namelist parameter
     REAL(wp) ::  pt_surface_initial_change = 0.0_wp            !< namelist parameter
+    REAL(wp) ::  pt_ref = 15.0_wp                              !< potential temperature reference falue
     REAL(wp) ::  q_surface = 0.0_wp                            !< namelist parameter
     REAL(wp) ::  q_surface_initial_change = 0.0_wp             !< namelist parameter
     REAL(wp) ::  rayleigh_damping_factor = -1.0_wp             !< namelist parameter
@@ -1539,12 +1542,15 @@
     REAL(wp) ::  recycling_width = 9999999.9_wp                !< namelist parameter
     REAL(wp) ::  residual_limit = 1.0E-4_wp                    !< namelist parameter
     REAL(wp) ::  restart_time = 9999999.9_wp                   !< namelist parameter
+    REAL(wp) ::  rho_ref = 1000.0_wp                           !< reference density for linear eos
     REAL(wp) ::  rho_reference                                 !< reference state of density
     REAL(wp) ::  rho_surface                                   !< surface value of density
     REAL(wp) ::  rho_init_surface                              !< initial surface value of density defined by EOS
     REAL(wp) ::  roughness_length = 0.1_wp                     !< namelist parameter
+    REAL(wp) ::  sa_ref = 35.0_wp                              !< salinity reerence value for fixed linear density equation
     REAL(wp) ::  sa_surface = 35.0_wp                          !< namelist parameter
     REAL(wp) ::  sa_slope_offset = 0.0_wp                      !< salinity difference between left and right 
+    REAL(wp) ::  schmidt_number = 2432_wp                      !< Schmidt number (dimensionless)
     REAL(wp) ::  simulated_time = 0.0_wp                       !< elapsed simulated time
     REAL(wp) ::  simulated_time_at_begin                       !< elapsed simulated time of previous run (job chain)
     REAL(wp) ::  sin_alpha_surface                             !< sine of alpha_surface (sloped surface)
@@ -1602,6 +1608,8 @@
     REAL(wp) ::  v_bulk = 0.0_wp                               !< namelist parameter
     REAL(wp) ::  v_gtrans = 0.0_wp                             !< transformed wind component (galilei transformation)
     REAL(wp) ::  wall_adjustment_factor = 1.8_wp               !< adjustment factor for mixing length l
+    REAL(wp) ::  wb_solar = 0.0_wp
+    REAL(wp) ::  z_offset = 9999999.9_wp                       !< namelist parameter, z_offset for most_method mcphee
     REAL(wp) ::  zeta_max = 20.0_wp                            !< namelist parameter
     REAL(wp) ::  zeta_min = -20.0_wp                           !< namelist parameter
     REAL(wp) ::  z0h_factor = 1.0_wp                           !< namelist parameter

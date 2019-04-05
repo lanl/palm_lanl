@@ -529,7 +529,7 @@
              galilei_transformation, humidity,                                 &
              inflow_damping_height, inflow_damping_width,                      &
              inflow_disturbance_begin, inflow_disturbance_end,                 &
-             initializing_actions, km_constant,                                &
+             initializing_actions, km_constant, k_offset,                      &
              large_scale_forcing, large_scale_subsidence, latitude,            &
              limiter_sedimentation, longitude,                                 &
              loop_optimization, lsf_exception, masking_method, mg_cycles,      &
@@ -576,8 +576,7 @@
              wall_adjustment, wall_heatflux, wall_humidityflux,                &
              wall_salinityflux, wall_scalarflux,                               &
              wave_age, wind_dir, wind_speed,                                   &
-             y_shift, zeta_max, zeta_min,                                      &
-             z0h_factor
+             y_shift, zeta_max, zeta_min, z0h_factor
 
     NAMELIST /initialization_parameters/  aerosol_bulk, alpha_surface,         &
              approximation, bc_e_b, bc_e_t,                                    &
@@ -602,7 +601,7 @@
              data_output_during_spinup,                                        &
              day_of_year_init,                                                 &
              dissipation_1d,                                                   &
-             dp_external, dp_level_b, dp_smooth, dpdxy,                        &
+             dp_external, dp_level_b, dp_smooth, dpdxy, drag_coeff,            &
              dpdx, dpdx_phase, dpdx_freq, dpdy, dpdy_phase, dpdy_freq,         &
              dry_aerosol_radius, dt, dt_pr_1d, dt_run_control_1d, dt_spinup,   &
              dx, dy, dz, dz_max, dz_stretch_factor, dz_stretch_level,          &
@@ -612,7 +611,7 @@
              galilei_transformation, humidity,                                 &
              inflow_damping_height, inflow_damping_width,                      &
              inflow_disturbance_begin, inflow_disturbance_end,                 &
-             initializing_actions, km_constant,                                &
+             initializing_actions, km_constant, k_offset,                      &
              large_scale_forcing, large_scale_subsidence, latitude,            &
              limiter_sedimentation, longitude,                                 &
              loop_optimization, lsf_exception, masking_method, mg_cycles,      &
@@ -622,6 +621,7 @@
              linear_eqnOfState, rho_ref, fixed_alpha, alpha_const,             &
              beta_const, pt_ref, sa_ref,                                       &
              omega, omega_sor, wb_solar,                                       &
+             omega, omega_sor,                                                 &
              outflow_source_plane, passive_scalar,                             &
              prandtl_number, precipitation, psolver, pt_damping_factor,        &
              pt_damping_width, pt_reference, pt_surface,                       &
@@ -659,8 +659,7 @@
              wall_adjustment, wall_heatflux, wall_humidityflux,                &
              wall_salinityflux, wall_scalarflux,                               &
              wave_age, wind_dir, wind_speed,                                   &
-             y_shift, zeta_max, zeta_min,                                      &
-             z0h_factor
+             y_shift, zeta_max, zeta_min, z0h_factor
 
     NAMELIST /d3par/  averaging_interval, averaging_interval_pr,               &
              cpu_log_barrierwait, create_disturbances,                         &

@@ -4150,6 +4150,15 @@
           ENDIF
        ENDIF
     ENDIF
+!
+!-- Check whether prandtl_number is appropriate
+    IF ( TRIM(most_method) == 'mcphee' ) THEN
+       prandtl_number = 13.8_wp
+    ELSEIF ( ocean .AND. prandtl_number == 1.0_wp ) THEN
+       message_string = 'prandtl_number is 1 for an ocean case, consider '     &
+                        // 'higher values'
+       CALL message( 'check_parameters', 'PA0656', 0, 1, 0, 6, 0 )
+    ENDIF
 
 !
 !-- In case of non-cyclic lateral boundaries and a damping layer for the

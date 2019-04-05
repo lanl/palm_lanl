@@ -183,7 +183,7 @@
         ONLY:  alpha_T, beta_S, csflux_input_conversion,                       &
                heatflux_input_conversion, momentumflux_input_conversion,       &
                scalarflux_input_conversion, salinityflux_input_conversion,     &
-               waterflux_input_conversion, zu, zw
+               waterflux_input_conversion, sa_init, zu, zw
 
     USE chem_modules
 
@@ -249,6 +249,9 @@
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  qrs       !< scaling parameter qr
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  nrs       !< scaling parameter nr
 
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  gamma_T   !< heat exchange velocity (m/s)
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  gamma_S   !< salt exchange velocity (m/s)
+
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  ol        !< Obukhov length
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  rib       !< Richardson bulk number
 
@@ -257,6 +260,9 @@
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  z0q       !< roughness length for humidity
 
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt1       !< Potential temperature at first grid level
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  sa1       !< Salinity at first grid level
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt_io     !< Potential temperature at ice-ocean interface
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  sa_io     !< Salinity at ice-ocean interface
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  qv1       !< mixing ratio at first grid level
        REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  css     !< scaling parameter chemical species
 !
@@ -1200,6 +1206,16 @@
        IF ( ocean )  THEN
          ALLOCATE ( surfaces%sasws(1:surfaces%ns) )
          ALLOCATE ( surfaces%shf_sol(1:surfaces%ns) )
+         ALLOCATE ( surfaces%sa1(1:surfaces%ns) )
+       ENDIF
+
+!
+!--
+       IF ( most_method == 'mcphee' ) THEN
+          ALLOCATE ( surfaces%gamma_T(1:surfaces%ns) )
+          ALLOCATE ( surfaces%gamma_S(1:surfaces%ns) )
+          ALLOCATE ( surfaces%sa_io(1:surfaces%ns) )
+          ALLOCATE ( surfaces%pt_io(1:surfaces%ns) )
        ENDIF
 
     END SUBROUTINE allocate_surface_attributes_h
@@ -1905,7 +1921,7 @@
              INTEGER(iwp)  ::  lsp_pr           !< running index chemical species??
 
              LOGICAL       ::  upward_facing    !< flag indicating upward-facing surface
-             LOGICAL       ::  downward_facing  !< flag indicating downward-facing surface
+             LOGICAL       ::  downward_facing  !< flag indicating downward-facing surfaceD -> dyn_melting) Add surface buoyancy production of TKE
              LOGICAL       ::  is_top           !< flag indicating whether surface is top
              LOGICAL       :: flux_layer
 
@@ -1926,10 +1942,14 @@
 !
 !--          Initialize surface-layer height
              IF ( flux_layer ) THEN
-                IF ( upward_facing )  THEN
-                   surf%z_mo(num_h)  = zu(k) - zw(k-1)
+                IF ( is_top ) THEN
+                   surf%z_mo(num_h) = zw(k+1) - zu(k)
                 ELSE
-                   surf%z_mo(num_h)  = zw(k) - zu(k)
+                   IF ( upward_facing )  THEN
+                      surf%z_mo(num_h)  = zu(k) - zw(k-1)
+                   ELSE
+                      surf%z_mo(num_h)  = zw(k) - zu(k)
+                   ENDIF
                 ENDIF
  
                 surf%z0(num_h)    = roughness_length
@@ -2178,6 +2198,15 @@
                                           salinityflux_input_conversion(nzt+1)
                    ELSE
                       surf%sasws(num_h) = 0.0_wp
+                   ENDIF
+               
+                   IF ( TRIM(most_method) == 'mcphee' ) THEN
+                      surf%gamma_T(num_h) = 0.0_wp
+                      surf%gamma_S(num_h) = 0.0_wp
+                      surf%shf(num_h) = 0.0_wp
+                      surf%sasws(num_h) = 0.0_wp
+                      surf%sa_io(num_h) = sa_init(nzt)
+                      surf%pt_io(num_h) = 0.0_wp
                    ENDIF
 
                 ENDIF

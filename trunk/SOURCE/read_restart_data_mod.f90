@@ -454,8 +454,8 @@
                 READ ( 13 )  inflow_disturbance_begin
              CASE ( 'inflow_disturbance_end' )
                 READ ( 13 )  inflow_disturbance_end
-             CASE ( 'k_offset' )
-                READ ( 13 )  k_offset
+             CASE ( 'k_offset_mcphee' )
+                READ ( 13 )  k_offset_mcphee
              CASE ( 'km_constant' )
                 READ ( 13 )  km_constant
              CASE ( 'large_scale_forcing' )

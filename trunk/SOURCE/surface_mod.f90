@@ -239,6 +239,10 @@
        INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE :: end_index   !< End index within surface data type for given (j,i)  
 
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  z_mo      !< surface-layer height 
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  usurf     !< u velocity at surface on scalar grid
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  vsurf     !< v velocity at surface on scalar grid
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  ufar      !< u velocity at depth where drag is defined
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  vfar      !< v velocity at depth where drag is defined
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  uvw_abs   !< absolute surface-parallel velocity
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  us        !< friction velocity
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  ts        !< scaling parameter temerature
@@ -263,6 +267,7 @@
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  sa1       !< Salinity at first grid level
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt_io     !< Potential temperature at ice-ocean interface
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  sa_io     !< Salinity at ice-ocean interface
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  melt      !< Melt rate in m/s
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  qv1       !< mixing ratio at first grid level
        REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  css     !< scaling parameter chemical species
 !
@@ -1216,6 +1221,7 @@
           ALLOCATE ( surfaces%gamma_S(1:surfaces%ns) )
           ALLOCATE ( surfaces%sa_io(1:surfaces%ns) )
           ALLOCATE ( surfaces%pt_io(1:surfaces%ns) )
+          ALLOCATE ( surfaces%melt(1:surfaces%ns) )
        ENDIF
 
     END SUBROUTINE allocate_surface_attributes_h
@@ -1530,11 +1536,7 @@
 !
 !--    Downward facing vertical offset
        surf_def_h(1)%koff   = 1
-       IF ( k_offset /= 9999 .AND. TRIM( most_method ) == 'mcphee' ) THEN
-          surf_def_h(2)%koff = k_offset
-       ELSE
-          surf_def_h(2)%koff = 1
-       ENDIF
+       surf_def_h(2)%koff   = 1
 !
 !--    Vertical surfaces - no vertical offset
        surf_def_v(0:3)%koff = 0
@@ -2204,6 +2206,7 @@
                       surf%gamma_T(num_h) = 0.0_wp
                       surf%gamma_S(num_h) = 0.0_wp
                       surf%shf(num_h) = 0.0_wp
+                      surf%melt(num_h) = 0.0_wp
                       surf%sasws(num_h) = 0.0_wp
                       surf%sa_io(num_h) = sa_init(nzt)
                       surf%pt_io(num_h) = 0.0_wp

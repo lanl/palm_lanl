@@ -4604,22 +4604,25 @@
        message_string = 'most_method = mcphee is incompatible with atmosphere runs'
        CALL message( 'check_parameters', 'PA0416', 1, 2, 0, 6, 0 )
     ENDIF
-    IF ( k_offset .LT. 0 )  THEN
-       message_string = 'k_offset is less than 0. k_offset must be >= 0'
+    IF ( k_offset_mcphee .LT. 0 )  THEN
+       message_string = 'k_offset_mcphee is less than 0. k_offset_mcphee must be >= 0'
        CALL message( 'check_parameters', 'PA0416', 1, 2, 0, 6, 0 )
     ENDIF
-    IF ( k_offset == 9999 .AND. TRIM( most_method ) == 'mcphee' )  THEN
-       k_offset = 0 ! set to default value
+    IF ( k_offset_mcphee == 9999 .AND. TRIM( most_method ) == 'mcphee' )  THEN
+       k_offset_mcphee = 0 ! set to default value
     ENDIF
-    IF ( k_offset /= 9999 .AND. TRIM( most_method ) == 'mcphee')  THEN
-       z_offset = k_offset * dz(1) + dz(1)/2.0_wp
+    IF ( k_offset_mcphee /= 9999 .AND. TRIM( most_method ) == 'mcphee')  THEN
+       z_offset_mcphee = k_offset_mcphee * dz(1) + dz(1)/2.0_wp
     ENDIF
 
 !
 !-- If drag_coefficient is specified, convert to roughness length
-    IF ( TRIM(constant_flux_layer) /= 'none' .AND. drag_coeff /= 9999999.9_wp )&
+    IF ( TRIM(constant_flux_layer) == 'bottom' .AND. drag_coeff /= 9999999.9_wp )&
        THEN
-       roughness_length = z_offset / EXP( kappa/SQRT(drag_coeff) )
+       roughness_length = ABS(zw(0) - zu(1)) / EXP( kappa/SQRT(drag_coeff) )
+    ELSEIF ( TRIM(constant_flux_layer) == 'top' .AND. drag_coeff /= 9999999.9_wp )&
+       THEN
+       roughness_length = ABS(zw(nzt+1) - zu(nzt)) / EXP( kappa/SQRT(drag_coeff) )
     ENDIF
 
 !

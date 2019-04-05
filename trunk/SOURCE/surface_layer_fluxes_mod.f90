@@ -21,6 +21,9 @@
 ! Current revisions:
 ! ------------------
 ! 
+! 2018-11-21 cbegeman
+! Add McPhee MOST parameterization of surface layer fluxes for ice-ocean 
+! interface
 ! 
 ! Former revisions:
 ! -----------------
@@ -209,33 +212,35 @@
  MODULE surface_layer_fluxes_mod
 
     USE arrays_3d,                                                             &
-        ONLY:  e, kh, nc, nr, pt, q, ql, qc, qr, s, u, v, vpt, w, zu, zw,      &
+        ONLY:  alpha_T, beta_S, e, hyp, kh, nc, nr, pt, q, ql, qc, qr,         &
+               rho_ocean, s, sa, u, v, vpt, w, zu, zw,                         &
                drho_ref_zw, rho_ref_zw
 
     USE chem_modules,                                                          &
         ONLY:  constant_csflux, nvar
 
     USE cloud_parameters,                                                      &
-        ONLY:  l_d_cp, pt_d_t
+        ONLY:  cp, l_d_cp, pt_d_t
 
     USE constants,                                                             &
-        ONLY:  pi
+        ONLY:  pi, cpw
 
     USE cpulog
 
     USE control_parameters,                                                    &
-        ONLY:  air_chemistry, cloud_droplets, cloud_physics,                   &
-               constant_flux_layer, constant_heatflux, constant_scalarflux,    &
-               constant_waterflux, coupling_mode, g, humidity, ibc_e_b,        &
-               ibc_e_t, ibc_pt_b, ibc_pt_t, initializing_actions, kappa,       &
+        ONLY:  air_chemistry, c1, c2, c3, cloud_droplets, cloud_physics,       &
+               constant_flux_layer, constant_heatflux, constant_scalarflux,    &     
+               constant_waterflux, coupling_mode, drag_coeff, f, g, humidity,  &
+               ibc_e_b, ibc_e_t, ibc_pt_b, ibc_pt_t, initializing_actions,     &
                intermediate_timestep_count, intermediate_timestep_count_max,   &
-               land_surface, large_scale_forcing, lsf_surf,                    &
+               k_offset_mcphee, kappa, l_m, land_surface, large_scale_forcing, &
+               lsf_surf,                                                       &
                message_string, microphysics_morrison, microphysics_seifert,    &
                molecular_viscosity, most_method, neutral, ocean,               &
                passive_scalar, prandtl_number, pt_surface, q_surface,          &
                run_coupled, schmidt_number, surface_pressure, simulated_time,  &
                terminate_run, time_since_reference_point, urban_surface,       &
-               z_offset, zeta_max, zeta_min
+               z_offset_mcphee, zeta_max, zeta_min
 
     USE eqn_state_seawater_mod,                                                &
         ONLY: pt_freezing, pt_freezing_SA
@@ -265,6 +270,7 @@
     INTEGER(iwp) ::  k              !< loop index z direction
     INTEGER(iwp) ::  l              !< loop index for surf type
     INTEGER(iwp) ::  li_bnd  = 7500 !< Lookup table index of the last time step
+    INTEGER(iwp) ::  m              !< loop index surface
 
     INTEGER(iwp), PARAMETER ::  num_steps = 15000  !< number of steps in the lookup table
 
@@ -278,11 +284,16 @@
     REAL(wp), DIMENSION(0:num_steps-1) :: rib_tab,  & !< Lookup table bulk Richardson number
                                           ol_tab      !< Lookup table values of L
 
-    REAL(wp)     ::  e_s,               & !< Saturation water vapor pressure
-                     ol_max = 1.0E6_wp, & !< Maximum Obukhov length
-                     rib_max,           & !< Maximum Richardson number in lookup table
-                     rib_min,           & !< Minimum Richardson number in lookup table
-                     z_mo                 !< Height of the constant flux layer where MOST is assumed
+    REAL(wp)     ::  dheatflux,                & !< Change in heat flux over iteration
+                     dheatflux_tol = 1.0E-6_wp,& !< Maximum acceptable change in heat flux over iteration !CB
+                     eta_star,                 & !< Stability factor 
+                     e_s,                      & !< Saturation water vapor pressure
+                     ol_max = 1.0E6_wp,        & !< Maximum Obukhov length
+                     rib_max,                  & !< Maximum Richardson number in lookup table
+                     rib_min,                  & !< Minimum Richardson number in lookup table
+                     z_mo                        !< Height of the constant flux layer where MOST is assumed
+    REAL(wp)     ::  ri_crit = 0.2_wp            !< critical flux Richardson number
+    REAL(wp)     ::  xi_N = 0.0052_wp            !< non-dimensional surface layer extent
 
     TYPE(surf_type), POINTER ::  surf     !< surf-type array, used to generalize subroutines
 
@@ -314,8 +325,12 @@
 
        IMPLICIT NONE
 
+       !CB INTEGER(iwp) :: m
+       REAL(wp), DIMENSION(:), ALLOCATABLE :: shf_p
+ 
        surf_vertical = .FALSE.
        downward      = .FALSE.
+
 !
 !--    Derive potential temperature and specific humidity at first grid level 
 !--    from the fields pt and q
@@ -361,13 +376,22 @@
           ENDDO
        
        ENDIF
+
        IF ( TRIM(constant_flux_layer) == 'top' )  THEN
 !
 !--       First call for horizontal default-type surfaces 
           IF ( surf_def_h(2)%ns >= 1 )  THEN
+             surf => surf_def_h(2)
+!
+!--          Derive scalar properties at the nth grid level 
+!--          from the surface from their 3-d arrays
+             IF ( ocean .AND. trim(most_method) == 'mcphee' ) THEN
                 surf => surf_def_h(2)
+                CALL calc_pt_sa
+             ELSE
                 CALL calc_pt_q
                 IF ( .NOT. neutral )  CALL calc_pt_surface
+             ENDIF
           ENDIF
        ENDIF
 
@@ -471,14 +495,24 @@
 !
 !--    Treat downward-facing horizontal surface at the top.
        IF ( surf_def_h(2)%ns >= 1 .AND. TRIM(constant_flux_layer) == 'top' )  THEN
+          
           downward = .TRUE.
           surf => surf_def_h(2)
-          CALL calc_scaling_parameters
-          CALL calc_uvw_abs
-          IF ( .NOT. neutral )  CALL calc_ol
-          CALL calc_us
-          CALL calc_surface_fluxes
+
+          IF ( trim(most_method) == 'mcphee' ) THEN
+             CALL calc_uvw_abs 
+             CALL calc_us
+             CALL calc_3eqn
+          ELSE
+             CALL calc_scaling_parameters
+             CALL calc_uvw_abs
+             IF ( .NOT. neutral )  CALL calc_ol
+             CALL calc_us
+             CALL calc_surface_fluxes
+          ENDIF
+          
           downward = .FALSE.
+       
        ENDIF
 !
 !--    Calculate surfaces fluxes at vertical surfaces for momentum 
@@ -991,15 +1025,12 @@
        IMPLICIT NONE
 
        INTEGER(iwp) ::  i             !< running index x direction
-       INTEGER(iwp) ::  ibit          !< flag to mask computation of relative velocity in case of downward-facing surfaces
+       INTEGER(iwp) ::  ibit          !< k-index away from surface for velocity
        INTEGER(iwp) ::  j             !< running index y direction
        INTEGER(iwp) ::  k             !< running index z direction
        INTEGER(iwp) ::  m             !< running index surface elements
 
-!
-!--    Reference velocity is at k+1 for downward-facing surfaces, 
-!--    k-1 for upward-facing surfaces.
-       ibit = MERGE( 1, -1, downward )
+       ibit = MERGE( -1 * k_offset_mcphee, 0, TRIM(most_method) == 'mcphee' )
 
        DO  m = 1, surf%ns
 
@@ -1016,18 +1047,18 @@
 !--       with respect to the ocean surface is used, hence, (k-1,j,i) values
 !--       are used to calculate the absolute velocity. 
 !--       However, this do not apply for downward-facing walls. To mask this, 
-!--       use ibit, which checks for upward/downward-facing surfaces. 
-          surf%uvw_abs(m) = SQRT(                                              &
-                              ( 0.5_wp * (   u(k,j,i)   + u(k,j,i+1)           &
-                                        -  ( u(k+ibit,j,i) + u(k+ibit,j,i+1) ) &
-                                         )                                     &
-                              )**2 +                                           &
-                              ( 0.5_wp * (   v(k,j,i)   + v(k,j+1,i)           &
-                                        -  ( v(k+ibit,j,i) + v(k+ibit,j+1,i) ) &
-                                         )                                     &
-                              )**2                                             &
-                                )
-
+!--       use ibit, which checks for upward/downward-facing surfaces.
+!--       Note: a previous version of the code computed the average relative 
+!--       velocity over two grid cells: i and i+1 for u and j and j+1 for v
+          IF ( TRIM(most_method) == 'mcphee' ) THEN
+             surf%uvw_abs(m) = SQRT( ( u(k-surf%koff,j,i) - u(k+ibit,j,i) ) **2 +&
+                                     ( v(k-surf%koff,j,i) - v(k+ibit,j,i) ) **2  &
+                                   ) 
+          ELSE
+             surf%uvw_abs(m) = SQRT( ( u(k,j,i) - u(k+ibit,j,i) ) **2 +        &
+                                     ( v(k,j,i) - v(k+ibit,j,i) ) **2          &
+                                   )
+          ENDIF
        ENDDO
 
     END SUBROUTINE calc_uvw_abs
@@ -1232,8 +1263,7 @@
 !--    k-1 for upward-facing surfaces.
        ibit = MERGE( 1, -1, downward )
 
-       IF ( TRIM( most_method ) /= 'circular' )  THEN
-
+       IF ( TRIM( most_method ) /= 'mcphee' .AND. TRIM( most_method ) /= 'circular' )  THEN
 !
 !--       Evaluate bulk Richardson number (calculation depends on
 !--       definition based on setting of boundary conditions
@@ -1556,12 +1586,55 @@
 
           ENDIF
 
+       ELSEIF ( trim(most_method) == 'mcphee' ) THEN
+
+          !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
+          DO  m = 1, surf%ns
+
+             i   = surf%i(m)            
+             j   = surf%j(m)
+             k   = surf%k(m)
+
+             surf%ol(m) = rho_ocean(k,j,i) * surf%us(m)**3 /                   &
+                          (g * kappa *                                         &
+                            ( beta_S(k,j,i)*surf%sasws(m) -                    &
+                              alpha_T(k,j,i)*surf%shf(m)    ) + 1E-30_wp )
+
+          ENDDO
+
        ENDIF
 
     END SUBROUTINE calc_ol
 
-!
-!-- Calculate friction velocity u*
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Compute the Obukhov length for an individual horizontal surface element. 
+!> This is required by mcphee method only.
+!------------------------------------------------------------------------------!
+    SUBROUTINE calc_ol_m(m)
+
+       IMPLICIT NONE
+
+       INTEGER(iwp) ::  i,j,k   !< index variables 
+       INTEGER(iwp) ::  m       !< loop variable over all horizontal surf elements 
+
+       i   = surf%i(m)            
+       j   = surf%j(m)
+       k   = surf%k(m)
+
+       surf%ol(m) = rho_ocean(k,j,i) * surf%us(m)**3 /                   &
+                    (g * kappa *                                         &
+                      ( beta_S(k,j,i)*surf%sasws(m) -                    &
+                        alpha_T(k,j,i)*surf%shf(m)    ) + 1E-30_wp )
+
+    END SUBROUTINE calc_ol_m
+
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Compute the friction velocity u*. This is required by all methods.
+!------------------------------------------------------------------------------!
     SUBROUTINE calc_us
 
        IMPLICIT NONE
@@ -1590,15 +1663,23 @@
 !--       Compute u* at downward-facing surfaces. This case, do not consider
 !--       any stability. 
           ELSE
-             !$OMP PARALLEL  DO PRIVATE( z_mo )
-             DO  m = 1, surf%ns
+             IF ( trim(most_method) == 'mcphee' ) THEN
+                DO  m = 1, surf%ns
+                   ! Equivalent to: surf%us(m) = SQRT(drag_coeff) * surf%uvw_abs(m)
+                   surf%us(m) = kappa * surf%uvw_abs(m) / LOG( z_offset_mcphee / surf%z0(m) ) 
+                                
+                ENDDO
+             ELSE
+                !$OMP PARALLEL  DO PRIVATE( z_mo )
+                DO  m = 1, surf%ns
 
-                z_mo = surf%z_mo(m)
+                   z_mo = surf%z_mo(m)
 !
-!--             Compute u* at the scalars' grid points
-                surf%us(m) = kappa * surf%uvw_abs(m) / LOG( z_mo / surf%z0(m) )
-   
-             ENDDO
+!--                Compute u* at the scalars' grid points
+                   surf%us(m) = kappa * surf%uvw_abs(m) / LOG( z_mo / surf%z0(m) )
+             
+                ENDDO
+             ENDIF
           ENDIF
 !
 !--    Compute u* at vertical surfaces at the u/v/v grid, respectively. 
@@ -1609,14 +1690,18 @@
              z_mo = surf%z_mo(m)
 
              surf%us(m) = kappa * surf%uvw_abs(m) / LOG( z_mo / surf%z0(m) )
+
           ENDDO
        ENDIF
 
     END SUBROUTINE calc_us
 
-!
-!-- Calculate potential temperature and specific humidity at first grid level
-!-- ( only for upward-facing surfs )
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Calculate potential temperature and specific humidity at first grid level
+!> ( only for upward-facing surfs ).
+!------------------------------------------------------------------------------!
     SUBROUTINE calc_pt_q
 
        IMPLICIT NONE
@@ -1649,10 +1734,40 @@
 
     END SUBROUTINE calc_pt_q
 
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Calculate potential temperature and salinity at nth level below the top surface
+!------------------------------------------------------------------------------!
+    SUBROUTINE calc_pt_sa
 
-!
-!-- Calculate potential temperature and specific humidity at first grid level
-!-- ( only for upward-facing surfs )
+       IMPLICIT NONE
+
+       INTEGER(iwp) ::  m       !< loop variable over all horizontal surf elements 
+       INTEGER(iwp) ::  ibit    !< k offset for mcphee case 
+
+       ibit = MERGE( -1 * k_offset_mcphee, 0, TRIM(most_method) == 'mcphee' )
+       
+       !$OMP PARALLEL DO PRIVATE( i, j, k )
+       DO  m = 1, surf%ns
+
+          i   = surf%i(m)            
+          j   = surf%j(m)
+          k   = surf%k(m)
+
+          surf%pt1(m) = pt(k+ibit,j,i)
+          surf%sa1(m) = sa(k+ibit,j,i)
+
+       ENDDO
+
+    END SUBROUTINE calc_pt_sa
+
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Calculate potential temperature and specific humidity at first grid level
+!> ( only for upward-facing surfs )
+!------------------------------------------------------------------------------!
     SUBROUTINE calc_pt_surface
 
        IMPLICIT NONE
@@ -1674,8 +1789,11 @@
 
     END SUBROUTINE calc_pt_surface
 
-!
-!-- Calculate the other MOST scaling parameters theta*, q*, (qc*, qr*, nc*, nr*)
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Calculate the other MOST scaling parameters theta*, q*, (qc*, qr*, nc*, nr*)
+!------------------------------------------------------------------------------!
     SUBROUTINE calc_scaling_parameters
 
        IMPLICIT NONE
@@ -1971,22 +2089,32 @@
 
 
 
-!
-!-- Calculate surface fluxes usws, vsws, shf, qsws, (qcsws, qrsws, ncsws, nrsws)
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Calculate surface fluxes usws, vsws, shf, qsws, (sasws, qcsws, qrsws, ncsws, 
+!> nrsws).
+!------------------------------------------------------------------------------!
     SUBROUTINE calc_surface_fluxes
 
        IMPLICIT NONE
 
-       INTEGER(iwp) ::  ibit          !< flag to mask computation of relative velocity in case of downward-facing surfaces
+       COMPLEX       ::  im = (0,-1), tau
+
+       INTEGER(iwp)  ::  ibit    !< flag to mask computation of relative velocity in case of downward-facing surfaces
        INTEGER(iwp)  ::  m       !< loop variable over all horizontal surf elements
        INTEGER(iwp)  ::  lsp     !< running index for chemical species
 
-       REAL(wp)                            ::  dum     !< dummy to precalculate logarithm
-       REAL(wp)                            ::  flag_u  !< flag indicating u-grid, used for calculation of horizontal momentum fluxes at vertical surfaces
-       REAL(wp)                            ::  flag_v  !< flag indicating v-grid, used for calculation of horizontal momentum fluxes at vertical surfaces
-       REAL(wp), DIMENSION(:), ALLOCATABLE ::  u_i     !< u-component interpolated onto scalar grid point, required for momentum fluxes at vertical surfaces 
-       REAL(wp), DIMENSION(:), ALLOCATABLE ::  v_i     !< v-component interpolated onto scalar grid point, required for momentum fluxes at vertical surfaces 
-       REAL(wp), DIMENSION(:), ALLOCATABLE ::  w_i     !< w-component interpolated onto scalar grid point, required for momentum fluxes at vertical surfaces 
+       REAL(wp)                            ::  dum         !< dummy to precalculate logarithm
+       REAL(wp)                            ::  flag_u      !< flag indicating u-grid, used for calculation of horizontal momentum fluxes at vertical surfaces
+       REAL(wp)                            ::  flag_v      !< flag indicating v-grid, used for calculation of horizontal momentum fluxes at vertical surfaces
+       REAL(wp)                            ::  melt_min = 0.0_wp,melt_max = 1e3/3e7
+       REAL(wp)                            ::  s_factor    !< term in mcphee surface flux calculation
+       REAL(wp)                            ::  us_x,us_y,us_mag
+       REAL(wp)                            ::  zeta
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  u_i         !< u-component interpolated onto scalar grid point, required for momentum fluxes at vertical surfaces 
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  v_i         !< v-component interpolated onto scalar grid point, required for momentum fluxes at vertical surfaces 
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  w_i         !< w-component interpolated onto scalar grid point, required for momentum fluxes at vertical surfaces 
 
 !
 !--    Reference velocity is at k+1 for downward-facing surfaces, 
@@ -2007,12 +2135,15 @@
                 j = surf%j(m)
                 k = surf%k(m)
 
-                z_mo = surf%z_mo(m)
 
                 surf%usws(m) = kappa * ( u(k,j,i) - u(k-1,j,i) )               &
-                              / ( LOG( z_mo / surf%z0(m) )                     &
-                                  - psi_m( z_mo / surf%ol(m) )                 &
+                              / ( LOG( surf%z_mo(m) / surf%z0(m) )             &
+                                  - psi_m( surf%z_mo(m) / surf%ol(m) )         &
                                   + psi_m( surf%z0(m) / surf%ol(m) ) )
+                surf%vsws(m) = kappa * ( v(k,j,i) - v(k-1,j,i) )               &
+                           / ( LOG( surf%z_mo(m) / surf%z0(m) )                &
+                               - psi_m( surf%z_mo(m) / surf%ol(m) )            &
+                               + psi_m( surf%z0(m) / surf%ol(m) ) )
 !
 !--             Please note, the computation of usws is not fully accurate. Actually 
 !--             a further interpolation of us onto the u-grid, where usws is defined, 
@@ -2022,11 +2153,13 @@
 !--             tests had shown. 
 !--             Same also for ol.  
                 surf%usws(m) = -surf%usws(m) * surf%us(m) * rho_ref_zw(k-1)
-
+                surf%vsws(m) = -surf%vsws(m) * surf%us(m) * rho_ref_zw(k-1)
+             
              ENDDO
 !
 !--       At downward-facing surfaces
           ELSE
+
              !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
              DO  m = 1, surf%ns  
    
@@ -2034,67 +2167,63 @@
                 j = surf%j(m)
                 k = surf%k(m)
 
-                z_mo = surf%z_mo(m)
+                IF ( trim(most_method) == 'mcphee' ) THEN
 
-                surf%usws(m) = kappa * u(k,j,i) / LOG( z_mo / surf%z0(m) )
-!                surf%usws(m) = kappa * ( u(k+1,j,i) - u(k,j,i) )               &
-!                              / ( LOG( z_mo / surf%z0(m) )                     &
-!                                  - psi_m( z_mo / surf%ol(m) )                 &
-!                                  + psi_m( surf%z0(m) / surf%ol(m) ) )
-                surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k+1)
+                   us_x = kappa * ( u(k,j,i) - u(k+1,j,i) )                    &
+                          / LOG( z_offset_mcphee / surf%z0(m) )
+                   us_y = kappa * ( v(k,j,i) - v(k+1,j,i) )                    &
+                          / LOG( z_offset_mcphee / surf%z0(m) )
+                   eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /               &
+                              ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5
+                   zeta = ABS(f) * -1.0_wp * z_offset_mcphee / ( eta_star * surf%us(m) )
+                   tau = EXP( SQRT( im / ( kappa * xi_N ) ) * zeta )
+                   surf%usws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
+                                  ( us_x * REAL(tau) - us_y * IMAG(tau) )
+                   surf%vsws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
+                                  ( us_x * IMAG(tau) + us_y * REAL(tau) )
+                
+                ELSE
 
+                   surf%usws(m) = surf%us(m) * rho_ref_zw(k+1) * kappa *       &
+                                  ( u(k,j,i) - u(k+1,j,i) )                    &
+                                  / LOG( surf%z_mo(m) / surf%z0(m) )
+                   surf%vsws(m) = surf%us(m) * rho_ref_zw(k+1) * kappa *       &
+                                  ( v(k,j,i) - v(k+1,j,i) )                    &
+                                  / LOG( surf%z_mo(m) / surf%z0(m) )
+
+                ENDIF
              ENDDO     
           ENDIF
 
 !
-!--       Compute v'w' for the total model domain.
-!--       First compute the corresponding component of u* and square it.
-!--       Upward-facing surfaces
-          IF ( .NOT. downward )  THEN
-             !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
-             DO  m = 1, surf%ns  
-                i = surf%i(m)            
-                j = surf%j(m)
-                k = surf%k(m)
-
-                z_mo = surf%z_mo(m)
-
-                surf%vsws(m) = kappa * ( v(k,j,i) - v(k-1,j,i) )               &
-                           / ( LOG( z_mo / surf%z0(m) )                        &
-                               - psi_m( z_mo / surf%ol(m) )                    &
-                               + psi_m( surf%z0(m) / surf%ol(m) ) )
-!
-!--             Please note, the computation of vsws is not fully accurate. Actually 
-!--             a further interpolation of us onto the v-grid, where vsws is defined, 
-!--             is required. However, this is not done as this would require several
-!--             data transfers between 2D-grid and the surf-type. 
-!--             The impact of the missing interpolation is negligible as several 
-!--             tests had shown. 
-!--             Same also for ol.  
-                surf%vsws(m) = -surf%vsws(m) * surf%us(m) * rho_ref_zw(k-1)
-             ENDDO
-!
-!--       Downward-facing surfaces
-          ELSE
-             !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
-             DO  m = 1, surf%ns  
-                i = surf%i(m)            
-                j = surf%j(m)
-                k = surf%k(m)
-
-                z_mo = surf%z_mo(m)
-
-                surf%vsws(m) = kappa * v(k,j,i) / LOG( z_mo / surf%z0(m) )
-!                surf%vsws(m) = kappa * ( v(k+1,j,i) - v(k,j,i) )               &
-!                           / ( LOG( z_mo / surf%z0(m) )                        &
-!                               - psi_m( z_mo / surf%ol(m) )                    &
-!                               + psi_m( surf%z0(m) / surf%ol(m) ) )
-                surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k+1)
-             ENDDO
-          ENDIF
-!
 !--       Compute the vertical kinematic heat flux
-          IF (  .NOT.  constant_heatflux  .AND.  ( ( time_since_reference_point&
+          IF ( trim(most_method) == 'mcphee' .AND. downward ) THEN
+             
+             !$OMP PARALLEL DO PRIVATE( i, j, k, s_factor )
+             DO  m = 1, surf%ns  
+   
+                i = surf%i(m)            
+                j = surf%j(m)
+                k = surf%k(m)
+                
+                s_factor = -1.0_wp * surf%gamma_S(m) *                           &
+                           ( surf%sa_io(m) - surf%sa1(m) ) / surf%sa_io(m)
+
+                surf%shf(m)   = -1.0_wp * rho_ocean(k,j,i) *                     &
+                                ( surf%gamma_T(m) + s_factor ) *                 &
+                                ( surf%pt_io(m) - surf%pt1(m) )
+                surf%sasws(m) = -1.0_wp * rho_ocean(k,j,i) *                     &
+                                ( surf%gamma_S(m) + s_factor ) *                 &
+                                ( surf%sa_io(m) - surf%sa1(m) )
+                surf%melt(m)  = MAX( 0.0_wp,                                     &
+                                     s_factor * rho_ocean(k,j,i)/1e3 )
+
+                IF ( surf%melt(m) < melt_min ) CALL location_message('Melt rate < minimum',.TRUE.)
+                IF ( surf%melt(m) > melt_max ) CALL location_message('Melt rate > maximum',.TRUE.)
+             
+             ENDDO
+             
+          ELSEIF (  .NOT.  constant_heatflux  .AND.  ( ( time_since_reference_point&
                <=  skip_time_do_lsm  .AND. simulated_time > 0.0_wp ) .OR.      &
                .NOT.  land_surface )  .AND.  .NOT. urban_surface )  THEN
              !$OMP PARALLEL DO PRIVATE( i, j, k )
@@ -2104,6 +2233,7 @@
                 k    = surf%k(m)
                 surf%shf(m) = -surf%ts(m) * surf%us(m) * rho_ref_zw(k+ibit)
              ENDDO
+
           ENDIF
 !
 !--       Compute the vertical water flux
@@ -2232,8 +2362,8 @@
                                 ( flag_u * u(k,j,i) + flag_v * v(k,j,i) )  /   &
                                                         LOG( z_mo / surf%z0(m) )
 
-               surf%mom_flux_uv(m) =                                           &
-                                    - surf%mom_flux_uv(m) * surf%us(m)
+                surf%mom_flux_uv(m) = - surf%mom_flux_uv(m) * surf%us(m)
+
              ENDDO
           ENDIF
 !
@@ -2249,8 +2379,8 @@
 
                 surf%mom_flux_w(m) = kappa * w(k,j,i) / LOG( z_mo / surf%z0(m) )
 
-                surf%mom_flux_w(m) =                                           &
-                                     - surf%mom_flux_w(m) * surf%us(m)
+                surf%mom_flux_w(m) = - surf%mom_flux_w(m) * surf%us(m)
+
              ENDDO
           ENDIF
 !
@@ -2318,45 +2448,6 @@
 
     END SUBROUTINE calc_surface_fluxes
 
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Calculate surface fluxes shf, sasws for individual surface elements.
-!> Only used for mcphee method. Follows Equations (29),(30) in Asay-Davis et al. 
-!> (2016), substituting for melt rate using Equation (26). 
-!> TODO Consider addding momentum fluxes.
-!------------------------------------------------------------------------------!
-    SUBROUTINE calc_surface_fluxes_m(m)
-
-       IMPLICIT NONE
-
-       INTEGER(iwp) :: m
-       REAL(wp)     :: melt_min = 0.0_wp
-       REAL(wp)     :: melt_max = 1e3/3e7
-       
-       !$OMP PARALLEL DO PRIVATE( i, j, k )
-       i = surf%i(m)            
-       j = surf%j(m)
-       k = surf%k(m)
-       
-       surf%melt(m)  = surf%gamma_S(m) * rho_ocean(k,j,i)/1e3 *                &
-                       (surf%sa1(m) - surf%sa_io(m))/surf%sa_io(m)
-       IF ( surf%melt(m) < melt_min ) CALL location_message('Melt rate < minimum',.TRUE.)
-       IF ( surf%melt(m) > melt_max ) CALL location_message('Melt rate > maximum',.TRUE.)
-       surf%shf(m)   = -1.0_wp * rho_ocean(k,j,i) *                            &
-                             ( surf%gamma_T(m)                                 &
-                               - surf%gamma_S(m) *                             &
-                                 ( surf%sa_io(m) - surf%sa1(m) )/surf%sa_io(m) &
-                             ) * ( surf%pt_io(m) - surf%pt1(m) )
-       surf%sasws(m) = -1.0_wp * rho_ocean(k,j,i) *                            &
-                             ( surf%gamma_S(m)                                 &
-                               - surf%gamma_S(m) *                             &
-                                 ( surf%sa_io(m) - surf%sa1(m) )/surf%sa_io(m) &
-                             ) * ( surf%sa_io(m) - surf%sa1(m) )
-        surf%usws(m) = 0.5_wp * surf%us(m)**2
-        surf%vsws(m) = 0.5_wp * surf%us(m)**2
-
-    END SUBROUTINE calc_surface_fluxes_m
 
 !------------------------------------------------------------------------------!
 ! Description:
@@ -2397,11 +2488,6 @@
        sa_io_min = 0.0_wp
        sa_io_max = 40.0_wp
 
-       !write(message_string,*) 'sa_far(0) = ',surf%sa1(1)
-       !CALL location_message(message_string,.TRUE.)
-       !write(message_string,*) 'pt_far(0) = ',surf%pt1(1)-273.15
-       !CALL location_message(message_string,.TRUE.)
-       
        DO m = 1, surf%ns
 
           !$OMP PARALLEL DO PRIVATE( i, j, k )
@@ -2481,12 +2567,6 @@
              IF ( ABS(surf%sa_io(m) - sa_io_k) < dsa_tol ) EXIT
 
           ENDDO ! end iterations
-          !IF (m == 1) THEN
-          !   write(message_string,*) 'gamma_T = ',surf%gamma_T(m)
-          !   CALL location_message(message_string,.TRUE.)
-          !   write(message_string,*) 'gamma_S = ',surf%gamma_S(m)
-          !   CALL location_message(message_string,.TRUE.)
-          !ENDIF
 
        ENDDO ! end loop over surface indices
 
@@ -2495,11 +2575,14 @@
        downward = .TRUE.
        CALL calc_surface_fluxes
        downward = .FALSE.
+
        write(message_string,*) 'us = ',surf%us(1)
        CALL location_message(message_string,.TRUE.)
        write(message_string,*) 'melt = ',surf%melt(1)
        CALL location_message(message_string,.TRUE.)
-
+       IF ( isnan(surf%melt(1)) ) THEN
+          CALL message( 'surface_layer_fluxes', 'PA0655', 1, 2, 0, 6, 0 )
+       ENDIF
        nn = nn/surf%ns
        WRITE(message_string,*) 'Average 3 eqn iterations = ', nn
        CALL location_message(message_string,.TRUE.)
@@ -2545,9 +2628,11 @@
 
     END FUNCTION psi_m
 
-
-!
-!-- Integrated stability function for heat and moisture
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Integrated stability function for heat and moisture
+!------------------------------------------------------------------------------!
     FUNCTION psi_h( zeta ) 
        
        USE kinds

@@ -1265,7 +1265,7 @@
     INTEGER(iwp) ::  domask_time_count(max_masks,0:1)            !< number of output intervals for masked data
     INTEGER(iwp) ::  dz_stretch_level_end_index(9)               !< vertical grid level index until which the vertical grid spacing is stretched
     INTEGER(iwp) ::  dz_stretch_level_start_index(9)             !< vertical grid level index above which the vertical grid spacing is stretched
-    INTEGER(iwp) ::  k_offset = 9999                             !< namelist parameter, offset for most_method mcphee
+    INTEGER(iwp) ::  k_offset_mcphee = 1                         !< namelist parameter, offset for most_method mcphee in number of grid cells below the upper surface used to define "far-field" u,v,pt,sa
     INTEGER(iwp) ::  mask_size(max_masks,3) = -1                 !< size of mask array per mask and dimension (for netcdf output)
     INTEGER(iwp) ::  mask_size_l(max_masks,3) = -1               !< subdomain size of mask array per mask and dimension (for netcdf output)
     INTEGER(iwp) ::  mask_start_l(max_masks,3) = -1              !< subdomain start index of mask array (for netcdf output)
@@ -1609,7 +1609,7 @@
     REAL(wp) ::  v_gtrans = 0.0_wp                             !< transformed wind component (galilei transformation)
     REAL(wp) ::  wall_adjustment_factor = 1.8_wp               !< adjustment factor for mixing length l
     REAL(wp) ::  wb_solar = 0.0_wp
-    REAL(wp) ::  z_offset = 9999999.9_wp                       !< namelist parameter, z_offset for most_method mcphee
+    REAL(wp) ::  z_offset_mcphee = 9999999.9_wp                !< namelist parameter, vertical offset for most_method mcphee in meters
     REAL(wp) ::  zeta_max = 20.0_wp                            !< namelist parameter
     REAL(wp) ::  zeta_min = -20.0_wp                           !< namelist parameter
     REAL(wp) ::  z0h_factor = 1.0_wp                           !< namelist parameter

@@ -231,9 +231,14 @@
                intermediate_timestep_count, intermediate_timestep_count_max,   &
                land_surface, large_scale_forcing, lsf_surf,                    &
                message_string, microphysics_morrison, microphysics_seifert,    &
-               most_method, neutral, passive_scalar, pt_surface, q_surface,    &
-               run_coupled, surface_pressure, simulated_time, terminate_run,   &
-               time_since_reference_point, urban_surface, zeta_max, zeta_min
+               molecular_viscosity, most_method, neutral, ocean,               &
+               passive_scalar, prandtl_number, pt_surface, q_surface,          &
+               run_coupled, schmidt_number, surface_pressure, simulated_time,  &
+               terminate_run, time_since_reference_point, urban_surface,       &
+               z_offset, zeta_max, zeta_min
+
+    USE eqn_state_seawater_mod,                                                &
+        ONLY: pt_freezing, pt_freezing_SA
 
     USE grid_variables,                                                        &
         ONLY:  dx, dy  
@@ -2313,9 +2318,199 @@
 
     END SUBROUTINE calc_surface_fluxes
 
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Calculate surface fluxes shf, sasws for individual surface elements.
+!> Only used for mcphee method. Follows Equations (29),(30) in Asay-Davis et al. 
+!> (2016), substituting for melt rate using Equation (26). 
+!> TODO Consider addding momentum fluxes.
+!------------------------------------------------------------------------------!
+    SUBROUTINE calc_surface_fluxes_m(m)
+
+       IMPLICIT NONE
+
+       INTEGER(iwp) :: m
+       REAL(wp)     :: melt_min = 0.0_wp
+       REAL(wp)     :: melt_max = 1e3/3e7
+       
+       !$OMP PARALLEL DO PRIVATE( i, j, k )
+       i = surf%i(m)            
+       j = surf%j(m)
+       k = surf%k(m)
+       
+       surf%melt(m)  = surf%gamma_S(m) * rho_ocean(k,j,i)/1e3 *                &
+                       (surf%sa1(m) - surf%sa_io(m))/surf%sa_io(m)
+       IF ( surf%melt(m) < melt_min ) CALL location_message('Melt rate < minimum',.TRUE.)
+       IF ( surf%melt(m) > melt_max ) CALL location_message('Melt rate > maximum',.TRUE.)
+       surf%shf(m)   = -1.0_wp * rho_ocean(k,j,i) *                            &
+                             ( surf%gamma_T(m)                                 &
+                               - surf%gamma_S(m) *                             &
+                                 ( surf%sa_io(m) - surf%sa1(m) )/surf%sa_io(m) &
+                             ) * ( surf%pt_io(m) - surf%pt1(m) )
+       surf%sasws(m) = -1.0_wp * rho_ocean(k,j,i) *                            &
+                             ( surf%gamma_S(m)                                 &
+                               - surf%gamma_S(m) *                             &
+                                 ( surf%sa_io(m) - surf%sa1(m) )/surf%sa_io(m) &
+                             ) * ( surf%sa_io(m) - surf%sa1(m) )
+        surf%usws(m) = 0.5_wp * surf%us(m)**2
+        surf%vsws(m) = 0.5_wp * surf%us(m)**2
+
+    END SUBROUTINE calc_surface_fluxes_m
+
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Calculate surface fluxes (shf, sasws) and ice-ocean interface pt, sa using
+!> 3 equations as presented in Asay-Davis et al. (2016) Equations (24)-(26).
+!> A variant on Equation (25), the freezing point equation, is used:
+!> pt_io = pt_io_p + dptf_dsa*(sa_io - sa_io_p) 
+!> Heat and salt transport across the surface layer are parameterized following
+!> McPhee et al. (1987) and McPhee et al. (2008)
+!> Note: technically, temperature gradients should be in terms of in situ
+!> temperature rather than the present method, which uses potential temperature
+!> below the boundary and conservative temperature freezing point at the 
+!> boundary. For the range of P,SA conditions on the continental shelf, 
+!> this difference in temperature is on the order of 0.007 K.
+!------------------------------------------------------------------------------!
+    SUBROUTINE calc_3eqn
+
+       IMPLICIT NONE
+
+       INTEGER(iwp)  ::  m                   !< loop variable over all horizontal surf elements
+       INTEGER(iwp)  ::  n                   !< iteration counter
+       INTEGER(iwp)  ::  nn = 0              !< iteration counter
+       INTEGER(iwp)  ::  max_iter = 10       !< maximum number of iterations
+
+       REAL(wp) ::  a, b, c                  !< coefficients of quadratic equation
+       REAL(wp) ::  dptf_dsa                 !< derivative of conservative temperature 
+                                             !< at freezing point with respect to salinity
+       REAL(wp) ::  sa_io_k                  !< change in salinity over kth iteration
+       REAL(wp) ::  sa_io_p, pt_io_p         !< interface properties at previous timestep
+       REAL(wp) ::  sa_io_min, sa_io_max     !< acceptable range of values
+       REAL(wp) ::  dsa_tol = 0.001          !< minimum acceptable change in salinity over kth iteration
+       REAL(wp) ::  h_nu                     !< thickness of viscous sublayer
+       REAL(wp) ::  term1                    !< term in 3 equations
+       REAL(wp) ::  Gamma_turb               !< turbulent contribution to exchange velocity
+       REAL(wp) ::  Gamma_mol_T, Gamma_mol_S !< molecular contribution to exchange velocity
+
+       sa_io_min = 0.0_wp
+       sa_io_max = 40.0_wp
+
+       !write(message_string,*) 'sa_far(0) = ',surf%sa1(1)
+       !CALL location_message(message_string,.TRUE.)
+       !write(message_string,*) 'pt_far(0) = ',surf%pt1(1)-273.15
+       !CALL location_message(message_string,.TRUE.)
+       
+       DO m = 1, surf%ns
+
+          !$OMP PARALLEL DO PRIVATE( i, j, k )
+          i = surf%i(m)            
+          j = surf%j(m)
+          k = surf%k(m)
+
+!--       Store sa, pt at the boundary at the previous time step
+          sa_io_p = surf%sa_io(m)
+
+          dptf_dsa = pt_freezing_SA(surface_pressure/1e2,sa_io_p)
+          pt_io_p  = pt_freezing(surface_pressure/1e2,sa_io_p)
+
+!--       Loop until a grid cell's interface salinity changes by less than the
+!--       tolerance or until maximum number of iterations is reached
+          DO n = 1, max_iter
+
+             sa_io_k = surf%sa_io(m)
+             
+!--          Update Obukhov length each iteration because it depends on the
+!--          buoyancy flux  
+             CALL calc_ol_m(m)
+
+!--          If buoyancy flux is 0, set stability parameter at neutral value
+             IF (surf%ol(m) <= 0.0_wp) THEN
+                eta_star = 1.0_wp
+!
+!--             Buoyancy flux is destabilizing, so assume double diffusion is not relevant
+!--             following the recommendation of McPhee et al. (2008)
+                surf%gamma_T(m) = 0.0057_wp * surf%us(m)
+                surf%gamma_S(m) = 0.0057_wp * surf%us(m)
+
+!--          If Obukhov length is positive, then buoyancy flux is stabilizing
+!--          and heat and salt transfer are governed by McPhee et al. (1987) 
+!--          parameterization
+             ELSE
+
+                ! viscous sublayer thickness, Tennekes and Lumley (1972) p. 160
+                h_nu = 5.0_wp * molecular_viscosity / surf%us(m)
+                
+                eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /                  &
+                           ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5
+                Gamma_turb = ( 1 / kappa ) *                                   &
+                                    LOG( ( surf%us(m) * xi_N * eta_star**2 ) / &
+                                         ( ABS(f) * h_nu ) )                   &
+                             + ( 1 / ( 2 * xi_N * eta_star ) )                 &
+                             - ( 1 / kappa )
+                Gamma_mol_T = 12.5_wp * prandtl_number**(2/3) - 6
+                Gamma_mol_S = 12.5_wp * schmidt_number**(2/3) - 6
+
+                surf%gamma_T(m) = surf%us(m) / (Gamma_turb + Gamma_mol_T)
+                surf%gamma_S(m) = surf%us(m) / (Gamma_turb + Gamma_mol_S)
+
+             ENDIF
 
 !
-!-- Integrated stability function for momentum
+!--          Solve 3 equations for salinity at ice-ocean interface
+             term1 = pt_io_p - ( dptf_dsa * sa_io_k ) - surf%pt1(m)
+             a = dptf_dsa * surf%gamma_T(m)
+             b = ( surf%gamma_T(m) * term1 ) - ( surf%gamma_S(m) * ( l_m / cpw ) ) 
+             c = surf%gamma_S(m) * surf%sa1(m) * ( l_m / cpw )
+
+             surf%sa_io(m) = 2.0_wp*c / (-1.0_wp*b + SQRT(b**2 - 4.0_wp*a*c))
+             IF ( surf%sa_io(m) < sa_io_min )                                  &
+                CALL location_message('Interface salinity is below minimum value',.TRUE.)
+             IF ( surf%sa_io(m) > sa_io_max )                                  &
+                CALL location_message('Interface salinity exceeds minimum value',.TRUE.)
+
+!
+!--          Calculate approximate freezing temperature at ice-ocean interface
+             surf%pt_io(m) = pt_io_p + ( dptf_dsa * ( surf%sa_io(m) - sa_io_p ) )
+
+             nn = nn + 1
+
+!
+!--          Stop iterations if interface salinity change is small enough
+             IF ( ABS(surf%sa_io(m) - sa_io_k) < dsa_tol ) EXIT
+
+          ENDDO ! end iterations
+          !IF (m == 1) THEN
+          !   write(message_string,*) 'gamma_T = ',surf%gamma_T(m)
+          !   CALL location_message(message_string,.TRUE.)
+          !   write(message_string,*) 'gamma_S = ',surf%gamma_S(m)
+          !   CALL location_message(message_string,.TRUE.)
+          !ENDIF
+
+       ENDDO ! end loop over surface indices
+
+!
+!--    Update surface fluxes
+       downward = .TRUE.
+       CALL calc_surface_fluxes
+       downward = .FALSE.
+       write(message_string,*) 'us = ',surf%us(1)
+       CALL location_message(message_string,.TRUE.)
+       write(message_string,*) 'melt = ',surf%melt(1)
+       CALL location_message(message_string,.TRUE.)
+
+       nn = nn/surf%ns
+       WRITE(message_string,*) 'Average 3 eqn iterations = ', nn
+       CALL location_message(message_string,.TRUE.)
+       
+    END SUBROUTINE calc_3eqn
+
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Integrated stability function for momentum
+!------------------------------------------------------------------------------!
     FUNCTION psi_m( zeta ) 
        
        USE kinds

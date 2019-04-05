@@ -1240,12 +1240,10 @@
 !--             Determine mean surface-level height. In case of downward-
 !--             facing walls are present, more than one surface level exist.
 !--             In this case, use the lowest surface-level height. 
-                !DO l = 0, 1, 2
-                l = 0
-                IF ( surf_def_h(l)%start_index(j,i) <=                         &
-                        surf_def_h(l)%end_index(j,i) )  THEN
-                   m = surf_def_h(l)%start_index(j,i)
-                   k = surf_def_h(l)%k(m)
+                IF ( surf_def_h(0)%start_index(j,i) <=                         &
+                        surf_def_h(0)%end_index(j,i) )  THEN
+                   m = surf_def_h(0)%start_index(j,i)
+                   k = surf_def_h(0)%k(m)
                    mean_surface_level_height_l(sr) =                           &
                                         mean_surface_level_height_l(sr) + zw(k-1)
                 ENDIF

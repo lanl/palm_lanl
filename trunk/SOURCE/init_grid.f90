@@ -2481,10 +2481,10 @@
 !--          treat edges (u(k,j,i+1)) simply by a gradient approach, i.e. these
 !--          points are not masked within diffusion_u. Tests had shown that the
 !--          effect on the flow is negligible. 
-             IF ( TRIM(constant_flux_layer) /= 'none' .OR. use_surface_fluxes )  THEN
-                IF ( BTEST( wall_flags_0(k,j,i), 0 ) ) THEN
+             IF ( TRIM(constant_flux_layer) /= 'none' .OR.                     &
+                  use_surface_fluxes                       )  THEN
+                IF ( BTEST( wall_flags_0(k,j,i), 0 ) )                         &
                    wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 8 )
-                ENDIF
              ELSE
                 wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 8 )
              ENDIF
@@ -2494,9 +2494,8 @@
 !--       Special flag to control vertical diffusion at model top - former 
 !--       nzt_diff
           wall_flags_0(:,j,i) = IBSET( wall_flags_0(:,j,i), 9 )
-          IF ( TRIM(constant_flux_layer) == 'top' .OR. use_top_fluxes ) THEN
+          IF ( TRIM(constant_flux_layer) == 'top' .OR. use_top_fluxes )        &
              wall_flags_0(nzt+1,j,i) = IBCLR( wall_flags_0(nzt+1,j,i), 9 )
-          ENDIF
 
           DO k = nzb+1, nzt
 !
@@ -2527,7 +2526,7 @@
 !
 !--          Special flag on scalar grid, nzb_diff_s_outer - 1, required in 
 !--          in production_e
-!--          CB: but bit 29 isn't even used if constant_flux_layer is on
+!--          Note: bit 29 isn't even used if constant_flux_layer is on
              IF ( TRIM(constant_flux_layer) /= 'none' .OR.                     &
                   use_surface_fluxes .OR. use_top_fluxes )  THEN
                 IF ( BTEST( wall_flags_0(k,j,i),   24 )  .AND.                 &

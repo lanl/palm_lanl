@@ -647,8 +647,8 @@
        DO k = nzb, nzt+1
           IF ( ngp_2dh_s_inner(k,sr) /= 0 )  THEN
              sums(k,4) = sums(k,4) / ngp_2dh_s_inner(k,sr)
-          ELSE
-             sums(k,4) = sums(k,4) / ngp_2dh_s_inner(MAX(k-1,nzb+1),sr)
+          ELSEIF ( k == nzt+1 ) THEN
+             sums(k,4) = sums(nzt,4)
           ENDIF
        ENDDO
        hom(:,1,1,sr) = sums(:,1)             ! u
@@ -662,8 +662,8 @@
           DO k = nzb, nzt+1
              IF ( ngp_2dh_s_inner(k,sr) /= 0 )  THEN
                 sums(k,23) = sums(k,23) / ngp_2dh_s_inner(k,sr)
-             ELSE
-                sums(k,23) = sums(k,23) / ngp_2dh_s_inner(MAX(k-1,nzb+1),sr)
+             ELSEIF ( k == nzt+1 ) THEN
+                sums(k,23) = sums(nzt,23)
              ENDIF
           ENDDO
           hom(:,1,23,sr) = sums(:,23)             ! sa

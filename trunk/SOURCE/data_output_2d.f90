@@ -229,7 +229,7 @@
         ONLY:  dzw, e, heatflux_output_conversion, nc, nr, p, pt,              &
                precipitation_amount, prr, q, qc, ql, ql_c, ql_v, ql_vp, qr,    &
                rho_ocean, s, sa, tend, u, v, vpt, w, zu, zw,                   &
-               waterflux_output_conversion
+               salinityflux_output_conversion, waterflux_output_conversion
         
     USE averaging
         
@@ -1122,25 +1122,35 @@
 !--                In case of default surfaces, clean-up flux by density.
 !--                In case of land- and urban-surfaces, convert fluxes into
 !--                dynamic units.
-                   DO  m = 1, surf_def_h(0)%ns
-                      i = surf_def_h(0)%i(m)
-                      j = surf_def_h(0)%j(m)
-                      k = surf_def_h(0)%k(m)
-                      local_pf(i,j,nzb+1) = surf_def_h(0)%shf(m) *             &
-                                            heatflux_output_conversion(k)
-                   ENDDO
-                   DO  m = 1, surf_lsm_h%ns
-                      i = surf_lsm_h%i(m)
-                      j = surf_lsm_h%j(m)
-                      k = surf_lsm_h%k(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%shf(m) * cp
-                   ENDDO
-                   DO  m = 1, surf_usm_h%ns
-                      i = surf_usm_h%i(m)
-                      j = surf_usm_h%j(m)
-                      k = surf_usm_h%k(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%shf(m) * cp
-                   ENDDO
+                   IF ( ANY( section(:,1) == nz+1 ) ) THEN 
+                      DO  m = 1, surf_def_h(2)%ns
+                         i = surf_def_h(2)%i(m)
+                         j = surf_def_h(2)%j(m)
+                         k = surf_def_h(2)%k(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(2)%shf(m) *             &
+                                               heatflux_output_conversion(k)
+                      ENDDO
+                   ELSE
+                      DO  m = 1, surf_def_h(0)%ns
+                         i = surf_def_h(0)%i(m)
+                         j = surf_def_h(0)%j(m)
+                         k = surf_def_h(0)%k(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(0)%shf(m) *             &
+                                               heatflux_output_conversion(k)
+                      ENDDO
+                      DO  m = 1, surf_lsm_h%ns
+                         i = surf_lsm_h%i(m)
+                         j = surf_lsm_h%j(m)
+                         k = surf_lsm_h%k(m)
+                         local_pf(i,j,nzb+1) = surf_lsm_h%shf(m) * cp
+                      ENDDO
+                      DO  m = 1, surf_usm_h%ns
+                         i = surf_usm_h%i(m)
+                         j = surf_usm_h%j(m)
+                         k = surf_usm_h%k(m)
+                         local_pf(i,j,nzb+1) = surf_usm_h%shf(m) * cp
+                      ENDDO
+                   ENDIF
                 ELSE
                    IF ( .NOT. ALLOCATED( shf_av ) ) THEN
                       ALLOCATE( shf_av(nysg:nyng,nxlg:nxrg) )
@@ -1156,6 +1166,40 @@
                 two_d = .TRUE.
                 level_z(nzb+1) = zu(nzb+1)
                 
+             CASE ( 'sasws*_xy' )        ! 2d-array
+                IF ( av == 0 ) THEN
+                   IF ( ANY( section(:,1) == nz+1 ) ) THEN
+                      DO  m = 1, surf_def_h(2)%ns
+                         i = surf_def_h(2)%i(m)
+                         j = surf_def_h(2)%j(m)
+                         k = surf_def_h(2)%k(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(2)%sasws(m) *        &
+                                               salinityflux_output_conversion(k)
+                      ENDDO
+                   ELSE
+                      DO  m = 1, surf_def_h(0)%ns
+                         i = surf_def_h(0)%i(m)
+                         j = surf_def_h(0)%j(m)
+                         k = surf_def_h(0)%k(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(0)%sasws(m) *        &
+                                               salinityflux_output_conversion(k)
+                      ENDDO
+                   ENDIF
+                ELSE
+                   IF ( .NOT. ALLOCATED( sasws_av ) ) THEN
+                      ALLOCATE( sasws_av(nysg:nyng,nxlg:nxrg) )
+                      sasws_av = REAL( fill_value, KIND = wp )
+                   ENDIF
+                   DO  i = nxl, nxr
+                      DO  j = nys, nyn
+                         local_pf(i,j,nzb+1) =  sasws_av(j,i)
+                      ENDDO
+                   ENDDO
+                ENDIF
+                resorted = .TRUE.
+                two_d = .TRUE.
+                level_z(nzb+1) = zu(nzb+1)
+             
              CASE ( 'ssws*_xy' )        ! 2d-array
                 IF ( av == 0 ) THEN
                    DO  m = 1, surf_def_h(0)%ns

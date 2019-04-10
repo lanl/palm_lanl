@@ -978,6 +978,7 @@
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  ol_av                  !< avg. Obukhov length
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  qsws_av                !< avg. surface moisture flux
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  r_a_av                 !< avg. resistance
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sasws_av               !< avg. surface salinity flux
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  ssws_av                !< avg. surface scalar flux
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  shf_av                 !< avg. surface heat flux
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  shf_sol_av             !< avg. surface solar flux

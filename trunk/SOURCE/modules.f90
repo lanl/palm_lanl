@@ -975,9 +975,14 @@
 
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  ghf_av                 !< avg. ground heat flux
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  lwp_av                 !< avg. liquid water path
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  melt_av                !< avg. melt rate (m/s)
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  pt1_av                 !< avg. input temperature for most method
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  pt_io_av               !< avg. interface temperature for most method mcphee
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  ol_av                  !< avg. Obukhov length
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  qsws_av                !< avg. surface moisture flux
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  r_a_av                 !< avg. resistance
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sa1_av                 !< avg. input salinity for most method
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sa_io_av               !< avg. interface salinity for most method mcphee
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sasws_av               !< avg. surface salinity flux
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  ssws_av                !< avg. surface scalar flux
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  shf_av                 !< avg. surface heat flux
@@ -985,6 +990,7 @@
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  tsurf_av               !< avg. surface temperature
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  ts_av                  !< avg. characteristic temperature scale
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  us_av                  !< avg. friction velocity
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  usws_av,vsws_av        !< avg. momentum fluxes
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  z0_av                  !< avg. roughness length for momentum
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  z0h_av                 !< avg. roughness length for heat
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  z0q_av                 !< avg. roughness length for moisture

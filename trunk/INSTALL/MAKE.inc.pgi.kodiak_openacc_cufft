@@ -1,0 +1,12 @@
+# Contents of this file are included in palm's makefile if the simple install
+# process (palm_simple_install) is used.
+# Please adjust compiling parameters as required for your system.
+
+PROG=palm
+F90=pgf90
+F90_SER=pgf90
+NETCDF=/usr/projects/hpcsoft/toss3/common/netcdf/4.4.0_pgi-18.10
+CUFFT=/opt/cudatoolkit/9.1
+COPT= -Mpreprocess -D__netcdf -D__lc -D__cudaProfiler -D__GPU
+F90FLAGS= -O0 -acc -ta=tesla:cc60,deepcopy -Minfo=accel -Mcuda -I $(NETCDF)/include -I $(CUFFT)/include
+LDFLAGS= -O0 -acc -Minfo=accel -Mcuda -L $(NETCDF)/lib -lnetcdff -lnetcdf -lhdf5 -lhdf5_hl -lm -lz -lfftw3 -L $(CUFFT)/lib64 -lcufft

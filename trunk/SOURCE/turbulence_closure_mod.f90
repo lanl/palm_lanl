@@ -258,28 +258,24 @@
 !-- Prognostic equations for TKE and TKE dissipation rate
     INTERFACE tcm_prognostic
        MODULE PROCEDURE tcm_prognostic
-       MODULE PROCEDURE tcm_prognostic_ij
     END INTERFACE tcm_prognostic
 
 !
 !-- Production term for TKE
     INTERFACE production_e
        MODULE PROCEDURE production_e
-       MODULE PROCEDURE production_e_ij
     END INTERFACE production_e
 
 !
 !-- Diffusion term for TKE
     INTERFACE diffusion_e
        MODULE PROCEDURE diffusion_e
-       MODULE PROCEDURE diffusion_e_ij
     END INTERFACE diffusion_e
 
 !
 !-- Diffusion term for TKE dissipation rate
     INTERFACE diffusion_diss
        MODULE PROCEDURE diffusion_diss
-       MODULE PROCEDURE diffusion_diss_ij
     END INTERFACE diffusion_diss
 
 !
@@ -1012,7 +1008,7 @@
     deallocate(kh, km, dummy1, dummy2, dummy3, diss_adve1)
     deallocate(diss_adve2, diss_adve3, diss_prod1, diss_prod2)
     deallocate(diss_prod3, diss_diff1, diss_diff2, diss_diff3)
-    deallocate(l_grid, l_wall) 
+    deallocate(l_grid, l_wall)
 #if defined( __nopointer )
     deallocate(e,e_p,te_m)
 #else
@@ -2102,20 +2098,23 @@
 !
 !--    Save production term for prognostic equation of TKE dissipation rate
        IF ( rans_tke_e )  produc = tend - advec
-    
-    !$acc data copy(drho_air(nzb+1:nzt),dd2zu(nzb+1:nzt),ddzu(nzb+1:nzt+1),ddzw(nzb+1:nzt),dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),e_p(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),g,kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho_reference,rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr),tsc(3),te_m(nzb+1:nzt,nys:nyn,nxl:nxr),wall_flags_0(nzb+1:nzt,nys:nyn,nxl:nxr)) 
+
+    !$acc data copy(drho_air(nzb+1:nzt),dd2zu(nzb+1:nzt),ddzu(nzb+1:nzt+1),ddzw(nzb+1:nzt),dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),e_p(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),g,kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho_reference,rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr),tsc(3),te_m(nzb+1:nzt,nys:nyn,nxl:nxr),wall_flags_0(nzb+1:nzt,nys:nyn,nxl:nxr))
 
     !$acc parallel default(present)
-    !$acc loop collapse(3)
+    !!$acc loop collapse(3)
 !
     !-- Calculate the tendency terms
+       !$acc loop seq
        DO  i = nxl, nxr
+          !$acc loop
           DO  j = nys, nyn
+             !$acc loop
              DO  k = nzb+1, nzt
        !
        !--      Predetermine flag to mask topography
                 flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
-   
+
        !
        !--      Calculate dissipation
                 dvar_dz = atmos_ocean_sign * (prho(k+1,j,i) - prho(k-1,j,i) ) * dd2zu(k)
@@ -2171,12 +2170,12 @@
                                              BTEST( wall_flags_0(k,j,i), 0 )   &
                                           )
                 IF ( e_p(k,j,i) < 0.0_wp )  e_p(k,j,i) = 0.1_wp * e(k,j,i)
-             
+
              ENDDO
           ENDDO
-   
+
        ENDDO
-    
+
     !$acc end parallel
 
     !$acc end data
@@ -2314,280 +2313,6 @@
     ENDIF
 
  END SUBROUTINE tcm_prognostic
-
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Prognostic equation for subgrid-scale TKE and TKE dissipation rate.
-!> Cache-optimized version
-!------------------------------------------------------------------------------!
- SUBROUTINE tcm_prognostic_ij( i, j, i_omp, tn )
-
-    USE arrays_3d,                                                             &
-        ONLY:  ddzu, diss_l_diss, diss_l_e, diss_s_diss, diss_s_e,             &
-               flux_l_diss, flux_l_e, flux_s_diss, flux_s_e,&
-               u_p,v_p,w_p
-
-    USE control_parameters,                                                    &
-        ONLY:  f, tsc
-
-    USE grid_variables,                                                        &
-        ONLY:  dx, dy
-
-    USE surface_mod,                                                           &
-        ONLY :  surf_def_h, surf_def_v, surf_lsm_h, surf_lsm_v, surf_usm_h,    &
-                surf_usm_v
-
-    use indices, only: nx, ny
-
-    IMPLICIT NONE
-
-    INTEGER(iwp) ::  i       !< loop index x direction
-    INTEGER(iwp) ::  i_omp   !< first loop index of i-loop in prognostic_equations
-    INTEGER(iwp) ::  j       !< loop index y direction
-    INTEGER(iwp) ::  k       !< loop index z direction
-    INTEGER(iwp) ::  l       !< loop index
-    INTEGER(iwp) ::  m       !< loop index
-    INTEGER(iwp) ::  surf_e  !< end index of surface elements at given i-j position
-    INTEGER(iwp) ::  surf_s  !< start index of surface elements at given i-j position
-    INTEGER(iwp) ::  tn      !< task number of openmp task
-
-    INTEGER(iwp) :: pis = 32 !< debug variable, print from i=pis                !> @todo remove later
-    INTEGER(iwp) :: pie = 32 !< debug variable, print until i=pie               !> @todo remove later
-    INTEGER(iwp) :: pjs = 26 !< debug variable, print from j=pjs                !> @todo remove later
-    INTEGER(iwp) :: pje = 26 !< debug variable, print until j=pje               !> @todo remove later
-    INTEGER(iwp) :: pkb = 1  !< debug variable, print from k=pkb                !> @todo remove later
-    INTEGER(iwp) :: pkt = 7  !< debug variable, print until k=pkt               !> @todo remove later
-
-    REAL(wp), DIMENSION(nzb:nzt+1) :: dum_adv   !< debug variable               !> @todo remove later
-    REAL(wp), DIMENSION(nzb:nzt+1) :: dum_pro   !< debug variable               !> @todo remove later
-    REAL(wp), DIMENSION(nzb:nzt+1) :: dum_dif   !< debug variable               !> @todo remove later
-
-5555 FORMAT(A,7(1X,E12.5))   !> @todo remove later
-
-!
-!-- If required, compute prognostic equation for turbulent kinetic
-!-- energy (TKE)
-    IF ( .NOT. constant_diffusion )  THEN
-
-!
-!--    Tendency-terms for TKE
-       tend(:,j,i) = 0.0_wp
-       CALL advec_s_ws( i, j, e, 'e', flux_s_e, diss_s_e, &
-                       flux_l_e, diss_l_e , i_omp, tn )
-
-       ! Compute Stokes-advection if required
-       IF ( ocean .AND. stokes_force ) THEN
-          CALL stokes_force_s( i, j, e )
-       ENDIF
-
-       dum_adv = tend(:,j,i)                                                    !> @todo remove later
-
-       CALL production_e( i, j, .FALSE. )
-
-       ! Compute Stokes production if required
-       IF ( ocean .AND. stokes_force ) THEN
-          CALL stokes_production_e( i, j )
-       ENDIF
-
-       dum_pro = tend(:,j,i) - dum_adv                                          !> @todo remove later
-
-       CALL diffusion_e( i, j, prho, prho_reference )
-
-       dum_dif = tend(:,j,i) - dum_adv - dum_pro                                !> @todo remove later
-
-!
-!--    Prognostic equation for TKE.
-!--    Eliminate negative TKE values, which can occur due to numerical
-!--    reasons in the course of the integration. In such cases the old
-!--    TKE value is reduced by 90%.
-       DO  k = nzb+1, nzt
-          e_p(k,j,i) = e(k,j,i) + ( dt_3d * ( tsc(2) * tend(k,j,i) +           &
-                                              tsc(3) * te_m(k,j,i) )           &
-                                  )                                            &
-                                 * MERGE( 1.0_wp, 0.0_wp,                      &
-                                          BTEST( wall_flags_0(k,j,i), 0 )      &
-                                        )
-          IF ( e_p(k,j,i) <= 0.0_wp )  e_p(k,j,i) = 0.1_wp * e(k,j,i)
-       ENDDO
-
-!
-!--    Use special boundary condition in case of TKE-e closure
-       IF ( rans_tke_e )  THEN
-          surf_s = surf_def_h(0)%start_index(j,i)
-          surf_e = surf_def_h(0)%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k = surf_def_h(0)%k(m)
-             e_p(k,j,i) = ( surf_def_h(0)%us(m) / c_0 )**2
-          ENDDO
-
-          DO  l = 0, 3
-             surf_s = surf_def_v(l)%start_index(j,i)
-             surf_e = surf_def_v(l)%end_index(j,i)
-             DO  m = surf_s, surf_e
-                k = surf_def_v(l)%k(m)
-                e_p(k,j,i) = ( surf_def_v(l)%us(m) / c_0 )**2
-             ENDDO
-          ENDDO
-       ENDIF
-
-!
-!--    Calculate tendencies for the next Runge-Kutta step
-       IF ( timestep_scheme(1:5) == 'runge' )  THEN
-          IF ( intermediate_timestep_count == 1 )  THEN
-             DO  k = nzb+1, nzt
-                te_m(k,j,i) = tend(k,j,i)
-             ENDDO
-          ELSEIF ( intermediate_timestep_count < &
-                   intermediate_timestep_count_max )  THEN
-             DO  k = nzb+1, nzt
-                te_m(k,j,i) =   -9.5625_wp * tend(k,j,i) +                     &
-                                 5.3125_wp * te_m(k,j,i)
-             ENDDO
-          ENDIF
-       ENDIF
-
-!        if ( i >= pis .and. i <= pie .and. j >= pjs .and. j <= pje ) then        !> @todo remove later
-!           WRITE(9, *) '------'
-!           WRITE(9, '(A,F8.3,1X,F8.3,1X,I2)') 't, dt, int_ts:', simulated_time, dt_3d, intermediate_timestep_count
-!           WRITE(9, *) 'i:', i
-!           WRITE(9, *) 'j:', j
-!           WRITE(9, *) 'k:', pkb, ' - ', pkt
-!           WRITE(9, *) '---'
-!           WRITE(9, *) 'e:'
-!           WRITE(9, 5555) 'adv :', dum_adv(pkb:pkt)
-!           WRITE(9, 5555) 'pro :', dum_pro(pkb:pkt)
-!           WRITE(9, 5555) 'dif :', dum_dif(pkb:pkt)
-!           WRITE(9, 5555) 'tend:', tend(pkb:pkt,j,i)
-!           WRITE(9, 5555) 'e_p :', e_p(pkb:pkt,j,i)
-!           WRITE(9, 5555) 'e   :', e(pkb:pkt,j,i)
-!           FLUSH(9)
-!        endif
-
-    ENDIF   ! TKE equation
-
-!
-!-- If required, compute prognostic equation for TKE dissipation rate
-    IF ( rans_tke_e )  THEN
-
-!
-!--    Tendency-terms for dissipation
-       tend(:,j,i) = 0.0_wp
-       CALL advec_s_ws( i, j, diss, 'diss', flux_s_diss, diss_s_diss,  &
-                        flux_l_diss, diss_l_diss, i_omp, tn )
-
-       IF ( intermediate_timestep_count == 1 )  diss_adve1(:,j,i) = tend(:,j,i) !> @todo remove later
-       IF ( intermediate_timestep_count == 2 )  diss_adve2(:,j,i) = tend(:,j,i)
-       IF ( intermediate_timestep_count == 3 )  diss_adve3(:,j,i) = tend(:,j,i)
-
-!
-!--    Production of TKE dissipation rate
-       CALL production_e( i, j, .TRUE. )
-
-       IF ( intermediate_timestep_count == 1 )  diss_prod1(:,j,i) = tend(:,j,i) - diss_adve1(:,j,i) !> @todo remove later
-       IF ( intermediate_timestep_count == 2 )  diss_prod2(:,j,i) = tend(:,j,i) - diss_adve2(:,j,i)
-       IF ( intermediate_timestep_count == 3 )  diss_prod3(:,j,i) = tend(:,j,i) - diss_adve3(:,j,i)
-
-       dum_pro = tend(:,j,i) - dum_adv                                          !> @todo remove later
-
-!
-!--    Diffusion term of TKE dissipation rate
-       CALL diffusion_diss( i, j )
-
-       IF ( intermediate_timestep_count == 1 )  diss_diff1(:,j,i) = tend(:,j,i) - diss_adve1(:,j,i) - diss_prod1(:,j,i) !> @todo remove later
-       IF ( intermediate_timestep_count == 2 )  diss_diff2(:,j,i) = tend(:,j,i) - diss_adve2(:,j,i) - diss_prod2(:,j,i)
-       IF ( intermediate_timestep_count == 3 )  diss_diff3(:,j,i) = tend(:,j,i) - diss_adve3(:,j,i) - diss_prod3(:,j,i)
-       IF ( intermediate_timestep_count == 3 )  dummy3(:,j,i) = km(:,j,i)
-
-       dum_dif = tend(:,j,i) - dum_adv - dum_pro                                !> @todo remove later
-
-!
-!
-!--    Prognostic equation for TKE dissipation
-!--    Eliminate negative dissipation values, which can occur due to
-!--    numerical reasons in the course of the integration. In such cases
-!--    the old dissipation value is reduced by 90%.
-       DO  k = nzb+1, nzt
-          diss_p(k,j,i) = diss(k,j,i) + ( dt_3d * ( tsc(2) * tend(k,j,i) +     &
-                                                    tsc(3) * tdiss_m(k,j,i) )  &
-                                        )                                      &
-                                        * MERGE( 1.0_wp, 0.0_wp,               &
-                                                BTEST( wall_flags_0(k,j,i), 0 )&
-                                               )
-       ENDDO
-
-!
-!--    Use special boundary condition in case of TKE-e closure
-       surf_s = surf_def_h(0)%start_index(j,i)
-       surf_e = surf_def_h(0)%end_index(j,i)
-       DO  m = surf_s, surf_e
-          k = surf_def_h(0)%k(m)
-          diss_p(k,j,i) = surf_def_h(0)%us(m)**3 / kappa * ddzu(k)
-       ENDDO
-
-       DO  l = 0, 1
-          surf_s = surf_def_v(l)%start_index(j,i)
-          surf_e = surf_def_v(l)%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k = surf_def_v(l)%k(m)
-             diss_p(k,j,i) = surf_def_v(l)%us(m)**3 / ( kappa * 0.5_wp * dy )
-          ENDDO
-       ENDDO
-
-       DO  l = 2, 3
-          surf_s = surf_def_v(l)%start_index(j,i)
-          surf_e = surf_def_v(l)%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k = surf_def_v(l)%k(m)
-             diss_p(k,j,i) = surf_def_v(l)%us(m)**3 / ( kappa * 0.5_wp * dx )
-          ENDDO
-       ENDDO
-!
-!--    Calculate tendencies for the next Runge-Kutta step
-       IF ( timestep_scheme(1:5) == 'runge' )  THEN
-          IF ( intermediate_timestep_count == 1 )  THEN
-             DO  k = nzb+1, nzt
-                tdiss_m(k,j,i) = tend(k,j,i)
-             ENDDO
-          ELSEIF ( intermediate_timestep_count < &
-                   intermediate_timestep_count_max )  THEN
-             DO  k = nzb+1, nzt
-                tdiss_m(k,j,i) =   -9.5625_wp * tend(k,j,i) +                  &
-                                    5.3125_wp * tdiss_m(k,j,i)
-             ENDDO
-          ENDIF
-       ENDIF
-!
-!--    Limit change of diss to be between -90% and +100%. Also, set an absolute
-!--    minimum value
-       DO  k = nzb, nzt+1
-          diss_p(k,j,i) = MIN( MAX( diss_p(k,j,i),         &
-                                    0.1_wp * diss(k,j,i),  &
-                                    0.0001_wp ),           &
-                               2.0_wp * diss(k,j,i) )
-       ENDDO
-
-       IF ( intermediate_timestep_count == 1 )  dummy1(:,j,i) = diss_p(:,j,i)   !> @todo remove later
-       IF ( intermediate_timestep_count == 2 )  dummy2(:,j,i) = diss_p(:,j,i)
-
-!        if ( i >= pis .and. i <= pie .and. j >= pjs .and. j <= pje ) then        !> @todo remove later
-!           WRITE(9, *) '---'
-!           WRITE(9, *) 'diss:'
-!           WRITE(9, 5555) 'adv   :', dum_adv(pkb:pkt)
-!           WRITE(9, 5555) 'pro   :', dum_pro(pkb:pkt)
-!           WRITE(9, 5555) 'dif   :', dum_dif(pkb:pkt)
-!           WRITE(9, 5555) 'tend  :', tend(pkb:pkt,j,i)
-!           WRITE(9, 5555) 'diss_p:', diss_p(pkb:pkt,j,i)
-!           WRITE(9, 5555) 'diss  :', diss(pkb:pkt,j,i)
-!           WRITE(9, *) '---'
-!           WRITE(9, 5555) 'km    :', km(pkb:pkt,j,i)
-!           flush(9)
-!        endif
-
-    ENDIF   ! dissipation equation
-
- END SUBROUTINE tcm_prognostic_ij
 
 
 !------------------------------------------------------------------------------!
@@ -2889,396 +2614,12 @@
  END SUBROUTINE production_e
 
 
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Production terms (shear + buoyancy) of the TKE.
-!> Cache-optimized version
-!> @warning The case with constant_flux_layer = F and use_surface_fluxes = T is
-!>          not considered well!
-!> @todo non-neutral case is not yet considered for RANS mode
-!------------------------------------------------------------------------------!
- SUBROUTINE production_e_ij( i, j, diss_production )
-
-    USE arrays_3d,                                                             &
-        ONLY:  ddzw, dd2zu, drho_air_zw, q, ql
-
-    USE cloud_parameters,                                                      &
-        ONLY:  l_d_cp, l_d_r, pt_d_t, t_d_pt
-
-    USE control_parameters,                                                    &
-        ONLY:  cloud_droplets, cloud_physics, constant_flux_layer, g, neutral, &
-               rho_reference, use_single_reference_value, use_surface_fluxes,  &
-               use_top_fluxes
-
-    USE grid_variables,                                                        &
-        ONLY:  ddx, dx, ddy, dy
-
-    USE surface_mod,                                                           &
-        ONLY :  surf_def_h, surf_def_v, surf_lsm_h, surf_lsm_v, surf_usm_h,    &
-                surf_usm_v
-
-    IMPLICIT NONE
-
-    LOGICAL :: diss_production
-
-    INTEGER(iwp) ::  i       !< running index x-direction
-    INTEGER(iwp) ::  j       !< running index y-direction
-    INTEGER(iwp) ::  k       !< running index z-direction
-    INTEGER(iwp) ::  l       !< running index for different surface type orientation
-    INTEGER(iwp) ::  m       !< running index surface elements
-    INTEGER(iwp) ::  surf_e  !< end index of surface elements at given i-j position
-    INTEGER(iwp) ::  surf_s  !< start index of surface elements at given i-j position
-
-    REAL(wp)     ::  def         !<
-    REAL(wp)     ::  flag        !< flag to mask topography
-    REAL(wp)     ::  k1          !<
-    REAL(wp)     ::  k2          !<
-    REAL(wp)     ::  km_neutral  !< diffusion coefficient assuming neutral conditions - used to compute shear production at surfaces
-    REAL(wp)     ::  theta       !<
-    REAL(wp)     ::  temp        !<
-    REAL(wp)     ::  sign_dir    !< sign of wall-tke flux, depending on wall orientation
-    REAL(wp)     ::  usvs        !< momentum flux u"v"
-    REAL(wp)     ::  vsus        !< momentum flux v"u"
-    REAL(wp)     ::  wsus        !< momentum flux w"u"
-    REAL(wp)     ::  wsvs        !< momentum flux w"v"
-
-
-    REAL(wp), DIMENSION(nzb+1:nzt)  ::  dudx        !< Gradient of u-component in x-direction
-    REAL(wp), DIMENSION(nzb+1:nzt)  ::  dudy        !< Gradient of u-component in y-direction
-    REAL(wp), DIMENSION(nzb+1:nzt)  ::  dudz        !< Gradient of u-component in z-direction
-    REAL(wp), DIMENSION(nzb+1:nzt)  ::  dvdx        !< Gradient of v-component in x-direction
-    REAL(wp), DIMENSION(nzb+1:nzt)  ::  dvdy        !< Gradient of v-component in y-direction
-    REAL(wp), DIMENSION(nzb+1:nzt)  ::  dvdz        !< Gradient of v-component in z-direction
-    REAL(wp), DIMENSION(nzb+1:nzt)  ::  dwdx        !< Gradient of w-component in x-direction
-    REAL(wp), DIMENSION(nzb+1:nzt)  ::  dwdy        !< Gradient of w-component in y-direction
-    REAL(wp), DIMENSION(nzb+1:nzt)  ::  dwdz        !< Gradient of w-component in z-direction
-    REAL(wp), DIMENSION(nzb+1:nzt)  ::  tend_temp   !< temporal tendency
-
-    IF ( constant_flux_layer )  THEN
-!
-!--    Calculate TKE production by shear. Calculate gradients at all grid
-!--    points first, gradients at surface-bounded grid points will be
-!--    overwritten further below.
-       DO  k = nzb+1, nzt
-
-          dudx(k)  =           ( u(k,j,i+1) - u(k,j,i)     ) * ddx
-          dudy(k)  = 0.25_wp * ( u(k,j+1,i) + u(k,j+1,i+1) -                   &
-                                 u(k,j-1,i) - u(k,j-1,i+1) ) * ddy
-          dudz(k)  = 0.5_wp  * ( u(k+1,j,i) + u(k+1,j,i+1) -                   &
-                                 u(k-1,j,i) - u(k-1,j,i+1) ) * dd2zu(k)
-
-          dvdx(k)  = 0.25_wp * ( v(k,j,i+1) + v(k,j+1,i+1) -                   &
-                                 v(k,j,i-1) - v(k,j+1,i-1) ) * ddx
-          dvdy(k)  =           ( v(k,j+1,i) - v(k,j,i)     ) * ddy
-          dvdz(k)  = 0.5_wp  * ( v(k+1,j,i) + v(k+1,j+1,i) -                   &
-                                 v(k-1,j,i) - v(k-1,j+1,i) ) * dd2zu(k)
-
-          dwdx(k)  = 0.25_wp * ( w(k,j,i+1) + w(k-1,j,i+1) -                   &
-                                 w(k,j,i-1) - w(k-1,j,i-1) ) * ddx
-          dwdy(k)  = 0.25_wp * ( w(k,j+1,i) + w(k-1,j+1,i) -                   &
-                                 w(k,j-1,i) - w(k-1,j-1,i) ) * ddy
-          dwdz(k)  =           ( w(k,j,i)   - w(k-1,j,i)   ) * ddzw(k)
-
-       ENDDO
-!
-!--    Compute gradients at north- and south-facing surfaces.
-!--    Note, no vertical natural surfaces so far.
-       DO  l = 0, 1
-!
-!--       Default surfaces
-          surf_s = surf_def_v(l)%start_index(j,i)
-          surf_e = surf_def_v(l)%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k           = surf_def_v(l)%k(m)
-             usvs        = surf_def_v(l)%mom_flux_tke(0,m)
-             wsvs        = surf_def_v(l)%mom_flux_tke(1,m)
-
-             km_neutral = kappa * ( usvs**2 + wsvs**2 )**0.25_wp               &
-                             * 0.5_wp * dy
-!
-!--          -1.0 for right-facing wall, 1.0 for left-facing wall
-             sign_dir = MERGE( 1.0_wp, -1.0_wp,                                &
-                               BTEST( wall_flags_0(k,j-1,i), 0 ) )
-             dudy(k) = sign_dir * usvs / ( km_neutral + 1E-10_wp )
-             dwdy(k) = sign_dir * wsvs / ( km_neutral + 1E-10_wp )
-          ENDDO
-      ENDDO
-!
-!--    Compute gradients at east- and west-facing walls
-       DO  l = 2, 3
-!
-!--       Default surfaces
-          surf_s = surf_def_v(l)%start_index(j,i)
-          surf_e = surf_def_v(l)%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k           = surf_def_v(l)%k(m)
-             vsus        = surf_def_v(l)%mom_flux_tke(0,m)
-             wsus        = surf_def_v(l)%mom_flux_tke(1,m)
-
-             km_neutral = kappa * ( vsus**2 + wsus**2 )**0.25_wp               &
-                                * 0.5_wp * dx
-!
-!--          -1.0 for right-facing wall, 1.0 for left-facing wall
-             sign_dir = MERGE( 1.0_wp, -1.0_wp,                                &
-                               BTEST( wall_flags_0(k,j,i-1), 0 ) )
-             dvdx(k) = sign_dir * vsus / ( km_neutral + 1E-10_wp )
-             dwdx(k) = sign_dir * wsus / ( km_neutral + 1E-10_wp )
-          ENDDO
-      ENDDO
-!
-!--    Compute gradients at upward-facing walls, first for
-!--    non-natural default surfaces
-       surf_s = surf_def_h(0)%start_index(j,i)
-       surf_e = surf_def_h(0)%end_index(j,i)
-       DO  m = surf_s, surf_e
-          k = surf_def_h(0)%k(m)
-!
-!--       Please note, actually, an interpolation of u_0 and v_0
-!--       onto the grid center would be required. However, this
-!--       would require several data transfers between 2D-grid and
-!--       wall type. The effect of this missing interpolation is
-!--       negligible. (See also production_e_init).
-          dudz(k)     = ( u(k+1,j,i) - surf_def_h(0)%u_0(m) ) * dd2zu(k)
-          dvdz(k)     = ( v(k+1,j,i) - surf_def_h(0)%v_0(m) ) * dd2zu(k)
-
-       ENDDO
-
-!--    Compute gradients at downward-facing walls, only for
-!--    non-natural default surfaces
-       surf_s = surf_def_h(1)%start_index(j,i)
-       surf_e = surf_def_h(1)%end_index(j,i)
-       DO  m = surf_s, surf_e
-          k = surf_def_h(1)%k(m)
-
-          dudz(k)     = ( surf_def_h(1)%u_0(m) - u(k-1,j,i) ) * dd2zu(k)
-          dvdz(k)     = ( surf_def_h(1)%v_0(m) - v(k-1,j,i) ) * dd2zu(k)
-
-       ENDDO
-
-!        IF ( .NOT. rans_tke_e )  THEN
-
-       DO  k = nzb+1, nzt
-
-          def = 2.0_wp * ( dudx(k)**2 + dvdy(k)**2 + dwdz(k)**2 ) +         &
-                           dudy(k)**2 + dvdx(k)**2 + dwdx(k)**2   +         &
-                           dwdy(k)**2 + dudz(k)**2 + dvdz(k)**2   +         &
-                2.0_wp * ( dvdx(k)*dudy(k) +                                &
-                           dwdx(k)*dudz(k) +                                &
-                           dwdy(k)*dvdz(k) )
-
-          IF ( def < 0.0_wp )  def = 0.0_wp
-
-          flag  = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
-
-          tend_temp(k) = km(k,j,i) * def * flag
-
-       ENDDO
-
-!        ELSE
-!
-!           DO  k = nzb+1, nzt
-! !
-! !--          Production term according to Kato and Launder (1993)
-!              def = SQRT( ( dudy(k)**2 + dvdz(k)**2 + dwdx(k)**2 +              &
-!                            dudz(k)**2 + dvdx(k)**2 + dwdy(k)**2 +              &
-!                            2.0_wp * ( dudy(k) * dvdx(k) +                      &
-!                                       dvdz(k) * dwdy(k) +                      &
-!                                       dwdx(k) * dudz(k) )       )              &
-!                        * ( dudy(k)**2 + dvdz(k)**2 + dwdx(k)**2 +              &
-!                            dudz(k)**2 + dvdx(k)**2 + dwdy(k)**2 -              &
-!                            2.0_wp * ( dudy(k) * dvdx(k) +                      &
-!                                       dvdz(k) * dwdy(k) +                      &
-!                                       dwdx(k) * dudz(k) )       )              &
-!                        )
-!
-!              IF ( def < 0.0_wp )  def = 0.0_wp
-!
-!              flag  = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
-!
-!              tend_temp(k) = km(k,j,i) * def * flag
-!
-!           ENDDO
-!
-!        ENDIF
-
-    ELSE  ! not constant_flux_layer
-
-!        IF ( .NOT. rans_tke_e )  THEN
-!
-!--       Calculate TKE production by shear. Here, no additional
-!--       wall-bounded code is considered.
-!--       Why?
-          DO  k = nzb+1, nzt
-
-             dudx(k)  =           ( u(k,j,i+1) - u(k,j,i)     ) * ddx
-             dudy(k)  = 0.25_wp * ( u(k,j+1,i) + u(k,j+1,i+1) -                &
-                                    u(k,j-1,i) - u(k,j-1,i+1) ) * ddy
-             dudz(k)  = 0.5_wp  * ( u(k+1,j,i) + u(k+1,j,i+1) -                &
-                                    u(k-1,j,i) - u(k-1,j,i+1) ) * dd2zu(k)
-
-             dvdx(k)  = 0.25_wp * ( v(k,j,i+1) + v(k,j+1,i+1) -                &
-                                    v(k,j,i-1) - v(k,j+1,i-1) ) * ddx
-             dvdy(k)  =           ( v(k,j+1,i) - v(k,j,i)     ) * ddy
-             dvdz(k)  = 0.5_wp  * ( v(k+1,j,i) + v(k+1,j+1,i) -                &
-                                    v(k-1,j,i) - v(k-1,j+1,i) ) * dd2zu(k)
-
-             dwdx(k)  = 0.25_wp * ( w(k,j,i+1) + w(k-1,j,i+1) -                &
-                                    w(k,j,i-1) - w(k-1,j,i-1) ) * ddx
-             dwdy(k)  = 0.25_wp * ( w(k,j+1,i) + w(k-1,j+1,i) -                &
-                                    w(k,j-1,i) - w(k-1,j-1,i) ) * ddy
-             dwdz(k)  =           ( w(k,j,i)   - w(k-1,j,i)   ) * ddzw(k)
-
-             def = 2.0_wp * ( dudx(k)**2 + dvdy(k)**2 + dwdz(k)**2 ) +         &
-                              dudy(k)**2 + dvdx(k)**2 + dwdx(k)**2   +         &
-                              dwdy(k)**2 + dudz(k)**2 + dvdz(k)**2   +         &
-                   2.0_wp * ( dvdx(k)*dudy(k) +                                &
-                              dwdx(k)*dudz(k) +                                &
-                              dwdy(k)*dvdz(k) )
-
-             IF ( def < 0.0_wp )  def = 0.0_wp
-
-             flag        = MERGE( 1.0_wp, 0.0_wp,                              &
-                                  BTEST( wall_flags_0(k,j,i), 29 ) )
-             tend_temp(k) = km(k,j,i) * def * flag
-
-          ENDDO
-
-!        ELSE
-!
-!           DO  k = nzb+1, nzt
-!
-!              dudx(k)  =           ( u(k,j,i+1) - u(k,j,i)     ) * ddx
-!              dudy(k)  = 0.25_wp * ( u(k,j+1,i) + u(k,j+1,i+1) -                &
-!                                     u(k,j-1,i) - u(k,j-1,i+1) ) * ddy
-!              dudz(k)  = 0.5_wp  * ( u(k+1,j,i) + u(k+1,j,i+1) -                &
-!                                     u(k-1,j,i) - u(k-1,j,i+1) ) * dd2zu(k)
-!
-!              dvdx(k)  = 0.25_wp * ( v(k,j,i+1) + v(k,j+1,i+1) -                &
-!                                     v(k,j,i-1) - v(k,j+1,i-1) ) * ddx
-!              dvdy(k)  =           ( v(k,j+1,i) - v(k,j,i)     ) * ddy
-!              dvdz(k)  = 0.5_wp  * ( v(k+1,j,i) + v(k+1,j+1,i) -                &
-!                                     v(k-1,j,i) - v(k-1,j+1,i) ) * dd2zu(k)
-!
-!              dwdx(k)  = 0.25_wp * ( w(k,j,i+1) + w(k-1,j,i+1) -                &
-!                                     w(k,j,i-1) - w(k-1,j,i-1) ) * ddx
-!              dwdy(k)  = 0.25_wp * ( w(k,j+1,i) + w(k-1,j+1,i) -                &
-!                                     w(k,j-1,i) - w(k-1,j-1,i) ) * ddy
-!              dwdz(k)  =           ( w(k,j,i)   - w(k-1,j,i)   ) * ddzw(k)
-! !
-! !--          Production term according to Kato and Launder (1993)
-!              def = SQRT( ( dudy(k)**2 + dvdz(k)**2 + dwdx(k)**2 +              &
-!                            dudz(k)**2 + dvdx(k)**2 + dwdy(k)**2 +              &
-!                            2.0_wp * ( dudy(k) * dvdx(k) +                      &
-!                                       dvdz(k) * dwdy(k) +                      &
-!                                       dwdx(k) * dudz(k) )       )              &
-!                        * ( dudy(k)**2 + dvdz(k)**2 + dwdx(k)**2 +              &
-!                            dudz(k)**2 + dvdx(k)**2 + dwdy(k)**2 -              &
-!                            2.0_wp * ( dudy(k) * dvdx(k) +                      &
-!                                       dvdz(k) * dwdy(k) +                      &
-!                                       dwdx(k) * dudz(k) )       )              &
-!                        )
-!
-!              IF ( def < 0.0_wp )  def = 0.0_wp
-!
-!              flag        = MERGE( 1.0_wp, 0.0_wp,                              &
-!                                   BTEST( wall_flags_0(k,j,i), 29 ) )
-!              tend_temp(k) = km(k,j,i) * def * flag
-!
-!           ENDDO
-!
-!        ENDIF
-
-    ENDIF
-
-    IF ( .NOT. diss_production )  THEN
-!
-!--    Production term in case of TKE production
-       DO  k = nzb+1, nzt
-          tend(k,j,i) = tend(k,j,i) + tend_temp(k)
-       ENDDO
-    ELSE
-!
-!--    Production term in case of dissipation-rate production (rans_tke_e)
-       DO  k = nzb+1, nzt
-
-          ! Standard TKE-e closure
-          tend(k,j,i) = tend(k,j,i) + tend_temp(k) * diss(k,j,i)               &
-                                    /( e(k,j,i) + 1.0E-20_wp )                 &
-                                    * c_1
-!           ! Production according to Koblitz (2013)
-!           tend(k,j,i) = tend(k,j,i) + tend_temp(k) * diss(k,j,i)               &
-!                                     /( e(k,j,i) + 1.0E-20_wp )                 &
-!                                     * ( c_1 + ( c_2 - c_1 )                    &
-!                                             * l_wall(k,j,i) / l_max )
-!           ! Production according to Detering and Etling (1985)
-!           !> @todo us is not correct if there are vertical walls
-!           tend(k,j,i) = tend(k,j,i) + tend_temp(k) * SQRT(e(k,j,i))            &
-!                                     * c_1 * c_0**3 / c_4 * f                   &
-!              / surf_def_h(0)%us(surf_def_h(0)%start_index(j,i))
-       ENDDO
-    ENDIF
-
-!
-!-- If required, calculate TKE production by buoyancy
-!--          So far in the ocean no special treatment of density flux in
-!--          the bottom and top surface layer
-             DO  k = nzb+1, nzt
-
-                tend(k,j,i) = tend(k,j,i) +                                    &
-                              kh(k,j,i) * g /                                  &
-                              MERGE( rho_reference, prho(k,j,i),               &
-                                     use_single_reference_value ) *            &
-                              ( prho(k+1,j,i) - prho(k-1,j,i) ) *              &
-                              dd2zu(k) *                                       &
-                                MERGE( 1.0_wp, 0.0_wp,                         &
-                                       BTEST( wall_flags_0(k,j,i), 30 )        &
-                                     ) *                                       &
-                                MERGE( 1.0_wp, 0.0_wp,                         &
-                                       BTEST( wall_flags_0(k,j,i), 9 )         &
-                                     )
-             ENDDO
-
-             IF ( use_surface_fluxes )  THEN
-!
-!--             Default surfaces, up- and downward-facing
-                DO  l = 0, 1
-                   surf_s = surf_def_h(l)%start_index(j,i)
-                   surf_e = surf_def_h(l)%end_index(j,i)
-                   DO  m = surf_s, surf_e
-                      k = surf_def_h(l)%k(m)
-                      tend(k,j,i) = tend(k,j,i) + g /                          &
-                                MERGE( rho_reference, prho(k,j,i),             &
-                                       use_single_reference_value ) *          &
-                                drho_air_zw(k-1) *                             &
-                                surf_def_h(l)%shf(m)
-                   ENDDO
-                ENDDO
-
-             ENDIF
-
-             IF ( use_top_fluxes )  THEN
-                surf_s = surf_def_h(2)%start_index(j,i)
-                surf_e = surf_def_h(2)%end_index(j,i)
-                DO  m = surf_s, surf_e
-                   k = surf_def_h(2)%k(m)
-                   tend(k,j,i) = tend(k,j,i) + g /                             &
-                                MERGE( rho_reference, prho(k,j,i),             &
-                                       use_single_reference_value ) *          &
-                                drho_air_zw(k) *                               &
-                                surf_def_h(2)%shf(m)
-                ENDDO
-             ENDIF
-
-  END SUBROUTINE production_e_ij
-
-
   !------------------------------------------------------------------------------!
   ! Description:
   ! ------------
   !> Diffusion and dissipation terms for the TKE.
   !> Vector-optimized version
-    !------------------------------------------------------------------------------!
+  !------------------------------------------------------------------------------!
 SUBROUTINE diffusion_e( var, var_reference )
 
     USE arrays_3d,                                                             &
@@ -3307,8 +2648,8 @@ SUBROUTINE diffusion_e( var, var_reference )
     REAL(wp), DIMENSION(:,:,:), POINTER ::  var  !< temperature
 #endif
     REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  dissipation  !< TKE dissipation
-    
-    !$acc data copy(drho_air(nzb+1:nzt),dd2zu(nzb+1:nzt),ddzu(nzb+1:nzt+1),ddzw(nzb+1:nzt),dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),var(:,:,:),kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr),wall_flags_0(nzb+1:nzt,nys:nyn,nxl:nxr)) 
+
+    !$acc data copy(drho_air(nzb+1:nzt),dd2zu(nzb+1:nzt),ddzu(nzb+1:nzt+1),ddzw(nzb+1:nzt),dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),var(:,:,:),kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr),wall_flags_0(nzb+1:nzt,nys:nyn,nxl:nxr))
     !$acc kernels default(present)
 
     !
@@ -3394,102 +2735,6 @@ SUBROUTINE diffusion_e( var, var_reference )
 !------------------------------------------------------------------------------!
 ! Description:
 ! ------------
-!> Diffusion and dissipation terms for the TKE.
-!> Cache-optimized version
-!------------------------------------------------------------------------------!
- SUBROUTINE diffusion_e_ij( i, j, var, var_reference )
-
-    USE arrays_3d,                                                             &
-        ONLY:  ddzu, ddzw, drho_air, rho_air_zw
-
-    USE grid_variables,                                                        &
-        ONLY:  ddx2, ddy2
-
-    USE surface_mod,                                                           &
-       ONLY :  bc_h
-
-    IMPLICIT NONE
-
-    INTEGER(iwp) ::  i              !< running index x direction
-    INTEGER(iwp) ::  j              !< running index y direction
-    INTEGER(iwp) ::  k              !< running index z direction
-    INTEGER(iwp) ::  m              !< running index surface elements
-    INTEGER(iwp) ::  surf_e         !< End index of surface elements at (j,i)-gridpoint
-    INTEGER(iwp) ::  surf_s         !< Start index of surface elements at (j,i)-gridpoint
-
-    REAL(wp)     ::  flag           !< flag to mask topography
-    REAL(wp)     ::  l              !< mixing length
-    REAL(wp)     ::  ll             !< adjusted l
-    REAL(wp)     ::  var_reference  !< reference temperature
-
-#if defined( __nopointer )
-    REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  var  !< temperature
-#else
-    REAL(wp), DIMENSION(:,:,:), POINTER ::  var     !< temperature
-#endif
-    REAL(wp), DIMENSION(nzb+1:nzt) ::  dissipation  !< dissipation of TKE
-
-!
-!-- Calculate the mixing length (for dissipation)
-    DO  k = nzb+1, nzt
-!
-!--    Predetermine flag to mask topography
-       flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
-
-!
-!--    Calculate dissipation...
-!--    ...in case of LES
-       IF ( les_mw )  THEN
-
-          CALL mixing_length_les( i, j, k, l, ll, var, var_reference )
-
-          dissipation(k) = ( 0.19_wp + 0.74_wp * l / ll )                      &
-                           * e(k,j,i) * SQRT( e(k,j,i) ) / l
-
-!
-!--    ...in case of RANS
-       ELSEIF ( rans_tke_l )  THEN
-
-          CALL mixing_length_rans( i, j, k, l, ll, var, var_reference  )
-
-          dissipation(k) = c_0**3 * e(k,j,i) * SQRT( e(k,j,i) ) / ll
-
-          diss(k,j,i) = dissipation(k) * flag
-
-       ELSEIF ( rans_tke_e )  THEN
-
-          dissipation(k) = diss(k,j,i)
-
-       ENDIF
-
-!
-!--    Calculate the tendency term
-       tend(k,j,i) = tend(k,j,i) + (                                           &
-                                      (                                        &
-                      ( km(k,j,i)+km(k,j,i+1) ) * ( e(k,j,i+1)-e(k,j,i) )      &
-                    - ( km(k,j,i)+km(k,j,i-1) ) * ( e(k,j,i)-e(k,j,i-1) )      &
-                                      ) * ddx2                                 &
-                                    + (                                        &
-                      ( km(k,j,i)+km(k,j+1,i) ) * ( e(k,j+1,i)-e(k,j,i) )      &
-                    - ( km(k,j,i)+km(k,j-1,i) ) * ( e(k,j,i)-e(k,j-1,i) )      &
-                                      ) * ddy2                                 &
-                                    + (                                        &
-           ( km(k,j,i)+km(k+1,j,i) ) * ( e(k+1,j,i)-e(k,j,i) ) * ddzu(k+1)     &
-                                                         * rho_air_zw(k)       &
-         - ( km(k,j,i)+km(k-1,j,i) ) * ( e(k,j,i)-e(k-1,j,i) ) * ddzu(k)       &
-                                                         * rho_air_zw(k-1)     &
-                                      ) * ddzw(k) * drho_air(k)                &
-                                   ) * flag * dsig_e                           &
-                                 - dissipation(k) * flag
-
-    ENDDO
-
- END SUBROUTINE diffusion_e_ij
-
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
 !> Diffusion term for the TKE dissipation rate
 !> Vector-optimized version
 !------------------------------------------------------------------------------!
@@ -3542,61 +2787,6 @@ SUBROUTINE diffusion_e( var, var_reference )
     ENDDO
 
  END SUBROUTINE diffusion_diss
-
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Diffusion term for the TKE dissipation rate
-!> Cache-optimized version
-!------------------------------------------------------------------------------!
- SUBROUTINE diffusion_diss_ij( i, j )
-
-    USE arrays_3d,                                                             &
-        ONLY:  ddzu, ddzw, drho_air, rho_air_zw
-
-    USE grid_variables,                                                        &
-        ONLY:  ddx2, ddy2
-
-    IMPLICIT NONE
-
-    INTEGER(iwp) ::  i         !< running index x direction
-    INTEGER(iwp) ::  j         !< running index y direction
-    INTEGER(iwp) ::  k         !< running index z direction
-
-    REAL(wp)     ::  flag      !< flag to mask topography
-
-!
-!-- Calculate the mixing length (for dissipation)
-    DO  k = nzb+1, nzt
-
-!
-!--    Predetermine flag to mask topography
-       flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
-
-!
-!--    Calculate the tendency term
-       tend(k,j,i) =  tend(k,j,i) +                                            &
-                   (            (                                              &
-                ( km(k,j,i)+km(k,j,i+1) ) * ( diss(k,j,i+1)-diss(k,j,i) )      &
-              - ( km(k,j,i)+km(k,j,i-1) ) * ( diss(k,j,i)-diss(k,j,i-1) )      &
-                                ) * ddx2                                       &
-                              + (                                              &
-                ( km(k,j,i)+km(k,j+1,i) ) * ( diss(k,j+1,i)-diss(k,j,i) )      &
-              - ( km(k,j,i)+km(k,j-1,i) ) * ( diss(k,j,i)-diss(k,j-1,i) )      &
-                                ) * ddy2                                       &
-                              + (                                              &
-     ( km(k,j,i)+km(k+1,j,i) ) * ( diss(k+1,j,i)-diss(k,j,i) ) * ddzu(k+1)     &
-                                                   * rho_air_zw(k)             &
-   - ( km(k,j,i)+km(k-1,j,i) ) * ( diss(k,j,i)-diss(k-1,j,i) ) * ddzu(k)       &
-                                                   * rho_air_zw(k-1)           &
-                                ) * ddzw(k) * drho_air(k)                      &
-                   ) * flag * dsig_diss                                        &
-                   - c_2 * diss(k,j,i)**2 / ( e(k,j,i) + 1.0E-20_wp ) * flag
-
-    ENDDO
-
- END SUBROUTINE diffusion_diss_ij
 
 
 !------------------------------------------------------------------------------!
@@ -3787,7 +2977,7 @@ SUBROUTINE diffusion_e( var, var_reference )
 !-- Introduce an optional minimum tke
     IF ( e_min > 0.0_wp )  THEN
        !$OMP DO
-       !$acc data copy(wall_flags_0(nzb+1:nzt,nysg:nyng,nxlg:nxrg),e(nzb+1:nzt,nysg:nyng,nxlg:nxrg)) 
+       !$acc data copy(wall_flags_0(nzb+1:nzt,nysg:nyng,nxlg:nxrg),e(nzb+1:nzt,nysg:nyng,nxlg:nxrg))
        !$acc parallel
        !$acc loop collapse(3)
        DO  i = nxlg, nxrg

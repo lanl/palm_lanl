@@ -439,6 +439,40 @@
     REAL(wp) ::  dt_3d_old  !< temporary storage of timestep to be used for
                             !< steering of run control output interval
     REAL(wp) ::  tsrp_org   !< original value of time_since_reference_point
+
+! !$acc data    copy( tend ) &
+! !$acc         copy( tu_m ) &
+! !$acc         copy( tv_m ) &
+! !$acc         copy( tw_m ) &
+! !$acc         copy( tpt_m ) &
+! !$acc         copy( tsa_m ) &
+! !$acc         copy( u ) &
+! !$acc         copy( v ) &
+! !$acc         copy( w ) &
+! !$acc         copy( pt ) &
+! !$acc         copy( sa ) &
+! !$acc         copy( u_p ) &
+! !$acc         copy( v_p ) &
+! !$acc         copy( w_p ) &
+! !$acc         copy( pt_p ) &
+! !$acc         copy( sa_p ) &
+! !$acc       copyin( ddzu ) &
+! !$acc       copyin( ddzw ) &
+! !$acc       copyin( dd2zu ) &
+! !$acc       copyin( u_init ) &
+! !$acc       copyin( v_init ) &
+! !$acc       copyin( ug ) &
+! !$acc       copyin( vg ) &
+! !$acc       copyin( pt_init ) &
+! !$acc       copyin( sa_init ) &
+! !$acc       copyin( tsc ) &
+! !$acc       copyin( ptdf_x ) &
+! !$acc       copyin( ptdf_y ) &
+! !$acc       copyin( wall_flags_0 ) &
+! !$acc       copyin( timestep_scheme ) &
+! !$acc       copyin( rdf ) &
+! !$acc       copyin( rdf_sc )
+
 !
 !-- At beginning determine the first time step
     CALL timestep
@@ -534,7 +568,7 @@ print *, simulated_time
                intermediate_timestep_count == 1 ) )                            &
           THEN
              time_disturb = time_disturb + dt_3d
-             IF ( time_disturb <= dt_disturb ) then 
+             IF ( time_disturb <= dt_disturb ) then
                   CALL disturb_field( 'u', tend, u )
                   CALL disturb_field( 'v', tend, v )
                   call disturb_field('pt', tend, pt )

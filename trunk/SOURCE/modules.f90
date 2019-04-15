@@ -1141,7 +1141,7 @@
     CHARACTER (LEN=210)  ::  run_description_header                       !< string containing diverse run informations as run identifier, coupling mode, host, ensemble number, run date and time
     CHARACTER (LEN=1000) ::  message_string = ' '                         !< dynamic string for error message output
 
-    CHARACTER (LEN=varnamelength), DIMENSION(500) ::  data_output = ' ' 
+    CHARACTER (LEN=varnamelength), DIMENSION(500) ::  data_output = ' '
     CHARACTER (LEN=varnamelength), DIMENSION(500) ::  data_output_user = ' '  !< namelist parameter
     CHARACTER (LEN=varnamelength), DIMENSION(500) ::  doav = ' '              !< label array for multi-dimensional,
                                                                               !< averaged output quantities
@@ -1149,7 +1149,7 @@
     CHARACTER (LEN=varnamelength), DIMENSION(max_masks,100) ::  data_output_masks = ' '       !< namelist parameter
     CHARACTER (LEN=varnamelength), DIMENSION(max_masks,100) ::  data_output_masks_user = ' '  !< namelist parameter
 
-    CHARACTER (LEN=varnamelength), DIMENSION(300) ::  data_output_pr = ' ' 
+    CHARACTER (LEN=varnamelength), DIMENSION(300) ::  data_output_pr = ' '
 
     CHARACTER (LEN=varnamelength), DIMENSION(200) ::  data_output_pr_user = ' '  !< namelist parameter
 
@@ -1373,9 +1373,6 @@
     LOGICAL ::  plant_canopy = .FALSE.                           !< switch for use of plant canopy model
     LOGICAL ::  precipitation = .FALSE.                          !< namelist parameter
     LOGICAL ::  random_heatflux = .FALSE.                        !< namelist parameter
-    LOGICAL ::  rans_mode = .FALSE.                              !< switch between RANS and LES mode
-    LOGICAL ::  rans_tke_e = .FALSE.                             !< use TKE-e turbulence closure for RANS mode
-    LOGICAL ::  rans_tke_l = .FALSE.                             !< use TKE-l turbulence closure for RANS mode
     LOGICAL ::  read_svf = .FALSE.                               !< ENVPAR namelist parameter to steer input of svf (ENVPAR is created by palmrun)
     LOGICAL ::  recycling_yshift = .FALSE.                       !< namelist parameter
     LOGICAL ::  run_control_header = .FALSE.                     !< onetime output of RUN_CONTROL header
@@ -2097,7 +2094,7 @@
     INTEGER(iwp) ::  dopr_initial_index(300) = 0        !< index number of initial profiles to be output
 
 !    SAVE
-                 
+
 
  END MODULE profil_parameter
 

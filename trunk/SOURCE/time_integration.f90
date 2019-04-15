@@ -374,8 +374,8 @@
                mid,  &
                neutral, nr_timesteps_this_run, nudging,                        &
                ocean, passive_scalar, prho_reference, pt_reference,            &
-               pt_slope_offset, random_heatflux, rans_mode,                    &
-               rans_tke_e, run_coupled, simulated_time, simulated_time_chr,    &
+               pt_slope_offset, random_heatflux,                    &
+               run_coupled, simulated_time, simulated_time_chr,    &
                skip_time_do2d_xy, skip_time_do2d_xz, skip_time_do2d_yz,        &
                skip_time_do3d, skip_time_domask, skip_time_dopr,               &
                skip_time_data_output_av, sloping_surface,                      &
@@ -532,9 +532,6 @@ print *, simulated_time
           CALL exchange_horiz( w_p, nbgp )
           CALL exchange_horiz( pt_p, nbgp )
           IF ( .NOT. constant_diffusion )  CALL exchange_horiz( e_p, nbgp )
-             IF ( rans_tke_e )  THEN
-                CALL exchange_horiz( diss_p, nbgp )
-             ENDIF
              CALL exchange_horiz( sa_p, nbgp )
              CALL exchange_horiz( rho_ocean, nbgp )
              CALL exchange_horiz( prho, nbgp )

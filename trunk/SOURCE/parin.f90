@@ -490,7 +490,6 @@
              pt_vertical_gradient_level, q_surface, q_surface_initial_change,  &
              q_vertical_gradient, q_vertical_gradient_level,                   &
              random_generator, random_heatflux, rans_const_c, rans_const_sigma,&
-             rans_mode,                                                        &
              rayleigh_damping_factor, rayleigh_damping_height,                 &
              recycling_width, recycling_yshift,                                &
              reference_state, residual_limit,                                  &
@@ -570,7 +569,6 @@
              pt_vertical_gradient_level, q_surface, q_surface_initial_change,  &
              q_vertical_gradient, q_vertical_gradient_level,                   &
              random_generator, random_heatflux, rans_const_c, rans_const_sigma,&
-             rans_mode,                                                        &
              rayleigh_damping_factor, rayleigh_damping_height,                 &
              recycling_width, recycling_yshift,                                &
              reference_state, residual_limit,                                  &
@@ -770,7 +768,7 @@
           ENDDO
           BACKSPACE ( 11 )
 
-          
+
 !
 !--       Read namelist
           READ ( 11, runtime_parameters )

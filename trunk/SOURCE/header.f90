@@ -536,11 +536,6 @@
 !
 !-- Numerical schemes
     WRITE ( io, 110 )
-    IF ( rans_mode )  THEN
-       WRITE ( io, 124 )  TRIM( turbulence_closure ), 'RANS'
-    ELSE
-       WRITE ( io, 124 )  TRIM( turbulence_closure ), 'LES'
-    ENDIF
     WRITE ( io, 121 )  TRIM( approximation )
     IF ( psolver(1:7) == 'poisfft' )  THEN
        WRITE ( io, 111 )  TRIM( fft_method )
@@ -1362,9 +1357,6 @@
        IF ( e_init > 0.0_wp )  WRITE ( io, 455 )  e_init
        IF ( e_min > 0.0_wp )  WRITE ( io, 454 )  e_min
        IF ( wall_adjustment )  WRITE ( io, 453 )  wall_adjustment_factor
-    ENDIF
-    IF ( rans_mode )  THEN
-       WRITE ( io, 457 )  rans_const_c, rans_const_sigma
     ENDIF
 !
 !-- Special actions during the run

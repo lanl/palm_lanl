@@ -19,85 +19,85 @@
 !
 ! Current revisions:
 ! ------------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: advec_ws.f90 3022 2018-05-18 11:12:35Z suehring $
 ! Bugfix in calculation of left-sided fluxes for u-component in OpenMP case.
-! 
+!
 ! 2731 2018-01-09 17:44:02Z suehring
 ! Enable loop vectorization by splitting the k-loop
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 ! Implement advection for TKE-dissipation in case of RANS-TKE-e closure (TG)
 ! Allocate advc_flags_1/2 within ws_init_flags instead of init_grid
 ! Change argument list for exchange_horiz_2d_int (MS)
-! 
+!
 ! 2329 2017-08-03 14:24:56Z knoop
 ! Bugfix concerning density in divergence correction close to buildings
-! 
+!
 ! 2292 2017-06-20 09:51:42Z schwenkel
-! Implementation of new microphysic scheme: cloud_scheme = 'morrison' 
-! includes two more prognostic equations for cloud drop concentration (nc)  
-! and cloud water content (qc). 
-! 
+! Implementation of new microphysic scheme: cloud_scheme = 'morrison'
+! includes two more prognostic equations for cloud drop concentration (nc)
+! and cloud water content (qc).
+!
 ! 2233 2017-05-30 18:08:54Z suehring
-! 
+!
 ! 2232 2017-05-30 17:47:52Z suehring
-! Rename wall_flags_0 and wall_flags_00 into advc_flags_1 and advc_flags_2, 
+! Rename wall_flags_0 and wall_flags_00 into advc_flags_1 and advc_flags_2,
 ! respectively.
 ! Set advc_flags_1/2 on basis of wall_flags_0/00 instead of nzb_s/u/v/w_inner.
 ! Setting advc_flags_1/2 also for downward-facing walls
-! 
+!
 ! 2200 2017-04-11 11:37:51Z suehring
 ! monotonic_adjustment removed
-! 
+!
 ! 2118 2017-01-17 16:38:49Z raasch
 ! OpenACC version of subroutines removed
-! 
+!
 ! 2037 2016-10-26 11:15:40Z knoop
 ! Anelastic approximation implemented
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1996 2016-08-18 11:42:29Z suehring
 ! Bugfix concerning calculation of turbulent of turbulent fluxes
-! 
+!
 ! 1960 2016-07-12 16:34:24Z suehring
 ! Separate humidity and passive scalar
-! 
+!
 ! 1942 2016-06-14 12:18:18Z suehring
 ! Initialization of flags for ws-scheme moved from init_grid.
-! 
+!
 ! 1873 2016-04-18 14:50:06Z maronga
 ! Module renamed (removed _mod)
-! 
-! 
+!
+!
 ! 1850 2016-04-08 13:29:27Z maronga
 ! Module renamed
 !
-! 
+!
 ! 1822 2016-04-07 07:49:42Z hoffmann
 ! icloud_scheme removed, microphysics_seifert added
 !
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1630 2015-08-26 16:57:23Z suehring
-! 
-! 
+!
+!
 ! 1629 2015-08-26 16:56:11Z suehring
 ! Bugfix concerning wall_flags at left and south PE boundaries
 !
 ! 1581 2015-04-10 13:45:59Z suehring
-! 
-! 
+!
+!
 ! 1580 2015-04-10 13:43:49Z suehring
 ! Bugfix: statistical evaluation of scalar fluxes in case of monotonic limiter
 !
@@ -105,18 +105,18 @@
 ! Bugfixes in monotonic limiter.
 !
 ! 2015-03-09 13:10:37Z heinze
-! Bugfix: REAL constants provided with KIND-attribute in call of 
-! intrinsic functions like MAX and MIN 
-! 
+! Bugfix: REAL constants provided with KIND-attribute in call of
+! intrinsic functions like MAX and MIN
+!
 ! 1557 2015-03-05 16:43:04Z suehring
 ! Enable monotone advection for scalars using monotonic limiter
 !
 ! 1374 2014-04-25 12:55:07Z raasch
 ! missing variables added to ONLY list
-! 
+!
 ! 1361 2014-04-16 15:17:48Z hoffmann
 ! accelerator and vector version for qr and nr added
-! 
+!
 ! 1353 2014-04-08 15:21:23Z heinze
 ! REAL constants provided with KIND-attribute,
 ! module kinds added
@@ -148,9 +148,9 @@
 ! calculation of qr and nr is restricted to precipitation
 !
 ! 1053 2012-11-13 17:11:03Z hoffmann
-! necessary expansions according to the two new prognostic equations (nr, qr) 
+! necessary expansions according to the two new prognostic equations (nr, qr)
 ! of the two-moment cloud physics scheme:
-! +flux_l_*, flux_s_*, diss_l_*, diss_s_*, sums_ws*s_ws_l 
+! +flux_l_*, flux_s_*, diss_l_*, diss_s_*, sums_ws*s_ws_l
 !
 ! 1036 2012-10-22 13:43:42Z raasch
 ! code put under GPL (PALM 3.9)
@@ -200,19 +200,19 @@
 ! Description:
 ! ------------
 !> Advection scheme for scalars and momentum using the flux formulation of
-!> Wicker and Skamarock 5th order. Additionally the module contains of a 
-!> routine using for initialisation and steering of the statical evaluation. 
+!> Wicker and Skamarock 5th order. Additionally the module contains of a
+!> routine using for initialisation and steering of the statical evaluation.
 !> The computation of turbulent fluxes takes place inside the advection
 !> routines.
 !> Near non-cyclic boundaries the order of the applied advection scheme is
 !> degraded.
 !> A divergence correction is applied. It is necessary for topography, since
 !> the divergence is not sufficiently reduced, resulting in erroneous fluxes and
-!> partly numerical instabilities. 
+!> partly numerical instabilities.
 !-----------------------------------------------------------------------------!
  MODULE advec_ws
 
- 
+
 
     PRIVATE
     PUBLIC   advec_s_ws, advec_u_ws, advec_v_ws, advec_w_ws, ws_init,          &
@@ -267,7 +267,7 @@
        USE arrays_3d,                                                          &
            ONLY:  diss_l_diss, diss_l_e, diss_l_nc, diss_l_nr, diss_l_pt,      &
                   diss_l_q, diss_l_qc, diss_l_qr, diss_l_s, diss_l_sa,         &
-                  diss_l_u, diss_l_v, diss_l_w, flux_l_diss, flux_l_e,         & 
+                  diss_l_u, diss_l_v, diss_l_w, flux_l_diss, flux_l_e,         &
                   flux_l_nc, flux_l_nr, flux_l_pt, flux_l_q, flux_l_qc,        &
                   flux_l_qr, flux_l_s, flux_l_sa, flux_l_u, flux_l_v,          &
                   flux_l_w, diss_s_diss, diss_s_e, diss_s_nc,  diss_s_nr,      &
@@ -284,22 +284,22 @@
        USE control_parameters,                                                 &
            ONLY:  cloud_physics, humidity, loop_optimization,                  &
                   passive_scalar, microphysics_morrison, microphysics_seifert, &
-                  ocean, rans_tke_e, ws_scheme_mom, ws_scheme_sca
+                  ocean, ws_scheme_mom, ws_scheme_sca
 
        USE indices,                                                            &
            ONLY:  nyn, nys, nzb, nzt
 
        USE kinds
-       
+
        USE pegrid
 
        USE statistics,                                                         &
-           ONLY:  sums_us2_ws_l, sums_vs2_ws_l, sums_ws2_ws_l, sums_wsncs_ws_l,& 
+           ONLY:  sums_us2_ws_l, sums_vs2_ws_l, sums_ws2_ws_l, sums_wsncs_ws_l,&
                   sums_wsnrs_ws_l,sums_wspts_ws_l, sums_wsqcs_ws_l,            &
                   sums_wsqrs_ws_l, sums_wsqs_ws_l, sums_wsss_ws_l,             &
                   sums_wssas_ws_l,  sums_wsss_ws_l, sums_wsus_ws_l,            &
                   sums_wsvs_ws_l
-  
+
 
 !
 !--    Set the appropriate factors for scalar and momentum advection.
@@ -309,7 +309,7 @@
        adv_mom_5 = 1.0_wp / 120.0_wp
        adv_mom_3 = 1.0_wp /  24.0_wp
        adv_mom_1 = 1.0_wp /   4.0_wp
-!         
+!
 !--    Arrays needed for statical evaluation of fluxes.
        IF ( ws_scheme_mom )  THEN
 
@@ -342,7 +342,7 @@
 !
 !--    Arrays needed for reasons of speed optimization for cache version.
 !--    For the vector version the buffer arrays are not necessary,
-!--    because the the fluxes can swapped directly inside the loops of the 
+!--    because the the fluxes can swapped directly inside the loops of the
 !--    advection routines.
        IF ( loop_optimization /= 'vector' )  THEN
 
@@ -368,18 +368,12 @@
              ALLOCATE( flux_s_pt(nzb+1:nzt,0:threads_per_task-1),              &
                        flux_s_e(nzb+1:nzt,0:threads_per_task-1),               &
                        diss_s_pt(nzb+1:nzt,0:threads_per_task-1),              &
-                       diss_s_e(nzb+1:nzt,0:threads_per_task-1) ) 
+                       diss_s_e(nzb+1:nzt,0:threads_per_task-1) )
              ALLOCATE( flux_l_pt(nzb+1:nzt,nys:nyn,0:threads_per_task-1),      &
                        flux_l_e(nzb+1:nzt,nys:nyn,0:threads_per_task-1),       &
                        diss_l_pt(nzb+1:nzt,nys:nyn,0:threads_per_task-1),      &
                        diss_l_e(nzb+1:nzt,nys:nyn,0:threads_per_task-1) )
 
-             IF ( rans_tke_e )  THEN
-                ALLOCATE( flux_s_diss(nzb+1:nzt,0:threads_per_task-1),         &
-                          diss_s_diss(nzb+1:nzt,0:threads_per_task-1) )
-                ALLOCATE( flux_l_diss(nzb+1:nzt,nys:nyn,0:threads_per_task-1), &
-                          diss_l_diss(nzb+1:nzt,nys:nyn,0:threads_per_task-1) )
-             ENDIF
              IF ( ocean )  THEN
                 ALLOCATE( flux_s_sa(nzb+1:nzt,0:threads_per_task-1),           &
                           diss_s_sa(nzb+1:nzt,0:threads_per_task-1) )
@@ -421,9 +415,9 @@
        INTEGER(iwp) ::  k_mm  !< dummy index along z
        INTEGER(iwp) ::  k_pp  !< dummy index along z
        INTEGER(iwp) ::  k_ppp !< dummy index along z
-       
+
        LOGICAL      ::  flag_set !< steering variable for advection flags
-   
+
        ALLOCATE( advc_flags_1(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                  &
                  advc_flags_2(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
        advc_flags_1 = 0
@@ -441,7 +435,7 @@
 !--                scalar - x-direction
 !--                WS1 (0), WS3 (1), WS5 (2)
                    IF ( ( .NOT. BTEST(wall_flags_0(k,j,i+1),0)                 &
-                    .OR.  .NOT. BTEST(wall_flags_0(k,j,i+2),0)                 &   
+                    .OR.  .NOT. BTEST(wall_flags_0(k,j,i+2),0)                 &
                     .OR.  .NOT. BTEST(wall_flags_0(k,j,i-1),0) )               &
                       .OR.  ( ( inflow_l .OR. outflow_l .OR. nest_bound_l  .OR.&
                                 force_bound_l )                                &
@@ -475,14 +469,14 @@
                       .AND. BTEST(wall_flags_0(k,j,i+3),0)                     &
                       .AND. BTEST(wall_flags_0(k,j,i-1),0)                     &
                       .AND. BTEST(wall_flags_0(k,j,i-2),0) )                   &
-                   THEN 
+                   THEN
                       advc_flags_1(k,j,i) = IBSET( advc_flags_1(k,j,i), 2 )
                    ENDIF
 !
 !--                scalar - y-direction
 !--                WS1 (3), WS3 (4), WS5 (5)
                    IF ( ( .NOT. BTEST(wall_flags_0(k,j+1,i),0)                 &
-                    .OR.  .NOT. BTEST(wall_flags_0(k,j+2,i),0)                 &   
+                    .OR.  .NOT. BTEST(wall_flags_0(k,j+2,i),0)                 &
                     .OR.  .NOT. BTEST(wall_flags_0(k,j-1,i),0))                &
                       .OR.  ( ( inflow_s .OR. outflow_s .OR. nest_bound_s  .OR.&
                                 force_bound_s )                                &
@@ -510,7 +504,7 @@
                               .AND. j == nysv  )    .OR.                       & ! why not nys+1
                             ( ( inflow_n .OR. outflow_n .OR. nest_bound_n  .OR.&
                                 force_bound_n )                                &
-                              .AND. j == nyn-1 ) )                             &          
+                              .AND. j == nyn-1 ) )                             &
                    THEN
                       advc_flags_1(k,j,i) = IBSET( advc_flags_1(k,j,i), 4 )
 !
@@ -520,43 +514,43 @@
                       .AND. BTEST(wall_flags_0(k,j+3,i),0)                     &
                       .AND. BTEST(wall_flags_0(k,j-1,i),0)                     &
                       .AND. BTEST(wall_flags_0(k,j-2,i),0) )                   &
-                   THEN 
+                   THEN
                       advc_flags_1(k,j,i) = IBSET( advc_flags_1(k,j,i), 5 )
                    ENDIF
-! 
+!
 !--                scalar - z-direction
 !--                WS1 (6), WS3 (7), WS5 (8)
                    IF ( k == nzb+1 )  THEN
                       k_mm = nzb
-                   ELSE 
+                   ELSE
                       k_mm = k - 2
                    ENDIF
                    IF ( k > nzt-1 )  THEN
                       k_pp = nzt+1
-                   ELSE 
+                   ELSE
                       k_pp = k + 2
                    ENDIF
                    IF ( k > nzt-2 )  THEN
                       k_ppp = nzt+1
-                   ELSE 
+                   ELSE
                       k_ppp = k + 3
                    ENDIF
 
                    flag_set = .FALSE.
                    IF ( .NOT. BTEST(wall_flags_0(k-1,j,i),0)  .AND.            &
                               BTEST(wall_flags_0(k,j,i),0)    .OR.             &
-                        .NOT. BTEST(wall_flags_0(k_pp,j,i),0) .AND.            &                              
+                        .NOT. BTEST(wall_flags_0(k_pp,j,i),0) .AND.            &
                               BTEST(wall_flags_0(k,j,i),0)    .OR.             &
                         k == nzt )                                             &
                    THEN
                       advc_flags_1(k,j,i) = IBSET( advc_flags_1(k,j,i), 6 )
                       flag_set = .TRUE.
                    ELSEIF ( ( .NOT. BTEST(wall_flags_0(k_mm,j,i),0)    .OR.    &
-                              .NOT. BTEST(wall_flags_0(k_ppp,j,i),0) ) .AND.   & 
+                              .NOT. BTEST(wall_flags_0(k_ppp,j,i),0) ) .AND.   &
                                   BTEST(wall_flags_0(k-1,j,i),0)  .AND.        &
                                   BTEST(wall_flags_0(k,j,i),0)    .AND.        &
                                   BTEST(wall_flags_0(k+1,j,i),0)  .AND.        &
-                                  BTEST(wall_flags_0(k_pp,j,i),0) .OR.         &    
+                                  BTEST(wall_flags_0(k_pp,j,i),0) .OR.         &
                             k == nzt - 1 )                                     &
                    THEN
                       advc_flags_1(k,j,i) = IBSET( advc_flags_1(k,j,i), 7 )
@@ -586,11 +580,11 @@
           DO  i = nxl, nxr
              DO  j = nys, nyn
                 DO  k = nzb+1, nzt
-!  
-!--                At first, set flags to WS1. 
-!--                Since fluxes are swapped in advec_ws.f90, this is necessary to 
+!
+!--                At first, set flags to WS1.
+!--                Since fluxes are swapped in advec_ws.f90, this is necessary to
 !--                in order to handle the left/south flux.
-!--                near vertical walls. 
+!--                near vertical walls.
                    advc_flags_1(k,j,i) = IBSET( advc_flags_1(k,j,i), 9 )
                    advc_flags_1(k,j,i) = IBSET( advc_flags_1(k,j,i), 12 )
 !
@@ -623,7 +617,7 @@
                    ELSEIF ( BTEST(wall_flags_0(k,j,i+1),1)  .AND.              &
                             BTEST(wall_flags_0(k,j,i+2),1)  .AND.              &
                             BTEST(wall_flags_0(k,j,i-1),1) )                   &
-                   THEN    
+                   THEN
                       advc_flags_1(k,j,i) = IBSET( advc_flags_1(k,j,i), 11 )
 !
 !--                   Clear flag for WS1
@@ -670,31 +664,31 @@
 !--                WS1 (15), WS3 (16), WS5 (17)
                    IF ( k == nzb+1 )  THEN
                       k_mm = nzb
-                   ELSE 
+                   ELSE
                       k_mm = k - 2
                    ENDIF
                    IF ( k > nzt-1 )  THEN
                       k_pp = nzt+1
-                   ELSE 
+                   ELSE
                       k_pp = k + 2
                    ENDIF
                    IF ( k > nzt-2 )  THEN
                       k_ppp = nzt+1
-                   ELSE 
+                   ELSE
                       k_ppp = k + 3
-                   ENDIF                   
+                   ENDIF
 
                    flag_set = .FALSE.
                    IF ( .NOT. BTEST(wall_flags_0(k-1,j,i),1)  .AND.            &
                               BTEST(wall_flags_0(k,j,i),1)    .OR.             &
-                        .NOT. BTEST(wall_flags_0(k_pp,j,i),1) .AND.            &                              
+                        .NOT. BTEST(wall_flags_0(k_pp,j,i),1) .AND.            &
                               BTEST(wall_flags_0(k,j,i),1)    .OR.             &
                         k == nzt )                                             &
                    THEN
                       advc_flags_1(k,j,i) = IBSET( advc_flags_1(k,j,i), 15 )
-                      flag_set = .TRUE.                      
+                      flag_set = .TRUE.
                    ELSEIF ( ( .NOT. BTEST(wall_flags_0(k_mm,j,i),1)    .OR.    &
-                              .NOT. BTEST(wall_flags_0(k_ppp,j,i),1) ) .AND.   & 
+                              .NOT. BTEST(wall_flags_0(k_ppp,j,i),1) ) .AND.   &
                                   BTEST(wall_flags_0(k-1,j,i),1)  .AND.        &
                                   BTEST(wall_flags_0(k,j,i),1)    .AND.        &
                                   BTEST(wall_flags_0(k+1,j,i),1)  .AND.        &
@@ -722,8 +716,8 @@
              DO  j = nys, nyn
                 DO  k = nzb+1, nzt
 !
-!--                At first, set flags to WS1. 
-!--                Since fluxes are swapped in advec_ws.f90, this is necessary to 
+!--                At first, set flags to WS1.
+!--                Since fluxes are swapped in advec_ws.f90, this is necessary to
 !--                in order to handle the left/south flux.
                    advc_flags_1(k,j,i) = IBSET( advc_flags_1(k,j,i), 18 )
                    advc_flags_1(k,j,i) = IBSET( advc_flags_1(k,j,i), 21 )
@@ -794,7 +788,7 @@
                       advc_flags_1(k,j,i) = IBCLR( advc_flags_1(k,j,i), 21 )
                    ELSEIF ( BTEST(wall_flags_0(k,j+1,i),2)  .AND.              &
                             BTEST(wall_flags_0(k,j+2,i),2)  .AND.              &
-                            BTEST(wall_flags_0(k,j-1,i),2) )                   & 
+                            BTEST(wall_flags_0(k,j-1,i),2) )                   &
                    THEN
                       advc_flags_1(k,j,i) = IBSET( advc_flags_1(k,j,i), 23 )
 !
@@ -806,31 +800,31 @@
 !--                WS1 (24), WS3 (25), WS5 (26)
                    IF ( k == nzb+1 )  THEN
                       k_mm = nzb
-                   ELSE 
+                   ELSE
                       k_mm = k - 2
                    ENDIF
                    IF ( k > nzt-1 )  THEN
                       k_pp = nzt+1
-                   ELSE 
+                   ELSE
                       k_pp = k + 2
                    ENDIF
                    IF ( k > nzt-2 )  THEN
                       k_ppp = nzt+1
-                   ELSE 
+                   ELSE
                       k_ppp = k + 3
-                   ENDIF  
-                   
+                   ENDIF
+
                    flag_set = .FALSE.
                    IF ( .NOT. BTEST(wall_flags_0(k-1,j,i),2)  .AND.            &
                               BTEST(wall_flags_0(k,j,i),2)    .OR.             &
-                        .NOT. BTEST(wall_flags_0(k_pp,j,i),2) .AND.            &                              
+                        .NOT. BTEST(wall_flags_0(k_pp,j,i),2) .AND.            &
                               BTEST(wall_flags_0(k,j,i),2)    .OR.             &
                         k == nzt )                                             &
                    THEN
                       advc_flags_1(k,j,i) = IBSET( advc_flags_1(k,j,i), 24 )
                       flag_set = .TRUE.
                    ELSEIF ( ( .NOT. BTEST(wall_flags_0(k_mm,j,i),2)    .OR.    &
-                              .NOT. BTEST(wall_flags_0(k_ppp,j,i),2) ) .AND.   & 
+                              .NOT. BTEST(wall_flags_0(k_ppp,j,i),2) ) .AND.   &
                                   BTEST(wall_flags_0(k-1,j,i),2)  .AND.        &
                                   BTEST(wall_flags_0(k,j,i),2)    .AND.        &
                                   BTEST(wall_flags_0(k+1,j,i),2)  .AND.        &
@@ -857,8 +851,8 @@
              DO  j = nys, nyn
                 DO  k = nzb+1, nzt
 !
-!--                At first, set flags to WS1. 
-!--                Since fluxes are swapped in advec_ws.f90, this is necessary to 
+!--                At first, set flags to WS1.
+!--                Since fluxes are swapped in advec_ws.f90, this is necessary to
 !--                in order to handle the left/south flux.
                    advc_flags_1(k,j,i) = IBSET( advc_flags_1(k,j,i), 27 )
                    advc_flags_1(k,j,i) = IBSET( advc_flags_1(k,j,i), 30 )
@@ -886,7 +880,7 @@
                               .AND. i == nxlu  ) )                             &
                    THEN
                       advc_flags_1(k,j,i) = IBSET( advc_flags_1(k,j,i), 28 )
-!   
+!
 !--                   Clear flag for WS1
                       advc_flags_1(k,j,i) = IBCLR( advc_flags_1(k,j,i), 27 )
                    ELSEIF ( BTEST(wall_flags_0(k,j,i+1),3)  .AND.              &
@@ -894,7 +888,7 @@
                             BTEST(wall_flags_0(k,j,i-1),3) )                   &
                    THEN
                       advc_flags_1(k,j,i) = IBSET( advc_flags_1(k,j,i),29 )
-!   
+!
 !--                   Clear flag for WS1
                       advc_flags_1(k,j,i) = IBCLR( advc_flags_1(k,j,i), 27 )
                    ENDIF
@@ -945,27 +939,27 @@
                    ENDIF
                    IF ( k > nzt-1 )  THEN
                       k_pp = nzt+1
-                   ELSE 
+                   ELSE
                       k_pp = k + 2
                    ENDIF
                    IF ( k > nzt-2 )  THEN
                       k_ppp = nzt+1
-                   ELSE 
+                   ELSE
                       k_ppp = k + 3
-                   ENDIF  
-                   
+                   ENDIF
+
                    IF ( ( .NOT. BTEST(wall_flags_0(k-1,j,i),3)  .AND.          &
                           .NOT. BTEST(wall_flags_0(k,j,i),3)    .AND.          &
                                 BTEST(wall_flags_0(k+1,j,i),3) )  .OR.         &
                         ( .NOT. BTEST(wall_flags_0(k-1,j,i),3)  .AND.          &
                                 BTEST(wall_flags_0(k,j,i),3) )  .OR.           &
                         ( .NOT. BTEST(wall_flags_0(k+1,j,i),3)  .AND.          &
-                                BTEST(wall_flags_0(k,j,i),3) )  .OR.           &        
+                                BTEST(wall_flags_0(k,j,i),3) )  .OR.           &
                         k == nzt )                                             &
                    THEN
 !
 !--                   Please note, at k == nzb_w_inner(j,i) a flag is explictely
-!--                   set, although this is not a prognostic level. However, 
+!--                   set, although this is not a prognostic level. However,
 !--                   contrary to the advection of u,v and s this is necessary
 !--                   because flux_t(nzb_w_inner(j,i)) is used for the tendency
 !--                   at k == nzb_w_inner(j,i)+1.
@@ -1001,13 +995,13 @@
 !
 !--    Exchange 3D integer wall_flags.
        IF ( momentum_advec == 'ws-scheme' .OR. scalar_advec == 'ws-scheme'     &
-          )  THEN  
+          )  THEN
 !
 !--       Exchange ghost points for advection flags
           CALL exchange_horiz_int( advc_flags_1, nys, nyn, nxl, nxr, nzt, nbgp )
           CALL exchange_horiz_int( advc_flags_2, nys, nyn, nxl, nxr, nzt, nbgp )
 !
-!--       Set boundary flags at inflow and outflow boundary in case of 
+!--       Set boundary flags at inflow and outflow boundary in case of
 !--       non-cyclic boundary conditions.
           IF ( inflow_l      .OR.  outflow_l  .OR.                             &
                nest_bound_l  .OR.  force_bound_l )  THEN
@@ -1032,7 +1026,7 @@
              advc_flags_1(:,nys-1,:) = advc_flags_1(:,nys,:)
              advc_flags_2(:,nys-1,:) = advc_flags_2(:,nys,:)
           ENDIF
-  
+
        ENDIF
 
 
@@ -1045,10 +1039,10 @@
 !> Initialize variables used for storing statistic quantities (fluxes, variances)
 !------------------------------------------------------------------------------!
     SUBROUTINE ws_statistics
-    
+
        USE control_parameters,                                                 &
            ONLY:  cloud_physics, humidity, passive_scalar, ocean,              &
-                  microphysics_morrison, microphysics_seifert, ws_scheme_mom,  & 
+                  microphysics_morrison, microphysics_seifert, ws_scheme_mom,  &
                   ws_scheme_sca
 
        USE kinds
@@ -1057,13 +1051,13 @@
            ONLY:  sums_us2_ws_l, sums_vs2_ws_l, sums_ws2_ws_l, sums_wsncs_ws_l,&
                   sums_wsnrs_ws_l, sums_wspts_ws_l, sums_wsqcs_ws_l,           &
                   sums_wsqrs_ws_l, sums_wsqs_ws_l, sums_wsss_ws_l,             &
-                  sums_wssas_ws_l, sums_wsus_ws_l, sums_wsvs_ws_l      
-                   
+                  sums_wssas_ws_l, sums_wsus_ws_l, sums_wsvs_ws_l
+
 
        IMPLICIT NONE
 
-!       
-!--    The arrays needed for statistical evaluation are set to to 0 at the 
+!
+!--    The arrays needed for statistical evaluation are set to to 0 at the
 !--    beginning of prognostic_equations.
        IF ( ws_scheme_mom )  THEN
           sums_wsus_ws_l = 0.0_wp
@@ -1098,7 +1092,7 @@
            ONLY:  adv_sca_1, adv_sca_3, adv_sca_5
 
        USE control_parameters,                                                 &
-           ONLY:  intermediate_timestep_count, u_gtrans, v_gtrans 
+           ONLY:  intermediate_timestep_count, u_gtrans, v_gtrans
 
        USE grid_variables,                                                     &
            ONLY:  ddx, ddy
@@ -1114,13 +1108,13 @@
        USE statistics,                                                         &
            ONLY:  hom, sums_wsncs_ws_l, sums_wsnrs_ws_l, sums_wspts_ws_l,      &
                   sums_wsqcs_ws_l,  sums_wsqrs_ws_l, sums_wsqs_ws_l,           &
-                  sums_wssas_ws_l, sums_wsss_ws_l, weight_substep    
-                  
+                  sums_wssas_ws_l, sums_wsss_ws_l, weight_substep
+
 
        IMPLICIT NONE
 
        CHARACTER (LEN = *), INTENT(IN) ::  sk_char !<
-       
+
        INTEGER(iwp) ::  i     !<
        INTEGER(iwp) ::  ibit0 !<
        INTEGER(iwp) ::  ibit1 !<
@@ -1139,13 +1133,13 @@
        INTEGER(iwp) ::  k_pp  !<
        INTEGER(iwp) ::  k_ppp !<
        INTEGER(iwp) ::  tn    !<
-       
+
        REAL(wp)     ::  diss_d !<
        REAL(wp)     ::  div    !<
        REAL(wp)     ::  flux_d !<
        REAL(wp)     ::  u_comp !<
        REAL(wp)     ::  v_comp !<
-       
+
 #if defined( __nopointer )
        REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  sk !<
 #else
@@ -1157,13 +1151,13 @@
        REAL(wp), DIMENSION(nzb:nzt+1)         ::  flux_n !<
        REAL(wp), DIMENSION(nzb:nzt+1)         ::  flux_r !<
        REAL(wp), DIMENSION(nzb:nzt+1)         ::  flux_t !<
-       
+
        REAL(wp), DIMENSION(nzb+1:nzt,0:threads_per_task-1) ::  swap_diss_y_local !<
        REAL(wp), DIMENSION(nzb+1:nzt,0:threads_per_task-1) ::  swap_flux_y_local !<
-       
+
        REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn,0:threads_per_task-1) ::  swap_diss_x_local !<
        REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn,0:threads_per_task-1) ::  swap_flux_x_local !<
-       
+
 
 !
 !--    Compute southside fluxes of the respective PE bounds.
@@ -1230,7 +1224,7 @@
 !
 !--    Compute leftside fluxes of the respective PE bounds.
        IF ( i == i_omp )  THEN
-        
+
           DO  k = nzb+1, nzb_max
 
              ibit2 = IBITS(advc_flags_1(k,j,i-1),2,1)
@@ -1286,19 +1280,19 @@
                                                           ) * adv_sca_5
 
           ENDDO
-           
+
        ENDIF
 
        flux_t(0) = 0.0_wp
        diss_t(0) = 0.0_wp
-!        
+!
 !--    Now compute the fluxes and tendency terms for the horizontal and
 !--    vertical parts up to the top of the highest topography.
        DO  k = nzb+1, nzb_max
 !
 !--       Note: It is faster to conduct all multiplications explicitly, e.g.
 !--       * adv_sca_5 ... than to determine a factor and multiplicate the
-!--       flux at the end. 
+!--       flux at the end.
 
           ibit2 = IBITS(advc_flags_1(k,j,i),2,1)
           ibit1 = IBITS(advc_flags_1(k,j,i),1,1)
@@ -1418,7 +1412,7 @@
 !
 !--       Calculate the divergence of the velocity field. A respective
 !--       correction is needed to overcome numerical instabilities caused
-!--       by a not sufficient reduction of divergences near topography. 
+!--       by a not sufficient reduction of divergences near topography.
           div         =   ( u(k,j,i+1) * ( ibit0 + ibit1 + ibit2 )             &
                           - u(k,j,i)   * ( IBITS(advc_flags_1(k,j,i-1),0,1)    &
                                          + IBITS(advc_flags_1(k,j,i-1),1,1)    &
@@ -1437,7 +1431,7 @@
                                          ( IBITS(advc_flags_1(k-1,j,i),6,1)    &
                                          + IBITS(advc_flags_1(k-1,j,i),7,1)    &
                                          + IBITS(advc_flags_1(k-1,j,i),8,1)    &
-                                         )                                     &      
+                                         )                                     &
                           ) * drho_air(k) * ddzw(k)
 
 
@@ -1571,7 +1565,7 @@
                                 *   ABS( w(k,j,i) - hom(k,1,3,0)            )  &
                     ) * weight_substep(intermediate_timestep_count)
              ENDDO
-            
+
           CASE ( 'sa' )
 
              DO  k = nzb, nzt
@@ -1583,7 +1577,7 @@
                     ) * weight_substep(intermediate_timestep_count)
              ENDDO
          END SELECT
-         
+
     END SUBROUTINE advec_s_ws_ij
 
 
@@ -1636,14 +1630,14 @@
        INTEGER(iwp) ::  k_pp   !<
        INTEGER(iwp) ::  k_ppp  !<
        INTEGER(iwp) ::  tn     !<
-       
+
        REAL(wp)    ::  diss_d   !<
        REAL(wp)    ::  div      !<
        REAL(wp)    ::  flux_d   !<
        REAL(wp)    ::  gu       !<
        REAL(wp)    ::  gv       !<
        REAL(wp)    ::  u_comp_l !<
-       
+
        REAL(wp), DIMENSION(nzb:nzt+1) ::  diss_n !<
        REAL(wp), DIMENSION(nzb:nzt+1) ::  diss_r !<
        REAL(wp), DIMENSION(nzb:nzt+1) ::  diss_t !<
@@ -1659,7 +1653,7 @@
 !
 !--    Compute southside fluxes for the respective boundary of PE
        IF ( j == nys  )  THEN
-       
+
           DO  k = nzb+1, nzb_max
 
              ibit14 = IBITS(advc_flags_1(k,j-1,i),14,1)
@@ -1712,12 +1706,12 @@
                          +           ( u(k,j+2,i) - u(k,j-3,i) ) ) * adv_mom_5
 
           ENDDO
-          
+
        ENDIF
 !
 !--    Compute leftside fluxes for the respective boundary of PE
        IF ( i == i_omp  .OR.  i == nxlu )  THEN
-       
+
           DO  k = nzb+1, nzb_max
 
              ibit11 = IBITS(advc_flags_1(k,j,i-1),11,1)
@@ -1770,7 +1764,7 @@
                            +           ( u(k,j,i+2) - u(k,j,i-3) ) ) * adv_mom_5
 
           ENDDO
-          
+
        ENDIF
 
        flux_t(0) = 0.0_wp
@@ -1793,7 +1787,7 @@
                      ) *                                                      &
                                     ( u(k,j,i+1) + u(k,j,i)   )               &
               -      (  8.0_wp * ibit11 * adv_mom_5                           &
-                  +              ibit10 * adv_mom_3                           & 
+                  +              ibit10 * adv_mom_3                           &
                      ) *                                                      &
                                     ( u(k,j,i+2) + u(k,j,i-1) )               &
               +      (           ibit11 * adv_mom_5                           &
@@ -1900,7 +1894,7 @@
 !
 !--       Calculate the divergence of the velocity field. A respective
 !--       correction is needed to overcome numerical instabilities introduced
-!--       by a not sufficient reduction of divergences near topography. 
+!--       by a not sufficient reduction of divergences near topography.
           div = ( ( u_comp(k)       * ( ibit9 + ibit10 + ibit11 )             &
                 - ( u(k,j,i)   + u(k,j,i-1)   )                               &
                                     * ( IBITS(advc_flags_1(k,j,i-1),9,1)      &
@@ -1920,7 +1914,7 @@
                                     * ( IBITS(advc_flags_1(k-1,j,i),15,1)     &
                                       + IBITS(advc_flags_1(k-1,j,i),16,1)     &
                                       + IBITS(advc_flags_1(k-1,j,i),17,1)     &
-                                      )                                       &  
+                                      )                                       &
                   ) * drho_air(k) * ddzw(k)                                   &
                 ) * 0.5_wp
 
@@ -2134,14 +2128,14 @@
        INTEGER(iwp)  ::  k_pp   !<
        INTEGER(iwp)  ::  k_ppp  !<
        INTEGER(iwp)  ::  tn     !<
-       
+
        REAL(wp)     ::  diss_d   !<
        REAL(wp)     ::  div      !<
        REAL(wp)     ::  flux_d   !<
        REAL(wp)     ::  gu       !<
        REAL(wp)     ::  gv       !<
        REAL(wp)     ::  v_comp_l !<
-       
+
        REAL(wp), DIMENSION(nzb:nzt+1)  ::  diss_n !<
        REAL(wp), DIMENSION(nzb:nzt+1)  ::  diss_r !<
        REAL(wp), DIMENSION(nzb:nzt+1)  ::  diss_t !<
@@ -2155,7 +2149,7 @@
        gu = 2.0_wp * u_gtrans
        gv = 2.0_wp * v_gtrans
 
-!       
+!
 !--    Compute leftside fluxes for the respective boundary.
        IF ( i == i_omp )  THEN
 
@@ -2211,12 +2205,12 @@
                            +           ( v(k,j,i+2) - v(k,j,i-3) ) ) * adv_mom_5
 
           ENDDO
-          
+
        ENDIF
 !
 !--    Compute southside fluxes for the respective boundary.
        IF ( j == nysv )  THEN
-       
+
           DO  k = nzb+1, nzb_max
 
              ibit23 = IBITS(advc_flags_1(k,j-1,i),23,1)
@@ -2269,7 +2263,7 @@
                          +           ( v(k,j+2,i) - v(k,j-3,i) ) ) * adv_mom_5
 
           ENDDO
-          
+
        ENDIF
 
        flux_t(0) = 0.0_wp
@@ -2283,7 +2277,7 @@
           ibit20 = IBITS(advc_flags_1(k,j,i),20,1)
           ibit19 = IBITS(advc_flags_1(k,j,i),19,1)
           ibit18 = IBITS(advc_flags_1(k,j,i),18,1)
- 
+
           u_comp(k) = u(k,j-1,i+1) + u(k,j,i+1) - gu
           flux_r(k) = u_comp(k) * (                                           &
                      ( 37.0_wp * ibit20 * adv_mom_5                           &
@@ -2400,7 +2394,7 @@
 !
 !--       Calculate the divergence of the velocity field. A respective
 !--       correction is needed to overcome numerical instabilities introduced
-!--       by a not sufficient reduction of divergences near topography. 
+!--       by a not sufficient reduction of divergences near topography.
           div = ( ( ( u_comp(k)     + gu )                                    &
                                        * ( ibit18 + ibit19 + ibit20 )         &
                   - ( u(k,j-1,i) + u(k,j,i) )                                 &
@@ -2617,7 +2611,7 @@
                   advc_flags_2
 
        USE kinds
-       
+
        USE statistics,                                                        &
            ONLY:  hom, sums_ws2_ws_l, weight_substep
 
@@ -2640,13 +2634,13 @@
        INTEGER(iwp) ::  k_pp   !<
        INTEGER(iwp) ::  k_ppp  !<
        INTEGER(iwp) ::  tn     !<
-       
+
        REAL(wp)    ::  diss_d  !<
        REAL(wp)    ::  div     !<
        REAL(wp)    ::  flux_d  !<
        REAL(wp)    ::  gu      !<
        REAL(wp)    ::  gv      !<
-       
+
        REAL(wp), DIMENSION(nzb:nzt+1)  ::  diss_n !<
        REAL(wp), DIMENSION(nzb:nzt+1)  ::  diss_r !<
        REAL(wp), DIMENSION(nzb:nzt+1)  ::  diss_t !<
@@ -2770,7 +2764,7 @@
              diss_l_w(k,j,tn) = - ABS( u_comp(k) ) * (                        &
                             10.0_wp * ( w(k,j,i) - w(k,j,i-1)   )             &
                           -  5.0_wp * ( w(k,j,i+1) - w(k,j,i-2) )             &
-                          +           ( w(k,j,i+2) - w(k,j,i-3) ) ) * adv_mom_5 
+                          +           ( w(k,j,i+2) - w(k,j,i-3) ) ) * adv_mom_5
 
           ENDDO
 
@@ -2907,15 +2901,15 @@
 !
 !--       Calculate the divergence of the velocity field. A respective
 !--       correction is needed to overcome numerical instabilities introduced
-!--       by a not sufficient reduction of divergences near topography. 
+!--       by a not sufficient reduction of divergences near topography.
           div = ( ( ( u_comp(k) + gu ) * ( ibit27 + ibit28 + ibit29 )         &
-                  - ( u(k+1,j,i) + u(k,j,i)   )                               & 
+                  - ( u(k+1,j,i) + u(k,j,i)   )                               &
                                     * ( IBITS(advc_flags_1(k,j,i-1),27,1)     &
                                       + IBITS(advc_flags_1(k,j,i-1),28,1)     &
                                       + IBITS(advc_flags_1(k,j,i-1),29,1)     &
                                       )                                       &
                   ) * ddx                                                     &
-              +   ( ( v_comp(k) + gv ) * ( ibit30 + ibit31 + ibit32 )         & 
+              +   ( ( v_comp(k) + gv ) * ( ibit30 + ibit31 + ibit32 )         &
                   - ( v(k+1,j,i) + v(k,j,i)   )                               &
                                     * ( IBITS(advc_flags_1(k,j-1,i),30,1)     &
                                       + IBITS(advc_flags_1(k,j-1,i),31,1)     &
@@ -2928,7 +2922,7 @@
                                     * ( IBITS(advc_flags_2(k-1,j,i),1,1)      &
                                       + IBITS(advc_flags_2(k-1,j,i),2,1)      &
                                       + IBITS(advc_flags_2(k-1,j,i),3,1)      &
-                                      )                                       & 
+                                      )                                       &
                   ) * drho_air_zw(k) * ddzu(k+1)                              &
                 ) * 0.5_wp
 
@@ -3070,7 +3064,7 @@
 
 
     END SUBROUTINE advec_w_ws_ij
-    
+
 
 !------------------------------------------------------------------------------!
 ! Description:
@@ -3086,7 +3080,7 @@
            ONLY:  adv_sca_1, adv_sca_3, adv_sca_5
 
        USE control_parameters,                                                &
-           ONLY:  intermediate_timestep_count, u_gtrans, v_gtrans 
+           ONLY:  intermediate_timestep_count, u_gtrans, v_gtrans
 
        USE grid_variables,                                                    &
            ONLY:  ddx, ddy
@@ -3094,20 +3088,20 @@
        USE indices,                                                           &
            ONLY:  nxl, nxlg, nxr, nxrg, nyn, nyng, nys, nysg, nzb, nzb_max,   &
                   nzt, advc_flags_1
-           
+
        USE kinds
-       
+
        USE statistics,                                                        &
            ONLY:  hom, sums_wspts_ws_l, sums_wsqs_ws_l, sums_wssas_ws_l,      &
                   sums_wsqcs_ws_l, sums_wsqrs_ws_l, sums_wsncs_ws_l,          &
-                  sums_wsnrs_ws_l, sums_wsss_ws_l, weight_substep  
-                  
+                  sums_wsnrs_ws_l, sums_wsss_ws_l, weight_substep
+
 
 
        IMPLICIT NONE
 
        CHARACTER (LEN = *), INTENT(IN)    ::  sk_char !<
-       
+
        INTEGER(iwp) ::  i      !<
        INTEGER(iwp) ::  ibit0  !<
        INTEGER(iwp) ::  ibit1  !<
@@ -3125,7 +3119,7 @@
        INTEGER(iwp) ::  k_pp   !<
        INTEGER(iwp) ::  k_ppp  !<
        INTEGER(iwp) ::  tn = 0 !<
-       
+
 #if defined( __nopointer )
        REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  sk !<
 #else
@@ -3137,24 +3131,24 @@
        REAL(wp) ::  flux_d !<
        REAL(wp) ::  u_comp !<
        REAL(wp) ::  v_comp !<
-       
+
        REAL(wp), DIMENSION(nzb:nzt)   ::  diss_n !<
        REAL(wp), DIMENSION(nzb:nzt)   ::  diss_r !<
        REAL(wp), DIMENSION(nzb:nzt)   ::  diss_t !<
        REAL(wp), DIMENSION(nzb:nzt)   ::  flux_n !<
        REAL(wp), DIMENSION(nzb:nzt)   ::  flux_r !<
        REAL(wp), DIMENSION(nzb:nzt)   ::  flux_t !<
-       
+
        REAL(wp), DIMENSION(nzb+1:nzt) ::  swap_diss_y_local !<
        REAL(wp), DIMENSION(nzb+1:nzt) ::  swap_flux_y_local !<
-       
+
        REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  swap_diss_x_local !<
        REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  swap_flux_x_local !<
-        
+
 
 !
 !--    Compute the fluxes for the whole left boundary of the processor domain.
-!$acc kernels   
+!$acc kernels
      i = nxl
        DO  j = nys, nyn
 
@@ -3175,7 +3169,7 @@
                                           +              ibit1 * adv_sca_3    &
                                              ) *                              &
                                           ( sk(k,j,i+1) + sk(k,j,i-2)    )    &
-                                      +      (           ibit2 * adv_sca_5    & 
+                                      +      (           ibit2 * adv_sca_5    &
                                              ) *                              &
                                           ( sk(k,j,i+2) + sk(k,j,i-3)    )    &
                                                )
@@ -3287,7 +3281,7 @@
              diss_t(0) = 0.0_wp
              flux_d    = 0.0_wp
              diss_d    = 0.0_wp
-         DO j= nys, nyn    
+         DO j= nys, nyn
              DO  k = nzb+1, nzb_max
 
                 ibit2 = IBITS(advc_flags_1(k,j,i),2,1)
@@ -3421,7 +3415,7 @@
                                          ( IBITS(advc_flags_1(k-1,j,i),6,1)    &
                                          + IBITS(advc_flags_1(k-1,j,i),7,1)    &
                                          + IBITS(advc_flags_1(k-1,j,i),8,1)    &
-                                         )                                     &      
+                                         )                                     &
                           ) * drho_air(k) * ddzw(k)
 
 
@@ -3533,7 +3527,7 @@
 
              ENDDO
 
-!--          Evaluation of statistics. 
+!--          Evaluation of statistics.
            SELECT CASE ( sk_char )
 
                 CASE ( 'pt' )
@@ -3585,9 +3579,9 @@ ENDDO
 
        USE indices,                                                            &
            ONLY:  nxl, nxlu, nxr, nyn, nys, nzb, nzb_max, nzt, advc_flags_1
-           
+
        USE kinds
-       
+
        USE statistics,                                                         &
            ONLY:  hom, sums_us2_ws_l, sums_wsus_ws_l, weight_substep
 
@@ -3609,7 +3603,7 @@ ENDDO
        INTEGER(iwp) ::  k_pp   !<
        INTEGER(iwp) ::  k_ppp  !<
        INTEGER(iwp) ::  tn = 0 !<
-       
+
        REAL(wp)    ::  diss_d !<
        REAL(wp)    ::  div    !<
        REAL(wp)    ::  flux_d !<
@@ -3617,13 +3611,13 @@ ENDDO
        REAL(wp)    ::  gv     !<
        REAL(wp)    ::  v_comp !<
        REAL(wp)    ::  w_comp !<
-       
+
        REAL(wp), DIMENSION(nzb+1:nzt) ::  swap_diss_y_local_u !<
        REAL(wp), DIMENSION(nzb+1:nzt) ::  swap_flux_y_local_u !<
-       
+
        REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  swap_diss_x_local_u !<
        REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  swap_flux_x_local_u !<
-       
+
        REAL(wp), DIMENSION(nzb:nzt) ::  diss_n !<
        REAL(wp), DIMENSION(nzb:nzt) ::  diss_r !<
        REAL(wp), DIMENSION(nzb:nzt) ::  diss_t !<
@@ -3631,7 +3625,7 @@ ENDDO
        REAL(wp), DIMENSION(nzb:nzt) ::  flux_r !<
        REAL(wp), DIMENSION(nzb:nzt) ::  flux_t !<
        REAL(wp), DIMENSION(nzb:nzt) ::  u_comp !<
- 
+
        gu = 2.0_wp * u_gtrans
        gv = 2.0_wp * v_gtrans
 
@@ -3694,7 +3688,7 @@ ENDDO
        ENDDO
 
        DO i = nxlu, nxr
-!       
+!
 !--       The following loop computes the fluxes for the south boundary points
           j = nys
           DO  k = nzb+1, nzb_max
@@ -3782,7 +3776,7 @@ ENDDO
 
                 diss_r(k) = - ABS( u_comp(k) - gu ) * (                      &
                           ( 10.0_wp * ibit11 * adv_mom_5                        &
-                       +     3.0_wp * ibit10 * adv_mom_3                        & 
+                       +     3.0_wp * ibit10 * adv_mom_3                        &
                        +              ibit9  * adv_mom_1                        &
                           ) *                                                &
                                  ( u(k,j,i+1) - u(k,j,i)  )                  &
@@ -3810,7 +3804,7 @@ ENDDO
                        +              ibit13 * adv_mom_3                        &
                           ) *                                                &
                                  ( u(k,j+2,i) + u(k,j-1,i) )                 &
-                   +      (           ibit14 * adv_mom_5                        & 
+                   +      (           ibit14 * adv_mom_5                        &
                           ) *                                                &
                                  ( u(k,j+3,i) + u(k,j-2,i) )                 &
                                                  )
@@ -3844,7 +3838,7 @@ ENDDO
                 flux_t(k) = w_comp * rho_air_zw(k) * (                       &
                           ( 37.0_wp * ibit17 * adv_mom_5                        &
                        +     7.0_wp * ibit16 * adv_mom_3                        &
-                       +              ibit15 * adv_mom_1                        & 
+                       +              ibit15 * adv_mom_1                        &
                           ) *                                                &
                              ( u(k+1,j,i)  + u(k,j,i)     )                  &
                    -      (  8.0_wp * ibit17 * adv_mom_5                        &
@@ -3893,7 +3887,7 @@ ENDDO
                                     * ( IBITS(advc_flags_1(k-1,j,i),15,1)     &
                                       + IBITS(advc_flags_1(k-1,j,i),16,1)     &
                                       + IBITS(advc_flags_1(k-1,j,i),17,1)     &
-                                      )                                       &  
+                                      )                                       &
                   ) * drho_air(k) * ddzw(k)                                   &
                 ) * 0.5_wp
 
@@ -4056,7 +4050,7 @@ ENDDO
 
 
     END SUBROUTINE advec_u_ws
-    
+
 
 !------------------------------------------------------------------------------!
 ! Description:
@@ -4104,7 +4098,7 @@ ENDDO
        INTEGER(iwp) ::  k_pp   !<
        INTEGER(iwp) ::  k_ppp  !<
        INTEGER(iwp) ::  tn = 0 !<
-       
+
        REAL(wp)    ::  diss_d !<
        REAL(wp)    ::  div    !<
        REAL(wp)    ::  flux_d !<
@@ -4112,13 +4106,13 @@ ENDDO
        REAL(wp)    ::  gv     !<
        REAL(wp)    ::  u_comp !<
        REAL(wp)    ::  w_comp !<
-       
+
        REAL(wp), DIMENSION(nzb+1:nzt) ::  swap_diss_y_local_v !<
        REAL(wp), DIMENSION(nzb+1:nzt) ::  swap_flux_y_local_v !<
-       
+
        REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  swap_diss_x_local_v !<
        REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  swap_flux_x_local_v !<
-       
+
        REAL(wp), DIMENSION(nzb:nzt) ::  diss_n !<
        REAL(wp), DIMENSION(nzb:nzt) ::  diss_r !<
        REAL(wp), DIMENSION(nzb:nzt) ::  diss_t !<
@@ -4512,7 +4506,7 @@ ENDDO
                           ( w(k-1,j-1,i) + w(k-1,j,i) ) * rho_air_zw(k-1)     &
                         ) * drho_air(k) * ddzw(k)                             &
                       ) * 0.5_wp
- 
+
                 tend(k,j,i) = tend(k,j,i) - (                                 &
                        ( flux_r(k) + diss_r(k)                                &
                      -   swap_flux_x_local_v(k,j) - swap_diss_x_local_v(k,j)  &
@@ -4561,8 +4555,8 @@ ENDDO
 
 
     END SUBROUTINE advec_v_ws
-    
-    
+
+
 !------------------------------------------------------------------------------!
 ! Description:
 ! ------------
@@ -4587,7 +4581,7 @@ ENDDO
                   advc_flags_2
 
        USE kinds
-       
+
        USE statistics,                                                         &
            ONLY:  hom, sums_ws2_ws_l, weight_substep
 
@@ -4609,7 +4603,7 @@ ENDDO
        INTEGER(iwp) ::  k_pp   !<
        INTEGER(iwp) ::  k_ppp  !<
        INTEGER(iwp) ::  tn = 0 !<
-       
+
        REAL(wp)    ::  diss_d !<
        REAL(wp)    ::  div    !<
        REAL(wp)    ::  flux_d !<
@@ -4618,20 +4612,20 @@ ENDDO
        REAL(wp)    ::  u_comp !<
        REAL(wp)    ::  v_comp !<
        REAL(wp)    ::  w_comp !<
-       
+
        REAL(wp), DIMENSION(nzb:nzt)    ::  diss_t !<
        REAL(wp), DIMENSION(nzb:nzt)    ::  flux_t !<
-       
+
        REAL(wp), DIMENSION(nzb+1:nzt)  ::  diss_n !<
        REAL(wp), DIMENSION(nzb+1:nzt)  ::  diss_r !<
        REAL(wp), DIMENSION(nzb+1:nzt)  ::  flux_n !<
        REAL(wp), DIMENSION(nzb+1:nzt)  ::  flux_r !<
        REAL(wp), DIMENSION(nzb+1:nzt)  ::  swap_diss_y_local_w !<
        REAL(wp), DIMENSION(nzb+1:nzt)  ::  swap_flux_y_local_w !<
-       
+
        REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  swap_diss_x_local_w !<
        REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  swap_flux_x_local_w !<
- 
+
        gu = 2.0_wp * u_gtrans
        gv = 2.0_wp * v_gtrans
 !
@@ -4879,7 +4873,7 @@ ENDDO
 !--             correction is needed to overcome numerical instabilities caused
 !--             by a not sufficient reduction of divergences near topography.
                 div = ( ( ( u_comp + gu ) * ( ibit27 + ibit28 + ibit29 )      &
-                  - ( u(k+1,j,i) + u(k,j,i)   )                               & 
+                  - ( u(k+1,j,i) + u(k,j,i)   )                               &
                                     * ( IBITS(advc_flags_1(k,j,i-1),27,1)     &
                                       + IBITS(advc_flags_1(k,j,i-1),28,1)     &
                                       + IBITS(advc_flags_1(k,j,i-1),29,1)     &
@@ -4897,7 +4891,7 @@ ENDDO
                                     * ( IBITS(advc_flags_2(k-1,j,i),1,1)      &
                                       + IBITS(advc_flags_2(k-1,j,i),2,1)      &
                                       + IBITS(advc_flags_2(k-1,j,i),3,1)      &
-                                      )                                       & 
+                                      )                                       &
                   ) * drho_air_zw(k) * ddzu(k+1)                              &
                 ) * 0.5_wp
 
@@ -5046,7 +5040,7 @@ ENDDO
        USE arrays_3d,                                                          &
            ONLY:  diss_l_diss, diss_l_e, diss_l_nc, diss_l_nr, diss_l_pt,      &
                   diss_l_q, diss_l_qc, diss_l_qr, diss_l_s, diss_l_sa,         &
-                  diss_l_u, diss_l_v, diss_l_w, flux_l_diss, flux_l_e,         & 
+                  diss_l_u, diss_l_v, diss_l_w, flux_l_diss, flux_l_e,         &
                   flux_l_nc, flux_l_nr, flux_l_pt, flux_l_q, flux_l_qc,        &
                   flux_l_qr, flux_l_s, flux_l_sa, flux_l_u, flux_l_v,          &
                   flux_l_w, diss_s_diss, diss_s_e, diss_s_nc,  diss_s_nr,      &
@@ -5063,22 +5057,22 @@ ENDDO
        USE control_parameters,                                                 &
            ONLY:  cloud_physics, humidity, loop_optimization,                  &
                   passive_scalar, microphysics_morrison, microphysics_seifert, &
-                  ocean, rans_tke_e, ws_scheme_mom, ws_scheme_sca
+                  ocean, ws_scheme_mom, ws_scheme_sca
 
        USE indices,                                                            &
            ONLY:  nyn, nys, nzb, nzt
 
        USE kinds
-       
+
        USE pegrid
 
        USE statistics,                                                         &
-           ONLY:  sums_us2_ws_l, sums_vs2_ws_l, sums_ws2_ws_l, sums_wsncs_ws_l,& 
+           ONLY:  sums_us2_ws_l, sums_vs2_ws_l, sums_ws2_ws_l, sums_wsncs_ws_l,&
                   sums_wsnrs_ws_l,sums_wspts_ws_l, sums_wsqcs_ws_l,            &
                   sums_wsqrs_ws_l, sums_wsqs_ws_l, sums_wsss_ws_l,             &
                   sums_wssas_ws_l,  sums_wsss_ws_l, sums_wsus_ws_l,            &
                   sums_wsvs_ws_l
-  
+
 !--    Arrays needed for statical evaluation of fluxes.
        IF ( ws_scheme_mom )  THEN
 
@@ -5101,7 +5095,7 @@ ENDDO
 !
 !--    Arrays needed for reasons of speed optimization for cache version.
 !--    For the vector version the buffer arrays are not necessary,
-!--    because the the fluxes can swapped directly inside the loops of the 
+!--    because the the fluxes can swapped directly inside the loops of the
 !--    advection routines.
        IF ( loop_optimization /= 'vector' )  THEN
 
@@ -5116,13 +5110,9 @@ ENDDO
 
           IF ( ws_scheme_sca )  THEN
 
-             DEALLOCATE( flux_s_pt, flux_s_e, diss_s_pt, diss_s_e ) 
+             DEALLOCATE( flux_s_pt, flux_s_e, diss_s_pt, diss_s_e )
              DEALLOCATE( flux_l_pt, flux_l_e, diss_l_pt, diss_l_e )
 
-             IF ( rans_tke_e )  THEN
-                DEALLOCATE( flux_s_diss, diss_s_diss )
-                DEALLOCATE( flux_l_diss, diss_l_diss )
-             ENDIF
              IF ( ocean )  THEN
                 DEALLOCATE( flux_s_sa, diss_s_sa )
                 DEALLOCATE( flux_l_sa, diss_l_sa )

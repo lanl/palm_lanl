@@ -129,7 +129,7 @@
                initializing_actions, intermediate_timestep_count,              &
                intermediate_timestep_count_max, kappa, km_constant, les_mw,    &
                ocean, plant_canopy, prandtl_number, prho_reference,            &
-               pt_reference, rans_mode, rans_tke_e, rans_tke_l, simulated_time,&
+               pt_reference, simulated_time,&
                timestep_scheme, turbulence_closure, turbulent_inflow,          &
                use_upstream_for_tke, vpt_reference, ws_scheme_sca,             &
                stokes_force
@@ -320,11 +320,6 @@
 ! Description:
 ! ------------
 !> Check parameters routine for turbulence closure module.
-!> @todo remove rans_mode from initialization namelist and rework checks
-!>   The way it is implemented at the moment, the user has to set two variables
-!>   so that the RANS mode is working. It would be better if only one parameter
-!>   has to be set.
-!>   2018-06-18, gronemeier
 !------------------------------------------------------------------------------!
  SUBROUTINE tcm_check_parameters
 
@@ -336,66 +331,25 @@
 
 !
 !-- Define which turbulence closure is going to be used
-    IF ( rans_mode )  THEN
 
-!
-!--    Assign values to constants for RANS mode
-       dsig_e    = 1.0_wp / rans_const_sigma(1)
-       dsig_diss = 1.0_wp / rans_const_sigma(2)
+    c_0 = 0.1_wp !according to Lilly (1967) and Deardorff (1980)
 
-       c_0 = rans_const_c(0)
-       c_1 = rans_const_c(1)
-       c_2 = rans_const_c(2)
-       !c_3 = rans_const_c(3)   !> @todo clarify how to switch between different models
-       c_4 = rans_const_c(4)
+    dsig_e = 1.0_wp !assure to use K_m to calculate TKE instead
+                    !of K_e which is used in RANS mode
 
-       SELECT CASE ( TRIM( turbulence_closure ) )
+    SELECT CASE ( TRIM( turbulence_closure ) )
 
-          CASE ( 'TKE-l' )
-             rans_tke_l = .TRUE.
+       CASE ( 'Moeng_Wyngaard' )
+          les_mw = .TRUE.
 
-          CASE ( 'TKE-e' )
-             rans_tke_e = .TRUE.
+       CASE DEFAULT
+          !> @todo rework this part so that only one call of this error exists
+          message_string = 'Unknown turbulence closure: ' //                &
+                           TRIM( turbulence_closure )
+          CALL message( 'tcm_check_parameters', 'PA0500', 1, 2, 0, 6, 0 )
 
-          CASE DEFAULT
-             message_string = 'Unknown turbulence closure: ' //                &
-                              TRIM( turbulence_closure )
-             CALL message( 'tcm_check_parameters', 'PA0500', 1, 2, 0, 6, 0 )
+    END SELECT
 
-       END SELECT
-
-       IF ( turbulent_inflow .OR. turbulent_outflow )  THEN
-          message_string = 'turbulent inflow/outflow is not yet '//            &
-                           'implemented for RANS mode'
-          CALL message( 'tcm_check_parameters', 'PA0501', 1, 2, 0, 6, 0 )
-       ENDIF
-
-       message_string = 'RANS mode is still in development! ' //               &
-                        '&Not all features of PALM are yet compatible '//      &
-                        'with RANS mode. &Use at own risk!'
-       CALL message( 'tcm_check_parameters', 'PA0502', 0, 1, 0, 6, 0 )
-
-    ELSE
-
-       c_0 = 0.1_wp !according to Lilly (1967) and Deardorff (1980)
-
-       dsig_e = 1.0_wp !assure to use K_m to calculate TKE instead
-                       !of K_e which is used in RANS mode
-
-       SELECT CASE ( TRIM( turbulence_closure ) )
-
-          CASE ( 'Moeng_Wyngaard' )
-             les_mw = .TRUE.
-
-          CASE DEFAULT
-             !> @todo rework this part so that only one call of this error exists
-             message_string = 'Unknown turbulence closure: ' //                &
-                              TRIM( turbulence_closure )
-             CALL message( 'tcm_check_parameters', 'PA0500', 1, 2, 0, 6, 0 )
-
-       END SELECT
-
-    ENDIF
 
  END SUBROUTINE tcm_check_parameters
 
@@ -1141,18 +1095,6 @@
              e    = 0.0_wp
           ENDIF
 
-          IF ( rans_tke_e )  THEN
-             DO  i = nxlg, nxrg
-                DO  j = nysg, nyng
-                   DO  k = nzb+1, nzt
-                      diss(k,j,i) = c_0**4 * e(k,j,i)**2 / km(k,j,i)
-                   ENDDO
-                ENDDO
-             ENDDO
-             diss(nzb,:,:) = diss(nzb+1,:,:)
-             diss(nzt+1,:,:) = diss(nzt,:,:)
-          ENDIF
-
        ENDIF
 !
 !--    Store initial profiles for output purposes etc.
@@ -1162,10 +1104,6 @@
 !--    Initialize old and new time levels.
        te_m = 0.0_wp
        e_p = e
-       IF ( rans_tke_e )  THEN
-          tdiss_m = 0.0_wp
-          diss_p = diss
-       ENDIF
 
     ELSEIF ( TRIM( initializing_actions ) == 'read_restart_data'  .OR.         &
              TRIM( initializing_actions ) == 'cyclic_fill' )                   &
@@ -1186,15 +1124,6 @@
                 kh(nz_s_shift:nzt+1,j,i) = kh(0:nzt+1-nz_s_shift,j,i)
              ENDDO
           ENDDO
-          IF ( rans_tke_e )  THEN
-             DO  i = nxlg, nxrg
-                DO  j = nysg, nyng
-                   nz_s_shift = get_topography_top_index_ji( j, i, 's' )
-
-                   diss(nz_s_shift:nzt+1,j,i) = diss(0:nzt+1-nz_s_shift,j,i)
-                ENDDO
-             ENDDO
-          ENDIF
        ENDIF
 
 !
@@ -1249,16 +1178,6 @@
              ENDDO
           ENDDO
 
-          IF ( rans_tke_e )  THEN
-             DO  i = nxlg, nxrg
-                DO  j = nysg, nyng
-                   DO  k = nzb, nzt
-                      diss(k,j,i)    = MERGE( diss(k,j,i), 0.0_wp,             &
-                                              BTEST( wall_flags_0(k,j,i), 0 ) )
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
        ENDIF
 !
 !--    Initialize new time levels (only done in order to set boundary values
@@ -1269,11 +1188,6 @@
 !--    to be predefined here because there they are used (but multiplied with 0)
 !--    before they are set.
        te_m = 0.0_wp
-
-       IF ( rans_tke_e )  THEN
-          diss_p = diss
-          tdiss_m = 0.0_wp
-       ENDIF
 
     ENDIF
 
@@ -1336,429 +1250,122 @@
     ALLOCATE( l_wall(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
 !
 !-- Initialize the mixing length in case of an LES-simulation
-    IF ( .NOT. rans_mode )  THEN
 !
-!--    Compute the grid-dependent mixing length.
-       DO  k = 1, nzt
-          l_grid(k)  = ( dx * dy * dzw(k) )**0.33333333333333_wp
-       ENDDO
+!-- Compute the grid-dependent mixing length.
+    DO  k = 1, nzt
+       l_grid(k)  = ( dx * dy * dzw(k) )**0.33333333333333_wp
+    ENDDO
 !
-!--    Initialize near-wall mixing length l_wall only in the vertical direction
-!--    for the moment, multiplication with wall_adjustment_factor further below
-       l_wall(nzb,:,:)   = l_grid(1)
-       DO  k = nzb+1, nzt
-          l_wall(k,:,:)  = l_grid(k)
-       ENDDO
-       l_wall(nzt+1,:,:) = l_grid(nzt)
+!-- Initialize near-wall mixing length l_wall only in the vertical direction
+!-- for the moment, multiplication with wall_adjustment_factor further below
+    l_wall(nzb,:,:)   = l_grid(1)
+    DO  k = nzb+1, nzt
+       l_wall(k,:,:)  = l_grid(k)
+    ENDDO
+    l_wall(nzt+1,:,:) = l_grid(nzt)
 
-       DO  k = 1, nzt
-          IF ( l_grid(k) > 1.5_wp * dx * wall_adjustment_factor .OR.            &
-               l_grid(k) > 1.5_wp * dy * wall_adjustment_factor )  THEN
-             WRITE( message_string, * ) 'grid anisotropy exceeds ',             &
-                                        'threshold given by only local',        &
-                                        ' &horizontal reduction of near_wall ', &
-                                        'mixing length l_wall',                 &
-                                        ' &starting from height level k = ', k, &
-                                        '.'
-             CALL message( 'init_grid', 'PA0202', 0, 1, 0, 6, 0 )
-             EXIT
-          ENDIF
-       ENDDO
-!
-!--    In case of topography: limit near-wall mixing length l_wall further:
-!--    Go through all points of the subdomain one by one and look for the closest
-!--    surface.
-!--    Is this correct in the ocean case?
-       DO  i = nxl, nxr
-          DO  j = nys, nyn
-             DO  k = nzb+1, nzt
-!
-!--             Check if current gridpoint belongs to the atmosphere
-                IF ( BTEST( wall_flags_0(k,j,i), 0 ) )  THEN
-!
-!--                Check for neighbouring grid-points.
-!--                Vertical distance, down
-                   IF ( .NOT. BTEST( wall_flags_0(k-1,j,i), 0 ) )              &
-                      l_wall(k,j,i) = MIN( l_grid(k), zu(k) - zw(k-1) )
-!
-!--                Vertical distance, up
-                   IF ( .NOT. BTEST( wall_flags_0(k+1,j,i), 0 ) )              &
-                      l_wall(k,j,i) = MIN( l_grid(k), zw(k) - zu(k) )
-!
-!--                y-distance
-                   IF ( .NOT. BTEST( wall_flags_0(k,j-1,i), 0 )  .OR.          &
-                        .NOT. BTEST( wall_flags_0(k,j+1,i), 0 ) )              &
-                      l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k), 0.5_wp * dy )
-!
-!--                x-distance
-                   IF ( .NOT. BTEST( wall_flags_0(k,j,i-1), 0 )  .OR.          &
-                        .NOT. BTEST( wall_flags_0(k,j,i+1), 0 ) )              &
-                      l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k), 0.5_wp * dx )
-!
-!--                 yz-distance (vertical edges, down)
-                    IF ( .NOT. BTEST( wall_flags_0(k-1,j-1,i), 0 )  .OR.       &
-                         .NOT. BTEST( wall_flags_0(k-1,j+1,i), 0 )  )          &
-                      l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k),           &
-                                           SQRT( 0.25_wp * dy**2 +             &
-                                          ( zu(k) - zw(k-1) )**2 ) )
-!
-!--                  yz-distance (vertical edges, up)
-                    IF ( .NOT. BTEST( wall_flags_0(k+1,j-1,i), 0 )  .OR.       &
-                         .NOT. BTEST( wall_flags_0(k+1,j+1,i), 0 )  )          &
-                      l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k),           &
-                                           SQRT( 0.25_wp * dy**2 +             &
-                                          ( zw(k) - zu(k) )**2 ) )
-!
-!--                 xz-distance (vertical edges, down)
-                    IF ( .NOT. BTEST( wall_flags_0(k-1,j,i-1), 0 )  .OR.       &
-                         .NOT. BTEST( wall_flags_0(k-1,j,i+1), 0 )  )          &
-                      l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k),           &
-                                           SQRT( 0.25_wp * dx**2 +             &
-                                          ( zu(k) - zw(k-1) )**2 ) )
-!
-!--                 xz-distance (vertical edges, up)
-                    IF ( .NOT. BTEST( wall_flags_0(k+1,j,i-1), 0 )  .OR.       &
-                         .NOT. BTEST( wall_flags_0(k+1,j,i+1), 0 )  )          &
-                     l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k),            &
-                                           SQRT( 0.25_wp * dx**2 +             &
-                                          ( zw(k) - zu(k) )**2 ) )
-!
-!--                xy-distance (horizontal edges)
-                   IF ( .NOT. BTEST( wall_flags_0(k,j-1,i-1), 0 )  .OR.        &
-                        .NOT. BTEST( wall_flags_0(k,j+1,i-1), 0 )  .OR.        &
-                        .NOT. BTEST( wall_flags_0(k,j-1,i+1), 0 )  .OR.        &
-                        .NOT. BTEST( wall_flags_0(k,j+1,i+1), 0 ) )            &
-                      l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k),           &
-                                           SQRT( 0.25_wp * ( dx**2 + dy**2 ) ) )
-!
-!--                xyz distance (vertical and horizontal edges, down)
-                   IF ( .NOT. BTEST( wall_flags_0(k-1,j-1,i-1), 0 )  .OR.      &
-                        .NOT. BTEST( wall_flags_0(k-1,j+1,i-1), 0 )  .OR.      &
-                        .NOT. BTEST( wall_flags_0(k-1,j-1,i+1), 0 )  .OR.      &
-                        .NOT. BTEST( wall_flags_0(k-1,j+1,i+1), 0 ) )          &
-                      l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k),           &
-                                           SQRT( 0.25_wp * ( dx**2 + dy**2 )   &
-                                                 +  ( zu(k) - zw(k-1) )**2  ) )
-!
-!--                xyz distance (vertical and horizontal edges, up)
-                   IF ( .NOT. BTEST( wall_flags_0(k+1,j-1,i-1), 0 )  .OR.      &
-                        .NOT. BTEST( wall_flags_0(k+1,j+1,i-1), 0 )  .OR.      &
-                        .NOT. BTEST( wall_flags_0(k+1,j-1,i+1), 0 )  .OR.      &
-                        .NOT. BTEST( wall_flags_0(k+1,j+1,i+1), 0 ) )          &
-                      l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k),           &
-                                           SQRT( 0.25_wp * ( dx**2 + dy**2 )   &
-                                                 +  ( zw(k) - zu(k) )**2  ) )
-
-                ENDIF
-             ENDDO
-          ENDDO
-       ENDDO
-
-    ELSE
-!
-!-- Initialize the mixing length in case of a RANS simulation
-       ALLOCATE( l_black(nzb:nzt+1) )
-
-!
-!--    Calculate mixing length according to Blackadar (1962)
-       IF ( f /= 0.0_wp )  THEN
-          l_max = 2.7E-4_wp * SQRT( ug(nzt+1)**2 + vg(nzt+1)**2 ) /            &
-                  ABS( f ) + 1.0E-10_wp
-       ELSE
-          l_max = 30.0_wp
+    DO  k = 1, nzt
+       IF ( l_grid(k) > 1.5_wp * dx * wall_adjustment_factor .OR.            &
+            l_grid(k) > 1.5_wp * dy * wall_adjustment_factor )  THEN
+          WRITE( message_string, * ) 'grid anisotropy exceeds ',             &
+                                     'threshold given by only local',        &
+                                     ' &horizontal reduction of near_wall ', &
+                                     'mixing length l_wall',                 &
+                                     ' &starting from height level k = ', k, &
+                                     '.'
+          CALL message( 'init_grid', 'PA0202', 0, 1, 0, 6, 0 )
+          EXIT
        ENDIF
-
-       DO  k = nzb, nzt
-          l_black(k) = kappa * zu(k) / ( 1.0_wp + kappa * zu(k) / l_max )
-       ENDDO
-
-       l_black(nzt+1) = l_black(nzt)
-
+    ENDDO
 !
-!--    Gather topography information of whole domain
-       !> @todo reduce amount of data sent by MPI call
-       !>   By now, a whole global 3D-array is sent and received with
-       !>   MPI_ALLREDUCE although most of the array is 0. This can be
-       !>   drastically reduced if only the local subarray is sent and stored
-       !>   in a global array. For that, an MPI data type or subarray must be
-       !>   defined.
-       !>   2018-03-19, gronemeier
-       ALLOCATE( wall_flags_0_global(nzb:nzt+1,0:ny,0:nx) )
-
-#if defined ( __parallel )
-       ALLOCATE( wall_flags_dummy(nzb:nzt+1,0:ny,0:nx) )
-       wall_flags_dummy = 0
-       wall_flags_dummy(nzb:nzt+1,nys:nyn,nxl:nxr) =  &
-           wall_flags_0(nzb:nzt+1,nys:nyn,nxl:nxr)
-
-       CALL MPI_ALLREDUCE( wall_flags_dummy,                  &
-                           wall_flags_0_global,               &
-                           (nzt-nzb+2)*(ny+1)*(nx+1),         &
-                           MPI_INTEGER, MPI_SUM, comm2d, ierr )
-       DEALLOCATE( wall_flags_dummy )
-#else
-       wall_flags_0_global(nzb:nzt+1,nys:nyn,nxl:nxr) =  &
-              wall_flags_0(nzb:nzt+1,nys:nyn,nxl:nxr)
-#endif
+!-- In case of topography: limit near-wall mixing length l_wall further:
+!-- Go through all points of the subdomain one by one and look for the closest
+!-- surface.
+!-- Is this correct in the ocean case?
+    DO  i = nxl, nxr
+       DO  j = nys, nyn
+          DO  k = nzb+1, nzt
 !
-!--    Get height level of highest topography
-       DO  i = 0, nx
-          DO  j = 0, ny
-             DO  k = nzb+1, nzt-1
-                IF ( .NOT. BTEST( wall_flags_0_global(k,j,i), 0 ) .AND.  &
-                     k > k_max_topo )  &
-                   k_max_topo = k
-             ENDDO
+!--          Check if current gridpoint belongs to the atmosphere
+             IF ( BTEST( wall_flags_0(k,j,i), 0 ) )  THEN
+!
+!--             Check for neighbouring grid-points.
+!--             Vertical distance, down
+                IF ( .NOT. BTEST( wall_flags_0(k-1,j,i), 0 ) )              &
+                   l_wall(k,j,i) = MIN( l_grid(k), zu(k) - zw(k-1) )
+!
+!--             Vertical distance, up
+                IF ( .NOT. BTEST( wall_flags_0(k+1,j,i), 0 ) )              &
+                   l_wall(k,j,i) = MIN( l_grid(k), zw(k) - zu(k) )
+!
+!--             y-distance
+                IF ( .NOT. BTEST( wall_flags_0(k,j-1,i), 0 )  .OR.          &
+                     .NOT. BTEST( wall_flags_0(k,j+1,i), 0 ) )              &
+                   l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k), 0.5_wp * dy )
+!
+!--             x-distance
+                IF ( .NOT. BTEST( wall_flags_0(k,j,i-1), 0 )  .OR.          &
+                     .NOT. BTEST( wall_flags_0(k,j,i+1), 0 ) )              &
+                   l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k), 0.5_wp * dx )
+!
+!--              yz-distance (vertical edges, down)
+                 IF ( .NOT. BTEST( wall_flags_0(k-1,j-1,i), 0 )  .OR.       &
+                      .NOT. BTEST( wall_flags_0(k-1,j+1,i), 0 )  )          &
+                   l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k),           &
+                                        SQRT( 0.25_wp * dy**2 +             &
+                                       ( zu(k) - zw(k-1) )**2 ) )
+!
+!--               yz-distance (vertical edges, up)
+                 IF ( .NOT. BTEST( wall_flags_0(k+1,j-1,i), 0 )  .OR.       &
+                      .NOT. BTEST( wall_flags_0(k+1,j+1,i), 0 )  )          &
+                   l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k),           &
+                                        SQRT( 0.25_wp * dy**2 +             &
+                                       ( zw(k) - zu(k) )**2 ) )
+!
+!--              xz-distance (vertical edges, down)
+                 IF ( .NOT. BTEST( wall_flags_0(k-1,j,i-1), 0 )  .OR.       &
+                      .NOT. BTEST( wall_flags_0(k-1,j,i+1), 0 )  )          &
+                   l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k),           &
+                                        SQRT( 0.25_wp * dx**2 +             &
+                                       ( zu(k) - zw(k-1) )**2 ) )
+!
+!--              xz-distance (vertical edges, up)
+                 IF ( .NOT. BTEST( wall_flags_0(k+1,j,i-1), 0 )  .OR.       &
+                      .NOT. BTEST( wall_flags_0(k+1,j,i+1), 0 )  )          &
+                  l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k),            &
+                                        SQRT( 0.25_wp * dx**2 +             &
+                                       ( zw(k) - zu(k) )**2 ) )
+!
+!--             xy-distance (horizontal edges)
+                IF ( .NOT. BTEST( wall_flags_0(k,j-1,i-1), 0 )  .OR.        &
+                     .NOT. BTEST( wall_flags_0(k,j+1,i-1), 0 )  .OR.        &
+                     .NOT. BTEST( wall_flags_0(k,j-1,i+1), 0 )  .OR.        &
+                     .NOT. BTEST( wall_flags_0(k,j+1,i+1), 0 ) )            &
+                   l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k),           &
+                                        SQRT( 0.25_wp * ( dx**2 + dy**2 ) ) )
+!
+!--             xyz distance (vertical and horizontal edges, down)
+                IF ( .NOT. BTEST( wall_flags_0(k-1,j-1,i-1), 0 )  .OR.      &
+                     .NOT. BTEST( wall_flags_0(k-1,j+1,i-1), 0 )  .OR.      &
+                     .NOT. BTEST( wall_flags_0(k-1,j-1,i+1), 0 )  .OR.      &
+                     .NOT. BTEST( wall_flags_0(k-1,j+1,i+1), 0 ) )          &
+                   l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k),           &
+                                        SQRT( 0.25_wp * ( dx**2 + dy**2 )   &
+                                              +  ( zu(k) - zw(k-1) )**2  ) )
+!
+!--             xyz distance (vertical and horizontal edges, up)
+                IF ( .NOT. BTEST( wall_flags_0(k+1,j-1,i-1), 0 )  .OR.      &
+                     .NOT. BTEST( wall_flags_0(k+1,j+1,i-1), 0 )  .OR.      &
+                     .NOT. BTEST( wall_flags_0(k+1,j-1,i+1), 0 )  .OR.      &
+                     .NOT. BTEST( wall_flags_0(k+1,j+1,i+1), 0 ) )          &
+                   l_wall(k,j,i) = MIN( l_wall(k,j,i), l_grid(k),           &
+                                        SQRT( 0.25_wp * ( dx**2 + dy**2 )   &
+                                              +  ( zw(k) - zu(k) )**2  ) )
+
+             ENDIF
           ENDDO
        ENDDO
-
-       l_wall(nzb,:,:) = l_black(nzb)
-       l_wall(nzt+1,:,:) = l_black(nzt+1)
-!
-!--    Limit mixing length to either nearest wall or Blackadar mixing length.
-!--    For that, analyze each grid point (i/j/k) ("analysed grid point") and
-!--    search within its vicinity for the shortest distance to a wall by cal-
-!--    culating the distance between the analysed grid point and the "viewed
-!--    grid point" if it contains a wall (belongs to topography).
-       DO  k = nzb+1, nzt
-
-          radius = l_black(k)  ! radius within walls are searched
-!
-!--       Set l_wall to its default maximum value (l_back)
-          l_wall(k,:,:) = radius
-
-!
-!--       Compute search radius as number of grid points in all directions
-          rad_i = CEILING( radius / dx )
-          rad_j = CEILING( radius / dy )
-
-          DO  kk = 0, nzt-k
-             rad_k_t = kk
-!
-!--          Limit upward search radius to height of maximum topography
-             IF ( zu(k+kk)-zu(k) >= radius .OR. k+kk >= k_max_topo )  EXIT
-          ENDDO
-
-          DO  kk = 0, k
-             rad_k_b = kk
-             IF ( zu(k)-zu(k-kk) >= radius )  EXIT
-          ENDDO
-
-!
-!--       Get maximum vertical radius; necessary for defining arrays
-          rad_k = MAX( rad_k_b, rad_k_t )
-!
-!--       When analysed grid point lies above maximum topography, set search
-!--       radius to 0 if the distance between the analysed grid point and max
-!--       topography height is larger than the maximum search radius
-          IF ( zu(k-rad_k_b) > zu(k_max_topo) )  rad_k_b = 0
-!
-!--       Search within vicinity only if the vertical search radius is >0
-          IF ( rad_k_b /= 0 .OR. rad_k_t /= 0 )  THEN
-
-             !> @note shape of vicinity is larger in z direction
-             !>   Shape of vicinity is two grid points larger than actual search
-             !>   radius in vertical direction. The first and last grid point is
-             !>   always set to 1 to asure correct detection of topography. See
-             !>   function "shortest_distance" for details.
-             !>   2018-03-16, gronemeier
-             ALLOCATE( vicinity(-rad_k-1:rad_k+1,-rad_j:rad_j,-rad_i:rad_i) )
-             ALLOCATE( vic_yz(0:rad_k+1,0:rad_j) )
-
-             vicinity = 1
-
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-!
-!--                Start search only if (i/j/k) belongs to atmosphere
-                   IF ( BTEST( wall_flags_0(k,j,i), 0 )  )  THEN
-!
-!--                   Reset topography within vicinity
-                      vicinity(-rad_k:rad_k,:,:) = 0
-!
-!--                   Copy area surrounding analysed grid point into vicinity.
-!--                   First, limit size of data copied to vicinity by the domain
-!--                   border
-                      rad_i_l = MIN( rad_i, i )
-                      rad_i_r = MIN( rad_i, nx-i )
-
-                      rad_j_s = MIN( rad_j, j )
-                      rad_j_n = MIN( rad_j, ny-j )
-
-                      CALL copy_into_vicinity( k, j, i,           &
-                                               -rad_k_b, rad_k_t, &
-                                               -rad_j_s, rad_j_n, &
-                                               -rad_i_l, rad_i_r  )
-!
-!--                   In case of cyclic boundaries, copy parts into vicinity
-!--                   where vicinity reaches over the domain borders.
-                      IF ( bc_lr_cyc )  THEN
-!
-!--                      Vicinity reaches over left domain boundary
-                         IF ( rad_i > rad_i_l )  THEN
-                            CALL copy_into_vicinity( k, j, nx+rad_i_l+1, &
-                                                     -rad_k_b, rad_k_t,  &
-                                                     -rad_j_s, rad_j_n,  &
-                                                     -rad_i, -rad_i_l-1  )
-!
-!--                         ...and over southern domain boundary
-                            IF ( bc_ns_cyc .AND. rad_j > rad_j_s )  &
-                               CALL copy_into_vicinity( k, ny+rad_j_s+1,    &
-                                                        nx+rad_i_l+1,       &
-                                                        -rad_k_b, rad_k_t,  &
-                                                        -rad_j, -rad_j_s-1, &
-                                                        -rad_i, -rad_i_l-1  )
-!
-!--                         ...and over northern domain boundary
-                            IF ( bc_ns_cyc .AND. rad_j > rad_j_n )  &
-                               CALL copy_into_vicinity( k, 0-rad_j_n-1,    &
-                                                        nx+rad_i_l+1,      &
-                                                        -rad_k_b, rad_k_t, &
-                                                         rad_j_n+1, rad_j, &
-                                                        -rad_i, -rad_i_l-1 )
-                         ENDIF
-!
-!--                      Vicinity reaches over right domain boundary
-                         IF ( rad_i > rad_i_r )  THEN
-                            CALL copy_into_vicinity( k, j, 0-rad_i_r-1, &
-                                                     -rad_k_b, rad_k_t, &
-                                                     -rad_j_s, rad_j_n, &
-                                                      rad_i_r+1, rad_i  )
-!
-!--                         ...and over southern domain boundary
-                            IF ( bc_ns_cyc .AND. rad_j > rad_j_s )  &
-                               CALL copy_into_vicinity( k, ny+rad_j_s+1,    &
-                                                        0-rad_i_r-1,        &
-                                                        -rad_k_b, rad_k_t,  &
-                                                        -rad_j, -rad_j_s-1, &
-                                                         rad_i_r+1, rad_i   )
-!
-!--                         ...and over northern domain boundary
-                            IF ( bc_ns_cyc .AND. rad_j > rad_j_n )  &
-                               CALL copy_into_vicinity( k, 0-rad_j_n-1,    &
-                                                        0-rad_i_r-1,       &
-                                                        -rad_k_b, rad_k_t, &
-                                                         rad_j_n+1, rad_j, &
-                                                         rad_i_r+1, rad_i  )
-                         ENDIF
-                      ENDIF
-
-                      IF ( bc_ns_cyc )  THEN
-!
-!--                      Vicinity reaches over southern domain boundary
-                         IF ( rad_j > rad_j_s )  &
-                            CALL copy_into_vicinity( k, ny+rad_j_s+1, i, &
-                                                     -rad_k_b, rad_k_t,  &
-                                                     -rad_j, -rad_j_s-1, &
-                                                     -rad_i_l, rad_i_r   )
-!
-!--                      Vicinity reaches over northern domain boundary
-                         IF ( rad_j > rad_j_n )  &
-                            CALL copy_into_vicinity( k, 0-rad_j_n-1, i, &
-                                                     -rad_k_b, rad_k_t, &
-                                                      rad_j_n+1, rad_j, &
-                                                      rad_i_l, rad_i_r  )
-                      ENDIF
-!
-!--                   Search for walls only if there is any within vicinity
-                      IF ( MAXVAL( vicinity(-rad_k:rad_k,:,:) ) /= 0 )  THEN
-!
-!--                      Search within first half (positive x)
-                         dist_dx = rad_i
-                         DO  ii = 0, dist_dx
-!
-!--                         Search along vertical direction only if below
-!--                         maximum topography
-                            IF ( rad_k_t > 0 ) THEN
-!
-!--                            Search for walls within octant (+++)
-                               vic_yz = vicinity(0:rad_k+1,0:rad_j,ii)
-                               l_wall(k,j,i) = MIN( l_wall(k,j,i),             &
-                                       shortest_distance( vic_yz, .TRUE., ii ) )
-!
-!--                            Search for walls within octant (+-+)
-!--                            Switch order of array so that the analysed grid
-!--                            point is always located at (0/0) (required by
-!--                            shortest_distance").
-                               vic_yz = vicinity(0:rad_k+1,0:-rad_j:-1,ii)
-                               l_wall(k,j,i) = MIN( l_wall(k,j,i),             &
-                                       shortest_distance( vic_yz, .TRUE., ii ) )
-
-                            ENDIF
-!
-!--                         Search for walls within octant (+--)
-                            vic_yz = vicinity(0:-rad_k-1:-1,0:-rad_j:-1,ii)
-                            l_wall(k,j,i) = MIN( l_wall(k,j,i),                &
-                                      shortest_distance( vic_yz, .FALSE., ii ) )
-!
-!--                         Search for walls within octant (++-)
-                            vic_yz = vicinity(0:-rad_k-1:-1,0:rad_j,ii)
-                            l_wall(k,j,i) = MIN( l_wall(k,j,i),                &
-                                      shortest_distance( vic_yz, .FALSE., ii ) )
-!
-!--                         Reduce search along x by already found distance
-                            dist_dx = CEILING( l_wall(k,j,i) / dx )
-
-                         ENDDO
-!
-!-                       Search within second half (negative x)
-                         DO  ii = 0, -dist_dx, -1
-!
-!--                         Search along vertical direction only if below
-!--                         maximum topography
-                            IF ( rad_k_t > 0 ) THEN
-!
-!--                            Search for walls within octant (-++)
-                               vic_yz = vicinity(0:rad_k+1,0:rad_j,ii)
-                               l_wall(k,j,i) = MIN( l_wall(k,j,i),             &
-                                      shortest_distance( vic_yz, .TRUE., -ii ) )
-!
-!--                            Search for walls within octant (--+)
-!--                            Switch order of array so that the analysed grid
-!--                            point is always located at (0/0) (required by
-!--                            shortest_distance").
-                               vic_yz = vicinity(0:rad_k+1,0:-rad_j:-1,ii)
-                               l_wall(k,j,i) = MIN( l_wall(k,j,i),             &
-                                      shortest_distance( vic_yz, .TRUE., -ii ) )
-
-                            ENDIF
-!
-!--                         Search for walls within octant (---)
-                            vic_yz = vicinity(0:-rad_k-1:-1,0:-rad_j:-1,ii)
-                            l_wall(k,j,i) = MIN( l_wall(k,j,i),                &
-                                     shortest_distance( vic_yz, .FALSE., -ii ) )
-!
-!--                         Search for walls within octant (-+-)
-                            vic_yz = vicinity(0:-rad_k-1:-1,0:rad_j,ii)
-                            l_wall(k,j,i) = MIN( l_wall(k,j,i),                &
-                                     shortest_distance( vic_yz, .FALSE., -ii ) )
-!
-!--                         Reduce search along x by already found distance
-                            dist_dx = CEILING( l_wall(k,j,i) / dx )
-
-                         ENDDO
-
-                      ENDIF  !Check for any walls within vicinity
-
-                   ELSE  !Check if (i,j,k) belongs to atmosphere
-
-                      l_wall(k,j,i) = l_black(k)
-
-                   ENDIF
-
-                ENDDO  !j loop
-             ENDDO  !i loop
-
-             DEALLOCATE( vicinity )
-             DEALLOCATE( vic_yz )
-
-          ENDIF  !check vertical size of vicinity
-
-       ENDDO  !k loop
-
-       DEALLOCATE( wall_flags_0_global )
-
-    ENDIF  !LES or RANS mode
+    ENDDO
 
 !
 !-- Set lateral boundary conditions for l_wall
@@ -2086,8 +1693,6 @@
           CALL stokes_force_s( e )
        ENDIF
 
-       IF ( rans_tke_e )  advec = tend
-
        CALL production_e
 
        ! Compute Stokes production if required
@@ -2097,7 +1702,6 @@
 
 !
 !--    Save production term for prognostic equation of TKE dissipation rate
-       IF ( rans_tke_e )  produc = tend - advec
 
     !$acc data copy(drho_air(nzb+1:nzt),dd2zu(nzb+1:nzt),ddzu(nzb+1:nzt+1),ddzw(nzb+1:nzt),dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),e_p(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),g,kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho_reference,rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr),tsc(3),te_m(nzb+1:nzt,nys:nyn,nxl:nxr),wall_flags_0(nzb+1:nzt,nys:nyn,nxl:nxr))
 
@@ -2181,23 +1785,6 @@
     !$acc end data
 
 !
-!--    Use special boundary condition in case of TKE-e closure
-       !> @todo do the same for usm and lsm surfaces
-       !>   2018-06-05, gronemeier
-       IF ( rans_tke_e )  THEN
-          DO  i = nxl, nxr
-             DO  j = nys, nyn
-                surf_s = surf_def_h(0)%start_index(j,i)
-                surf_e = surf_def_h(0)%end_index(j,i)
-                DO  m = surf_s, surf_e
-                   k = surf_def_h(0)%k(m)
-                   e_p(k,j,i) = surf_def_h(0)%us(m)**2 / c_0**2
-                ENDDO
-             ENDDO
-          ENDDO
-       ENDIF
-
-!
 !--    Calculate tendencies for the next Runge-Kutta step
        IF ( timestep_scheme(1:5) == 'runge' )  THEN
           IF ( intermediate_timestep_count == 1 )  THEN
@@ -2225,93 +1812,6 @@
 
     ENDIF   ! TKE equation
 
-!
-!-- If required, compute prognostic equation for TKE dissipation rate
-    IF ( rans_tke_e )  THEN
-
-       CALL cpu_log( log_point(33), 'diss-equation', 'start' )
-
-       sbt = tsc(2)
-       tend = 0.0_wp
-       CALL advec_s_ws( diss, 'diss' )
-
-!
-!--    Production of TKE dissipation rate
-       DO  i = nxl, nxr
-          DO  j = nys, nyn
-             DO  k = nzb+1, nzt
-!                tend(k,j,i) = tend(k,j,i) + c_1 * diss(k,j,i) / ( e(k,j,i) + 1.0E-20_wp ) * produc(k)
-                tend(k,j,i) = tend(k,j,i) + c_1 * c_0**4 * f / c_4               &  !> @todo needs revision
-                      / surf_def_h(0)%us(surf_def_h(0)%start_index(j,i))       &
-                      * SQRT(e(k,j,i)) * produc(k,j,i)
-             ENDDO
-          ENDDO
-       ENDDO
-
-       CALL diffusion_diss
-
-!
-!
-!--    Prognostic equation for TKE dissipation.
-!--    Eliminate negative dissipation values, which can occur due to numerical
-!--    reasons in the course of the integration. In such cases the old
-!--    dissipation value is reduced by 90%.
-       DO  i = nxl, nxr
-          DO  j = nys, nyn
-             DO  k = nzb+1, nzt
-                diss_p(k,j,i) = diss(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +  &
-                                                 tsc(3) * tdiss_m(k,j,i) )     &
-                                        )                                      &
-                                   * MERGE( 1.0_wp, 0.0_wp,                    &
-                                             BTEST( wall_flags_0(k,j,i), 0 )   &
-                                          )
-                IF ( diss_p(k,j,i) < 0.0_wp )                                  &
-                   diss_p(k,j,i) = 0.1_wp * diss(k,j,i)
-             ENDDO
-          ENDDO
-       ENDDO
-
-!
-!--    Use special boundary condition in case of TKE-e closure
-       DO  i = nxl, nxr
-          DO  j = nys, nyn
-             surf_s = surf_def_h(0)%start_index(j,i)
-             surf_e = surf_def_h(0)%end_index(j,i)
-             DO  m = surf_s, surf_e
-                k = surf_def_h(0)%k(m)
-                diss_p(k,j,i) = surf_def_h(0)%us(m)**3 / kappa * ddzu(k)
-             ENDDO
-          ENDDO
-       ENDDO
-
-!
-!--    Calculate tendencies for the next Runge-Kutta step
-       IF ( timestep_scheme(1:5) == 'runge' )  THEN
-          IF ( intermediate_timestep_count == 1 )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb+1, nzt
-                      tdiss_m(k,j,i) = tend(k,j,i)
-                   ENDDO
-                ENDDO
-             ENDDO
-          ELSEIF ( intermediate_timestep_count < &
-                   intermediate_timestep_count_max )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb+1, nzt
-                      tdiss_m(k,j,i) =   -9.5625_wp * tend(k,j,i)              &
-                                        + 5.3125_wp * tdiss_m(k,j,i)
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
-       ENDIF
-
-       CALL cpu_log( log_point(33), 'diss-equation', 'stop' )
-
-    ENDIF
-
  END SUBROUTINE tcm_prognostic
 
 
@@ -2322,7 +1822,6 @@
 !> Vector-optimized version
 !> @warning The case with constant_flux_layer = F and use_surface_fluxes = T is
 !>          not considered well!
-!> @todo Adjust production term in case of rans_tke_e simulation
 !------------------------------------------------------------------------------!
  SUBROUTINE production_e
 
@@ -2663,46 +2162,34 @@ SUBROUTINE diffusion_e( var, var_reference )
 
     !
     !--      Calculate dissipation
-             IF ( les_mw )  THEN
+             ! IF ( les_mw )  THEN
 
-                dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
-                IF ( dvar_dz > 0.0_wp ) THEN
-                   IF ( use_single_reference_value )  THEN
-                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
-                                         / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
-                   ELSE
-                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
-                                         / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
-                   ENDIF
+             dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
+             IF ( dvar_dz > 0.0_wp ) THEN
+                IF ( use_single_reference_value )  THEN
+                   l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                      / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
                 ELSE
-                   l_stable = l_grid(k)
+                   l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                      / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
                 ENDIF
+             ELSE
+                l_stable = l_grid(k)
+             ENDIF
             !
             !-- Adjustment of the mixing length
-                IF ( wall_adjustment )  THEN
-                   l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
-                   ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
-                ELSE
-                   l  = MIN( l_grid(k), l_stable )
-                   ll = l_grid(k)
-                ENDIF
+             IF ( wall_adjustment )  THEN
+                l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
+                ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
+             ELSE
+                l  = MIN( l_grid(k), l_stable )
+                ll = l_grid(k)
+             ENDIF
 
-                dissipation(k,j) = ( 0.19_wp + 0.74_wp * l / ll )              &
+             dissipation(k,j) = ( 0.19_wp + 0.74_wp * l / ll )              &
                                    * e(k,j,i) * SQRT( e(k,j,i) ) / l
 
-!             ELSEIF ( rans_tke_l )  THEN
-!
-!                CALL mixing_length_rans( i, j, k, l, ll, var, var_reference )
-!
-!                dissipation(k,j) = c_0**3 * e(k,j,i) * SQRT( e(k,j,i) ) / ll
-!
-!                diss(k,j,i) = dissipation(k,j) * flag
-!
-!             ELSEIF ( rans_tke_e )  THEN
-!
-!                dissipation(k,j) = diss(k,j,i)
-
-             ENDIF
+             ! ENDIF ! les_mw
 
              tend(k,j,i) = tend(k,j,i) + (                                     &
                                            (                                   &
@@ -2992,138 +2479,59 @@ SUBROUTINE diffusion_e( var, var_reference )
        !$acc end data
     ENDIF
 
-!    IF ( les_mw )  THEN
-       !$OMP DO
-       !$acc data copy(dd2zu(nzb+1:nzt),kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb+1:nzt,nysg:nyng,nxlg:nxrg),e(nzb+1:nzt,nysg:nyng,nxlg:nxrg),var,sums_l_l(nzb+1:nzt,0:statistic_regions,0),wall_flags_0(nzb+1:nzt,nysg:nyng,nxlg:nxrg),l_grid(nzb+1:nzt),rmask(nysg:nyng,nxlg:nxrg,0:statistic_regions),l_wall(nzb+1:nzt,nysg:nyng,nxlg:nxrg))
-       !$acc parallel
-       !$acc loop collapse(3)
-       DO  i = nxlg, nxrg
-          DO  j = nysg, nyng
-             DO  k = nzb+1, nzt
+!   IF ( les_mw )  THEN
+    !$OMP DO
+    !$acc data copy(dd2zu(nzb+1:nzt),kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb+1:nzt,nysg:nyng,nxlg:nxrg),e(nzb+1:nzt,nysg:nyng,nxlg:nxrg),var,sums_l_l(nzb+1:nzt,0:statistic_regions,0),wall_flags_0(nzb+1:nzt,nysg:nyng,nxlg:nxrg),l_grid(nzb+1:nzt),rmask(nysg:nyng,nxlg:nxrg,0:statistic_regions),l_wall(nzb+1:nzt,nysg:nyng,nxlg:nxrg))
+    !$acc parallel
+    !$acc loop collapse(3)
+    DO  i = nxlg, nxrg
+       DO  j = nysg, nyng
+          DO  k = nzb+1, nzt
 
-                flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
+             flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
 
 !
-!--             Determine the mixing length for LES closure
-!                CALL mixing_length_les( i, j, k, l, ll, var, var_reference )
+!--          Determine the mixing length for LES closure
+!             CALL mixing_length_les( i, j, k, l, ll, var, var_reference )
 
-                dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
-                IF ( dvar_dz > 0.0_wp ) THEN
-                   IF ( use_single_reference_value )  THEN
-                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
-                                         / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
-                   ELSE
-                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
-                                         / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
-                   ENDIF
+             dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
+             IF ( dvar_dz > 0.0_wp ) THEN
+                IF ( use_single_reference_value )  THEN
+                   l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                      / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
                 ELSE
-                   l_stable = l_grid(k)
+                   l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                      / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
                 ENDIF
+             ELSE
+                l_stable = l_grid(k)
+             ENDIF
 !
 !-- Adjustment of the mixing length
-                IF ( wall_adjustment )  THEN
-                   l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
-                   ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
-                ELSE
-                   l  = MIN( l_grid(k), l_stable )
-                   ll = l_grid(k)
-                ENDIF
+             IF ( wall_adjustment )  THEN
+                l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
+                ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
+             ELSE
+                l  = MIN( l_grid(k), l_stable )
+                ll = l_grid(k)
+             ENDIF
 !
-!--             Compute diffusion coefficients for momentum and heat
-                km(k,j,i) = c_0 * l * SQRT( e(k,j,i) ) * flag
-                kh(k,j,i) = ( 1.0_wp + 2.0_wp * l / ll ) * km(k,j,i) * flag
+!--          Compute diffusion coefficients for momentum and heat
+             km(k,j,i) = c_0 * l * SQRT( e(k,j,i) ) * flag
+             kh(k,j,i) = ( 1.0_wp + 2.0_wp * l / ll ) * km(k,j,i) * flag
 !
-!--             Summation for averaged profile (cf. flow_statistics)
-                DO  sr = 0, statistic_regions
-                   sums_l_l(k,sr,tn) = sums_l_l(k,sr,tn) + l * rmask(j,i,sr)   &
-                                                             * flag
-                ENDDO
-
+!--          Summation for averaged profile (cf. flow_statistics)
+             DO  sr = 0, statistic_regions
+                sums_l_l(k,sr,tn) = sums_l_l(k,sr,tn) + l * rmask(j,i,sr)   &
+                                                          * flag
              ENDDO
+
           ENDDO
        ENDDO
-       !$acc end parallel
-       !$acc end data
-
-!    ELSEIF ( rans_tke_l )  THEN
-!
-!       !$OMP DO
-!       !$acc parallel
-!       !$acc loop collapse(3)
-!       DO  i = nxlg, nxrg
-!          DO  j = nysg, nyng
-!             DO  k = nzb+1, nzt
-!
-!                flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
-!!
-!!--             Mixing length for RANS mode with TKE-l closure
-!!                CALL mixing_length_rans( i, j, k, l, ll, var, var_reference )
-!
-!                dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
-!                IF ( dvar_dz > 0.0_wp ) THEN
-!                   IF ( use_single_reference_value )  THEN
-!                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
-!                                         / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
-!                   ELSE
-!                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
-!                                         / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
-!                   ENDIF
-!                ELSE
-!                   l_stable = l_grid(k)
-!                ENDIF
-!!
-!!-- Adjustment of the mixing length
-!                IF ( wall_adjustment )  THEN
-!                   l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
-!                   ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
-!                ELSE
-!                   l  = MIN( l_grid(k), l_stable )
-!                   ll = l_grid(k)
-!                ENDIF
-!!
-!!--             Compute diffusion coefficients for momentum and heat
-!                km(k,j,i) = c_0 * l * SQRT( e(k,j,i) ) * flag
-!                kh(k,j,i) = km(k,j,i) / prandtl_number * flag
-!!
-!!--             Summation for averaged profile (cf. flow_statistics)
-!                DO  sr = 0, statistic_regions
-!                   sums_l_l(k,sr,tn) = sums_l_l(k,sr,tn) + l * rmask(j,i,sr)   &
-!                                                             * flag
-!                ENDDO
-!
-!             ENDDO
-!          ENDDO
-!       ENDDO
-!       !$acc end parallel
-!
-!    ELSEIF ( rans_tke_e )  THEN
-!
-!       !$OMP DO
-!       !$acc parallel
-!       !$acc loop collapse(3)
-!       DO  i = nxlg, nxrg
-!          DO  j = nysg, nyng
-!             DO  k = nzb+1, nzt
-!
-!                flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
-!!
-!!--             Compute diffusion coefficients for momentum and heat
-!                km(k,j,i) = c_0**4 * e(k,j,i)**2 / ( diss(k,j,i) + 1.0E-30_wp ) * flag
-!                kh(k,j,i) = km(k,j,i) / prandtl_number * flag
-!!
-!!--             Summation for averaged profile of mixing length (cf. flow_statistics)
-!                DO  sr = 0, statistic_regions
-!                   sums_l_l(k,sr,tn) = sums_l_l(k,sr,tn) +                     &
-!                      c_0**3 * e(k,j,i) * SQRT(e(k,j,i)) /                     &
-!                      ( diss(k,j,i) + 1.0E-30_wp ) * rmask(j,i,sr) * flag
-!                ENDDO
-!
-!             ENDDO
-!          ENDDO
-!       ENDDO
-!       !$acc end parallel
-!
-!    ENDIF
+    ENDDO
+    !$acc end parallel
+    !$acc end data
+    ! ENDIF ! les_mw
 
     sums_l_l(nzt+1,:,tn) = sums_l_l(nzt,:,tn)   ! quasi boundary-condition for
                                                 ! data output
@@ -3136,66 +2544,26 @@ SUBROUTINE diffusion_e( var, var_reference )
 !-- Horizontal boundary conditions at vertical walls are not set because
 !-- so far vertical surfaces require usage of a Prandtl-layer where the boundary
 !-- values of the diffusivities are not needed.
-    IF ( .NOT. rans_tke_e )  THEN
 !
-!--    Upward-facing
-       !$OMP PARALLEL DO PRIVATE( i, j, k )
-       DO  m = 1, bc_h(0)%ns
-          i = bc_h(0)%i(m)
-          j = bc_h(0)%j(m)
-          k = bc_h(0)%k(m)
-          km(k-1,j,i) = km(k,j,i)
-          kh(k-1,j,i) = kh(k,j,i)
-       ENDDO
+!-- Upward-facing
+    !$OMP PARALLEL DO PRIVATE( i, j, k )
+    DO  m = 1, bc_h(0)%ns
+       i = bc_h(0)%i(m)
+       j = bc_h(0)%j(m)
+       k = bc_h(0)%k(m)
+       km(k-1,j,i) = km(k,j,i)
+       kh(k-1,j,i) = kh(k,j,i)
+    ENDDO
 !
-!--    Downward facing surfaces
-       !$OMP PARALLEL DO PRIVATE( i, j, k )
-       DO  m = 1, bc_h(1)%ns
-          i = bc_h(1)%i(m)
-          j = bc_h(1)%j(m)
-          k = bc_h(1)%k(m)
-          km(k+1,j,i) = km(k,j,i)
-          kh(k+1,j,i) = kh(k,j,i)
-       ENDDO
-    ELSE
-!
-!--    Up- and downward facing surfaces
-       DO  n = 0, 1
-          DO  m = 1, surf_def_h(n)%ns
-             i = surf_def_h(n)%i(m)
-             j = surf_def_h(n)%j(m)
-             k = surf_def_h(n)%k(m)
-             km(k,j,i) = kappa * surf_def_h(n)%us(m) * dzu(k)
-             kh(k,j,i) = 1.35_wp * km(k,j,i)
-          ENDDO
-       ENDDO
-!
-!--    North- and southward facing surfaces
-       DO  n = 0, 1
-          DO  m = 1, surf_def_v(n)%ns
-             i = surf_def_v(n)%i(m)
-             j = surf_def_v(n)%j(m)
-             k = surf_def_v(n)%k(m)
-             km(k,j,i) = kappa * surf_def_v(n)%us(m) * 0.5_wp * dy
-             kh(k,j,i) = 1.35_wp * km(k,j,i)
-          ENDDO
-       ENDDO
-!
-!--    West- and eastward facing surfaces
-       DO  n = 2, 3
-          DO  m = 1, surf_def_v(n)%ns
-             i = surf_def_v(n)%i(m)
-             j = surf_def_v(n)%j(m)
-             k = surf_def_v(n)%k(m)
-             km(k,j,i) = kappa * surf_def_v(n)%us(m) * 0.5_wp * dx
-             kh(k,j,i) = 1.35_wp * km(k,j,i)
-          ENDDO
-       ENDDO
-
-       CALL exchange_horiz( km, nbgp )
-       CALL exchange_horiz( kh, nbgp )
-
-    ENDIF
+!-- Downward facing surfaces
+    !$OMP PARALLEL DO PRIVATE( i, j, k )
+    DO  m = 1, bc_h(1)%ns
+       i = bc_h(1)%i(m)
+       j = bc_h(1)%j(m)
+       k = bc_h(1)%k(m)
+       km(k+1,j,i) = km(k,j,i)
+       kh(k+1,j,i) = kh(k,j,i)
+    ENDDO
 
 !
 !-- Model top
@@ -3256,16 +2624,6 @@ SUBROUTINE diffusion_e( var, var_reference )
        ENDDO
     ENDIF
 
-    IF ( rans_tke_e )  THEN
-       DO  i = nxlg, nxrg
-          DO  j = nysg, nyng
-             DO  k = nzb, nzt+1
-                diss(k,j,i) = diss_p(k,j,i)
-             ENDDO
-          ENDDO
-       ENDDO
-    ENDIF
-
 #else
 
     SELECT CASE ( mod_count )
@@ -3276,18 +2634,10 @@ SUBROUTINE diffusion_e( var, var_reference )
              e => e_1;    e_p => e_2
           ENDIF
 
-          IF ( rans_tke_e )  THEN
-             diss => diss_1;    diss_p => diss_2
-          ENDIF
-
        CASE ( 1 )
 
           IF ( .NOT. constant_diffusion )  THEN
              e => e_2;    e_p => e_1
-          ENDIF
-
-          IF ( rans_tke_e )  THEN
-             diss => diss_2;    diss_p => diss_1
           ENDIF
 
     END SELECT

@@ -19,49 +19,49 @@
 !
 ! Current revisions:
 ! ------------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: surface_coupler.f90 3049 2018-05-29 13:52:36Z Giersch $
 ! Error messages revised
-! 
+!
 ! 3045 2018-05-28 07:55:41Z Giersch
 ! Error message revised
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 !
 ! 2233 2017-05-30 18:08:54Z suehring
 !
 ! 2232 2017-05-30 17:47:52Z suehring
-! Adjust to new surface structure. Transfer 1D surface fluxes onto 2D grid 
-! (and back). 
-! 
+! Adjust to new surface structure. Transfer 1D surface fluxes onto 2D grid
+! (and back).
+!
 ! 2031 2016-10-21 15:11:58Z knoop
 ! renamed variable rho to rho_ocean
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1427 2014-07-07 14:04:59Z maronga
 ! Bugfix: value of l_v corrected.
-! 
+!
 ! 1418 2014-06-06 13:05:08Z fricke
-! Bugfix: For caluclation of the salinity flux at the sea surface, 
+! Bugfix: For caluclation of the salinity flux at the sea surface,
 !          the given value for salinity must be in percent and not in psu
 !
 ! 1353 2014-04-08 15:21:23Z heinze
 ! REAL constants provided with KIND-attribute
-! 
+!
 ! 1324 2014-03-21 09:13:16Z suehring
-! Bugfix: ONLY statement for module pegrid removed 
+! Bugfix: ONLY statement for module pegrid removed
 !
 ! 1322 2014-03-20 16:38:49Z raasch
 ! REAL constants defined as wp-kind
@@ -73,7 +73,7 @@
 ! old module precision_kind is removed,
 ! revision history before 2012 removed,
 ! comment fields (!:) to be used for variable explanations added to
-! all variable declaration statements 
+! all variable declaration statements
 !
 ! 1318 2014-03-17 13:35:16Z raasch
 ! module interfaces removed
@@ -95,7 +95,7 @@
 !> Data exchange at the interface between coupled models
 !------------------------------------------------------------------------------!
  SUBROUTINE surface_coupler
- 
+
 
     USE arrays_3d,                                                             &
         ONLY:  pt, rho_ocean, sa, total_2d_a, total_2d_o, u, v
@@ -121,17 +121,17 @@
     USE pegrid
 
     USE surface_mod,                                                           &
-        ONLY :  surf_def_h, surf_lsm_h, surf_type, surf_usm_h
+        ONLY :  surf_def_h, surf_type
 
     IMPLICIT NONE
 
-    INTEGER(iwp) ::  i                                    !< index variable x-direction 
-    INTEGER(iwp) ::  j                                    !< index variable y-direction 
+    INTEGER(iwp) ::  i                                    !< index variable x-direction
+    INTEGER(iwp) ::  j                                    !< index variable y-direction
     INTEGER(iwp) ::  m                                    !< running index for surface elements
 
     REAL(wp)    ::  cpw = 4218.0_wp                       !< heat capacity of water at constant pressure
-    REAL(wp)    ::  time_since_reference_point_rem        !< 
-    REAL(wp)    ::  total_2d(-nbgp:ny+nbgp,-nbgp:nx+nbgp) !< 
+    REAL(wp)    ::  time_since_reference_point_rem        !<
+    REAL(wp)    ::  total_2d(-nbgp:ny+nbgp,-nbgp:nx+nbgp) !<
 
     REAL(wp), DIMENSION(nysg:nyng,nxlg:nxrg) ::  surface_flux !< dummy array for surface fluxes on 2D grid
 
@@ -143,11 +143,11 @@
 
 
 !
-!-- In case of model termination initiated by the remote model 
-!-- (terminate_coupled_remote > 0), initiate termination of the local model. 
-!-- The rest of the coupler must then be skipped because it would cause an MPI 
+!-- In case of model termination initiated by the remote model
+!-- (terminate_coupled_remote > 0), initiate termination of the local model.
+!-- The rest of the coupler must then be skipped because it would cause an MPI
 !-- intercomminucation hang.
-!-- If necessary, the coupler will be called at the beginning of the next 
+!-- If necessary, the coupler will be called at the beginning of the next
 !-- restart run.
 
     IF ( coupling_topology == 0 ) THEN
@@ -159,7 +159,7 @@
        IF ( myid == 0) THEN
           CALL MPI_SENDRECV( terminate_coupled,        1, MPI_INTEGER, &
                              target_id, 0,                             &
-                             terminate_coupled_remote, 1, MPI_INTEGER, & 
+                             terminate_coupled_remote, 1, MPI_INTEGER, &
                              target_id, 0,                             &
                              comm_inter, status, ierr )
        ENDIF
@@ -184,13 +184,13 @@
        CALL message( 'surface_coupler', 'PA0310', 1, 2, 0, 6, 0 )
        RETURN
     ENDIF
- 
+
 
 !
 !-- Exchange the current simulated time between the models,
 !-- currently just for total_2d
     IF ( coupling_topology == 0 ) THEN
-   
+
        CALL MPI_SEND( time_since_reference_point, 1, MPI_REAL, target_id, 11, &
                       comm_inter, ierr )
        CALL MPI_RECV( time_since_reference_point_rem, 1, MPI_REAL, target_id, &
@@ -214,24 +214,22 @@
 !
 !-- Exchange the interface data
     IF ( coupling_mode == 'atmosphere_to_ocean' )  THEN
-    
+
 !
 !--    Horizontal grid size and number of processors is equal in ocean and
 !--    atmosphere
        IF ( coupling_topology == 0 )  THEN
 
 !
-!--       Send heat flux at bottom surface to the ocean. First, transfer from 
+!--       Send heat flux at bottom surface to the ocean. First, transfer from
 !--       1D surface type to 2D grid.
-          CALL transfer_1D_to_2D_equal( surf_def_h(0)%shf, surf_lsm_h%shf,     &
-                                        surf_usm_h%shf )
+          CALL transfer_1D_to_2D_equal( surf_def_h(0)%shf)
           CALL MPI_SEND( surface_flux(nysg,nxlg), ngp_xy, MPI_REAL, target_id, &
                          12, comm_inter, ierr )
 !
 !--       Send humidity flux at bottom surface to the ocean. First, transfer
 !--       from 1D surface type to 2D grid.
-          CALL transfer_1D_to_2D_equal( surf_def_h(0)%qsws, surf_lsm_h%qsws,   &
-                                        surf_usm_h%qsws )
+          CALL transfer_1D_to_2D_equal( surf_def_h(0)%qsws)
           IF ( humidity )  THEN
              CALL MPI_SEND( surface_flux(nysg,nxlg), ngp_xy, MPI_REAL,         &
                             target_id, 13, comm_inter, ierr )
@@ -241,17 +239,15 @@
           CALL MPI_RECV( pt(0,nysg,nxlg), 1, type_xy, target_id, 14,           &
                          comm_inter, status, ierr )
 !
-!--       Send the momentum flux (u) at bottom surface to the ocean. First, 
+!--       Send the momentum flux (u) at bottom surface to the ocean. First,
 !--       transfer from 1D surface type to 2D grid.
-          CALL transfer_1D_to_2D_equal( surf_def_h(0)%usws, surf_lsm_h%usws,   &
-                                        surf_usm_h%usws )
+          CALL transfer_1D_to_2D_equal( surf_def_h(0)%usws)
           CALL MPI_SEND( surface_flux(nysg,nxlg), ngp_xy, MPI_REAL, target_id, &
                          15, comm_inter, ierr )
 !
-!--       Send the momentum flux (v) at bottom surface to the ocean. First, 
+!--       Send the momentum flux (v) at bottom surface to the ocean. First,
 !--       transfer from 1D surface type to 2D grid.
-          CALL transfer_1D_to_2D_equal( surf_def_h(0)%vsws, surf_lsm_h%vsws,   &
-                                        surf_usm_h%vsws )
+          CALL transfer_1D_to_2D_equal( surf_def_h(0)%vsws)
           CALL MPI_SEND( surface_flux(nysg,nxlg), ngp_xy, MPI_REAL, target_id, &
                          16, comm_inter, ierr )
 !
@@ -263,22 +259,21 @@
           CALL MPI_RECV( v(0,nysg,nxlg), 1, type_xy, target_id, 18,            &
                          comm_inter, status, ierr )
 !
-!--    Horizontal grid size or number of processors differs between 
+!--    Horizontal grid size or number of processors differs between
 !--    ocean and atmosphere
        ELSE
-      
+
 !
 !--       Send heat flux at bottom surface to the ocean
           total_2d_a = 0.0_wp
           total_2d   = 0.0_wp
 !
 !--       Transfer from 1D surface type to 2D grid.
-          CALL transfer_1D_to_2D_unequal( surf_def_h(0)%shf, surf_lsm_h%shf,   &
-                                          surf_usm_h%shf )
+          CALL transfer_1D_to_2D_unequal( surf_def_h(0)%shf)
 
           CALL MPI_REDUCE( total_2d, total_2d_a, ngp_a, MPI_REAL, MPI_SUM, 0,  &
                            comm2d, ierr )
-          CALL interpolate_to_ocean( 12 )   
+          CALL interpolate_to_ocean( 12 )
 !
 !--       Send humidity flux at bottom surface to the ocean
           IF ( humidity )  THEN
@@ -286,9 +281,7 @@
              total_2d   = 0.0_wp
 !
 !--          Transfer from 1D surface type to 2D grid.
-             CALL transfer_1D_to_2D_unequal( surf_def_h(0)%qsws,              &
-                                             surf_lsm_h%qsws,                 &
-                                             surf_usm_h%qsws )
+             CALL transfer_1D_to_2D_unequal( surf_def_h(0)%qsws)
 
              CALL MPI_REDUCE( total_2d, total_2d_a, ngp_a, MPI_REAL, MPI_SUM, &
                               0, comm2d, ierr )
@@ -298,7 +291,7 @@
 !--       Receive temperature at the bottom surface from the ocean
           IF ( myid == 0 )  THEN
              CALL MPI_RECV( total_2d_a(-nbgp,-nbgp), ngp_a, MPI_REAL,          &
-                            target_id, 14, comm_inter, status, ierr )   
+                            target_id, 14, comm_inter, status, ierr )
           ENDIF
           CALL MPI_BARRIER( comm2d, ierr )
           CALL MPI_BCAST( total_2d_a(-nbgp,-nbgp), ngp_a, MPI_REAL, 0, comm2d, &
@@ -306,12 +299,11 @@
           pt(0,nysg:nyng,nxlg:nxrg) = total_2d_a(nysg:nyng,nxlg:nxrg)
 !
 !--       Send momentum flux (u) at bottom surface to the ocean
-          total_2d_a = 0.0_wp 
+          total_2d_a = 0.0_wp
           total_2d   = 0.0_wp
 !
 !--       Transfer from 1D surface type to 2D grid.
-          CALL transfer_1D_to_2D_unequal( surf_def_h(0)%usws, surf_lsm_h%usws, &
-                                          surf_usm_h%usws )
+          CALL transfer_1D_to_2D_unequal( surf_def_h(0)%usws)
           CALL MPI_REDUCE( total_2d, total_2d_a, ngp_a, MPI_REAL, MPI_SUM, 0, &
                            comm2d, ierr )
           CALL interpolate_to_ocean( 15 )
@@ -321,8 +313,7 @@
           total_2d   = 0.0_wp
 !
 !--       Transfer from 1D surface type to 2D grid.
-          CALL transfer_1D_to_2D_unequal( surf_def_h(0)%usws, surf_lsm_h%usws, &
-                                          surf_usm_h%usws )
+          CALL transfer_1D_to_2D_unequal( surf_def_h(0)%usws)
           CALL MPI_REDUCE( total_2d, total_2d_a, ngp_a, MPI_REAL, MPI_SUM, 0, &
                            comm2d, ierr )
           CALL interpolate_to_ocean( 16 )
@@ -391,7 +382,7 @@
           CALL MPI_SEND( v(nzt,nysg,nxlg), 1, type_xy, target_id, 18, &
                          comm_inter, ierr )
 !
-!--    Horizontal gridsize or number of processors differs between 
+!--    Horizontal gridsize or number of processors differs between
 !--    ocean and atmosphere
        ELSE
 !
@@ -423,7 +414,7 @@
           total_2d(nys:nyn,nxl:nxr) = pt(nzt,nys:nyn,nxl:nxr)
 
           CALL MPI_REDUCE( total_2d, total_2d_o, ngp_o, MPI_REAL, MPI_SUM, 0, &
-                           comm2d, ierr) 
+                           comm2d, ierr)
           CALL interpolate_to_atmos( 14 )
 !
 !--       Receive momentum flux (u) at the sea surface (top) from the atmosphere
@@ -447,7 +438,7 @@
           CALL transfer_2D_to_1D_unequal( surf_def_h(2)%vsws )
 !
 !--       Send u to atmosphere
-          total_2d_o = 0.0_wp  
+          total_2d_o = 0.0_wp
           total_2d   = 0.0_wp
           total_2d(nys:nyn,nxl:nxr) = u(nzt,nys:nyn,nxl:nxr)
           CALL MPI_REDUCE( total_2d, total_2d_o, ngp_o, MPI_REAL, MPI_SUM, 0, &
@@ -461,7 +452,7 @@
           CALL MPI_REDUCE( total_2d, total_2d_o, ngp_o, MPI_REAL, MPI_SUM, 0, &
                            comm2d, ierr )
           CALL interpolate_to_atmos( 18 )
-        
+
        ENDIF
 
 !
@@ -474,7 +465,7 @@
           DO  m = 1, surf_def_h(2)%ns
              i = surf_def_h(2)%i(m)
              j = surf_def_h(2)%j(m)
-             
+
              surf_def_h(2)%shf(m) = surf_def_h(2)%shf(m) +                     &
                                     surf_def_h(2)%qsws(m) * l_v / cp
 !
@@ -491,8 +482,8 @@
 
 !
 !--    Adjust the kinematic heat flux with respect to ocean density
-!--    (constants are the specific heat capacities for air and water), as well 
-!--    as momentum fluxes 
+!--    (constants are the specific heat capacities for air and water), as well
+!--    as momentum fluxes
        DO  m = 1, surf_def_h(2)%ns
           i = surf_def_h(2)%i(m)
           j = surf_def_h(2)%j(m)
@@ -513,14 +504,14 @@
 
 #endif
 
-     CONTAINS 
+     CONTAINS
 
 !       Description:
 !------------------------------------------------------------------------------!
-!>      Data transfer from 1D surface-data type to 2D dummy array for equal 
+!>      Data transfer from 1D surface-data type to 2D dummy array for equal
 !>      grids in atmosphere and ocean.
 !------------------------------------------------------------------------------!
-        SUBROUTINE transfer_1D_to_2D_equal( def_1d, lsm_1d, usm_1d )
+        SUBROUTINE transfer_1D_to_2D_equal( def_1d )
 
            IMPLICIT NONE
 
@@ -529,34 +520,14 @@
             INTEGER(iwp) ::  m   !< running index surface type
 
             REAL(wp), DIMENSION(1:surf_def_h(0)%ns) ::  def_1d !< 1D surface flux, default surfaces
-            REAL(wp), DIMENSION(1:surf_lsm_h%ns)    ::  lsm_1d !< 1D surface flux, natural surfaces
-            REAL(wp), DIMENSION(1:surf_usm_h%ns)    ::  usm_1d !< 1D surface flux, urban surfaces
 !
-!--         Transfer surface flux at default surfaces to 2D grid 
+!--         Transfer surface flux at default surfaces to 2D grid
             DO  m = 1, surf_def_h(0)%ns
                i = surf_def_h(0)%i(m)
                j = surf_def_h(0)%j(m)
                surface_flux(j,i) = def_1d(m)
             ENDDO
 !
-!--         Transfer surface flux at natural surfaces to 2D grid 
-            IF ( land_surface )  THEN 
-               DO  m = 1, SIZE(lsm_1d)
-                  i = surf_lsm_h%i(m)
-                  j = surf_lsm_h%j(m)
-                  surface_flux(j,i) = lsm_1d(m)
-               ENDDO
-            ENDIF
-!
-!--         Transfer surface flux at natural surfaces to 2D grid 
-            IF ( urban_surface )  THEN 
-               DO  m = 1, SIZE(usm_1d)
-                  i = surf_usm_h%i(m)
-                  j = surf_usm_h%j(m)
-                  surface_flux(j,i) = usm_1d(m)
-               ENDDO
-            ENDIF
-
         END SUBROUTINE transfer_1D_to_2D_equal
 
 !       Description:
@@ -574,7 +545,7 @@
 
             REAL(wp), DIMENSION(1:surf_def_h(2)%ns) ::  def_1d !< 1D surface flux, default surfaces
 !
-!--         Transfer surface flux to 1D surface type, only for default surfaces 
+!--         Transfer surface flux to 1D surface type, only for default surfaces
             DO  m = 1, surf_def_h(2)%ns
                i = surf_def_h(2)%i(m)
                j = surf_def_h(2)%j(m)
@@ -585,10 +556,10 @@
 
 !       Description:
 !------------------------------------------------------------------------------!
-!>      Data transfer from 1D surface-data type to 2D dummy array from unequal 
+!>      Data transfer from 1D surface-data type to 2D dummy array from unequal
 !>      grids in atmosphere and ocean.
 !------------------------------------------------------------------------------!
-        SUBROUTINE transfer_1D_to_2D_unequal( def_1d, lsm_1d, usm_1d )
+        SUBROUTINE transfer_1D_to_2D_unequal( def_1d )
 
            IMPLICIT NONE
 
@@ -597,8 +568,6 @@
             INTEGER(iwp) ::  m   !< running index surface type
 
             REAL(wp), DIMENSION(1:surf_def_h(0)%ns) ::  def_1d !< 1D surface flux, default surfaces
-            REAL(wp), DIMENSION(1:surf_lsm_h%ns)    ::  lsm_1d !< 1D surface flux, natural surfaces
-            REAL(wp), DIMENSION(1:surf_usm_h%ns)    ::  usm_1d !< 1D surface flux, urban surfaces
 !
 !--         Transfer surface flux at default surfaces to 2D grid. Transfer no
 !--         ghost-grid points since total_2d is a global array.
@@ -611,38 +580,12 @@
                   total_2d(j,i) = def_1d(m)
                ENDIF
             ENDDO
-!
-!--         Transfer surface flux at natural surfaces to 2D grid 
-            IF ( land_surface )  THEN 
-               DO  m = 1, SIZE(lsm_1d)
-                  i = surf_lsm_h%i(m)
-                  j = surf_lsm_h%j(m)
-
-                  IF ( i >= nxl  .AND.  i <= nxr  .AND.                        &
-                       j >= nys  .AND.  j <= nyn )  THEN
-                     total_2d(j,i) = lsm_1d(m)
-                  ENDIF
-               ENDDO
-            ENDIF
-!
-!--         Transfer surface flux at natural surfaces to 2D grid 
-            IF ( urban_surface )  THEN 
-               DO  m = 1, SIZE(usm_1d)
-                  i = surf_usm_h%i(m)
-                  j = surf_usm_h%j(m)
-
-                  IF ( i >= nxl  .AND.  i <= nxr  .AND.                        &
-                       j >= nys  .AND.  j <= nyn )  THEN
-                     total_2d(j,i) = usm_1d(m)
-                  ENDIF
-               ENDDO
-            ENDIF
 
         END SUBROUTINE transfer_1D_to_2D_unequal
 
 !       Description:
 !------------------------------------------------------------------------------!
-!>      Data transfer from 2D dummy array from unequal grids to 1D surface-data 
+!>      Data transfer from 2D dummy array from unequal grids to 1D surface-data
 !>      type.
 !------------------------------------------------------------------------------!
         SUBROUTINE transfer_2D_to_1D_unequal( def_1d )
@@ -695,16 +638,16 @@
 
     IMPLICIT NONE
 
-    INTEGER(iwp) ::  dnx  !< 
-    INTEGER(iwp) ::  dnx2 !< 
-    INTEGER(iwp) ::  dny  !< 
-    INTEGER(iwp) ::  dny2 !< 
-    INTEGER(iwp) ::  i    !< 
-    INTEGER(iwp) ::  ii   !< 
-    INTEGER(iwp) ::  j    !< 
-    INTEGER(iwp) ::  jj   !< 
+    INTEGER(iwp) ::  dnx  !<
+    INTEGER(iwp) ::  dnx2 !<
+    INTEGER(iwp) ::  dny  !<
+    INTEGER(iwp) ::  dny2 !<
+    INTEGER(iwp) ::  i    !<
+    INTEGER(iwp) ::  ii   !<
+    INTEGER(iwp) ::  j    !<
+    INTEGER(iwp) ::  jj   !<
 
-    INTEGER(iwp), intent(in) ::  tag !< 
+    INTEGER(iwp), intent(in) ::  tag !<
 
     CALL MPI_BARRIER( comm2d, ierr )
 
@@ -719,8 +662,8 @@
 
 !
 !--    Number of gridpoints of the fine grid within one mesh of the coarse grid
-       dnx = (nx_o+1) / (nx_a+1) 
-       dny = (ny_o+1) / (ny_a+1) 
+       dnx = (nx_o+1) / (nx_a+1)
+       dny = (ny_o+1) / (ny_a+1)
 
 !
 !--    Distance for interpolation around coarse grid points within the fine
@@ -732,7 +675,7 @@
 !
 !--    Interpolation from ocean-grid-layer to atmosphere-grid-layer
        DO  j = 0, ny_a
-          DO  i = 0, nx_a 
+          DO  i = 0, nx_a
              DO  jj = 0, dny2
                 DO  ii = 0, dnx2
                    total_2d_a(j,i) = total_2d_a(j,i) &
@@ -742,11 +685,11 @@
              total_2d_a(j,i) = total_2d_a(j,i) / ( ( dnx2 + 1 ) * ( dny2 + 1 ) )
           ENDDO
        ENDDO
-! 
+!
 !--    Cyclic boundary conditions for atmosphere grid
        total_2d_a(-nbgp:-1,:) = total_2d_a(ny_a+1-nbgp:ny_a,:)
        total_2d_a(:,-nbgp:-1) = total_2d_a(:,nx_a+1-nbgp:nx_a)
-       
+
        total_2d_a(ny_a+1:ny_a+nbgp,:) = total_2d_a(0:nbgp-1,:)
        total_2d_a(:,nx_a+1:nx_a+nbgp) = total_2d_a(:,0:nbgp-1)
 !
@@ -784,33 +727,33 @@
 
     IMPLICIT NONE
 
-    INTEGER(iwp)             ::  dnx !< 
-    INTEGER(iwp)             ::  dny !< 
-    INTEGER(iwp)             ::  i   !< 
-    INTEGER(iwp)             ::  ii  !< 
-    INTEGER(iwp)             ::  j   !< 
-    INTEGER(iwp)             ::  jj  !< 
-    INTEGER(iwp), intent(in) ::  tag !< 
+    INTEGER(iwp)             ::  dnx !<
+    INTEGER(iwp)             ::  dny !<
+    INTEGER(iwp)             ::  i   !<
+    INTEGER(iwp)             ::  ii  !<
+    INTEGER(iwp)             ::  j   !<
+    INTEGER(iwp)             ::  jj  !<
+    INTEGER(iwp), intent(in) ::  tag !<
 
-    REAL(wp)                 ::  fl  !< 
-    REAL(wp)                 ::  fr  !< 
-    REAL(wp)                 ::  myl !< 
-    REAL(wp)                 ::  myr !< 
+    REAL(wp)                 ::  fl  !<
+    REAL(wp)                 ::  fr  !<
+    REAL(wp)                 ::  myl !<
+    REAL(wp)                 ::  myr !<
 
     CALL MPI_BARRIER( comm2d, ierr )
 
-    IF ( myid == 0 )  THEN   
+    IF ( myid == 0 )  THEN
 
 !
 !--    Number of gridpoints of the fine grid within one mesh of the coarse grid
-       dnx = ( nx_o + 1 ) / ( nx_a + 1 ) 
-       dny = ( ny_o + 1 ) / ( ny_a + 1 ) 
+       dnx = ( nx_o + 1 ) / ( nx_a + 1 )
+       dny = ( ny_o + 1 ) / ( ny_a + 1 )
 
-! 
+!
 !--    Cyclic boundary conditions for atmosphere grid
        total_2d_a(-nbgp:-1,:) = total_2d_a(ny+1-nbgp:ny,:)
        total_2d_a(:,-nbgp:-1) = total_2d_a(:,nx+1-nbgp:nx)
-       
+
        total_2d_a(ny+1:ny+nbgp,:) = total_2d_a(0:nbgp-1,:)
        total_2d_a(:,nx+1:nx+nbgp) = total_2d_a(:,0:nbgp-1)
 !
@@ -820,15 +763,15 @@
              myl = ( total_2d_a(j+1,i)   - total_2d_a(j,i)   ) / dny
              myr = ( total_2d_a(j+1,i+1) - total_2d_a(j,i+1) ) / dny
              DO  jj = 0, dny-1
-                fl = myl*jj + total_2d_a(j,i)  
-                fr = myr*jj + total_2d_a(j,i+1)  
+                fl = myl*jj + total_2d_a(j,i)
+                fr = myr*jj + total_2d_a(j,i+1)
                 DO  ii = 0, dnx-1
                    total_2d_o(j*dny+jj,i*dnx+ii) = ( fr - fl ) / dnx * ii + fl
                 ENDDO
              ENDDO
           ENDDO
        ENDDO
-! 
+!
 !--    Cyclic boundary conditions for ocean grid
        total_2d_o(-nbgp:-1,:) = total_2d_o(ny_o+1-nbgp:ny_o,:)
        total_2d_o(:,-nbgp:-1) = total_2d_o(:,nx_o+1-nbgp:nx_o)
@@ -841,7 +784,7 @@
 
     ENDIF
 
-    CALL MPI_BARRIER( comm2d, ierr )  
+    CALL MPI_BARRIER( comm2d, ierr )
 
 #endif
 

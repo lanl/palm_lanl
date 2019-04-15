@@ -1489,7 +1489,7 @@
         ONLY:  constant_flux_layer
 
     USE surface_mod,                                                           &
-        ONLY :  surf_def_h, surf_def_v, surf_lsm_h, surf_usm_h
+        ONLY :  surf_def_h, surf_def_v
 
     IMPLICIT NONE
 
@@ -1568,68 +1568,6 @@
 
        ENDDO
 !
-!--    Natural surfaces, upward-facing
-       !$OMP PARALLEL DO PRIVATE(i,j,k,m)
-       DO  m = 1, surf_lsm_h%ns
-
-          i = surf_lsm_h%i(m)
-          j = surf_lsm_h%j(m)
-          k = surf_lsm_h%k(m)
-!
-!--       Note, calculatione of u_0 and v_0 is not fully accurate, as u/v
-!--       and km are not on the same grid. Actually, a further
-!--       interpolation of km onto the u/v-grid is necessary. However, the
-!--       effect of this error is negligible.
-          surf_lsm_h%u_0(m) = u(k+1,j,i) + surf_lsm_h%usws(m)      *           &
-                                        drho_air_zw(k-1) *                     &
-                                        ( zu(k+1)   - zu(k-1)    )  /          &
-                                        ( km(k,j,i) + 1.0E-20_wp )
-          surf_lsm_h%v_0(m) = v(k+1,j,i) + surf_lsm_h%vsws(m)      *           &
-                                        drho_air_zw(k-1) *                     &
-                                        ( zu(k+1)   - zu(k-1)    )  /          &
-                                        ( km(k,j,i) + 1.0E-20_wp )
-
-          IF ( ABS( u(k+1,j,i) - surf_lsm_h%u_0(m) )  >                        &
-               ABS( u(k+1,j,i) - u(k-1,j,i)   )                                &
-             )  surf_lsm_h%u_0(m) = u(k-1,j,i)
-
-          IF ( ABS( v(k+1,j,i) - surf_lsm_h%v_0(m) )  >                        &
-               ABS( v(k+1,j,i) - v(k-1,j,i)   )                                &
-             )  surf_lsm_h%v_0(m) = v(k-1,j,i)
-
-       ENDDO
-!
-!--    Urban surfaces, upward-facing
-       !$OMP PARALLEL DO PRIVATE(i,j,k,m)
-       DO  m = 1, surf_usm_h%ns
-
-          i = surf_usm_h%i(m)
-          j = surf_usm_h%j(m)
-          k = surf_usm_h%k(m)
-!
-!--       Note, calculatione of u_0 and v_0 is not fully accurate, as u/v
-!--       and km are not on the same grid. Actually, a further
-!--       interpolation of km onto the u/v-grid is necessary. However, the
-!--       effect of this error is negligible.
-          surf_usm_h%u_0(m) = u(k+1,j,i) + surf_usm_h%usws(m)      *           &
-                                        drho_air_zw(k-1) *                     &
-                                        ( zu(k+1)   - zu(k-1)    )  /          &
-                                        ( km(k,j,i) + 1.0E-20_wp )
-          surf_usm_h%v_0(m) = v(k+1,j,i) + surf_usm_h%vsws(m)      *           &
-                                        drho_air_zw(k-1) *                     &
-                                        ( zu(k+1)   - zu(k-1)    )  /          &
-                                        ( km(k,j,i) + 1.0E-20_wp )
-
-          IF ( ABS( u(k+1,j,i) - surf_usm_h%u_0(m) )  >                        &
-               ABS( u(k+1,j,i) - u(k-1,j,i)   )                                &
-             )  surf_usm_h%u_0(m) = u(k-1,j,i)
-
-          IF ( ABS( v(k+1,j,i) - surf_usm_h%v_0(m) )  >                        &
-               ABS( v(k+1,j,i) - v(k-1,j,i)   )                                &
-             )  surf_usm_h%v_0(m) = v(k-1,j,i)
-
-       ENDDO
-
     ENDIF
 
  END SUBROUTINE production_e_init
@@ -1653,8 +1591,7 @@
         ONLY:  ddx2, ddy2
 
     USE surface_mod,                                                           &
-        ONLY :   bc_h, surf_def_h, surf_def_v, surf_lsm_h, surf_lsm_v, surf_usm_h,    &
-                surf_usm_v
+        ONLY :   bc_h, surf_def_h, surf_def_v
 
     IMPLICIT NONE
 
@@ -1840,8 +1777,7 @@
         ONLY:  ddx, dx, ddy, dy
 
     USE surface_mod,                                                           &
-        ONLY :  surf_def_h, surf_def_v, surf_lsm_h, surf_lsm_v, surf_usm_h,    &
-                surf_usm_v
+        ONLY :  surf_def_h, surf_def_v
 
     IMPLICIT NONE
 

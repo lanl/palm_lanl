@@ -419,7 +419,7 @@
         ONLY:  surface_layer_fluxes
 
     USE surface_mod,                                                           &
-        ONLY:  surf_def_h, surf_lsm_h, surf_usm_h
+        ONLY:  surf_def_h
 
     USE turbulence_closure_mod,                                                &
         ONLY:  tcm_diffusivities, production_e_init

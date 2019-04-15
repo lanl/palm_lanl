@@ -19,81 +19,81 @@
 !
 ! Current revisions:
 ! -----------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: average_3d_data.f90 3004 2018-04-27 12:33:25Z Giersch $
 ! Further allocation checks implemented, case z0q* added
-! 
+!
 ! 2885 2018-03-14 11:02:46Z Giersch
 ! Preliminary gust module interface implemented
-! 
+!
 ! 2797 2018-02-08 13:24:35Z suehring
 ! Enable output of ground-heat flux also at urban surfaces.
-! 
+!
 ! 2766 2018-01-22 17:17:47Z kanani
 ! Removed preprocessor directive __chem
-! 
+!
 ! 2742 2018-01-12 14:59:47Z suehring
 ! Enable output of surface temperature
-! 
+!
 ! 2735 2018-01-11 12:01:27Z suehring
 ! output of r_a moved from land-surface to consider also urban-type surfaces
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 ! Implement call for turbulence_closure_mod (TG)
 ! Implementation of chemistry module (FK)
-! 
+!
 ! 2292 2017-06-20 09:51:42Z schwenkel
-! Implementation of new microphysic scheme: cloud_scheme = 'morrison' 
-! includes two more prognostic equations for cloud drop concentration (nc)  
-! and cloud water content (qc). 
-! 
+! Implementation of new microphysic scheme: cloud_scheme = 'morrison'
+! includes two more prognostic equations for cloud drop concentration (nc)
+! and cloud water content (qc).
+!
 ! 2233 2017-05-30 18:08:54Z suehring
 !
 ! 2232 2017-05-30 17:47:52Z suehring
-! Adjustments to new surface concept - additional ghost point exchange 
+! Adjustments to new surface concept - additional ghost point exchange
 ! of surface variable required
-! 
+!
 ! 2031 2016-10-21 15:11:58Z knoop
 ! renamed variable rho to rho_ocean and rho_av to rho_ocean_av
-! 
+!
 ! 2011 2016-09-19 17:29:57Z kanani
 ! Flag urban_surface is now defined in module control_parameters,
 ! changed prefix for urban surface model output to "usm_",
 ! introduced control parameter varnamelength for LEN of trimvar.
-! 
+!
 ! 2007 2016-08-24 15:47:17Z kanani
-! Added support for new urban surface model (temporary modifications of 
+! Added support for new urban surface model (temporary modifications of
 ! SELECT CASE ( ) necessary, see variable trimvar),
 ! added comments in variable declaration section
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1972 2016-07-26 07:52:02Z maronga
 ! Output of land surface quantities is now done directly in the respective module
-! 
+!
 ! 1960 2016-07-12 16:34:24Z suehring
 ! Treat humidity and passive scalar separately
-! 
+!
 ! 1691 2015-10-26 16:17:44Z maronga
-! Added output of Obukhov length and radiative heating rates for RRTMG. 
-! 
+! Added output of Obukhov length and radiative heating rates for RRTMG.
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1585 2015-04-30 07:05:52Z maronga
 ! Adapted for RRTMG
-! 
+!
 ! 1555 2015-03-04 17:44:27Z maronga
 ! Added output of r_a and r_s
-! 
+!
 ! 1551 2015-03-03 14:18:16Z maronga
 ! Added support for land surface and radiation model parameters.
 !
@@ -133,7 +133,7 @@
 !> Time-averaging of 3d-data-arrays.
 !------------------------------------------------------------------------------!
  SUBROUTINE average_3d_data
- 
+
 
     USE averaging
 
@@ -173,15 +173,7 @@
 !
 !-- Loop of all variables to be averaged.
     DO  ii = 1, doav_n
-
-!
-!--    Temporary solution to account for data output within the new urban 
-!--    surface model (urban_surface_mod.f90), see also SELECT CASE ( trimvar )
        trimvar = TRIM( doav(ii) )
-       IF ( urban_surface  .AND.  trimvar(1:4) == 'usm_' )  THEN
-          trimvar = 'usm_output'
-       ENDIF
-
 !
 !--    Store the array chosen on the temporary array.
        SELECT CASE ( trimvar )
@@ -532,7 +524,7 @@
              ENDIF
 
           CASE ( 'u' )
-             IF ( ALLOCATED( u_av ) ) THEN 
+             IF ( ALLOCATED( u_av ) ) THEN
                 DO  i = nxlg, nxrg
                    DO  j = nysg, nyng
                       DO  k = nzb, nzt+1

@@ -19,43 +19,43 @@
 !
 ! Current revisions:
 ! ------------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: netcdf_interface_mod.f90 3049 2018-05-29 13:52:36Z Giersch $
 ! Error messages revised
-! 
+!
 ! 3045 2018-05-28 07:55:41Z Giersch
 ! Error messages revised, code adjusted to PALMs coding standards, CASE pt_ext
 ! pt_new disabled, comment revised
-! 
+!
 ! 3004 2018-04-27 12:33:25Z Giersch
 ! .NOT. found in if-query added to account for variables found in tcm
-! 
+!
 ! 2964 2018-04-12 16:04:03Z Giersch
 ! Calculation of fixed number of output time levels for parallel netcdf output
 ! has been moved completely to check_parameters
-! 
+!
 ! 2932 2018-03-26 09:39:22Z maronga
 ! Renamed inipar to initialization_parameters.
-! 
+!
 ! 2817 2018-02-19 16:32:21Z knoop
 ! Preliminary gust module interface implemented
-! 
+!
 ! 2769 2018-01-25 09:22:24Z raasch
 ! bugfix for calculating number of required output time levels in case of output
 ! at the beginning of a restart run
-! 
+!
 ! 2766 2018-01-22 17:17:47Z kanani
 ! Removed preprocessor directive __chem
-! 
+!
 ! 2746 2018-01-15 12:06:04Z suehring
 ! Move flag plant canopy to modules
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 ! Implementation of uv exposure model (FK)
@@ -67,33 +67,33 @@
 ! 2512 2017-10-04 08:26:59Z raasch
 ! upper bounds of cross section and 3d output changed from nx+1,ny+1 to nx,ny
 ! no output of ghost layer data any more
-! 
+!
 ! 2302 2017-07-03 14:07:20Z suehring
 ! Reading of 3D topography using NetCDF data type NC_BYTE
-! 
+!
 ! 2292 2017-06-20 09:51:42Z schwenkel
-! Implementation of new microphysic scheme: cloud_scheme = 'morrison' 
-! includes two more prognostic equations for cloud drop concentration (nc)  
-! and cloud water content (qc). 
-! 
+! Implementation of new microphysic scheme: cloud_scheme = 'morrison'
+! includes two more prognostic equations for cloud drop concentration (nc)
+! and cloud water content (qc).
+!
 ! 2270 2017-06-09 12:18:47Z maronga
 ! Removed 2 timeseries (shf_eb + qsws_eb). Removed _eb suffixes
-! 
+!
 ! 2265 2017-06-08 16:58:28Z schwenkel
 ! Unused variables removed.
-! 
+!
 ! 2239 2017-06-01 12:04:51Z suehring
 ! Bugfix xy-output of land-surface variables
-! 
+!
 ! 2233 2017-05-30 18:08:54Z suehring
 !
 ! 2232 2017-05-30 17:47:52Z suehring
 ! Adjustments to new topography and surface concept
-! 
-! Topograpyh height arrays (zu_s_inner, zw_w_inner) are defined locally, output
-! only if parallel netcdf. 
 !
-! Build interface for topography input: 
+! Topograpyh height arrays (zu_s_inner, zw_w_inner) are defined locally, output
+! only if parallel netcdf.
+!
+! Build interface for topography input:
 ! - open file in read-only mode
 ! - read global attributes
 ! - read variables
@@ -102,7 +102,7 @@
 !
 ! 2209 2017-04-19 09:34:46Z kanani
 ! Added support for plant canopy model output
-! 
+!
 ! 2189 2017-03-21 09:29:52Z raasch
 ! bugfix: rho renamed rho_ocean for the cross section output
 !
@@ -112,54 +112,54 @@
 !
 ! 2040 2016-10-26 16:58:09Z gronemeier
 ! Increased number of possible statistic_regions to 99
-! 
+!
 ! 2037 2016-10-26 11:15:40Z knoop
 ! Anelastic approximation implemented
-! 
+!
 ! 2031 2016-10-21 15:11:58Z knoop
 ! renamed variable rho to rho_ocean
-! 
+!
 ! 2011 2016-09-19 17:29:57Z kanani
 ! Flag urban_surface is now defined in module control_parameters,
 ! changed prefix for urban surface model output to "usm_",
 ! introduced control parameter varnamelength for LEN of trimvar.
-! 
+!
 ! 2007 2016-08-24 15:47:17Z kanani
-! Added support for new urban surface model (temporary modifications of 
+! Added support for new urban surface model (temporary modifications of
 ! SELECT CASE ( ) necessary, see variable trimvar),
 ! increased DIMENSION of do2d_unit, do3d_unit, id_var_do2d, id_var_do3d,
 ! increased LEN of char_cross_profiles, var_list, var_list_old
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1990 2016-08-12 09:54:36Z gronemeier
 ! Bugfix: variable list was not written for time series output
-! 
+!
 ! 1980 2016-07-29 15:51:57Z suehring
 ! Bugfix, in order to steer user-defined output, setting flag found explicitly
 ! to .F.
-! 
+!
 ! 1976 2016-07-27 13:28:04Z maronga
-! Removed remaining 2D land surface quantities. Definition of radiation 
+! Removed remaining 2D land surface quantities. Definition of radiation
 ! quantities is now done directly in the respective module
-! 
+!
 ! 1972 2016-07-26 07:52:02Z maronga
 ! Bugfix: wrong units for lsm quantities.
 ! Definition of grids for land surface quantities is now done directly in the
 ! respective module.
-! 
+!
 ! 1960 2016-07-12 16:34:24Z suehring
-! Additional labels and units for timeseries output of passive scalar-related 
+! Additional labels and units for timeseries output of passive scalar-related
 ! quantities
-! 
+!
 ! 1957 2016-07-07 10:43:48Z suehring
 ! flight module added
 !
 ! 1850 2016-04-08 13:29:27Z maronga
 ! Module renamed
-! 
-! 
+!
+!
 ! 1833 2016-04-07 14:23:03Z raasch
 ! spectrum renamed spectra_mod
 !
@@ -175,22 +175,22 @@
 !
 ! 1745 2016-02-05 13:06:51Z gronemeier
 ! Bugfix: recalculating ntdim_3d, ntdim_2d_xy/xz/yz when checking the
-!         extensibility of an existing file (only when using parallel NetCDF). 
-! 
+!         extensibility of an existing file (only when using parallel NetCDF).
+!
 ! 1691 2015-10-26 16:17:44Z maronga
-! Added output of radiative heating rates for RRTMG. Corrected output of 
+! Added output of radiative heating rates for RRTMG. Corrected output of
 ! radiative fluxes
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1596 2015-05-21 09:34:28Z gronemeier
 ! Bugfix in masked data output. Read 'zu_3d' when trying to extend masked data
-! 
+!
 ! 1551 2015-03-03 14:18:16Z maronga
 ! Added support for land surface model and radiation model output. In the course
 ! of this action a new vertical grid zs (soil) was introduced.
-! 
+!
 ! 1353 2014-04-08 15:21:23Z heinze
 ! REAL constants provided with KIND-attribute
 !
@@ -232,7 +232,7 @@
 !
 ! 992 2012-09-05 15:08:26Z hoffmann
 ! Removal of the informative messages PA0352 and PA0353.
-!  
+!
 ! 983 2012-08-21 14:17:57Z hoffmann
 ! Bugfix in cross_profiles.
 !
@@ -241,7 +241,7 @@
 !
 ! 959 2012-07-24 13:13:41Z hoffmann
 ! Bugfix in cross_profiles. It is not allowed to arrange more than 100
-! profiles with cross_profiles. 
+! profiles with cross_profiles.
 !
 ! 951 2012-07-19 14:22:52Z hoffmann
 ! cross_profiles, profile_rows, profile_columns are written to netCDF header
@@ -324,7 +324,7 @@
              'r_s          ',                                                  &
              'rad_net      ', 'rad_lw_in    ', 'rad_lw_out   ',                &
              'rad_sw_in    ', 'rad_sw_out   ', 'rrtm_aldif   ',                &
-             'rrtm_aldir   ', 'rrtm_asdif   ', 'rrtm_asdir   ',                &                                               
+             'rrtm_aldir   ', 'rrtm_asdif   ', 'rrtm_asdir   ',                &
              ( 'unknown      ', i9 = 1, dots_max-43 ) /)
 
     CHARACTER (LEN=13), DIMENSION(dots_max) :: dots_unit =                     &
@@ -417,17 +417,17 @@
     INTEGER(iwp), DIMENSION(20)  ::  id_var_prt
     INTEGER(iwp), DIMENSION(11)  ::  nc_precision
     INTEGER(iwp), DIMENSION(dopr_norm_num) ::  id_var_norm_dopr
-    
+
     INTEGER(iwp), DIMENSION(fl_max) ::  id_dim_x_fl, id_dim_y_fl, id_dim_z_fl
     INTEGER(iwp), DIMENSION(fl_max) ::  id_var_x_fl, id_var_y_fl, id_var_z_fl
-    
+
     CHARACTER (LEN=20), DIMENSION(fl_max*var_fl_max) :: dofl_label
-    CHARACTER (LEN=20), DIMENSION(fl_max*var_fl_max) :: dofl_unit 
+    CHARACTER (LEN=20), DIMENSION(fl_max*var_fl_max) :: dofl_unit
     CHARACTER (LEN=20), DIMENSION(fl_max) :: dofl_dim_label_x
     CHARACTER (LEN=20), DIMENSION(fl_max) :: dofl_dim_label_y
     CHARACTER (LEN=20), DIMENSION(fl_max) :: dofl_dim_label_z
 
-    INTEGER(iwp), DIMENSION(fl_max*var_fl_max) :: id_var_dofl    
+    INTEGER(iwp), DIMENSION(fl_max*var_fl_max) :: id_var_dofl
 
     INTEGER(iwp), DIMENSION(dopts_num,0:10) ::  id_var_dopts
     INTEGER(iwp), DIMENSION(0:1,500)        ::  id_var_do3d
@@ -453,7 +453,7 @@
     PUBLIC   &
             dopr_unit, dopts_num,     &
             dots_label, dots_max, dots_num, dots_rad, dots_soil, dots_unit,    &
-             do3d_unit, fill_value,                                  & 
+             do3d_unit, fill_value,                                  &
             id_set_fl, id_set_mask, id_set_pr,                                 &
             id_set_prt, id_set_pts, id_set_sp, id_set_ts,&
             id_set_3d, id_var_dopr,     &
@@ -498,7 +498,7 @@
  CONTAINS
 
  SUBROUTINE netcdf_define_header( callmode, extend, av )
- 
+
 #if defined( __netcdf )
 
     USE arrays_3d,                                                             &
@@ -667,7 +667,7 @@
 
              CASE DEFAULT
                 WRITE ( message_string, * ) 'unknown variable in ' //          &
-                                  'initialization_parameters ',                & 
+                                  'initialization_parameters ',                &
                                   'assignment: netcdf_precision(', i, ')="',   &
                                             TRIM( netcdf_precision(i) ),'"'
                 CALL message( 'netcdf_define_header', 'PA0243', 1, 2, 0, 6, 0 )
@@ -708,8 +708,8 @@
     ENDIF
 
 !
-!-- Select the mode to be processed. Possibilities are 3d, ma (mask), xy, xz, 
-!-- yz, pr (profiles), ps (particle timeseries), fl (flight data), ts 
+!-- Select the mode to be processed. Possibilities are 3d, ma (mask), xy, xz,
+!-- yz, pr (profiles), ps (particle timeseries), fl (flight data), ts
 !-- (timeseries) or sp (spectra)
     SELECT CASE ( mode )
 
@@ -808,27 +808,21 @@
                                      id_dim_y_3d(av) /), 'zusi', NF90_DOUBLE,  &
                                      id_var_zusi_3d(av), 'meters',             &
                                      'zu(nzb_s_inner)', 413, 414, 415 )
-!             
+!
 !--          Define zwwi = zw(nzb_w_inner)
              CALL netcdf_create_var( id_set_3d(av), (/ id_dim_x_3d(av),        &
                                      id_dim_y_3d(av) /), 'zwwi', NF90_DOUBLE,  &
                                      id_var_zwwi_3d(av), 'meters',             &
                                      'zw(nzb_w_inner)', 416, 417, 418 )
 
-          ENDIF             
+          ENDIF
 !
 !--       Define the variables
           var_list = ';'
           i = 1
 
           DO WHILE ( do3d(av,i)(1:1) /= ' ' )
-!
-!--          Temporary solution to account for data output within the new urban 
-!--          surface model (urban_surface_mod.f90), see also SELECT CASE ( trimvar )
              trimvar = TRIM( do3d(av,i) )
-             IF ( urban_surface  .AND.  trimvar(1:4) == 'usm_' )  THEN
-                trimvar = 'usm_output'
-             ENDIF
 !
 !--          Check for the grid
              found = .FALSE.
@@ -864,7 +858,7 @@
                    grid_y = 'y'
                    grid_z = 'zw'
 
-!             
+!
 
                 CASE DEFAULT
 
@@ -1235,10 +1229,10 @@
 
 !
 !--       Update the title attribute on file
-!--       In order to avoid 'data mode' errors if updated attributes are larger 
-!--       than their original size, NF90_PUT_ATT is called in 'define mode' 
-!--       enclosed by NF90_REDEF and NF90_ENDDEF calls. This implies a possible 
-!--       performance loss due to data copying; an alternative strategy would be 
+!--       In order to avoid 'data mode' errors if updated attributes are larger
+!--       than their original size, NF90_PUT_ATT is called in 'define mode'
+!--       enclosed by NF90_REDEF and NF90_ENDDEF calls. This implies a possible
+!--       performance loss due to data copying; an alternative strategy would be
 !--       to ensure equal attribute size. Maybe revise later.
           IF ( av == 0 )  THEN
              time_average_text = ' '
@@ -1285,13 +1279,13 @@
 !--       on one page to the netcdf header.
 !--       This information can be used by palmplot.
           nc_stat = NF90_PUT_ATT( id_set_pr, NF90_GLOBAL,                     &
-                                  'no_rows',                                  & 
-                                  profile_rows ) 
+                                  'no_rows',                                  &
+                                  profile_rows )
           CALL netcdf_handle_error( 'netcdf_define_header', 519 )
 
           nc_stat = NF90_PUT_ATT( id_set_pr, NF90_GLOBAL,                     &
-                                  'no_columns',                               & 
-                                  profile_columns ) 
+                                  'no_columns',                               &
+                                  profile_columns )
           CALL netcdf_handle_error( 'netcdf_define_header', 520 )
 
 
@@ -1326,7 +1320,7 @@
 
           cross_profiles_count = MIN( crmax, k-1 )
 !
-!--       Check if all profiles defined in cross_profiles are defined in 
+!--       Check if all profiles defined in cross_profiles are defined in
 !--       data_output_pr. If not, they will be skipped.
           DO  i = 1, cross_profiles_count
              DO  j = 1, dopr_n
@@ -1363,7 +1357,7 @@
              ENDIF
           ENDDO
 !
-!--       Check if all profiles defined in data_output_pr are defined in 
+!--       Check if all profiles defined in data_output_pr are defined in
 !--       cross_profiles. If not, they will be added to cross_profiles.
           DO  i = 1, dopr_n
              DO  j = 1, cross_profiles_count
@@ -1395,8 +1389,8 @@
           ENDIF
 
 !
-!--       Writing cross_profiles to netcdf header. This information can be 
-!--       used by palmplot. Each profile is separated by ",", each cross is 
+!--       Writing cross_profiles to netcdf header. This information can be
+!--       used by palmplot. Each profile is separated by ",", each cross is
 !--       separated by ";".
           char_cross_profiles = ';'
           id_last = 1
@@ -1613,7 +1607,7 @@
 !--       Now get the variable ids.
           i = 1
           DO  i = 1, dopr_n
- 
+
              IF ( statistic_regions == 0 )  THEN
                 nc_stat = NF90_INQ_VARID( id_set_pr, data_output_pr(i),        &
                                           id_var_dopr(i,0) )
@@ -1641,10 +1635,10 @@
 
 !
 !--       Update the title attribute on file
-!--       In order to avoid 'data mode' errors if updated attributes are larger 
-!--       than their original size, NF90_PUT_ATT is called in 'define mode' 
-!--       enclosed by NF90_REDEF and NF90_ENDDEF calls. This implies a possible 
-!--       performance loss due to data copying; an alternative strategy would be 
+!--       In order to avoid 'data mode' errors if updated attributes are larger
+!--       than their original size, NF90_PUT_ATT is called in 'define mode'
+!--       enclosed by NF90_REDEF and NF90_ENDDEF calls. This implies a possible
+!--       performance loss due to data copying; an alternative strategy would be
 !--       to ensure equal attribute size in a job chain. Maybe revise later.
           IF ( averaging_interval_pr == 0.0_wp )  THEN
              time_average_text = ' '
@@ -1812,7 +1806,7 @@
 !--       Now get the variable ids
           i = 1
           DO  i = 1, dots_num
- 
+
              IF ( statistic_regions == 0 )  THEN
                 nc_stat = NF90_INQ_VARID( id_set_ts, dots_label(i), &
                                           id_var_dots(i,0) )
@@ -1831,10 +1825,10 @@
 
 !
 !--       Update the title attribute on file
-!--       In order to avoid 'data mode' errors if updated attributes are larger 
-!--       than their original size, NF90_PUT_ATT is called in 'define mode' 
-!--       enclosed by NF90_REDEF and NF90_ENDDEF calls. This implies a possible 
-!--       performance loss due to data copying; an alternative strategy would be 
+!--       In order to avoid 'data mode' errors if updated attributes are larger
+!--       than their original size, NF90_PUT_ATT is called in 'define mode'
+!--       enclosed by NF90_REDEF and NF90_ENDDEF calls. This implies a possible
+!--       performance loss due to data copying; an alternative strategy would be
 !--       to ensure equal attribute size in a job chain. Maybe revise later.
           nc_stat = NF90_REDEF( id_set_ts )
           CALL netcdf_handle_error( 'netcdf_define_header', 439 )
@@ -1847,7 +1841,7 @@
                            'from previous run found.' //                       &
                            '&This file will be extended.'
           CALL message( 'define_netcdf_header', 'PA0259', 0, 0, 0, 6, 0 )
-          
+
        CASE DEFAULT
 
           message_string = 'mode "' // TRIM( mode) // '" not supported'
@@ -1865,7 +1859,7 @@
 !> Creates a netCDF file and give back the id. The parallel flag has to be TRUE
 !> for parallel netCDF output support.
 !------------------------------------------------------------------------------!
- 
+
  SUBROUTINE netcdf_create_file( filename , id, parallel, errno )
 #if defined( __netcdf )
 
@@ -1973,7 +1967,7 @@
 ! ------------
 !> Prints out a text message corresponding to the current status.
 !------------------------------------------------------------------------------!
- 
+
  SUBROUTINE netcdf_handle_error( routine_name, errno )
 #if defined( __netcdf )
 
@@ -2049,7 +2043,7 @@
     CHARACTER(LEN=*), INTENT(IN) ::  unit_name
     CHARACTER(LEN=*), INTENT(IN) ::  var_name
 
-    LOGICAL, OPTIONAL ::  fill  !< indicates setting of _FillValue attribute 
+    LOGICAL, OPTIONAL ::  fill  !< indicates setting of _FillValue attribute
 
     INTEGER, INTENT(IN)  ::  error_no1
     INTEGER, INTENT(IN)  ::  error_no2
@@ -2090,7 +2084,7 @@
 
 !
 !-- Set _FillValue for all variables, except for dimension variables.
-!-- Set the fill values accordingly to the corresponding output precision. 
+!-- Set the fill values accordingly to the corresponding output precision.
     IF ( PRESENT( fill ) )  THEN
        IF ( var_type == NF90_REAL4 )  THEN
           nc_stat = NF90_PUT_ATT( ncid, var_id, '_FillValue',                  &

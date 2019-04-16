@@ -19,44 +19,44 @@
 !
 ! Current revisions:
 ! ------------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: pres.f90 3016 2018-05-09 10:53:37Z Giersch $
 ! Dollar sign added before Id
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
-! To avoid jumps while plotting w-profiles w level nzt+1 is set to w level nzt 
+! To avoid jumps while plotting w-profiles w level nzt+1 is set to w level nzt
 ! after velocity modifications through the pressure solver were carried out
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 ! poismg_noopt modularized (MS)
-! 
+!
 ! 2298 2017-06-29 09:28:18Z raasch
 ! comment changed + some formatting
-! 
+!
 ! 2233 2017-05-30 18:08:54Z suehring
 !
 ! 2232 2017-05-30 17:47:52Z suehring
 ! Adjustments to new topography and surface concept
-! 
+!
 ! 2118 2017-01-17 16:38:49Z raasch
 ! OpenACC directives and related code removed
-! 
+!
 ! 2073 2016-11-30 14:34:05Z raasch
 ! openmp bugfix for calculation of new divergence
-! 
+!
 ! 2037 2016-10-26 11:15:40Z knoop
 ! Anelastic approximation implemented
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1932 2016-06-10 12:09:21Z suehring
 ! Initial version of purely vertical nesting introduced.
 !
@@ -65,7 +65,7 @@
 !
 ! 1929 2016-06-09 16:25:25Z suehring
 ! Bugfix: weight_substep for initial call, replace by local variable
-! 
+!
 ! 1918 2016-05-27 14:35:57Z raasch
 ! sum of divergence is also calculated when pres is called before the initial
 ! first time step,
@@ -76,20 +76,20 @@
 ! bugfix for calculating divergences
 !
 ! 1908 2016-05-25 17:22:32Z suehring
-! New divergence for output into RUN_CONTROL file is calculated only at last 
+! New divergence for output into RUN_CONTROL file is calculated only at last
 ! Runge-Kutta step
 !
 ! 1845 2016-04-08 08:29:13Z raasch
 ! nzb_2d replace by nzb_u|v_inner
-! 
+!
 ! 1799 2016-04-05 08:35:55Z gronemeier
 ! Bugfix: excluded third dimension from horizontal volume flow calculation
-! 
+!
 ! 1762 2016-02-25 12:31:13Z hellstea
 ! Introduction of nested domain feature
 !
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
+! Code annotations made doxygen readable
 !
 ! 1575 2015-03-27 09:56:27Z raasch
 ! poismg_fast + respective module added, adjustments for psolver-queries
@@ -153,7 +153,7 @@
 !> this perturbation pressure. Compute the remaining divergence.
 !------------------------------------------------------------------------------!
  SUBROUTINE pres
- 
+
 
     USE arrays_3d,                                                             &
         ONLY:  d, ddzu, ddzu_pres, ddzw, dzw, p, p_loc, rho_air, rho_air_zw,   &
@@ -181,13 +181,9 @@
     USE kinds
 
     USE pegrid
-    
+
     USE poisfft_mod,                                                           &
         ONLY:  poisfft
-
-    USE poismg_mod
-
-    USE poismg_noopt_mod
 
     USE statistics,                                                            &
         ONLY:  statistic_regions, sums_divnew_l, sums_divold_l, weight_pres,   &
@@ -237,10 +233,10 @@
     ENDIF
 
 !-- Remove mean vertical velocity in case that Neumann conditions are
-!-- used both at bottom and top boundary, and if not a nested domain in a 
+!-- used both at bottom and top boundary, and if not a nested domain in a
 !-- normal nesting run. In case of vertical nesting, this must be done.
-!-- Therefore an auxiliary logical variable nest_domain_nvn is used here, and 
-!-- nvn stands for non-vertical nesting. 
+!-- Therefore an auxiliary logical variable nest_domain_nvn is used here, and
+!-- nvn stands for non-vertical nesting.
 !-- This cannot be done before the first initial time step because ngp_2dh_outer
 !-- is not yet known then.
     IF ( ibc_p_b == 1  .AND.  ibc_p_t == 1  .AND.                               &
@@ -257,7 +253,7 @@
              ENDDO
           ENDDO
        ENDDO
-#if defined( __parallel )   
+#if defined( __parallel )
        IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
        CALL MPI_ALLREDUCE( w_l_l(1), w_l(1), nzt, MPI_REAL, MPI_SUM, &
                            comm2d, ierr )
@@ -339,7 +335,7 @@
                         ) * ddt_3d * d_weight_pres                             &
                                    * MERGE( 1.0_wp, 0.0_wp,                    &
                                             BTEST( wall_flags_0(k,j,i), 0 )    &
-                                          )     
+                                          )
           ENDDO
        ENDDO
     ENDDO
@@ -398,7 +394,7 @@
 !--    gradient (dp(nzb+1)-dp(nzb))/dz is not used anywhere else.
        IF ( ibc_p_b == 1 )  THEN
 !
-!--       Neumann (dp/dz = 0). Using surfae data type, first for non-natural 
+!--       Neumann (dp/dz = 0). Using surfae data type, first for non-natural
 !--       surfaces, then for natural and urban surfaces
 !--       Upward facing
           !$OMP PARALLEL DO PRIVATE( i, j, k )
@@ -420,7 +416,7 @@
 
        ELSE
 !
-!--       Dirichlet. Using surface data type, first for non-natural 
+!--       Dirichlet. Using surface data type, first for non-natural
 !--       surfaces, then for natural and urban surfaces
 !--       Upward facing
           !$OMP PARALLEL DO PRIVATE( i, j, k )
@@ -498,10 +494,10 @@
        !$OMP END PARALLEL
 
     ENDIF
-       
+
     !$OMP PARALLEL PRIVATE (i,j,k)
     !$OMP DO
-    DO  i = nxl, nxr   
+    DO  i = nxl, nxr
        DO  j = nys, nyn
 
           DO  k = nzb+1, nzt
@@ -529,7 +525,7 @@
                                      * MERGE( 1.0_wp, 0.0_wp,                  &
                                               BTEST( wall_flags_0(k,j,i), 2 )  &
                                             )
-          ENDDO                                                         
+          ENDDO
 
        ENDDO
     ENDDO

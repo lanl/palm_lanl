@@ -350,7 +350,8 @@
         ONLY:  p, diss, diss_p, dzu, e, e_p, nc, nc_p, nr, nr_p, prho, pt, pt_p, pt_init, &
                q_init, q, qc, qc_p, ql, ql_c, ql_v, ql_vp, qr, qr_p, q_p,      &
                ref_state, rho_ocean, s, s_p, sa_p, tend, u, u_p, v, vpt,       &
-               v_p, w, w_p, alpha_T, beta_S, solar3d, sa
+               v_p, w, w_p, alpha_T, beta_S, solar3d, sa, &
+               ddzu, ddzw, dd2zu, drho_air, rho_air_zw, kh, km
 
     USE calc_mean_profile_mod,                                                 &
         ONLY:  calc_mean_profile
@@ -368,7 +369,7 @@
                dt_coupling, dt_data_output_av, dt_disturb, dt_do2d_xy,         &
                dt_do2d_xz, dt_do2d_yz, dt_do3d, dt_domask,dt_dopts, dt_dopr,   &
                dt_dopr_listing, dt_dots, dt_run_control, end_time,    &
-               forcing,       &
+               forcing, g,      &
                intermediate_timestep_count, intermediate_timestep_count_max,   &
                masks,                   &
                mid,  &
@@ -384,7 +385,7 @@
                time_do3d, time_domask, time_dopr, time_dopr_av,                &
                time_dopr_listing, time_dopts, time_dosp, time_dosp_av,         &
                time_dots, time_do_av, time_do_sla, time_disturb, time_dvrp,    &
-               time_run_control, time_since_reference_point,                   &
+               time_run_control, time_since_reference_point, tsc,              &
                turbulent_inflow, turbulent_outflow, urban_surface,             &
                use_initial_profile_as_reference,                               &
                use_single_reference_value, uv_exposure, u_gtrans, v_gtrans,    &
@@ -395,7 +396,8 @@
         ONLY:  cpu_log, log_point, log_point_s
 
     USE indices,                                                               &
-        ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, nyn, nyng, nys, nysg, nzb, nzt
+        ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, nyn, nyng, nys, nysg, nzb, nzt, &
+               wall_flags_0
 
     USE interfaces
 
@@ -422,7 +424,8 @@
         ONLY:  surf_def_h
 
     USE turbulence_closure_mod,                                                &
-        ONLY:  tcm_diffusivities, production_e_init
+        ONLY:  tcm_diffusivities, production_e_init, &
+               l_grid, l_wall
 
     USE stokes_force_mod,                                                      &
         ONLY:  stokes_pressure_head
@@ -473,6 +476,21 @@
 ! !$acc       copyin( rdf ) &
 ! !$acc       copyin( rdf_sc )
 
+!$acc data copyin( g ) &
+!$acc      copyin( prho_reference ) &
+!$acc      copyin( drho_air ) &
+!$acc      copyin( rho_air_zw ) &
+!$acc      copyin( dd2zu ) &
+!$acc      copyin( ddzu ) &
+!$acc      copyin( ddzw ) &
+!$acc      copyin( l_grid ) &
+!$acc      copyin( l_wall ) &
+!$acc      copyin( wall_flags_0 ) &
+!$acc      copyin( tsc ) &
+!$acc      copyin ( e, e_p ) &
+!$acc      copyin ( kh, km ) &
+!$acc      copyin ( prho )
+
 !
 !-- At beginning determine the first time step
     CALL timestep
@@ -504,6 +522,7 @@ print *, simulated_time
 !--       Set the steering factors for the prognostic equations which depend
 !--       on the timestep scheme
           CALL timestep_scheme_steering
+          !$acc update device(tsc)
 
 !--          Horizontally averaged profiles to be used as reference state in
 !--          buoyancy terms (WARNING: only the respective last call of
@@ -521,7 +540,9 @@ print *, simulated_time
           IF ( ( ws_scheme_mom .OR. ws_scheme_sca )  .AND.  &
                intermediate_timestep_count == 1 )  CALL ws_statistics
 !
+          !$acc update device(e)
           CALL prognostic_equations_vector
+          !$acc update self(e_p)
             !
 !
 !--       Exchange of ghost points (lateral boundary conditions)
@@ -589,7 +610,9 @@ print *, simulated_time
 
 !--       Compute the diffusion coefficients
           CALL cpu_log( log_point(17), 'diffusivities', 'start' )
-          CALL tcm_diffusivities( prho, prho_reference )
+          !$acc update device(e, prho)
+          CALL tcm_diffusivities
+          !$acc update self(km, kh, e)
           CALL cpu_log( log_point(17), 'diffusivities', 'stop' )
 !
 
@@ -724,6 +747,8 @@ print *, simulated_time
        CALL cpu_log( log_point_s(10), 'timesteps', 'stop' )
 
     ENDDO   ! time loop
+
+!$acc end data
 
     call ws_finalize
 

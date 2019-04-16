@@ -299,7 +299,8 @@
            tcm_check_parameters, tcm_data_output_2d, tcm_data_output_3d,       &
            tcm_define_netcdf_grid, tcm_diffusivities, tcm_init,                &
            tcm_init_arrays, tcm_prognostic, tcm_swap_timelevel,                &
-           tcm_deallocate_arrays
+           tcm_deallocate_arrays, &
+           l_grid, l_wall
 
 
  CONTAINS
@@ -1588,10 +1589,10 @@
     REAL(wp)     ::  l              !< mixing length
     REAL(wp)     ::  ll             !< adjusted l
 
+    ! REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn,nxl:nxr) ::  dissipation  !< TKE dissipation
     REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  dissipation  !< TKE dissipation
-
-    REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) :: advec  !< advection term of TKE tendency
-    REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) :: produc !< production term of TKE tendency
+    ! REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) :: advec  !< advection term of TKE tendency
+    ! REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) :: produc !< production term of TKE tendency
 
 !
 !-- If required, compute prognostic equation for turbulent kinetic
@@ -1621,7 +1622,15 @@
 !--    Save production term for prognostic equation of TKE dissipation rate
       ! inline subroutine diffusion_e()
 
-    !$acc data copy(drho_air(nzb+1:nzt),dd2zu(nzb+1:nzt),ddzu(nzb+1:nzt+1),ddzw(nzb+1:nzt),dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),e_p(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),g,kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho_reference,rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr),tsc(3),te_m(nzb+1:nzt,nys:nyn,nxl:nxr),wall_flags_0(nzb+1:nzt,nys:nyn,nxl:nxr))
+    !$acc data copy(tend(nzb+1:nzt,nys:nyn,nxl:nxr),te_m(nzb+1:nzt,nys:nyn,nxl:nxr)) &
+
+    !$acc present( g, prho_reference, drho_air, rho_air_zw ) &
+    !$acc present( dd2zu, ddzu, ddzw, l_grid ) &
+    !$acc present( l_wall, wall_flags_0) &
+    !$acc present( tsc ) &
+    !$acc present( e, e_p ) &
+    !$acc present( km, prho ) &
+    !$acc create( dissipation )
 
     !$acc parallel default(present)
     !!$acc loop collapse(3)
@@ -1661,7 +1670,7 @@
                 ll = l_grid(k)
              ENDIF
              dissipation(k,j) = ( 0.19_wp + 0.74_wp * l / ll )              &
-                                * e(k,j,i) * SQRT( e(k,j,i) ) / l
+                                  * e(k,j,i) * SQRT( e(k,j,i) ) / l
              tend(k,j,i) = tend(k,j,i) + (                                     &
                                            (                                   &
                        ( km(k,j,i)+km(k,j,i+1) ) * ( e(k,j,i+1)-e(k,j,i) )     &
@@ -2064,7 +2073,8 @@ SUBROUTINE diffusion_e( var, var_reference )
 #endif
     REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  dissipation  !< TKE dissipation
 
-    !$acc data copy(drho_air(nzb+1:nzt),dd2zu(nzb+1:nzt),ddzu(nzb+1:nzt+1),ddzw(nzb+1:nzt),dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),var(:,:,:),kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr),wall_flags_0(nzb+1:nzt,nys:nyn,nxl:nxr))
+    !$acc data copy(dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),var(:,:,:),kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr)) &
+    !$acc present(drho_air, dd2zu, ddzu, ddzw, wall_flags_0)
     !$acc kernels default(present)
 
     !
@@ -2198,16 +2208,17 @@ SUBROUTINE diffusion_e( var, var_reference )
 !> according to Prandtl-Kolmogorov.
 !> @todo consider non-default surfaces
 !------------------------------------------------------------------------------!
- SUBROUTINE tcm_diffusivities( var, var_reference )
+ SUBROUTINE tcm_diffusivities
 
 
     USE arrays_3d,                                                             &
-        ONLY:  dd2zu
+        ONLY:  dd2zu, prho
 
     USE control_parameters,                                                    &
         ONLY:  e_min, outflow_l, outflow_n, outflow_r, outflow_s,              &
                atmos_ocean_sign, g, use_single_reference_value,                &
-               wall_adjustment, wall_adjustment_factor
+               wall_adjustment, wall_adjustment_factor,  &
+               prho_reference
 
     USE grid_variables,                                                        &
         ONLY:  dx, dy
@@ -2234,13 +2245,13 @@ SUBROUTINE diffusion_e( var, var_reference )
     REAL(wp)     ::  l                   !< mixing length
     REAL(wp)     ::  ll                  !< adjusted mixing length
     REAL(wp)     ::  l_stable            !< mixing length according to stratification
-    REAL(wp)     ::  var_reference       !< reference temperature
+    ! REAL(wp)     ::  var_reference       !< reference temperature
 
-#if defined( __nopointer )
-    REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  var  !< temperature
-#else
-    REAL(wp), DIMENSION(:,:,:), POINTER ::  var  !< temperature
-#endif
+! #if defined( __nopointer )
+!     REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  var  !< temperature
+! #else
+!     REAL(wp), DIMENSION(:,:,:), POINTER ::  var  !< temperature
+! #endif
 
 !
 !-- Default thread number in case of one thread
@@ -2257,10 +2268,10 @@ SUBROUTINE diffusion_e( var, var_reference )
 
 !
 !-- Introduce an optional minimum tke
+! TODO: Is this step necessary? <20190416, Qing Li> !
     IF ( e_min > 0.0_wp )  THEN
        !$OMP DO
-       !$acc data copy(wall_flags_0(nzb+1:nzt,nysg:nyng,nxlg:nxrg),e(nzb+1:nzt,nysg:nyng,nxlg:nxrg))
-       !$acc parallel
+       !$acc parallel present(e, wall_flags_0)
        !$acc loop collapse(3)
        DO  i = nxlg, nxrg
           DO  j = nysg, nyng
@@ -2271,12 +2282,14 @@ SUBROUTINE diffusion_e( var, var_reference )
           ENDDO
        ENDDO
        !$acc end parallel
-       !$acc end data
     ENDIF
 
 !   IF ( les_mw )  THEN
     !$OMP DO
-    !$acc data copy(dd2zu(nzb+1:nzt),kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb+1:nzt,nysg:nyng,nxlg:nxrg),e(nzb+1:nzt,nysg:nyng,nxlg:nxrg),var,sums_l_l(nzb+1:nzt,0:statistic_regions,0),wall_flags_0(nzb+1:nzt,nysg:nyng,nxlg:nxrg),l_grid(nzb+1:nzt),rmask(nysg:nyng,nxlg:nxrg,0:statistic_regions),l_wall(nzb+1:nzt,nysg:nyng,nxlg:nxrg))
+    !$acc data copy(sums_l_l(nzb+1:nzt,0:statistic_regions,0),rmask(nysg:nyng,nxlg:nxrg,0:statistic_regions)) &
+    !$acc present( kh, km, e, prho ) &
+    !$acc present( dd2zu, l_grid ) &
+    !$acc present( l_wall, wall_flags_0)
     !$acc parallel
     !$acc loop collapse(3)
     DO  i = nxlg, nxrg
@@ -2290,14 +2303,14 @@ SUBROUTINE diffusion_e( var, var_reference )
 !             CALL mixing_length_les( i, j, k, l, ll, var, var_reference )
             ! inline subroutine mixing_length_les()
 
-             dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
+             dvar_dz = atmos_ocean_sign * ( prho(k+1,j,i) - prho(k-1,j,i) ) * dd2zu(k)
              IF ( dvar_dz > 0.0_wp ) THEN
                 IF ( use_single_reference_value )  THEN
                    l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
-                                      / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
+                                      / SQRT( g / prho_reference * dvar_dz ) + 1E-5_wp
                 ELSE
                    l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
-                                      / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
+                                      / SQRT( g / prho(k,j,i) * dvar_dz ) + 1E-5_wp
                 ENDIF
              ELSE
                 l_stable = l_grid(k)
@@ -2343,6 +2356,8 @@ SUBROUTINE diffusion_e( var, var_reference )
 !
 !-- Upward-facing
     !$OMP PARALLEL DO PRIVATE( i, j, k )
+    !$acc parallel present(km, kh)
+    !$acc loop
     DO  m = 1, bc_h(0)%ns
        i = bc_h(0)%i(m)
        j = bc_h(0)%j(m)
@@ -2353,6 +2368,7 @@ SUBROUTINE diffusion_e( var, var_reference )
 !
 !-- Downward facing surfaces
     !$OMP PARALLEL DO PRIVATE( i, j, k )
+    !$acc loop
     DO  m = 1, bc_h(1)%ns
        i = bc_h(1)%i(m)
        j = bc_h(1)%j(m)
@@ -2364,32 +2380,34 @@ SUBROUTINE diffusion_e( var, var_reference )
 !
 !-- Model top
     !$OMP PARALLEL DO
+    !$acc loop collapse(2)
     DO  i = nxlg, nxrg
        DO  j = nysg, nyng
           km(nzt+1,j,i) = km(nzt,j,i)
           kh(nzt+1,j,i) = kh(nzt,j,i)
        ENDDO
     ENDDO
+    !$acc end parallel
 
 !
 !-- Set Neumann boundary conditions at the outflow boundaries in case of
 !-- non-cyclic lateral boundaries
-    IF ( outflow_l )  THEN
-       km(:,:,nxl-1) = km(:,:,nxl)
-       kh(:,:,nxl-1) = kh(:,:,nxl)
-    ENDIF
-    IF ( outflow_r )  THEN
-       km(:,:,nxr+1) = km(:,:,nxr)
-       kh(:,:,nxr+1) = kh(:,:,nxr)
-    ENDIF
-    IF ( outflow_s )  THEN
-       km(:,nys-1,:) = km(:,nys,:)
-       kh(:,nys-1,:) = kh(:,nys,:)
-    ENDIF
-    IF ( outflow_n )  THEN
-       km(:,nyn+1,:) = km(:,nyn,:)
-       kh(:,nyn+1,:) = kh(:,nyn,:)
-    ENDIF
+    ! IF ( outflow_l )  THEN
+    !    km(:,:,nxl-1) = km(:,:,nxl)
+    !    kh(:,:,nxl-1) = kh(:,:,nxl)
+    ! ENDIF
+    ! IF ( outflow_r )  THEN
+    !    km(:,:,nxr+1) = km(:,:,nxr)
+    !    kh(:,:,nxr+1) = kh(:,:,nxr)
+    ! ENDIF
+    ! IF ( outflow_s )  THEN
+    !    km(:,nys-1,:) = km(:,nys,:)
+    !    kh(:,nys-1,:) = kh(:,nys,:)
+    ! ENDIF
+    ! IF ( outflow_n )  THEN
+    !    km(:,nyn+1,:) = km(:,nyn,:)
+    !    kh(:,nyn+1,:) = kh(:,nyn,:)
+    ! ENDIF
 
  END SUBROUTINE tcm_diffusivities
 

@@ -82,8 +82,6 @@ SOURCES = \
 	palm.f90 \
 	parin.f90 \
 	poisfft_mod.f90 \
-	poismg_mod.f90 \
-	poismg_noopt_mod.f90 \
 	posix_calls_from_fortran.f90 \
 	pres.f90 \
 	prognostic_equations.f90 \
@@ -137,7 +135,7 @@ libs: libLES.a
 
 libLES.a: $(OBJS)
 ifeq ($(OS),Linux)
-	ar cr -o libLES.a *.o 
+	ar cr -o libLES.a *.o
 endif
 ifeq ($(OS),Darwin)
 	libtool -static -o libLES.a *.o
@@ -317,7 +315,6 @@ init_grid.o: \
 	modules.o \
 	netcdf_data_input_mod.o \
 	netcdf_interface_mod.o \
-	poismg_noopt_mod.o \
 	surface_mod.o
 init_ocean.o: \
 	eqn_state_seawater.o \
@@ -392,14 +389,6 @@ poisfft_mod.o: \
 	mod_kinds.o \
 	modules.o \
 	tridia_solver_mod.o
-poismg_mod.o: \
-	cpulog_mod.o \
-	mod_kinds.o \
-	modules.o
-poismg_noopt_mod.o: \
-	cpulog_mod.o \
-	mod_kinds.o \
-	modules.o
 posix_calls_from_fortran.o: \
 
 pres.o: \
@@ -407,8 +396,6 @@ pres.o: \
 	mod_kinds.o \
 	modules.o \
 	poisfft_mod.o \
-	poismg_mod.o \
-	poismg_noopt_mod.o \
 	surface_mod.o
 prognostic_equations.o: \
 	advec_ws.o \

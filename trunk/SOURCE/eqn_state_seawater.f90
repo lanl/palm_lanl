@@ -112,7 +112,6 @@
 
     INTERFACE eqn_state_seawater
        MODULE PROCEDURE eqn_state_seawater
-       MODULE PROCEDURE eqn_state_seawater_ij
     END INTERFACE eqn_state_seawater
 
     INTERFACE eqn_state_seawater_func
@@ -278,112 +277,6 @@
        ENDDO
 
     END SUBROUTINE eqn_state_seawater
-
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Call for grid point i,j
-!------------------------------------------------------------------------------!
-    SUBROUTINE eqn_state_seawater_ij( i, j )
-
-       USE arrays_3d,                                                          &
-           ONLY:  hyp, prho, pt_p, rho_ocean, sa_p
-
-       USE indices,                                                            &
-           ONLY:  nzb, nzt
-
-       USE surface_mod,                                                        &
-          ONLY :  bc_h
-
-       IMPLICIT NONE
-
-       INTEGER(iwp) ::  i       !< running index x direction
-       INTEGER(iwp) ::  j       !< running index y direction
-       INTEGER(iwp) ::  k       !< running index z direction
-       INTEGER(iwp) ::  l       !< running index of surface type, south- or north-facing wall
-       INTEGER(iwp) ::  m       !< running index surface elements
-       INTEGER(iwp) ::  surf_e  !< End index of surface elements at (j,i)-gridpoint
-       INTEGER(iwp) ::  surf_s  !< Start index of surface elements at (j,i)-gridpoint
-
-       REAL(wp) ::  pden   !<
-       REAL(wp) ::  pnom   !<
-       REAL(wp) ::  p1     !<
-       REAL(wp) ::  p2     !<
-       REAL(wp) ::  p3     !<
-       REAL(wp) ::  pt1    !<
-       REAL(wp) ::  pt2    !<
-       REAL(wp) ::  pt3    !<
-       REAL(wp) ::  pt4    !<
-       REAL(wp) ::  sa1    !<
-       REAL(wp) ::  sa15   !<
-       REAL(wp) ::  sa2    !<
-
-       DO  k = nzb+1, nzt
-!
-!--       Pressure is needed in dbar
-          p1 = hyp(k) * 1E-4_wp
-          p2 = p1 * p1
-          p3 = p2 * p1
-
-!
-!--       Temperature needed in degree Celsius
-          pt1 = pt_p(k,j,i) - 273.15_wp
-          pt2 = pt1 * pt1
-          pt3 = pt1 * pt2
-          pt4 = pt2 * pt2
-
-          sa1  = sa_p(k,j,i)
-          sa15 = sa1 * SQRT( sa1 )
-          sa2  = sa1 * sa1
-
-          pnom = nom(1)           + nom(2)*pt1     + nom(3)*pt2     +          &
-                 nom(4)*pt3       + nom(5)*sa1     + nom(6)*sa1*pt1 +          &
-                 nom(7)*sa2
-
-          pden = den(1)           + den(2)*pt1     + den(3)*pt2     +          &
-                 den(4)*pt3       + den(5)*pt4     + den(6)*sa1     +          &
-                 den(7)*sa1*pt1   + den(8)*sa1*pt3 + den(9)*sa15    +          &
-                 den(10)*sa15*pt2
-!
-!--       Potential density (without pressure terms)
-          prho(k,j,i) = pnom / pden
-
-          pnom = pnom +             nom(8)*p1      + nom(9)*p1*pt2  +          &
-                 nom(10)*p1*sa1   + nom(11)*p2     + nom(12)*p2*pt2
-          pden = pden +             den(11)*p1     + den(12)*p2*pt3 +          &
-                 den(13)*p3*pt1
-
-!
-!--       In-situ density
-          rho_ocean(k,j,i) = pnom / pden
-
-
-       ENDDO
-!
-!--    Neumann conditions at up/downward-facing walls
-       surf_s = bc_h(0)%start_index(j,i)
-       surf_e = bc_h(0)%end_index(j,i)
-       DO  m = surf_s, surf_e
-          k                  = bc_h(0)%k(m)
-          prho(k-1,j,i)      = prho(k,j,i)
-          rho_ocean(k-1,j,i) = rho_ocean(k,j,i)
-       ENDDO
-!
-!--    Downward facing surfaces
-       surf_s = bc_h(1)%start_index(j,i)
-       surf_e = bc_h(1)%end_index(j,i)
-       DO  m = surf_s, surf_e
-          k                  = bc_h(1)%k(m)
-          prho(k+1,j,i)      = prho(k,j,i)
-          rho_ocean(k+1,j,i) = rho_ocean(k,j,i)
-       ENDDO
-!
-!--    Neumann condition are assumed at top boundary
-       prho(nzt+1,j,i)      = prho(nzt,j,i)
-       rho_ocean(nzt+1,j,i) = rho_ocean(nzt,j,i)
-
-    END SUBROUTINE eqn_state_seawater_ij
 
 
 !------------------------------------------------------------------------------!

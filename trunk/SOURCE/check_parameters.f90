@@ -2204,14 +2204,6 @@
 !--    Check for allowed value and set units
        SELECT CASE ( TRIM( var ) )
 
-          CASE ( 'e' )
-             IF ( constant_diffusion )  THEN
-                message_string = 'output of "' // TRIM( var ) // '" requi' //  &
-                                 'res constant_diffusion = .FALSE.'
-                CALL message( 'check_parameters', 'PA0103', 1, 2, 0, 6, 0 )
-             ENDIF
-             unit = 'm2/s2'
-
           CASE ( 'solar3d' )
              IF (  .NOT.  ocean )  THEN
                 message_string = 'output of "' // TRIM( var ) // '" requi' //  &
@@ -2261,7 +2253,8 @@
              ENDIF
              unit = 'psu'
 
-          CASE ( 'p', 'pt', 'u', 'v', 'w' )
+          CASE ( 'e', 'p', 'pt', 'u', 'v', 'w' )
+             IF ( TRIM( var ) == 'e'  )  unit = 'm2/s2'
              IF ( TRIM( var ) == 'p'  )  unit = 'Pa'
              IF ( TRIM( var ) == 'pt' )  unit = 'K'
              IF ( TRIM( var ) == 'u'  )  unit = 'm/s'
@@ -2277,7 +2270,7 @@
                                  'cross sections are allowed for this value'
                 CALL message( 'check_parameters', 'PA0111', 1, 2, 0, 6, 0 )
              ENDIF
-            IF ( TRIM( var ) == 'ghf*'   )  unit = 'W/m2'
+             IF ( TRIM( var ) == 'ghf*'   )  unit = 'W/m2'
              IF ( TRIM( var ) == 'lwp*'   )  unit = 'kg/m2'
              IF ( TRIM( var ) == 'ol*'    )  unit = 'm'
              IF ( TRIM( var ) == 'pra*'   )  unit = 'mm'
@@ -2420,28 +2413,6 @@
                      ( end_time - MAX( skip_time_data_output_av,               &
                                        simulated_time_at_begin )               &
                      ) / dt_data_output_av )
-    ENDIF
-
-!
-!-- Check, whether a constant diffusion coefficient shall be used
-    IF ( km_constant /= -1.0_wp )  THEN
-       IF ( km_constant < 0.0_wp )  THEN
-          WRITE( message_string, * )  'km_constant = ', km_constant, ' < 0.0'
-          CALL message( 'check_parameters', 'PA0121', 1, 2, 0, 6, 0 )
-       ELSE
-          IF ( prandtl_number < 0.0_wp )  THEN
-             WRITE( message_string, * )  'prandtl_number = ', prandtl_number,  &
-                                         ' < 0.0'
-             CALL message( 'check_parameters', 'PA0122', 1, 2, 0, 6, 0 )
-          ENDIF
-          constant_diffusion = .TRUE.
-
-          IF ( constant_flux_layer )  THEN
-             message_string = 'constant_flux_layer is not allowed with fixed ' &
-                              // 'value of km'
-             CALL message( 'check_parameters', 'PA0123', 1, 2, 0, 6, 0 )
-          ENDIF
-       ENDIF
     ENDIF
 
 !

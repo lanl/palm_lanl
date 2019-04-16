@@ -361,7 +361,7 @@
                bc_lr_cyc, bc_ns_cyc, bc_pt_t_val,                              &
                bc_q_t_val, call_psolver_at_all_substeps,       &
                constant_flux_layer, constant_heatflux,          &
-               create_disturbances, dopr_n, constant_diffusion, coupling_mode, &
+               create_disturbances, dopr_n, coupling_mode, &
                coupling_start_time, current_timestep_number,                   &
                disturbance_created, disturbance_energy_limit, dist_range,      &
                do_sum, dt_3d, dt_averaging_input, dt_averaging_input_pr,       &
@@ -373,7 +373,7 @@
                masks,                   &
                mid,  &
                neutral, nr_timesteps_this_run, nudging,                        &
-               ocean, passive_scalar, prho_reference, pt_reference,            &
+               passive_scalar, prho_reference, pt_reference,            &
                pt_slope_offset, random_heatflux,                    &
                run_coupled, simulated_time, simulated_time_chr,    &
                skip_time_do2d_xy, skip_time_do2d_xz, skip_time_do2d_yz,        &
@@ -508,20 +508,20 @@ print *, simulated_time
 !--          Horizontally averaged profiles to be used as reference state in
 !--          buoyancy terms (WARNING: only the respective last call of
 !--          calc_mean_profile defines the reference state!)
-                CALL calc_mean_profile( rho_ocean, 64 )
+          CALL calc_mean_profile( rho_ocean, 64 )
 
                 ref_state(:)  = hom(:,1,64,0)
 !--          Assure that ref_state does not become zero at any level
 !--          ( might be the case if a vertical level is completely occupied
 !--            with topography ).
-             ref_state = MERGE( MAXVAL(ref_state), ref_state,                  &
+          ref_state = MERGE( MAXVAL(ref_state), ref_state,                  &
                                 ref_state == 0.0_wp )
 
-          IF ( .NOT. constant_diffusion )  CALL production_e_init
+          CALL production_e_init
           IF ( ( ws_scheme_mom .OR. ws_scheme_sca )  .AND.  &
                intermediate_timestep_count == 1 )  CALL ws_statistics
 !
-            CALL prognostic_equations_vector
+          CALL prognostic_equations_vector
             !
 !
 !--       Exchange of ghost points (lateral boundary conditions)
@@ -531,13 +531,13 @@ print *, simulated_time
           CALL exchange_horiz( v_p, nbgp )
           CALL exchange_horiz( w_p, nbgp )
           CALL exchange_horiz( pt_p, nbgp )
-          IF ( .NOT. constant_diffusion )  CALL exchange_horiz( e_p, nbgp )
-             CALL exchange_horiz( sa_p, nbgp )
-             CALL exchange_horiz( rho_ocean, nbgp )
-             CALL exchange_horiz( prho, nbgp )
-             CALL exchange_horiz( alpha_T, nbgp )
-             CALL exchange_horiz( beta_S, nbgp )
-             call exchange_horiz( solar3d, nbgp )
+          CALL exchange_horiz( e_p, nbgp )
+          CALL exchange_horiz( sa_p, nbgp )
+          CALL exchange_horiz( rho_ocean, nbgp )
+          CALL exchange_horiz( prho, nbgp )
+          CALL exchange_horiz( alpha_T, nbgp )
+          CALL exchange_horiz( beta_S, nbgp )
+          call exchange_horiz( solar3d, nbgp )
           CALL cpu_log( log_point(26), 'exchange-horiz-progn', 'stop' )
 
 !
@@ -578,29 +578,26 @@ print *, simulated_time
           CALL pres
 !
 !--       Compute the diffusion quantities
-          IF ( .NOT. constant_diffusion )  THEN
 
-
-!--          First the vertical (and horizontal) fluxes in the surface
-!--          (constant flux) layer are computed
-             IF ( constant_flux_layer )  THEN
-                CALL cpu_log( log_point(19), 'surface_layer_fluxes', 'start' )
-                CALL surface_layer_fluxes
-                CALL cpu_log( log_point(19), 'surface_layer_fluxes', 'stop' )
-             ENDIF
-
-!--          Compute the diffusion coefficients
-             CALL cpu_log( log_point(17), 'diffusivities', 'start' )
-             CALL tcm_diffusivities( prho, prho_reference )
-             CALL cpu_log( log_point(17), 'diffusivities', 'stop' )
-!
+!--       First the vertical (and horizontal) fluxes in the surface
+!--       (constant flux) layer are computed
+          IF ( constant_flux_layer )  THEN
+             CALL cpu_log( log_point(19), 'surface_layer_fluxes', 'start' )
+             CALL surface_layer_fluxes
+             CALL cpu_log( log_point(19), 'surface_layer_fluxes', 'stop' )
           ENDIF
+
+!--       Compute the diffusion coefficients
+          CALL cpu_log( log_point(17), 'diffusivities', 'start' )
+          CALL tcm_diffusivities( prho, prho_reference )
+          CALL cpu_log( log_point(17), 'diffusivities', 'stop' )
+!
 
        ENDDO   ! Intermediate step loop
 !
 !--    Update perturbation pressure to account for the Stokes pressure
 !--    head, if required
-       IF ( ocean .AND. stokes_force ) THEN
+       IF ( stokes_force ) THEN
           CALL stokes_pressure_head
        ENDIF
 !

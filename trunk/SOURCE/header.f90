@@ -792,29 +792,27 @@
 
     WRITE ( io, 300 )  r_lower, r_upper
 
-    IF ( .NOT. constant_diffusion )  THEN
-       IF ( ibc_e_b == 1 )  THEN
-          r_lower = 'e(0)     = e(1)'
-       ELSE
-          r_lower = 'e(0)     = e(1) = (u*/0.1)**2'
-       ENDIF
-       r_upper = 'e(nzt+1) = e(nzt) = e(nzt-1)'
-
-       WRITE ( io, 301 )  'e', r_lower, r_upper
-
+    IF ( ibc_e_b == 1 )  THEN
+       r_lower = 'e(0)     = e(1)'
+    ELSE
+       r_lower = 'e(0)     = e(1) = (u*/0.1)**2'
     ENDIF
+    r_upper = 'e(nzt+1) = e(nzt) = e(nzt-1)'
 
-       IF ( ibc_sa_b == 0 ) THEN
-          r_lower = 'sa(0)    = sa_surface'
-       ELSE
-          r_lower = 'sa(0)    = sa(1)'
-       ENDIF
-       IF ( ibc_sa_t == 0 )  THEN
-          r_upper =  'sa(nzt+1) = sa_top'
-       ELSE
-          r_upper =  'sa(nzt+1) = sa(nzt)'
-       ENDIF
-       WRITE ( io, 301 ) 'sa', r_lower, r_upper
+    WRITE ( io, 301 )  'e', r_lower, r_upper
+
+
+    IF ( ibc_sa_b == 0 ) THEN
+       r_lower = 'sa(0)    = sa_surface'
+    ELSE
+       r_lower = 'sa(0)    = sa(1)'
+    ENDIF
+    IF ( ibc_sa_t == 0 )  THEN
+       r_upper =  'sa(nzt+1) = sa_top'
+    ELSE
+       r_upper =  'sa(nzt+1) = sa(nzt)'
+    ENDIF
+    WRITE ( io, 301 ) 'sa', r_lower, r_upper
 
     IF ( use_surface_fluxes )  THEN
        WRITE ( io, 303 )
@@ -1349,15 +1347,9 @@
 !--
 ! ... LES-constants used must still be added here
 !--
-    IF ( constant_diffusion )  THEN
-       WRITE ( io, 451 )  km_constant, km_constant/prandtl_number, &
-                          prandtl_number
-    ENDIF
-    IF ( .NOT. constant_diffusion)  THEN
-       IF ( e_init > 0.0_wp )  WRITE ( io, 455 )  e_init
-       IF ( e_min > 0.0_wp )  WRITE ( io, 454 )  e_min
-       IF ( wall_adjustment )  WRITE ( io, 453 )  wall_adjustment_factor
-    ENDIF
+    IF ( e_init > 0.0_wp )  WRITE ( io, 455 )  e_init
+    IF ( e_min > 0.0_wp )  WRITE ( io, 454 )  e_min
+    IF ( wall_adjustment )  WRITE ( io, 453 )  wall_adjustment_factor
 !
 !-- Special actions during the run
     WRITE ( io, 470 )

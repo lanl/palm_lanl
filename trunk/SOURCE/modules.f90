@@ -1296,7 +1296,6 @@
     LOGICAL ::  cloud_top_radiation = .FALSE.                    !< namelist parameter
     LOGICAL ::  complex_terrain = .FALSE.                        !< namelist parameter
     LOGICAL ::  conserve_volume_flow = .FALSE.                   !< namelist parameter
-    LOGICAL ::  constant_diffusion = .FALSE.                     !< diffusion coefficient constant?
     LOGICAL ::  constant_flux_layer = .FALSE.                     !< namelist parameter
     LOGICAL ::  constant_heatflux = .TRUE.                       !< heat flux at all surfaces constant?
     LOGICAL ::  constant_top_heatflux = .TRUE.                   !< heat flux at domain top constant?
@@ -1483,7 +1482,6 @@
     REAL(wp) ::  inflow_damping_height = 9999999.9_wp          !< namelist parameter
     REAL(wp) ::  inflow_damping_width = 9999999.9_wp           !< namelist parameter
     REAL(wp) ::  kappa = 0.4_wp                                !< von Karman constant
-    REAL(wp) ::  km_constant = -1.0_wp                         !< namelist parameter
     REAL(wp) ::  latitude = 55.6_wp                            !< namelist parameter
     REAL(wp) ::  longitude = 0.0_wp                            !< namelist parameter
     REAL(wp) ::  mask_scale_x = 1.0_wp                         !< namelist parameter

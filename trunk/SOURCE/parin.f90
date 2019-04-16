@@ -473,7 +473,7 @@
              galilei_transformation, humidity,                                 &
              inflow_damping_height, inflow_damping_width,                      &
              inflow_disturbance_begin, inflow_disturbance_end,                 &
-             initializing_actions, km_constant,                                &
+             initializing_actions,                                &
              large_scale_forcing, large_scale_subsidence, latitude,            &
              longitude,                                 &
              loop_optimization, lsf_exception, masking_method, mg_cycles,      &
@@ -552,7 +552,7 @@
              galilei_transformation, humidity,                                 &
              inflow_damping_height, inflow_damping_width,                      &
              inflow_disturbance_begin, inflow_disturbance_end,                 &
-             initializing_actions, km_constant,                                &
+             initializing_actions,                                &
              large_scale_forcing, large_scale_subsidence, latitude,            &
              longitude,                                 &
              loop_optimization, lsf_exception, masking_method, mg_cycles,      &

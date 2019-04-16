@@ -19,63 +19,63 @@
 !
 ! Current revisions:
 ! ------------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: time_integration_spinup.f90 2983 2018-04-18 10:43:40Z suehring $
 ! Revise limitation of wall-adjacent velocity.
-! 
+!
 ! 2934 2018-03-26 19:13:22Z suehring
 ! Synchronize parent and child models after spinup.
-! 
+!
 ! 2881 2018-03-13 16:24:40Z maronga
 ! Added flag for switching on/off calculation of soil moisture
-! 
+!
 ! 2818 2018-02-19 16:42:36Z maronga
 ! Velocity components near walls/ground are now set to the profiles stored in
 ! u_init and v_init. Activated soil moisture calculation during spinup.
-! 
+!
 ! 2782 2018-02-02 11:51:10Z maronga
-! Bugfix and re-activation of homogeneous setting of velocity components 
+! Bugfix and re-activation of homogeneous setting of velocity components
 ! during spinup
-! 
+!
 ! 2758 2018-01-17 12:55:21Z suehring
 ! Comment out homogeneous setting of wind velocity as this will lead to zero
 ! friction velocity and cause problems in MOST relationships.
-! 
+!
 ! 2728 2018-01-09 07:03:53Z maronga
 ! Set velocity componenets to homogeneous values during spinup
-! 
+!
 ! 2724 2018-01-05 12:12:38Z maronga
 ! Use dt_spinup for all active components during spinup
-! 
+!
 ! 2723 2018-01-05 09:27:03Z maronga
 ! Bugfix: array rad_sw_in no longer exists and is thus removed from RUN_CONTROL
 ! output.
 ! Added output of XY and 3D data during spinup.
 ! Bugfix: time step in LSM and USM was set to dt_3d instead of dt_spinup
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 ! Added radiation interactions (moved from USM) (MS)
-! 
+!
 ! 2544 2017-10-13 18:09:32Z maronga
-! Date and time quantities are now read from date_and_time_mod 
-! 
+! Date and time quantities are now read from date_and_time_mod
+!
 ! 2299 2017-06-29 10:14:38Z maronga
 ! Call of soil model adjusted to avoid prognostic equation for soil moisture
 ! during spinup.
 ! Better representation of diurnal cycle of near-surface temperature.
 ! Excluded prognostic equation for soil moisture during spinup.
 ! Added output of run control data for spinup.
-! 
+!
 ! 2297 2017-06-28 14:35:57Z scharf
 ! bugfixes
-! 
+!
 ! 2296 2017-06-28 07:53:56Z maronga
 ! Initial revision
 !
@@ -86,13 +86,13 @@
 !> surface model and urban surface model
 !------------------------------------------------------------------------------!
  SUBROUTINE time_integration_spinup
- 
+
     USE arrays_3d,                                                             &
         ONLY:  pt, pt_p, u, u_init, v, v_init
 
     USE control_parameters,                                                    &
         ONLY:  averaging_interval_pr, calc_soil_moisture_during_spinup,        &
-               constant_diffusion, constant_flux_layer,                        &
+               constant_flux_layer,                        &
                coupling_start_time, current_timestep_number,                   &
                data_output_during_spinup, disturbance_created, dopr_n, do_sum, &
                dt_averaging_input_pr, dt_dopr, dt_dots, dt_do2d_xy, dt_do3d,   &
@@ -134,8 +134,8 @@
 
     IMPLICIT NONE
 
-    CHARACTER (LEN=9) ::  time_to_string          !< 
-  
+    CHARACTER (LEN=9) ::  time_to_string          !<
+
     INTEGER(iwp) ::  i !< running index
     INTEGER(iwp) ::  j !< running index
     INTEGER(iwp) ::  k !< running index
@@ -143,12 +143,12 @@
     INTEGER(iwp) ::  m !< running index
 
     INTEGER(iwp) :: current_timestep_number_spinup = 0  !< number if timestep during spinup
-  
+
     LOGICAL :: run_control_header_spinup = .FALSE.  !< flag parameter for steering whether the header information must be output
 
     REAL(wp) ::  pt_spinup   !< temporary storage of temperature
     REAL(wp) ::  dt_save     !< temporary storage for time step
-                  
+
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  pt_save  !< temporary storage of temperature
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  u_save   !< temporary storage of u wind component
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  v_save   !< temporary storage of v wind component
@@ -160,17 +160,17 @@
     ALLOCATE( u_save(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
     ALLOCATE( v_save(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
 
-    CALL exchange_horiz( pt, nbgp )   
-    CALL exchange_horiz( u,  nbgp )  
-    CALL exchange_horiz( v,  nbgp )  
- 
+    CALL exchange_horiz( pt, nbgp )
+    CALL exchange_horiz( u,  nbgp )
+    CALL exchange_horiz( v,  nbgp )
+
     pt_save = pt
     u_save  = u
     v_save  = v
 
 !
-!-- Set the same wall-adjacent velocity to all grid points. The sign of the 
-!-- original velocity field must be preserved because the surface schemes crash 
+!-- Set the same wall-adjacent velocity to all grid points. The sign of the
+!-- original velocity field must be preserved because the surface schemes crash
 !-- otherwise. The precise reason is still unknown. A minimum velocity of 0.1
 !-- m/s is used to maintain turbulent transfer at the surface.
     CALL exchange_horiz( u,  nbgp )
@@ -185,7 +185,7 @@
     DO  WHILE ( simulated_time < spinup_time )
 
        CALL cpu_log( log_point_s(15), 'timesteps spinup', 'start' )
-   
+
 !
 !--    Start of intermediate step loop
        intermediate_timestep_count = 0
@@ -201,36 +201,34 @@
 
 
 !
-!--       Estimate a near-surface air temperature based on the position of the 
+!--       Estimate a near-surface air temperature based on the position of the
 !--       sun and user input about mean temperature and amplitude. The time is
 !--       shifted by one hour to simulate a lag between air temperature and
 !--       incoming radiation
-          pt_spinup = spinup_pt_mean 
+          pt_spinup = spinup_pt_mean
 
 
 !
-          CALL exchange_horiz( pt,  nbgp )    
+          CALL exchange_horiz( pt,  nbgp )
 
 
 !
 !--       Swap the time levels in preparation for the next time step.
           timestep_count = timestep_count + 1
-     
+
 !
 !--       Compute the diffusion quantities
-          IF ( .NOT. constant_diffusion )  THEN
 
 !
-!--          First the vertical (and horizontal) fluxes in the surface 
-!--          (constant flux) layer are computed
-             IF ( constant_flux_layer )  THEN
-                CALL cpu_log( log_point(19), 'surface_layer_fluxes', 'start' )
-                CALL surface_layer_fluxes
-                CALL cpu_log( log_point(19), 'surface_layer_fluxes', 'stop' )
-             ENDIF
-
-!
+!--       First the vertical (and horizontal) fluxes in the surface
+!--       (constant flux) layer are computed
+          IF ( constant_flux_layer )  THEN
+             CALL cpu_log( log_point(19), 'surface_layer_fluxes', 'start' )
+             CALL surface_layer_fluxes
+             CALL cpu_log( log_point(19), 'surface_layer_fluxes', 'stop' )
           ENDIF
+
+!
        ENDDO   ! Intermediate step loop
 
 !

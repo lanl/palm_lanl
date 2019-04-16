@@ -382,9 +382,6 @@
        CALL wrd_write_string( 'inflow_disturbance_end' )
        WRITE ( 14 )  inflow_disturbance_end
 
-       CALL wrd_write_string( 'km_constant' )
-       WRITE ( 14 )  km_constant
-
        CALL wrd_write_string( 'large_scale_forcing' )
        WRITE ( 14 )  large_scale_forcing
 

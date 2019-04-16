@@ -123,12 +123,12 @@
 #endif
 
     USE control_parameters,                                                    &
-        ONLY:  constant_diffusion, dt_3d, e_init, humidity, inflow_l,          &
+        ONLY:  dt_3d, e_init, humidity, inflow_l,          &
                atmos_ocean_sign, g, use_single_reference_value,                &
                wall_adjustment, wall_adjustment_factor,                        &
                initializing_actions, intermediate_timestep_count,              &
-               intermediate_timestep_count_max, kappa, km_constant, les_mw,    &
-               ocean, plant_canopy, prandtl_number, prho_reference,            &
+               intermediate_timestep_count_max, kappa, les_mw,    &
+               plant_canopy, prandtl_number, prho_reference,            &
                pt_reference, simulated_time,&
                timestep_scheme, turbulence_closure, turbulent_inflow,          &
                use_upstream_for_tke, vpt_reference, ws_scheme_sca,             &
@@ -273,22 +273,10 @@
     END INTERFACE diffusion_e
 
 !
-!-- Diffusion term for TKE dissipation rate
-    INTERFACE diffusion_diss
-       MODULE PROCEDURE diffusion_diss
-    END INTERFACE diffusion_diss
-
-!
 !-- Mixing length for LES case
     INTERFACE mixing_length_les
        MODULE PROCEDURE mixing_length_les
     END INTERFACE mixing_length_les
-
-!
-!-- Mixing length for RANS case
-    INTERFACE mixing_length_rans
-       MODULE PROCEDURE mixing_length_rans
-    END INTERFACE mixing_length_rans
 
 !
 !-- Calculate diffusivities
@@ -1066,11 +1054,7 @@
        IF ( INDEX(initializing_actions, 'set_constant_profiles') /= 0 .OR. &
                 INDEX( initializing_actions, 'inifor' ) /= 0 )  THEN
 
-          IF ( constant_diffusion )  THEN
-             km = km_constant
-             kh = km / prandtl_number
-             e  = 0.0_wp
-          ELSEIF ( e_init > 0.0_wp )  THEN
+          IF ( e_init > 0.0_wp )  THEN
              DO  i = nxlg, nxrg
                 DO  j = nysg, nyng
                    DO  k = nzb+1, nzt
@@ -1083,15 +1067,12 @@
              kh = km / prandtl_number
              e  = e_init
           ELSE
-             IF ( .NOT. ocean )  THEN
-                kh   = 0.01_wp   ! there must exist an initial diffusion, because
-                km   = 0.01_wp   ! otherwise no TKE would be produced by the
-                                 ! production terms, as long as not yet
-                                 ! e = (u*/cm)**2 at k=nzb+1
-             ELSE
-                kh   = 0.00001_wp
-                km   = 0.00001_wp
-             ENDIF
+             ! there must exist an initial diffusion, because
+             ! otherwise no TKE would be produced by the
+             ! production terms, as long as not yet
+             ! e = (u*/cm)**2 at k=nzb+1
+             kh   = 0.00001_wp
+             km   = 0.00001_wp
              e    = 0.0_wp
           ENDIF
 
@@ -1615,30 +1596,30 @@
 !
 !-- If required, compute prognostic equation for turbulent kinetic
 !-- energy (TKE)
-    IF ( .NOT. constant_diffusion )  THEN
 
-       CALL cpu_log( log_point(16), 'tke-equation', 'start' )
+    CALL cpu_log( log_point(16), 'tke-equation', 'start' )
 
-       sbt = tsc(2)
-       tend = 0.0_wp
-       IF ( timestep_scheme(1:5) == 'runge' )  THEN
-         CALL advec_s_ws( e, 'e' )
-       ENDIF
+    sbt = tsc(2)
+    tend = 0.0_wp
+    IF ( timestep_scheme(1:5) == 'runge' )  THEN
+      CALL advec_s_ws( e, 'e' )
+    ENDIF
 
-       ! Compute Stokes-advection if required
-       IF ( ocean .AND. stokes_force ) THEN
-          CALL stokes_force_s( e )
-       ENDIF
+    ! Compute Stokes-advection if required
+    IF ( stokes_force ) THEN
+       CALL stokes_force_s( e )
+    ENDIF
 
-       CALL production_e
+    CALL production_e
 
-       ! Compute Stokes production if required
-       IF ( ocean .AND. stokes_force ) THEN
-          CALL stokes_production_e
-       ENDIF
+    ! Compute Stokes production if required
+    IF ( stokes_force ) THEN
+       CALL stokes_production_e
+    ENDIF
 
 !
 !--    Save production term for prognostic equation of TKE dissipation rate
+      ! inline subroutine diffusion_e()
 
     !$acc data copy(drho_air(nzb+1:nzt),dd2zu(nzb+1:nzt),ddzu(nzb+1:nzt+1),ddzw(nzb+1:nzt),dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),e_p(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),g,kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),prho_reference,rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr),tsc(3),te_m(nzb+1:nzt,nys:nyn,nxl:nxr),wall_flags_0(nzb+1:nzt,nys:nyn,nxl:nxr))
 
@@ -1646,108 +1627,107 @@
     !!$acc loop collapse(3)
 !
     !-- Calculate the tendency terms
-       !$acc loop seq
-       DO  i = nxl, nxr
+    !$acc loop seq
+    DO  i = nxl, nxr
+       !$acc loop
+       DO  j = nys, nyn
           !$acc loop
-          DO  j = nys, nyn
-             !$acc loop
-             DO  k = nzb+1, nzt
-       !
-       !--      Predetermine flag to mask topography
-                flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
+          DO  k = nzb+1, nzt
+    !
+    !--      Predetermine flag to mask topography
+             flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
 
-       !
-       !--      Calculate dissipation
-                dvar_dz = atmos_ocean_sign * (prho(k+1,j,i) - prho(k-1,j,i) ) * dd2zu(k)
-                IF ( dvar_dz > 0.0_wp ) THEN
-                   IF ( use_single_reference_value )  THEN
-                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
-                                         / SQRT( g / prho_reference * dvar_dz ) + 1E-5_wp
-                   ELSE
-                      l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
-                                         / SQRT( g / prho(k,j,i) * dvar_dz ) + 1E-5_wp
-                   ENDIF
+    !
+    !--      Calculate dissipation
+             dvar_dz = atmos_ocean_sign * (prho(k+1,j,i) - prho(k-1,j,i) ) * dd2zu(k)
+             IF ( dvar_dz > 0.0_wp ) THEN
+                IF ( use_single_reference_value )  THEN
+                   l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                      / SQRT( g / prho_reference * dvar_dz ) + 1E-5_wp
                 ELSE
-                   l_stable = l_grid(k)
+                   l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+                                      / SQRT( g / prho(k,j,i) * dvar_dz ) + 1E-5_wp
                 ENDIF
-            !
-            !-- Adjustment of the mixing length
-                IF ( wall_adjustment )  THEN
-                   l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
-                   ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
-                ELSE
-                   l  = MIN( l_grid(k), l_stable )
-                   ll = l_grid(k)
-                ENDIF
-                dissipation(k,j) = ( 0.19_wp + 0.74_wp * l / ll )              &
-                                   * e(k,j,i) * SQRT( e(k,j,i) ) / l
-                tend(k,j,i) = tend(k,j,i) + (                                     &
-                                              (                                   &
-                          ( km(k,j,i)+km(k,j,i+1) ) * ( e(k,j,i+1)-e(k,j,i) )     &
-                        - ( km(k,j,i)+km(k,j,i-1) ) * ( e(k,j,i)-e(k,j,i-1) )     &
-                                              ) * ddx2  * flag                    &
-                                            + (                                   &
-                          ( km(k,j,i)+km(k,j+1,i) ) * ( e(k,j+1,i)-e(k,j,i) )     &
-                        - ( km(k,j,i)+km(k,j-1,i) ) * ( e(k,j,i)-e(k,j-1,i) )     &
-                                              ) * ddy2  * flag                    &
-                                            + (                                   &
-               ( km(k,j,i)+km(k+1,j,i) ) * ( e(k+1,j,i)-e(k,j,i) ) * ddzu(k+1)    &
-                                                             * rho_air_zw(k)      &
-             - ( km(k,j,i)+km(k-1,j,i) ) * ( e(k,j,i)-e(k-1,j,i) ) * ddzu(k)      &
-                                                             * rho_air_zw(k-1)    &
-                                              ) * ddzw(k) * drho_air(k)           &
-                                            ) * flag * dsig_e                     &
-                             - dissipation(k,j) * flag
-
+             ELSE
+                l_stable = l_grid(k)
+             ENDIF
          !
-         !--    Prognostic equation for TKE.
-         !--    Eliminate negative TKE values, which can occur due to numerical
-         !--    reasons in the course of the integration. In such cases the old TKE
-         !--    value is reduced by 90%.
-                e_p(k,j,i) = e(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +        &
-                                                 tsc(3) * te_m(k,j,i) )        &
-                                        )                                      &
-                                   * MERGE( 1.0_wp, 0.0_wp,                    &
-                                             BTEST( wall_flags_0(k,j,i), 0 )   &
-                                          )
-                IF ( e_p(k,j,i) < 0.0_wp )  e_p(k,j,i) = 0.1_wp * e(k,j,i)
+         !-- Adjustment of the mixing length
+             IF ( wall_adjustment )  THEN
+                l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
+                ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
+             ELSE
+                l  = MIN( l_grid(k), l_stable )
+                ll = l_grid(k)
+             ENDIF
+             dissipation(k,j) = ( 0.19_wp + 0.74_wp * l / ll )              &
+                                * e(k,j,i) * SQRT( e(k,j,i) ) / l
+             tend(k,j,i) = tend(k,j,i) + (                                     &
+                                           (                                   &
+                       ( km(k,j,i)+km(k,j,i+1) ) * ( e(k,j,i+1)-e(k,j,i) )     &
+                     - ( km(k,j,i)+km(k,j,i-1) ) * ( e(k,j,i)-e(k,j,i-1) )     &
+                                           ) * ddx2  * flag                    &
+                                         + (                                   &
+                       ( km(k,j,i)+km(k,j+1,i) ) * ( e(k,j+1,i)-e(k,j,i) )     &
+                     - ( km(k,j,i)+km(k,j-1,i) ) * ( e(k,j,i)-e(k,j-1,i) )     &
+                                           ) * ddy2  * flag                    &
+                                         + (                                   &
+            ( km(k,j,i)+km(k+1,j,i) ) * ( e(k+1,j,i)-e(k,j,i) ) * ddzu(k+1)    &
+                                                          * rho_air_zw(k)      &
+          - ( km(k,j,i)+km(k-1,j,i) ) * ( e(k,j,i)-e(k-1,j,i) ) * ddzu(k)      &
+                                                          * rho_air_zw(k-1)    &
+                                           ) * ddzw(k) * drho_air(k)           &
+                                         ) * flag * dsig_e                     &
+                          - dissipation(k,j) * flag
 
-             ENDDO
+      !
+      !--    Prognostic equation for TKE.
+      !--    Eliminate negative TKE values, which can occur due to numerical
+      !--    reasons in the course of the integration. In such cases the old TKE
+      !--    value is reduced by 90%.
+             e_p(k,j,i) = e(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +        &
+                                              tsc(3) * te_m(k,j,i) )        &
+                                     )                                      &
+                                * MERGE( 1.0_wp, 0.0_wp,                    &
+                                          BTEST( wall_flags_0(k,j,i), 0 )   &
+                                       )
+             IF ( e_p(k,j,i) < 0.0_wp )  e_p(k,j,i) = 0.1_wp * e(k,j,i)
+
           ENDDO
-
        ENDDO
 
-    !$acc end parallel
+    ENDDO
 
+    !$acc end parallel
     !$acc end data
+    ! end subroutine diffusion_e()
 
 !
-!--    Calculate tendencies for the next Runge-Kutta step
-       IF ( timestep_scheme(1:5) == 'runge' )  THEN
-          IF ( intermediate_timestep_count == 1 )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb+1, nzt
-                      te_m(k,j,i) = tend(k,j,i)
-                   ENDDO
+!-- Calculate tendencies for the next Runge-Kutta step
+    IF ( timestep_scheme(1:5) == 'runge' )  THEN
+       IF ( intermediate_timestep_count == 1 )  THEN
+          DO  i = nxl, nxr
+             DO  j = nys, nyn
+                DO  k = nzb+1, nzt
+                   te_m(k,j,i) = tend(k,j,i)
                 ENDDO
              ENDDO
-          ELSEIF ( intermediate_timestep_count < &
-                   intermediate_timestep_count_max )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb+1, nzt
-                      te_m(k,j,i) =   -9.5625_wp * tend(k,j,i)                 &
-                                     + 5.3125_wp * te_m(k,j,i)
-                   ENDDO
+          ENDDO
+       ELSEIF ( intermediate_timestep_count < &
+                intermediate_timestep_count_max )  THEN
+          DO  i = nxl, nxr
+             DO  j = nys, nyn
+                DO  k = nzb+1, nzt
+                   te_m(k,j,i) =   -9.5625_wp * tend(k,j,i)                 &
+                                  + 5.3125_wp * te_m(k,j,i)
                 ENDDO
              ENDDO
-          ENDIF
+          ENDDO
        ENDIF
+    ENDIF
 
-       CALL cpu_log( log_point(16), 'tke-equation', 'stop' )
+    CALL cpu_log( log_point(16), 'tke-equation', 'stop' )
 
-    ENDIF   ! TKE equation
 
  END SUBROUTINE tcm_prognostic
 
@@ -2154,64 +2134,6 @@ SUBROUTINE diffusion_e( var, var_reference )
 
  END SUBROUTINE diffusion_e
 
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Diffusion term for the TKE dissipation rate
-!> Vector-optimized version
-!------------------------------------------------------------------------------!
- SUBROUTINE diffusion_diss()
-    USE arrays_3d,                                                             &
-        ONLY:  ddzu, ddzw, drho_air, rho_air_zw
-
-    USE grid_variables,                                                        &
-        ONLY:  ddx2, ddy2
-
-    IMPLICIT NONE
-
-    INTEGER(iwp) ::  i              !< running index x direction
-    INTEGER(iwp) ::  j              !< running index y direction
-    INTEGER(iwp) ::  k              !< running index z direction
-
-    REAL(wp)     ::  flag           !< flag to mask topography
-
-!
-!-- Calculate the tendency terms
-    DO  i = nxl, nxr
-       DO  j = nys, nyn
-          DO  k = nzb+1, nzt
-
-!
-!--          Predetermine flag to mask topography
-             flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
-
-             tend(k,j,i) = tend(k,j,i) +                                       &
-                         (       (                                             &
-                 ( km(k,j,i)+km(k,j,i+1) ) * ( diss(k,j,i+1)-diss(k,j,i) )     &
-               - ( km(k,j,i)+km(k,j,i-1) ) * ( diss(k,j,i)-diss(k,j,i-1) )     &
-                                 ) * ddx2                                      &
-                               + (                                             &
-                 ( km(k,j,i)+km(k,j+1,i) ) * ( diss(k,j+1,i)-diss(k,j,i) )     &
-               - ( km(k,j,i)+km(k,j-1,i) ) * ( diss(k,j,i)-diss(k,j-1,i) )     &
-                                 ) * ddy2                                      &
-                               + (                                             &
-      ( km(k,j,i)+km(k+1,j,i) ) * ( diss(k+1,j,i)-diss(k,j,i) ) * ddzu(k+1)    &
-                                                    * rho_air_zw(k)            &
-    - ( km(k,j,i)+km(k-1,j,i) ) * ( diss(k,j,i)-diss(k-1,j,i) ) * ddzu(k)      &
-                                                    * rho_air_zw(k-1)          &
-                                 ) * ddzw(k) * drho_air(k)                     &
-                         ) * flag * dsig_diss                                  &
-                         - c_2 * diss(k,j,i)**2                                &
-                               / ( e(k,j,i) + 1.0E-20_wp ) * flag
-
-          ENDDO
-       ENDDO
-    ENDDO
-
- END SUBROUTINE diffusion_diss
-
-
 !------------------------------------------------------------------------------!
 ! Description:
 ! ------------
@@ -2267,69 +2189,6 @@ SUBROUTINE diffusion_e( var, var_reference )
     ENDIF
 
  END SUBROUTINE mixing_length_les
-
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Calculate mixing length for RANS mode.
-!------------------------------------------------------------------------------!
- SUBROUTINE mixing_length_rans( i, j, k, l, l_diss, var, var_reference  )
-
-    USE arrays_3d,                                                             &
-        ONLY:  dd2zu
-
-    USE control_parameters,                                                    &
-        ONLY:  atmos_ocean_sign, g, use_single_reference_value
-
-    IMPLICIT NONE
-
-    INTEGER(iwp) :: i   !< loop index
-    INTEGER(iwp) :: j   !< loop index
-    INTEGER(iwp) :: k   !< loop index
-
-    REAL(wp)     :: duv2_dz2        !< squared vertical gradient of wind vector
-    REAL(wp)     :: dvar_dz         !< vertical gradient of var
-    REAL(wp)     :: l               !< mixing length
-    REAL(wp)     :: l_diss          !< mixing length for dissipation
-    REAL(wp)     :: rif             !< Richardson flux number
-    REAL(wp)     :: var_reference   !< var at reference height
-
-#if defined( __nopointer )
-    REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  var  !< temperature
-#else
-    REAL(wp), DIMENSION(:,:,:), POINTER ::  var     !< temperature
-#endif
-
-    dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
-
-    duv2_dz2 =   ( ( u(k+1,j,i) - u(k-1,j,i) ) * dd2zu(k) )**2                 &
-               + ( ( v(k+1,j,i) - v(k-1,j,i) ) * dd2zu(k) )**2                 &
-               + 1E-30_wp
-
-    IF ( use_single_reference_value )  THEN
-       rif = g / var_reference * dvar_dz / duv2_dz2
-    ELSE
-       rif = g / var(k,j,i) * dvar_dz / duv2_dz2
-    ENDIF
-
-    rif = MAX( rif, -5.0_wp )
-    rif = MIN( rif,  1.0_wp )
-
-!
-!-- Calculate diabatic mixing length using Dyer-profile functions
-    IF ( rif >= 0.0_wp )  THEN
-       l      = MIN( l_black(k) / ( 1.0_wp + 5.0_wp * rif ), l_wall(k,j,i) )
-       l_diss = l
-    ELSE
-!
-!--    In case of unstable stratification, use mixing length of neutral case
-!--    for l, but consider profile functions for l_diss
-       l      = l_wall(k,j,i)
-       l_diss = l * SQRT( 1.0_wp - 16.0_wp * rif )
-    ENDIF
-
- END SUBROUTINE mixing_length_rans
 
 
 !------------------------------------------------------------------------------!
@@ -2429,6 +2288,7 @@ SUBROUTINE diffusion_e( var, var_reference )
 !
 !--          Determine the mixing length for LES closure
 !             CALL mixing_length_les( i, j, k, l, ll, var, var_reference )
+            ! inline subroutine mixing_length_les()
 
              dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
              IF ( dvar_dz > 0.0_wp ) THEN
@@ -2550,15 +2410,13 @@ SUBROUTINE diffusion_e( var, var_reference )
 
 #if defined( __nopointer )
 
-    IF ( .NOT. constant_diffusion )  THEN
-       DO  i = nxlg, nxrg
-          DO  j = nysg, nyng
-             DO  k = nzb, nzt+1
-                e(k,j,i) = e_p(k,j,i)
-             ENDDO
+    DO  i = nxlg, nxrg
+       DO  j = nysg, nyng
+          DO  k = nzb, nzt+1
+             e(k,j,i) = e_p(k,j,i)
           ENDDO
        ENDDO
-    ENDIF
+    ENDDO
 
 #else
 
@@ -2566,15 +2424,11 @@ SUBROUTINE diffusion_e( var, var_reference )
 
        CASE ( 0 )
 
-          IF ( .NOT. constant_diffusion )  THEN
-             e => e_1;    e_p => e_2
-          ENDIF
+          e => e_1;    e_p => e_2
 
        CASE ( 1 )
 
-          IF ( .NOT. constant_diffusion )  THEN
-             e => e_2;    e_p => e_1
-          ENDIF
+          e => e_2;    e_p => e_1
 
     END SELECT
 #endif

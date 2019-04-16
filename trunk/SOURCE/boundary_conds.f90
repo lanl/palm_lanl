@@ -190,7 +190,7 @@
 
     USE control_parameters,                                                    &
         ONLY:  air_chemistry, bc_pt_t_val, bc_q_t_val, bc_s_t_val,             &
-               constant_diffusion, cloud_physics, coupling_mode, dt_3d,        &
+               cloud_physics, coupling_mode, dt_3d,        &
                force_bound_l, force_bound_s, forcing, humidity,                &
                ibc_pt_b, ibc_pt_t, ibc_q_b, ibc_q_t, ibc_s_b, ibc_s_t,         &
                ibc_sa_b, ibc_sa_t, ibc_uv_b, ibc_uv_t, inflow_l, inflow_n,     &
@@ -323,30 +323,28 @@
 !
 !-- Boundary conditions for TKE.
 !-- Generally Neumann conditions with de/dz=0 are assumed.
-    IF ( .NOT. constant_diffusion )  THEN
 
-       DO  l = 0, 1
+    DO  l = 0, 1
 !
-!--      Set kb, for upward-facing surfaces value at topography top (k-1) is set,
-!--      for downward-facing surfaces at topography bottom (k+1).
-          kb = MERGE( -1, 1, l == 0 )
-          !$OMP PARALLEL DO PRIVATE( i, j, k )
-          DO  m = 1, bc_h(l)%ns
-             i = bc_h(l)%i(m)
-             j = bc_h(l)%j(m)
-             k = bc_h(l)%k(m)
-             e_p(k+kb,j,i) = e_p(k,j,i)
-          ENDDO
+!--   Set kb, for upward-facing surfaces value at topography top (k-1) is set,
+!--   for downward-facing surfaces at topography bottom (k+1).
+       kb = MERGE( -1, 1, l == 0 )
+       !$OMP PARALLEL DO PRIVATE( i, j, k )
+       DO  m = 1, bc_h(l)%ns
+          i = bc_h(l)%i(m)
+          j = bc_h(l)%j(m)
+          k = bc_h(l)%k(m)
+          e_p(k+kb,j,i) = e_p(k,j,i)
        ENDDO
+    ENDDO
 
-       e_p(nzt+1,:,:) = e_p(nzt,:,:)
+    e_p(nzt+1,:,:) = e_p(nzt,:,:)
 !
-!--    Nesting case: if parent operates in RANS mode and child in LES mode,
-!--    no TKE is transfered. This case, set Neumann conditions at lateral and
-!--    top child boundaries.
-!--    If not ( both either in RANS or in LES mode ), TKE boundary condition
-!--    is treated in the nesting.
-   ENDIF
+!-- Nesting case: if parent operates in RANS mode and child in LES mode,
+!-- no TKE is transfered. This case, set Neumann conditions at lateral and
+!-- top child boundaries.
+!-- If not ( both either in RANS or in LES mode ), TKE boundary condition
+!-- is treated in the nesting.
 
 !
 !-- Bottom boundary: Dirichlet condition.

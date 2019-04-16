@@ -845,10 +845,8 @@
        DEALLOCATE ( surfaces%vsws )
 !
 !--    Required in production_e
-       IF ( .NOT. constant_diffusion )  THEN
-          DEALLOCATE ( surfaces%u_0 )
-          DEALLOCATE ( surfaces%v_0 )
-       ENDIF
+       DEALLOCATE ( surfaces%u_0 )
+       DEALLOCATE ( surfaces%v_0 )
 !
 !--    Characteristic temperature and surface flux of sensible heat
        DEALLOCATE ( surfaces%ts )
@@ -935,10 +933,8 @@
        ALLOCATE ( surfaces%vsws(1:surfaces%ns) )
 !
 !--    Required in production_e
-       IF ( .NOT. constant_diffusion )  THEN
-          ALLOCATE ( surfaces%u_0(1:surfaces%ns) )
-          ALLOCATE ( surfaces%v_0(1:surfaces%ns) )
-       ENDIF
+       ALLOCATE ( surfaces%u_0(1:surfaces%ns) )
+       ALLOCATE ( surfaces%v_0(1:surfaces%ns) )
 !
 !--    Characteristic temperature and surface flux of sensible heat
        ALLOCATE ( surfaces%ts(1:surfaces%ns)  )
@@ -976,10 +972,8 @@
        DEALLOCATE ( surfaces%j )
        DEALLOCATE ( surfaces%k )
 
-       IF ( .NOT. constant_diffusion )  THEN
-          DEALLOCATE ( surfaces%u_0 )
-          DEALLOCATE ( surfaces%v_0 )
-       ENDIF
+       DEALLOCATE ( surfaces%u_0 )
+       DEALLOCATE ( surfaces%v_0 )
 !
 !--    Vertical momentum fluxes of u and v
        DEALLOCATE ( surfaces%usws )
@@ -1023,10 +1017,8 @@
        ALLOCATE ( surfaces%j(1:surfaces%ns)  )
        ALLOCATE ( surfaces%k(1:surfaces%ns)  )
 
-       IF ( .NOT. constant_diffusion )  THEN
-          ALLOCATE ( surfaces%u_0(1:surfaces%ns) )
-          ALLOCATE ( surfaces%v_0(1:surfaces%ns) )
-       ENDIF
+       ALLOCATE ( surfaces%u_0(1:surfaces%ns) )
+       ALLOCATE ( surfaces%v_0(1:surfaces%ns) )
 !
 !--    Vertical momentum fluxes of u and v
        ALLOCATE ( surfaces%usws(1:surfaces%ns) )
@@ -1472,10 +1464,8 @@
              surf%rib(num_h)     = 0.0_wp
              surf%uvw_abs(num_h) = 0.0_wp
 
-             IF ( .NOT. constant_diffusion )  THEN
-                surf%u_0(num_h)     = 0.0_wp
-                surf%v_0(num_h)     = 0.0_wp
-             ENDIF
+             surf%u_0(num_h)     = 0.0_wp
+             surf%v_0(num_h)     = 0.0_wp
 
              surf%ts(num_h)   = 0.0_wp
 

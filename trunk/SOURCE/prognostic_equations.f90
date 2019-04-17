@@ -23,6 +23,8 @@
 ! 2019-01-22 cbegeman
 ! Add timers to prognostic_equations_cache and to tcm_prognostic
 !
+! 2019-01-22 cbegeman
+! Add timers to prognostic_equations_cache and to tcm_prognostic
 !
 ! 2018-10-19 cbegeman
 ! Change buoyancy call for sloped ocean cases
@@ -312,10 +314,11 @@
                ocean, outflow_l, outflow_s, passive_scalar, plant_canopy,      &
                prho_reference, pt_reference, pt_reference, pt_reference,       &
                scalar_advec, scalar_advec, simulated_time, sloping_surface,    &
-               rho_reference, timestep_scheme, tsc, use_single_reference_value,&
-               use_subsidence_tendencies, use_upstream_for_tke, wind_turbine,  &
-               ws_scheme_mom, ws_scheme_sca, urban_surface, land_surface,      &
-               wb_solar, stokes_force
+               rho_reference, time_prog_terms, timestep_scheme, tsc,           &
+               use_single_reference_value, use_subsidence_tendencies,          &
+               use_upstream_for_tke, wind_turbine, ws_scheme_mom,              &
+               ws_scheme_sca, urban_surface, land_surface, wb_solar,           &
+               stokes_force
 
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point, log_point_s
@@ -366,7 +369,7 @@
 
     USE coriolis_mod,                                                          &
         ONLY:  coriolis
-    
+
     USE diffusion_s_mod,                                                       &
         ONLY:  diffusion_s
 
@@ -511,6 +514,7 @@
          ( intermediate_timestep_count == 1  .OR.                              &
            call_microphysics_at_all_substeps ) )                               &
     THEN
+       CALL cpu_log( log_point(51), 'microphysics', 'start')
        !$OMP PARALLEL PRIVATE (i,j)
        !$OMP DO
        DO  i = nxlg, nxrg
@@ -519,6 +523,7 @@
            ENDDO
        ENDDO
        !$OMP END PARALLEL
+       CALL cpu_log( log_point(51), 'microphysics', 'stop' )
     ENDIF
 
 !
@@ -559,8 +564,10 @@
 !--       Tendency terms for u-velocity component. Please note, in case of
 !--       non-cyclic boundary conditions the grid point i=0 is excluded from
 !--       the prognostic equations for the u-component.
+          CALL cpu_log( log_point(5), 'u-equation', 'start' )
           IF ( i >= nxlu )  THEN
 
+             CALL cpu_log( log_point(43), 'uvw-advec', 'start' )
              tend(:,j,i) = 0.0_wp
 
              IF ( timestep_scheme(1:5) == 'runge' )  THEN
@@ -572,19 +579,31 @@
              ELSE
                 CALL advec_u_up( i, j )
              ENDIF
+             CALL cpu_log( log_point(43), 'uvw-advec', 'stop' )
+             
+             CALL cpu_log( log_point(44), 'uvw-diffusion', 'start' )
              CALL diffusion_u( i, j )
+             CALL cpu_log( log_point(44), 'uvw-diffusion', 'stop' )
+
+             CALL cpu_log( log_point(45), 'uvw-coriolis', 'start' )
              CALL coriolis( i, j, 1 )
+             CALL cpu_log( log_point(45), 'uvw-coriolis', 'stop' )
+             
              IF ( sloping_surface  .AND.  .NOT. neutral )  THEN
+                CALL cpu_log( log_point(46), 'uvw-buoyancy', 'start' )
                 IF ( ocean ) THEN
                    CALL buoyancy( i, j, rho_ocean, 1 )
                 ELSE
                    CALL buoyancy( i, j, pt, 1 )
                 ENDIF
+                CALL cpu_log( log_point(46), 'uvw-buoyancy', 'stop' )
              ENDIF
 !
 !--          If required, compute Stokes forces
              IF ( ocean .AND. stokes_force ) THEN
+                CALL cpu_log( log_point(47), 'uvw-stokes', 'start' )
                 CALL stokes_force_uvw( i, j, 1 )
+                CALL cpu_log( log_point(47), 'uvw-stokes', 'stop' )
              ENDIF
 
 !
@@ -615,17 +634,19 @@
 !--          Prognostic equation for u-velocity component
              CALL cpu_log( log_point(48), 'prog-u', 'start' )
              DO  k = nzb+1, nzt
+
                 u_p(k,j,i) = u(k,j,i) + ( dt_3d *                               &
                                             ( tsc(2) * tend(k,j,i) +            &
                                               tsc(3) * tu_m(k,j,i) )            &
                                             - tsc(5) * rdf(k)                   &
                                                      * ( u(k,j,i) - u_init(k) ) &
                                         ) * MERGE( 1.0_wp, 0.0_wp,              &
-                                                   BTEST( wall_flags_0(k,j,i), 1 )&
+                                                 BTEST( wall_flags_0(k,j,i), 1 )&
                                                  )
              ENDDO
 
-!!--          Calculate tendencies for the next Runge-Kutta step
+!
+!--          Calculate tendencies for the next Runge-Kutta step
              IF ( timestep_scheme(1:5) == 'runge' )  THEN
                 IF ( intermediate_timestep_count == 1 )  THEN
                    DO  k = nzb+1, nzt
@@ -641,12 +662,15 @@
              ENDIF
 
           ENDIF
+          CALL cpu_log( log_point(5), 'u-equation', 'stop' )
 !
 !--       Tendency terms for v-velocity component. Please note, in case of
 !--       non-cyclic boundary conditions the grid point j=0 is excluded from
 !--       the prognostic equations for the v-component. !--
+          CALL cpu_log( log_point(6), 'v-equation', 'start' )
           IF ( j >= nysv )  THEN
 
+             CALL cpu_log( log_point(43), 'uvw-advec', 'start' )
              tend(:,j,i) = 0.0_wp
              IF ( timestep_scheme(1:5) == 'runge' )  THEN
                 IF ( ws_scheme_mom )  THEN
@@ -657,13 +681,22 @@
              ELSE
                 CALL advec_v_up( i, j )
              ENDIF
+             CALL cpu_log( log_point(43), 'uvw-advec', 'stop' )
+             
+             CALL cpu_log( log_point(44), 'uvw-diffusion', 'start' )
              CALL diffusion_v( i, j )
+             CALL cpu_log( log_point(44), 'uvw-diffusion', 'stop' )
+             
+             CALL cpu_log( log_point(45), 'uvw-coriolis', 'start' )
              CALL coriolis( i, j, 2 )
+             CALL cpu_log( log_point(45), 'uvw-coriolis', 'stop' )
 
 !
 !--          If required, compute Stokes forces
              IF ( ocean .AND. stokes_force ) THEN
+                CALL cpu_log( log_point(47), 'uvw-stokes', 'start' )
                 CALL stokes_force_uvw( i, j, 2 )
+                CALL cpu_log( log_point(47), 'uvw-stokes', 'stop' )
              ENDIF
 
 !
@@ -720,9 +753,13 @@
              ENDIF
 
           ENDIF
+          CALL cpu_log( log_point(6), 'v-equation', 'stop' )
 
 !
 !--       Tendency terms for w-velocity component
+          CALL cpu_log( log_point(7), 'w-equation', 'start' )
+          
+          CALL cpu_log( log_point(43), 'uvw-advec', 'start' )
           tend(:,j,i) = 0.0_wp
           IF ( timestep_scheme(1:5) == 'runge' )  THEN
              IF ( ws_scheme_mom )  THEN
@@ -733,10 +770,18 @@
           ELSE
              CALL advec_w_up( i, j )
           ENDIF
+          CALL cpu_log( log_point(43), 'uvw-advec', 'stop' )
+          
+          CALL cpu_log( log_point(44), 'uvw-diffusion', 'start' )
           CALL diffusion_w( i, j )
+          CALL cpu_log( log_point(44), 'uvw-diffusion', 'stop' )
+          
+          CALL cpu_log( log_point(45), 'uvw-coriolis', 'start' )
           CALL coriolis( i, j, 3 )
+          CALL cpu_log( log_point(45), 'uvw-coriolis', 'stop' )
 
           IF ( .NOT. neutral )  THEN
+             CALL cpu_log( log_point(46), 'uvw-buoyancy', 'start' )
              IF ( ocean )  THEN
                 CALL buoyancy( i, j, rho_ocean, 3 )
              ELSE
@@ -746,12 +791,15 @@
                    CALL buoyancy( i, j, vpt, 3 )
                 ENDIF
              ENDIF
+             CALL cpu_log( log_point(46), 'uvw-buoyancy', 'stop' )
           ENDIF
 
 !
 !--       If required, compute Stokes forces
           IF ( ocean .AND. stokes_force ) THEN
+             CALL cpu_log( log_point(47), 'uvw-stokes', 'start' )
              CALL stokes_force_uvw( i, j, 3 )
+             CALL cpu_log( log_point(47), 'uvw-stokes', 'stop' )
           ENDIF
 
 !
@@ -791,13 +839,16 @@
                 ENDDO
              ENDIF
           ENDIF
+          CALL cpu_log( log_point(7), 'w-equation', 'stop' )
 
 !
 !--       If required, compute prognostic equation for potential temperature
           IF ( .NOT. neutral )  THEN
+             CALL cpu_log( log_point(13), 'pt-equation', 'start' )
 !
 !--          Tendency terms for potential temperature
              tend(:,j,i) = 0.0_wp
+             CALL cpu_log( log_point(61), 'pt-advec', 'start' )
              IF ( timestep_scheme(1:5) == 'runge' )  THEN
                    IF ( ws_scheme_sca )  THEN
                       CALL advec_s_ws( i, j, pt, 'pt', flux_s_pt, diss_s_pt,   &
@@ -808,6 +859,9 @@
              ELSE
                 CALL advec_s_up( i, j, pt )
              ENDIF
+             CALL cpu_log( log_point(61), 'pt-advec', 'stop' )
+
+             CALL cpu_log( log_point(62), 'pt-diffusion', 'start' )
              CALL diffusion_s( i, j, pt,                                       &
                                surf_def_h(0)%shf, surf_def_h(1)%shf,           &
                                surf_def_h(2)%shf,                              &
@@ -819,11 +873,14 @@
                                surf_usm_v(0)%shf, surf_usm_v(1)%shf,           &
                                surf_usm_v(2)%shf, surf_usm_v(3)%shf,           &
                                surf_def_h(2)%shf_sol )
+             CALL cpu_log( log_point(62), 'pt-diffusion', 'stop' )
 
 !
 !--          If required, compute Stokes-advection term
              IF ( ocean .AND. stokes_force ) THEN
+                CALL cpu_log( log_point(63), 'pt-stokes', 'start' )
                 CALL stokes_force_s( i, j, pt )
+                CALL cpu_log( log_point(63), 'pt-stokes', 'stop' )
              ENDIF
 
 !
@@ -898,17 +955,20 @@
                 ENDIF
              ENDIF
 
+             CALL cpu_log( log_point(13), 'pt-equation', 'stop' )
+
           ENDIF
 
 !
 !--       If required, compute prognostic equation for salinity
           IF ( ocean )  THEN
 
+             CALL cpu_log( log_point(37), 'sa-equation', 'start' )
 !
 !--          Tendency-terms for salinity
              tend(:,j,i) = 0.0_wp
-             IF ( timestep_scheme(1:5) == 'runge' ) &
-             THEN
+             CALL cpu_log( log_point(64), 'sa-advec', 'start' )
+             IF ( timestep_scheme(1:5) == 'runge' ) THEN
                 IF ( ws_scheme_sca )  THEN
                     CALL advec_s_ws( i, j, sa, 'sa', flux_s_sa,  &
                                 diss_s_sa, flux_l_sa, diss_l_sa, i_omp_start, tn  )
@@ -918,7 +978,9 @@
              ELSE
                 CALL advec_s_up( i, j, sa )
              ENDIF
+             CALL cpu_log( log_point(64), 'sa-advec', 'stop' )
 
+             CALL cpu_log( log_point(65), 'sa-diffusion', 'start' )
              CALL diffusion_s( i, j, sa,                                       &
                                surf_def_h(0)%sasws, surf_def_h(1)%sasws,       &
                                surf_def_h(2)%sasws,                            &
@@ -929,11 +991,14 @@
                                surf_lsm_v(2)%sasws, surf_lsm_v(3)%sasws,       &
                                surf_usm_v(0)%sasws, surf_usm_v(1)%sasws,       &
                                surf_usm_v(2)%sasws, surf_usm_v(3)%sasws )
+             CALL cpu_log( log_point(65), 'sa-diffusion', 'stop' )
 
 !
 !--          If required, compute Stokes-advection term
              IF ( stokes_force ) THEN
+                CALL cpu_log( log_point(66), 'sa-stokes', 'start' )
                 CALL stokes_force_s( i, j, sa )
+                CALL cpu_log( log_point(66), 'sa-stokes', 'stop' )
              ENDIF
 
 
@@ -969,9 +1034,12 @@
                 ENDIF
              ENDIF
 
+             CALL cpu_log( log_point(37), 'sa-equation', 'stop' )
 !
 !--          Calculate density by the equation of state for seawater
+             CALL cpu_log( log_point(38), 'eqns-seawater', 'start' )
              CALL eqn_state_seawater( i, j )
+             CALL cpu_log( log_point(38), 'eqns-seawater', 'stop' )
 
           ENDIF
 
@@ -979,6 +1047,7 @@
 !--       If required, compute prognostic equation for total water content
           IF ( humidity )  THEN
 
+             CALL cpu_log( log_point(29), 'q-equation', 'start' )
 !
 !--          Tendency-terms for total water content / scalar
              tend(:,j,i) = 0.0_wp
@@ -1058,11 +1127,14 @@
                 ENDIF
              ENDIF
 
+             CALL cpu_log( log_point(29), 'q-equation', 'stop' )
 !
 !--          If required, calculate prognostic equations for cloud water content
 !--          and cloud drop concentration
              IF ( cloud_physics  .AND.  microphysics_morrison )  THEN
 !
+                CALL cpu_log( log_point(67), 'qc-equation', 'start' )
+
 !--             Calculate prognostic equation for cloud water content
                 tend(:,j,i) = 0.0_wp
                 IF ( timestep_scheme(1:5) == 'runge' ) &
@@ -1118,6 +1190,8 @@
                    ENDIF
                 ENDIF
 
+                CALL cpu_log( log_point(67), 'qc-equation', 'stop' )
+                CALL cpu_log( log_point(68), 'nc-equation', 'start' )
 !
 !--             Calculate prognostic equation for cloud drop concentration.
                 tend(:,j,i) = 0.0_wp
@@ -1173,11 +1247,15 @@
                    ENDIF
                 ENDIF
 
+                CALL cpu_log( log_point(68), 'nc-equation', 'stop' )
+
              ENDIF
 !
 !--          If required, calculate prognostic equations for rain water content
 !--          and rain drop concentration
              IF ( cloud_physics  .AND.  microphysics_seifert )  THEN
+
+                CALL cpu_log( log_point(52), 'qr-equation', 'start' )
 !
 !--             Calculate prognostic equation for rain water content
                 tend(:,j,i) = 0.0_wp
@@ -1234,6 +1312,8 @@
                    ENDIF
                 ENDIF
 
+                CALL cpu_log( log_point(52), 'qr-equation', 'stop' )
+                CALL cpu_log( log_point(53), 'nr-equation', 'start' )
 !
 !--             Calculate prognostic equation for rain drop concentration.
                 tend(:,j,i) = 0.0_wp
@@ -1289,6 +1369,8 @@
                    ENDIF
                 ENDIF
 
+                CALL cpu_log( log_point(53), 'nr-equation', 'stop' )
+
              ENDIF
 
           ENDIF
@@ -1296,6 +1378,8 @@
 !
 !--       If required, compute prognostic equation for scalar
           IF ( passive_scalar )  THEN
+       
+             CALL cpu_log( log_point(66), 's-equation', 'start' )
 !
 !--          Tendency-terms for total water content / scalar
              tend(:,j,i) = 0.0_wp
@@ -1385,11 +1469,15 @@
                 ENDIF
              ENDIF
 
+             CALL cpu_log( log_point(66), 's-equation', 'stop' )
+
           ENDIF
 
 !
 !--       Calculate prognostic equations for turbulence closure
+          CALL cpu_log( log_point(41), 'tcm-equation', 'start' )
           CALL tcm_prognostic( i, j, i_omp_start, tn )
+          CALL cpu_log( log_point(41), 'tcm-equation', 'stop' )
 
 !
 !--       If required, compute prognostic equation for chemical quantites
@@ -2591,7 +2679,9 @@
 
     ENDIF
 
+    CALL cpu_log( log_point(41), 'tcm-equation', 'start' )
     CALL tcm_prognostic()
+    CALL cpu_log( log_point(41), 'tcm-equation', 'stop' )
 
 !
 !-- If required, compute prognostic equation for chemical quantites

@@ -498,6 +498,9 @@
     USE constants,                                                             &
         ONLY:  pi, cpw
     
+    USE cpulog,                                                                &
+        ONLY: cpu_log, log_point
+        
     USE control_parameters
     
     USE cpulog,                                                                &

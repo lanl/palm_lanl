@@ -164,7 +164,7 @@
 
        rho_reference = rho_reference / ( zw(nzt) - zu(nzb) )
 
-    
+
        DO  k = nzt, 0, -1
           hyp(k) = hyp(k+1) + g * 0.5_wp * ( rho_ocean_init(k)                 &
                                            + rho_ocean_init(k+1) ) * dzu(k+1)
@@ -207,8 +207,8 @@
 
 !
 !-- Initialize Stokes drift, if required
-    IF ( stokes_force ) THEN
+    ! IF ( stokes_force ) THEN
        CALL init_stokes_drift
-    ENDIF
+    ! ENDIF
 
  END SUBROUTINE init_ocean

@@ -351,7 +351,7 @@
                q_init, q, qc, qc_p, ql, ql_c, ql_v, ql_vp, qr, qr_p, q_p,      &
                ref_state, rho_ocean, s, s_p, sa_p, tend, u, u_p, v, vpt,       &
                v_p, w, w_p, alpha_T, beta_S, solar3d, sa, &
-               ddzu, ddzw, dd2zu, drho_air, rho_air_zw, kh, km
+               ddzu, ddzw, dd2zu, drho_air, rho_air_zw, kh, km, te_m
 
     USE calc_mean_profile_mod,                                                 &
         ONLY:  calc_mean_profile
@@ -487,9 +487,11 @@
 !$acc      copyin( l_wall ) &
 !$acc      copyin( wall_flags_0 ) &
 !$acc      copyin( tsc ) &
-!$acc      copyin ( e, e_p ) &
-!$acc      copyin ( kh, km ) &
-!$acc      copyin ( prho )
+!!$acc      copyin( tend ) &
+!$acc      copyin( e, e_p ) &
+!$acc      copyin( te_m ) &
+!$acc      copyin( kh, km ) &
+!$acc      copyin( prho )
 
 !
 !-- At beginning determine the first time step

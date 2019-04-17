@@ -268,15 +268,15 @@
 
 !
 !-- Diffusion term for TKE
-    INTERFACE diffusion_e
-       MODULE PROCEDURE diffusion_e
-    END INTERFACE diffusion_e
+    ! INTERFACE diffusion_e
+    !    MODULE PROCEDURE diffusion_e
+    ! END INTERFACE diffusion_e
 
 !
 !-- Mixing length for LES case
-    INTERFACE mixing_length_les
-       MODULE PROCEDURE mixing_length_les
-    END INTERFACE mixing_length_les
+    ! INTERFACE mixing_length_les
+    !    MODULE PROCEDURE mixing_length_les
+    ! END INTERFACE mixing_length_les
 
 !
 !-- Calculate diffusivities
@@ -1622,20 +1622,18 @@
 !--    Save production term for prognostic equation of TKE dissipation rate
       ! inline subroutine diffusion_e()
 
-    !$acc data copy(tend(nzb+1:nzt,nys:nyn,nxl:nxr),te_m(nzb+1:nzt,nys:nyn,nxl:nxr)) &
-
-    !$acc present( g, prho_reference, drho_air, rho_air_zw ) &
+    !$acc data copy(tend)
+    !$acc parallel present( g, prho_reference, drho_air, rho_air_zw ) &
     !$acc present( dd2zu, ddzu, ddzw, l_grid ) &
     !$acc present( l_wall, wall_flags_0) &
     !$acc present( tsc ) &
-    !$acc present( e, e_p ) &
+    !$acc present( e, e_p, te_m ) &
     !$acc present( km, prho ) &
     !$acc create( dissipation )
 
-    !$acc parallel default(present)
-    !!$acc loop collapse(3)
 !
     !-- Calculate the tendency terms
+    !!$acc loop collapse(3)
     !$acc loop seq
     DO  i = nxl, nxr
        !$acc loop
@@ -1706,15 +1704,15 @@
        ENDDO
 
     ENDDO
-
     !$acc end parallel
-    !$acc end data
     ! end subroutine diffusion_e()
 
 !
 !-- Calculate tendencies for the next Runge-Kutta step
+    !$acc parallel present( te_m, tend )
     IF ( timestep_scheme(1:5) == 'runge' )  THEN
        IF ( intermediate_timestep_count == 1 )  THEN
+          !$acc loop collapse(3)
           DO  i = nxl, nxr
              DO  j = nys, nyn
                 DO  k = nzb+1, nzt
@@ -1724,6 +1722,7 @@
           ENDDO
        ELSEIF ( intermediate_timestep_count < &
                 intermediate_timestep_count_max )  THEN
+          !$acc loop collapse(3)
           DO  i = nxl, nxr
              DO  j = nys, nyn
                 DO  k = nzb+1, nzt
@@ -1734,6 +1733,9 @@
           ENDDO
        ENDIF
     ENDIF
+    !$acc end parallel
+    !$acc end data
+
 
     CALL cpu_log( log_point(16), 'tke-equation', 'stop' )
 
@@ -2044,161 +2046,161 @@
   !> Diffusion and dissipation terms for the TKE.
   !> Vector-optimized version
   !------------------------------------------------------------------------------!
-SUBROUTINE diffusion_e( var, var_reference )
+!SUBROUTINE diffusion_e( var, var_reference )
 
-    USE arrays_3d,                                                             &
-    ONLY:  ddzu, ddzw, drho_air, rho_air_zw
+!    USE arrays_3d,                                                             &
+!    ONLY:  ddzu, ddzw, drho_air, rho_air_zw
 
-    USE grid_variables,                                                        &
-    ONLY:  ddx2, ddy2
-    USE surface_mod,                                                           &
-    ONLY :  bc_h
+!    USE grid_variables,                                                        &
+!    ONLY:  ddx2, ddy2
+!    USE surface_mod,                                                           &
+!    ONLY :  bc_h
 
-    IMPLICIT NONE
+!    IMPLICIT NONE
 
-    INTEGER(iwp) ::  i              !< running index x direction
-    INTEGER(iwp) ::  j              !< running index y direction
-    INTEGER(iwp) ::  k              !< running index z direction
-    INTEGER(iwp) ::  m              !< running index surface elements
+!    INTEGER(iwp) ::  i              !< running index x direction
+!    INTEGER(iwp) ::  j              !< running index y direction
+!    INTEGER(iwp) ::  k              !< running index z direction
+!    INTEGER(iwp) ::  m              !< running index surface elements
 
-    REAL(wp)     ::  flag           !< flag to mask topography
-    REAL(wp)     ::  l              !< mixing length
-    REAL(wp)     ::  ll             !< adjusted l
-    REAL(wp)     ::  var_reference  !< reference temperature
+!    REAL(wp)     ::  flag           !< flag to mask topography
+!    REAL(wp)     ::  l              !< mixing length
+!    REAL(wp)     ::  ll             !< adjusted l
+!    REAL(wp)     ::  var_reference  !< reference temperature
 
-#if defined( __nopointer )
-    REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  var  !< temperature
-#else
-    REAL(wp), DIMENSION(:,:,:), POINTER ::  var  !< temperature
-#endif
-    REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  dissipation  !< TKE dissipation
+!#if defined( __nopointer )
+!    REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  var  !< temperature
+!#else
+!    REAL(wp), DIMENSION(:,:,:), POINTER ::  var  !< temperature
+!#endif
+!    REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  dissipation  !< TKE dissipation
 
-    !$acc data copy(dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),var(:,:,:),kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr)) &
-    !$acc present(drho_air, dd2zu, ddzu, ddzw, wall_flags_0)
-    !$acc kernels default(present)
+!    !$acc data copy(dissipation(nzb+1:nzt,nys:nyn),e(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),l_grid(nzb+1:nzt),l_wall(nzb+1:nzt,nys:nyn,nxl:nxr),var(:,:,:),kh(nzb+1:nzt,nysg:nyng,nxlg:nxrg),km(nzb:nzt+1,nys-1:nyn+1,nxl-1:nxr+1),rho_air_zw(nzb:nzt),tend(nzb+1:nzt,nys:nyn,nxl:nxr)) &
+!    !$acc present(drho_air, dd2zu, ddzu, ddzw, wall_flags_0)
+!    !$acc kernels default(present)
 
-    !
-    !-- Calculate the tendency terms
-    DO  i = nxl, nxr
-       DO  j = nys, nyn
-          DO  k = nzb+1, nzt
-    !
-    !--      Predetermine flag to mask topography
-             flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
+!    !
+!    !-- Calculate the tendency terms
+!    DO  i = nxl, nxr
+!       DO  j = nys, nyn
+!          DO  k = nzb+1, nzt
+!    !
+!    !--      Predetermine flag to mask topography
+!             flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
 
-    !
-    !--      Calculate dissipation
-             ! IF ( les_mw )  THEN
+!    !
+!    !--      Calculate dissipation
+!             ! IF ( les_mw )  THEN
 
-             dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
-             IF ( dvar_dz > 0.0_wp ) THEN
-                IF ( use_single_reference_value )  THEN
-                   l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
-                                      / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
-                ELSE
-                   l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
-                                      / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
-                ENDIF
-             ELSE
-                l_stable = l_grid(k)
-             ENDIF
-            !
-            !-- Adjustment of the mixing length
-             IF ( wall_adjustment )  THEN
-                l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
-                ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
-             ELSE
-                l  = MIN( l_grid(k), l_stable )
-                ll = l_grid(k)
-             ENDIF
+!             dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
+!             IF ( dvar_dz > 0.0_wp ) THEN
+!                IF ( use_single_reference_value )  THEN
+!                   l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+!                                      / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
+!                ELSE
+!                   l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+!                                      / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
+!                ENDIF
+!             ELSE
+!                l_stable = l_grid(k)
+!             ENDIF
+!            !
+!            !-- Adjustment of the mixing length
+!             IF ( wall_adjustment )  THEN
+!                l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
+!                ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
+!             ELSE
+!                l  = MIN( l_grid(k), l_stable )
+!                ll = l_grid(k)
+!             ENDIF
 
-             dissipation(k,j) = ( 0.19_wp + 0.74_wp * l / ll )              &
-                                   * e(k,j,i) * SQRT( e(k,j,i) ) / l
+!             dissipation(k,j) = ( 0.19_wp + 0.74_wp * l / ll )              &
+!                                   * e(k,j,i) * SQRT( e(k,j,i) ) / l
 
-             ! ENDIF ! les_mw
+!             ! ENDIF ! les_mw
 
-             tend(k,j,i) = tend(k,j,i) + (                                     &
-                                           (                                   &
-                       ( km(k,j,i)+km(k,j,i+1) ) * ( e(k,j,i+1)-e(k,j,i) )     &
-                     - ( km(k,j,i)+km(k,j,i-1) ) * ( e(k,j,i)-e(k,j,i-1) )     &
-                                           ) * ddx2  * flag                    &
-                                         + (                                   &
-                       ( km(k,j,i)+km(k,j+1,i) ) * ( e(k,j+1,i)-e(k,j,i) )     &
-                     - ( km(k,j,i)+km(k,j-1,i) ) * ( e(k,j,i)-e(k,j-1,i) )     &
-                                           ) * ddy2  * flag                    &
-                                         + (                                   &
-            ( km(k,j,i)+km(k+1,j,i) ) * ( e(k+1,j,i)-e(k,j,i) ) * ddzu(k+1)    &
-                                                          * rho_air_zw(k)      &
-          - ( km(k,j,i)+km(k-1,j,i) ) * ( e(k,j,i)-e(k-1,j,i) ) * ddzu(k)      &
-                                                          * rho_air_zw(k-1)    &
-                                           ) * ddzw(k) * drho_air(k)           &
-                                         ) * flag * dsig_e                     &
-                          - dissipation(k,j) * flag
+!             tend(k,j,i) = tend(k,j,i) + (                                     &
+!                                           (                                   &
+!                       ( km(k,j,i)+km(k,j,i+1) ) * ( e(k,j,i+1)-e(k,j,i) )     &
+!                     - ( km(k,j,i)+km(k,j,i-1) ) * ( e(k,j,i)-e(k,j,i-1) )     &
+!                                           ) * ddx2  * flag                    &
+!                                         + (                                   &
+!                       ( km(k,j,i)+km(k,j+1,i) ) * ( e(k,j+1,i)-e(k,j,i) )     &
+!                     - ( km(k,j,i)+km(k,j-1,i) ) * ( e(k,j,i)-e(k,j-1,i) )     &
+!                                           ) * ddy2  * flag                    &
+!                                         + (                                   &
+!            ( km(k,j,i)+km(k+1,j,i) ) * ( e(k+1,j,i)-e(k,j,i) ) * ddzu(k+1)    &
+!                                                          * rho_air_zw(k)      &
+!          - ( km(k,j,i)+km(k-1,j,i) ) * ( e(k,j,i)-e(k-1,j,i) ) * ddzu(k)      &
+!                                                          * rho_air_zw(k-1)    &
+!                                           ) * ddzw(k) * drho_air(k)           &
+!                                         ) * flag * dsig_e                     &
+!                          - dissipation(k,j) * flag
 
-          ENDDO
-       ENDDO
+!          ENDDO
+!       ENDDO
 
-    ENDDO
-    !$acc end kernels
-    !$acc end data
+!    ENDDO
+!    !$acc end kernels
+!    !$acc end data
 
- END SUBROUTINE diffusion_e
+! END SUBROUTINE diffusion_e
 
 !------------------------------------------------------------------------------!
 ! Description:
 ! ------------
 !> Calculate mixing length for LES mode.
 !------------------------------------------------------------------------------!
- SUBROUTINE mixing_length_les( i, j, k, l, ll, var, var_reference )
+ !SUBROUTINE mixing_length_les( i, j, k, l, ll, var, var_reference )
 
-    USE arrays_3d,                                                             &
-        ONLY:  dd2zu
+ !   USE arrays_3d,                                                             &
+ !       ONLY:  dd2zu
 
-    USE control_parameters,                                                    &
-        ONLY:  atmos_ocean_sign, g, use_single_reference_value,                &
-               wall_adjustment, wall_adjustment_factor
+ !   USE control_parameters,                                                    &
+ !       ONLY:  atmos_ocean_sign, g, use_single_reference_value,                &
+ !              wall_adjustment, wall_adjustment_factor
 
-    IMPLICIT NONE
+ !   IMPLICIT NONE
 
-    INTEGER(iwp) :: i   !< loop index
-    INTEGER(iwp) :: j   !< loop index
-    INTEGER(iwp) :: k   !< loop index
+ !   INTEGER(iwp) :: i   !< loop index
+ !   INTEGER(iwp) :: j   !< loop index
+ !   INTEGER(iwp) :: k   !< loop index
 
-    REAL(wp)     :: dvar_dz         !< vertical gradient of var
-    REAL(wp)     :: l               !< mixing length
-    REAL(wp)     :: l_stable        !< mixing length according to stratification
-    REAL(wp)     :: ll              !< adjusted l_grid
-    REAL(wp)     :: var_reference   !< var at reference height
+ !   REAL(wp)     :: dvar_dz         !< vertical gradient of var
+ !   REAL(wp)     :: l               !< mixing length
+ !   REAL(wp)     :: l_stable        !< mixing length according to stratification
+ !   REAL(wp)     :: ll              !< adjusted l_grid
+ !   REAL(wp)     :: var_reference   !< var at reference height
 
-#if defined( __nopointer )
-    REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  var  !< temperature
-#else
-    REAL(wp), DIMENSION(:,:,:), POINTER ::  var     !< temperature
-#endif
+!#if defined( __nopointer )
+ !   REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  var  !< temperature
+!#else
+ !   REAL(wp), DIMENSION(:,:,:), POINTER ::  var     !< temperature
+!#endif
 
-    dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
-    IF ( dvar_dz > 0.0_wp ) THEN
-       IF ( use_single_reference_value )  THEN
-          l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
-                             / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
-       ELSE
-          l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
-                             / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
-       ENDIF
-    ELSE
-       l_stable = l_grid(k)
-    ENDIF
-!
-!-- Adjustment of the mixing length
-    IF ( wall_adjustment )  THEN
-       l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
-       ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
-    ELSE
-       l  = MIN( l_grid(k), l_stable )
-       ll = l_grid(k)
-    ENDIF
+ !   dvar_dz = atmos_ocean_sign * ( var(k+1,j,i) - var(k-1,j,i) ) * dd2zu(k)
+ !   IF ( dvar_dz > 0.0_wp ) THEN
+ !      IF ( use_single_reference_value )  THEN
+ !         l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+ !                            / SQRT( g / var_reference * dvar_dz ) + 1E-5_wp
+ !      ELSE
+ !         l_stable = 0.76_wp * SQRT( e(k,j,i) )                                &
+ !                            / SQRT( g / var(k,j,i) * dvar_dz ) + 1E-5_wp
+ !      ENDIF
+ !   ELSE
+ !      l_stable = l_grid(k)
+ !   ENDIF
+!!
+!!-- Adjustment of the mixing length
+ !   IF ( wall_adjustment )  THEN
+ !      l  = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k), l_stable )
+ !      ll = MIN( wall_adjustment_factor * l_wall(k,j,i), l_grid(k) )
+ !   ELSE
+ !      l  = MIN( l_grid(k), l_stable )
+ !      ll = l_grid(k)
+ !   ENDIF
 
- END SUBROUTINE mixing_length_les
+ !END SUBROUTINE mixing_length_les
 
 
 !------------------------------------------------------------------------------!

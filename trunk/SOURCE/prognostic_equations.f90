@@ -278,7 +278,7 @@
                flux_l_sa, nc, nc_p, nr, nr_p, pt, ptdf_x, ptdf_y, pt_init,     &
                pt_p, prho, q, q_init, q_p, qc, qc_p, qr, qr_p, rdf, rdf_sc,    &
                ref_state, rho_ocean, s,  s_init, s_p, sa, sa_init, sa_p, tend, &
-               te_m, tnc_m,  tnr_m, tpt_m, tq_m, tqc_m, tqr_m, ts_m, tsa_m,    &
+               tnc_m,  tnr_m, tpt_m, tq_m, tqc_m, tqr_m, ts_m, tsa_m,    &
                tu_m, tv_m, tw_m, u, ug, u_init, u_p, v, vg, vpt, v_init, v_p,  &
                w, w_p, alpha_T, beta_S
     USE kinds

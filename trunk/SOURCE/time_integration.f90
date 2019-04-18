@@ -351,7 +351,7 @@
                q_init, q, qc, qc_p, ql, ql_c, ql_v, ql_vp, qr, qr_p, q_p,      &
                ref_state, rho_ocean, s, s_p, sa_p, tend, u, u_p, v,            &
                v_p, w, w_p, alpha_T, beta_S, solar3d, sa, &
-               ddzu, ddzw, dd2zu, drho_air, rho_air_zw, kh, km, te_m,          &
+               ddzu, ddzw, dd2zu, drho_air, drho_air_zw, rho_air_zw, kh, km, te_m,          &
                u_stk, v_stk
 
     USE calc_mean_profile_mod,                                                 &
@@ -479,12 +479,14 @@
 
 !$acc data copyin( g ) &
 !$acc      copyin( drho_air ) &
+!$acc      copyin( drho_air_zw ) &
 !$acc      copyin( rho_air_zw ) &
 !$acc      copyin( dd2zu ) &
 !$acc      copyin( ddzu ) &
 !$acc      copyin( ddzw ) &
 !$acc      copyin( l_grid ) &
 !$acc      copyin( l_wall ) &
+!$acc      copyin( surf_def_h ) &
 !$acc      copyin( wall_flags_0 ) &
 !$acc      copyin( tsc ) &
 !!$acc      copyin( tend ) &

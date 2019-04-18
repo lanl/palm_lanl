@@ -1137,16 +1137,18 @@
        REAL(wp) ::  flux_d !<
        REAL(wp) ::  u_comp !<
        REAL(wp) ::  v_comp !<
+       REAL(wp) ::  flux_n, flux_r, flux_t !<
+       REAL(wp) ::  diss_n, diss_r, diss_t !<
 
-       REAL(wp), DIMENSION(nzb:nzt)   ::  diss_n !<
-       REAL(wp), DIMENSION(nzb:nzt)   ::  diss_r !<
-       REAL(wp), DIMENSION(nzb:nzt)   ::  diss_t !<
-       REAL(wp), DIMENSION(nzb:nzt)   ::  flux_n !<
-       REAL(wp), DIMENSION(nzb:nzt)   ::  flux_r !<
-       REAL(wp), DIMENSION(nzb:nzt)   ::  flux_t !<
+       ! REAL(wp), DIMENSION(nzb:nzt)   ::  diss_n !<
+       ! REAL(wp), DIMENSION(nzb:nzt)   ::  diss_r !<
+       ! REAL(wp), DIMENSION(nzb:nzt)   ::  diss_t !<
+       ! REAL(wp), DIMENSION(nzb:nzt)   ::  flux_n !<
+       ! REAL(wp), DIMENSION(nzb:nzt)   ::  flux_r !<
+       ! REAL(wp), DIMENSION(nzb:nzt)   ::  flux_t !<
 
-       REAL(wp), DIMENSION(nzb+1:nzt) ::  swap_diss_y_local !<
-       REAL(wp), DIMENSION(nzb+1:nzt) ::  swap_flux_y_local !<
+       REAL(wp), DIMENSION(nzb+1:nzt,nxl:nxr) ::  swap_diss_y_local !<
+       REAL(wp), DIMENSION(nzb+1:nzt,nxl:nxr) ::  swap_flux_y_local !<
 
        REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  swap_diss_x_local !<
        REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  swap_flux_x_local !<
@@ -1154,10 +1156,13 @@
 
 !
 !--    Compute the fluxes for the whole left boundary of the processor domain.
-!$acc kernels
-     i = nxl
-       DO  j = nys, nyn
+       !$acc data copyin( u, sk, advc_flags_1 ) &
+       !$acc copyout( swap_flux_x_local(nzb+1:nzb_max,nys:nyn), swap_diss_x_local(nzb+1:nzb_max,nys:nyn) )
 
+       i = nxl
+       !$acc parallel
+       !$acc loop collapse(2)
+       DO  j = nys, nyn
           DO  k = nzb+1, nzb_max
 
              ibit2 = IBITS(advc_flags_1(k,j,i-1),2,1)
@@ -1196,11 +1201,16 @@
                                                         )
 
           ENDDO
-        ENDDO
+       ENDDO
+       !$acc end parallel
+       !$acc end data
 
-!$acc end kernels
-!$acc kernels
-     DO j=nys,nyn
+       !$acc data copyin( u, sk ) &
+       !$acc copyout( swap_flux_x_local(nzb_max+1:nzt,nys:nyn), swap_diss_x_local(nzb_max+1:nzt,nys:nyn) )
+
+       !$acc parallel
+       !$acc loop collapse(2)
+       DO j = nys, nyn
           DO  k = nzb_max+1, nzt
 
              u_comp                 = u(k,j,i) - u_gtrans
@@ -1217,14 +1227,17 @@
                                                        ) * adv_sca_5
 
           ENDDO
-
        ENDDO
-!$acc end kernels
-!$acc kernels
+       !$acc end parallel
+       !$acc end data
 
+       !$acc data copyin( v, sk, advc_flags_1 ) &
+       !$acc copyout(swap_flux_y_local(nzb+1:nzb_max,nxl:nxr), swap_diss_y_local(nzb+1:nzb_max,nxl:nxr))
+
+       j = nys
+       !$acc parallel
+       !$acc loop collapse(2)
        DO  i = nxl, nxr
-
-          j = nys
           DO  k = nzb+1, nzb_max
 
              ibit5 = IBITS(advc_flags_1(k,j-1,i),5,1)
@@ -1232,7 +1245,7 @@
              ibit3 = IBITS(advc_flags_1(k,j-1,i),3,1)
 
              v_comp               = v(k,j,i) - v_gtrans
-             swap_flux_y_local(k) = v_comp * (                                &
+             swap_flux_y_local(k,i) = v_comp * (                              &
                                              ( 37.0_wp * ibit5 * adv_sca_5    &
                                           +     7.0_wp * ibit4 * adv_sca_3    &
                                           +              ibit3 * adv_sca_1    &
@@ -1247,7 +1260,7 @@
                                         ( sk(k,j+2,i) + sk(k,j-3,i)     )     &
                                              )
 
-             swap_diss_y_local(k) = -ABS( v_comp ) * (                        &
+             swap_diss_y_local(k,i) = -ABS( v_comp ) * (                      &
                                              ( 10.0_wp * ibit5 * adv_sca_5    &
                                           +     3.0_wp * ibit4 * adv_sca_3    &
                                           +              ibit3 * adv_sca_1    &
@@ -1264,30 +1277,51 @@
 
           ENDDO
        ENDDO
-!$acc end kernels
+       !$acc end parallel
+       !$acc end data
 
-    DO i=nxl,nxr
+       !$acc data copyin( v, sk ) &
+       !$acc copyout(swap_flux_y_local(nzb_max+1:nzt,nxl:nxr), swap_diss_y_local(nzb_max+1:nzt,nxl:nxr))
+       !$acc parallel
+       !$acc loop collapse(2)
+       DO i=nxl,nxr
 !--       Above to the top of the highest topography. No degradation necessary.
           DO  k = nzb_max+1, nzt
 
              v_comp               = v(k,j,i) - v_gtrans
-             swap_flux_y_local(k) = v_comp * (                               &
+             swap_flux_y_local(k,i) = v_comp * (                               &
                                     37.0_wp * ( sk(k,j,i)   + sk(k,j-1,i) )  &
                                   -  8.0_wp * ( sk(k,j+1,i) + sk(k,j-2,i) )  &
                                   +           ( sk(k,j+2,i) + sk(k,j-3,i) )  &
                                              ) * adv_sca_5
-              swap_diss_y_local(k) = -ABS( v_comp ) * (                      &
+              swap_diss_y_local(k,i) = -ABS( v_comp ) * (                      &
                                     10.0_wp * ( sk(k,j,i)   - sk(k,j-1,i) )  &
                                   -  5.0_wp * ( sk(k,j+1,i) - sk(k,j-2,i) )  &
                                   +             sk(k,j+2,i) - sk(k,j-3,i)    &
                                                       ) * adv_sca_5
-           ENDDO
+          ENDDO
+       ENDDO
+       !$acc end parallel
+       !$acc end data
 
-             flux_t(0) = 0.0_wp
-             diss_t(0) = 0.0_wp
+
+!       !$acc data copyin( sk, u, v, w, advc_flags_1, weight_substep ) &
+!       !$acc copy( tend, sums_wspts_ws_l, sums_wssas_ws_l ) &
+!       !!$acc copyin( swap_flux_x_local, swap_diss_x_local, swap_flux_y_local, swap_diss_y_local ) &
+!       !$acc present( ddzw ) &
+!       !$acc present( rho_air_zw, drho_air )
+!       !!$acc create( flux_t, flux_r, flux_n, diss_t, diss_r, diss_n )
+!
+!       !$acc parallel
+!       !$acc loop collapse(2)
+!      ! private ( flux_t, diss_t, flux_r, flux_n, diss_r, diss_n, flux_d, diss_d )
+       DO  i = nxl, nxr
+          DO j= nys, nyn
+             ! flux_t(0) = 0.0_wp
+             ! diss_t(0) = 0.0_wp
              flux_d    = 0.0_wp
              diss_d    = 0.0_wp
-         DO j= nys, nyn
+!             !$acc loop seq
              DO  k = nzb+1, nzb_max
 
                 ibit2 = IBITS(advc_flags_1(k,j,i),2,1)
@@ -1295,7 +1329,7 @@
                 ibit0 = IBITS(advc_flags_1(k,j,i),0,1)
 
                 u_comp    = u(k,j,i+1) - u_gtrans
-                flux_r(k) = u_comp * (                                        &
+                flux_r = u_comp * (                                        &
                           ( 37.0_wp * ibit2 * adv_sca_5                       &
                       +      7.0_wp * ibit1 * adv_sca_3                       &
                       +               ibit0 * adv_sca_1                       &
@@ -1310,7 +1344,7 @@
                              ( sk(k,j,i+3) + sk(k,j,i-2) )                    &
                                      )
 
-                diss_r(k) = -ABS( u_comp ) * (                                &
+                diss_r = -ABS( u_comp ) * (                                &
                           ( 10.0_wp * ibit2 * adv_sca_5                       &
                        +     3.0_wp * ibit1 * adv_sca_3                       &
                        +              ibit0 * adv_sca_1                       &
@@ -1330,7 +1364,7 @@
                 ibit3 = IBITS(advc_flags_1(k,j,i),3,1)
 
                 v_comp    = v(k,j+1,i) - v_gtrans
-                flux_n(k) = v_comp * (                                        &
+                flux_n = v_comp * (                                        &
                           ( 37.0_wp * ibit5 * adv_sca_5                       &
                        +     7.0_wp * ibit4 * adv_sca_3                       &
                        +              ibit3 * adv_sca_1                       &
@@ -1345,7 +1379,7 @@
                              ( sk(k,j+3,i) + sk(k,j-2,i) )                    &
                                      )
 
-                diss_n(k) = -ABS( v_comp ) * (                                &
+                diss_n = -ABS( v_comp ) * (                                &
                           ( 10.0_wp * ibit5 * adv_sca_5                       &
                        +     3.0_wp * ibit4 * adv_sca_3                       &
                        +              ibit3 * adv_sca_1                       &
@@ -1371,7 +1405,7 @@
                 k_mm  = k - 2 * ibit8
 
 
-                flux_t(k) = w(k,j,i) * rho_air_zw(k) * (                      &
+                flux_t = w(k,j,i) * rho_air_zw(k) * (                      &
                            ( 37.0_wp * ibit8 * adv_sca_5                      &
                         +     7.0_wp * ibit7 * adv_sca_3                      &
                         +           ibit6 * adv_sca_1                         &
@@ -1385,7 +1419,7 @@
                            ) *     ( sk(k_ppp,j,i)+ sk(k_mm,j,i) )            &
                                        )
 
-                diss_t(k) = -ABS( w(k,j,i) ) * rho_air_zw(k) * (              &
+                diss_t = -ABS( w(k,j,i) ) * rho_air_zw(k) * (              &
                            ( 10.0_wp * ibit8 * adv_sca_5                      &
                         +     3.0_wp * ibit7 * adv_sca_3                      &
                         +              ibit6 * adv_sca_1                      &
@@ -1426,41 +1460,42 @@
 
 
                 tend(k,j,i) = tend(k,j,i) - (                                 &
-                        ( flux_r(k) + diss_r(k) - swap_flux_x_local(k,j) -    &
+                        ( flux_r + diss_r - swap_flux_x_local(k,j) -    &
                           swap_diss_x_local(k,j)            ) * ddx           &
-                      + ( flux_n(k) + diss_n(k) - swap_flux_y_local(k)   -    &
-                          swap_diss_y_local(k)              ) * ddy           &
-                      + ( ( flux_t(k) + diss_t(k) ) -                         &
+                      + ( flux_n + diss_n - swap_flux_y_local(k,i)   -    &
+                          swap_diss_y_local(k,i)              ) * ddy           &
+                      + ( ( flux_t + diss_t ) -                         &
                           ( flux_d    + diss_d    )                           &
                                                     ) * drho_air(k) * ddzw(k) &
                                             ) + sk(k,j,i) * div
 
-                swap_flux_y_local(k)   = flux_n(k)
-                swap_diss_y_local(k)   = diss_n(k)
-                swap_flux_x_local(k,j) = flux_r(k)
-                swap_diss_x_local(k,j) = diss_r(k)
-                flux_d                 = flux_t(k)
-                diss_d                 = diss_t(k)
+                swap_flux_y_local(k,i) = flux_n
+                swap_diss_y_local(k,i) = diss_n
+                swap_flux_x_local(k,j) = flux_r
+                swap_diss_x_local(k,j) = diss_r
+                flux_d                 = flux_t
+                diss_d                 = diss_t
 
              ENDDO
+!             !$acc loop seq
              DO  k = nzb_max+1, nzt
 
                 u_comp    = u(k,j,i+1) - u_gtrans
-                flux_r(k) = u_comp * (                                        &
+                flux_r = u_comp * (                                        &
                       37.0_wp * ( sk(k,j,i+1) + sk(k,j,i)   )                 &
                     -  8.0_wp * ( sk(k,j,i+2) + sk(k,j,i-1) )                 &
                     +           ( sk(k,j,i+3) + sk(k,j,i-2) ) ) * adv_sca_5
-                diss_r(k) = -ABS( u_comp ) * (                                &
+                diss_r = -ABS( u_comp ) * (                                &
                       10.0_wp * ( sk(k,j,i+1) - sk(k,j,i)   )                 &
                     -  5.0_wp * ( sk(k,j,i+2) - sk(k,j,i-1) )                 &
                     +           ( sk(k,j,i+3) - sk(k,j,i-2) ) ) * adv_sca_5
 
                 v_comp    = v(k,j+1,i) - v_gtrans
-                flux_n(k) = v_comp * (                                        &
+                flux_n = v_comp * (                                        &
                       37.0_wp * ( sk(k,j+1,i) + sk(k,j,i)   )                 &
                     -  8.0_wp * ( sk(k,j+2,i) + sk(k,j-1,i) )                 &
                     +           ( sk(k,j+3,i) + sk(k,j-2,i) ) ) * adv_sca_5
-                diss_n(k) = -ABS( v_comp ) * (                                &
+                diss_n = -ABS( v_comp ) * (                                &
                       10.0_wp * ( sk(k,j+1,i) - sk(k,j,i)   )                 &
                     -  5.0_wp * ( sk(k,j+2,i) - sk(k,j-1,i) )                 &
                     +           ( sk(k,j+3,i) - sk(k,j-2,i) ) ) * adv_sca_5
@@ -1476,7 +1511,7 @@
                 k_mm  = k - 2 * ibit8
 
 
-                flux_t(k) = w(k,j,i) * rho_air_zw(k) * (                      &
+                flux_t = w(k,j,i) * rho_air_zw(k) * (                      &
                            ( 37.0_wp * ibit8 * adv_sca_5                      &
                         +     7.0_wp * ibit7 * adv_sca_3                      &
                         +              ibit6 * adv_sca_1                      &
@@ -1490,7 +1525,7 @@
                            ) *     ( sk(k_ppp,j,i)+ sk(k_mm,j,i)  )           &
                                        )
 
-                diss_t(k) = -ABS( w(k,j,i) ) * rho_air_zw(k) * (              &
+                diss_t = -ABS( w(k,j,i) ) * rho_air_zw(k) * (              &
                            ( 10.0_wp * ibit8 * adv_sca_5                      &
                         +     3.0_wp * ibit7 * adv_sca_3                      &
                         +              ibit6 * adv_sca_1                      &
@@ -1515,52 +1550,56 @@
                                 ) * drho_air(k) * ddzw(k)
 
                 tend(k,j,i) = tend(k,j,i) - (                                 &
-                        ( flux_r(k) + diss_r(k) - swap_flux_x_local(k,j) -    &
+                        ( flux_r + diss_r - swap_flux_x_local(k,j) -    &
                           swap_diss_x_local(k,j)            ) * ddx           &
-                      + ( flux_n(k) + diss_n(k) - swap_flux_y_local(k)   -    &
-                          swap_diss_y_local(k)              ) * ddy           &
-                      + ( ( flux_t(k) + diss_t(k) ) -                         &
+                      + ( flux_n + diss_n - swap_flux_y_local(k,i)   -    &
+                          swap_diss_y_local(k,i)              ) * ddy           &
+                      + ( ( flux_t + diss_t ) -                         &
                           ( flux_d    + diss_d    )                           &
                                                     ) * drho_air(k) * ddzw(k) &
                                             ) + sk(k,j,i) * div
 
-                swap_flux_y_local(k)   = flux_n(k)
-                swap_diss_y_local(k)   = diss_n(k)
-                swap_flux_x_local(k,j) = flux_r(k)
-                swap_diss_x_local(k,j) = diss_r(k)
-                flux_d                 = flux_t(k)
-                diss_d                 = diss_t(k)
+                swap_flux_y_local(k,i) = flux_n
+                swap_diss_y_local(k,i) = diss_n
+                swap_flux_x_local(k,j) = flux_r
+                swap_diss_x_local(k,j) = diss_r
+                flux_d                 = flux_t
+                diss_d                 = diss_t
 
              ENDDO
 
 !--          Evaluation of statistics.
-           SELECT CASE ( sk_char )
+             !SELECT CASE ( sk_char )
 
-                CASE ( 'pt' )
-                   DO  k = nzb, nzt
-                       sums_wspts_ws_l(k,tn) = sums_wspts_ws_l(k,tn)           &
-                        + ( flux_t(k)                                        &
-                                / ( w(k,j,i) + SIGN( 1.0E-20_wp, w(k,j,i) ) )  &
-                                * ( w(k,j,i) - hom(k,1,3,0)                 )  &
-                            + diss_t(k)                                        &
-                                / ( ABS(w(k,j,i)) + 1.0E-20_wp              )  &
-                               *   ABS(w(k,j,i) - hom(k,1,3,0)             )  &
-                            ) * weight_substep(intermediate_timestep_count)
-                    ENDDO
-                 CASE ( 'sa' )
-                    DO  k = nzb, nzt
-                       sums_wssas_ws_l(k,tn) = sums_wssas_ws_l(k,tn)           &
-                          + ( flux_t(k)                                        &
-                                / ( w(k,j,i) + SIGN( 1.0E-20_wp, w(k,j,i) ) )  &
-                                * ( w(k,j,i) - hom(k,1,3,0)                 )  &
-                            + diss_t(k)                                        &
-                                / ( ABS(w(k,j,i)) + 1.0E-20_wp              )  &
-                                *   ABS(w(k,j,i) - hom(k,1,3,0)             )  &
-                            ) * weight_substep(intermediate_timestep_count)
-                    ENDDO
-              END SELECT
-         ENDDO
-ENDDO
+             !   CASE ( 'pt' )
+             !      !$acc loop independent
+             !      DO  k = nzb, nzt
+             !          sums_wspts_ws_l(k,tn) = sums_wspts_ws_l(k,tn)           &
+             !           + ( flux_t(k)                                          &
+             !                   / ( w(k,j,i) + SIGN( 1.0E-20_wp, w(k,j,i) ) )  &
+             !                   * ( w(k,j,i) - hom(k,1,3,0)                 )  &
+             !               + diss_t(k)                                        &
+             !                   / ( ABS(w(k,j,i)) + 1.0E-20_wp              )  &
+             !                  *   ABS(w(k,j,i) - hom(k,1,3,0)             )   &
+             !               ) * weight_substep(intermediate_timestep_count)
+             !       ENDDO
+             !   CASE ( 'sa' )
+             !      !$acc loop independent
+             !      DO  k = nzb, nzt
+             !          sums_wssas_ws_l(k,tn) = sums_wssas_ws_l(k,tn)           &
+             !             + ( flux_t(k)                                        &
+             !                   / ( w(k,j,i) + SIGN( 1.0E-20_wp, w(k,j,i) ) )  &
+             !                   * ( w(k,j,i) - hom(k,1,3,0)                 )  &
+             !               + diss_t(k)                                        &
+             !                   / ( ABS(w(k,j,i)) + 1.0E-20_wp              )  &
+             !                   *   ABS(w(k,j,i) - hom(k,1,3,0)             )  &
+             !               ) * weight_substep(intermediate_timestep_count)
+             !      ENDDO
+             !END SELECT
+          ENDDO
+       ENDDO
+!       !$acc end parallel
+!       !$acc end data
     END SUBROUTINE advec_s_ws
 
 

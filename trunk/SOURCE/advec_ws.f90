@@ -1305,23 +1305,23 @@
        !$acc end data
 
 
-!       !$acc data copyin( sk, u, v, w, advc_flags_1, weight_substep ) &
-!       !$acc copy( tend, sums_wspts_ws_l, sums_wssas_ws_l ) &
-!       !!$acc copyin( swap_flux_x_local, swap_diss_x_local, swap_flux_y_local, swap_diss_y_local ) &
-!       !$acc present( ddzw ) &
-!       !$acc present( rho_air_zw, drho_air )
-!       !!$acc create( flux_t, flux_r, flux_n, diss_t, diss_r, diss_n )
+       !$acc data copyin( sk, u, v, w, advc_flags_1, weight_substep ) &
+       !$acc copy( tend, sums_wspts_ws_l, sums_wssas_ws_l ) &
+       !$acc copyin( swap_flux_x_local, swap_diss_x_local, swap_flux_y_local, swap_diss_y_local ) &
+       !$acc present( ddzw ) &
+       !$acc present( rho_air_zw, drho_air )
+       !!$acc create( flux_t, flux_r, flux_n, diss_t, diss_r, diss_n )
 !
-!       !$acc parallel
-!       !$acc loop collapse(2)
-!      ! private ( flux_t, diss_t, flux_r, flux_n, diss_r, diss_n, flux_d, diss_d )
+       !$acc parallel
+       !$acc loop seq
        DO  i = nxl, nxr
+          !$acc loop seq
           DO j= nys, nyn
              ! flux_t(0) = 0.0_wp
              ! diss_t(0) = 0.0_wp
              flux_d    = 0.0_wp
              diss_d    = 0.0_wp
-!             !$acc loop seq
+             !$acc loop seq
              DO  k = nzb+1, nzb_max
 
                 ibit2 = IBITS(advc_flags_1(k,j,i),2,1)
@@ -1477,7 +1477,7 @@
                 diss_d                 = diss_t
 
              ENDDO
-!             !$acc loop seq
+             !$acc loop seq
              DO  k = nzb_max+1, nzt
 
                 u_comp    = u(k,j,i+1) - u_gtrans
@@ -1598,8 +1598,8 @@
              !END SELECT
           ENDDO
        ENDDO
-!       !$acc end parallel
-!       !$acc end data
+       !$acc end parallel
+       !$acc end data
     END SUBROUTINE advec_s_ws
 
 

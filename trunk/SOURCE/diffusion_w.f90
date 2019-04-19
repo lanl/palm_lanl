@@ -125,19 +125,13 @@
        USE arrays_3d,                                                          &
            ONLY :  ddzu, ddzw, km, tend, u, v, w, drho_air_zw, rho_air
 
-       USE control_parameters,                                                 &
-           ONLY :  topography
-
        USE grid_variables,                                                     &
            ONLY :  ddx, ddy
 
        USE indices,                                                            &
-           ONLY :  nxl, nxr, nyn, nys, nzb, nzt, wall_flags_0
+           ONLY :  nxl, nxr, nyn, nys, nzb, nzt
 
        USE kinds
-
-       USE surface_mod,                                                        &
-           ONLY :  surf_def_v
 
        IMPLICIT NONE
 
@@ -149,33 +143,25 @@
        INTEGER(iwp) ::  surf_e        !< End index of surface elements at (j,i)-gridpoint
        INTEGER(iwp) ::  surf_s        !< Start index of surface elements at (j,i)-gridpoint
 
-       REAL(wp) ::  flag              !< flag to mask topography grid points
        REAL(wp) ::  kmxm              !<
        REAL(wp) ::  kmxp              !<
        REAL(wp) ::  kmym              !<
        REAL(wp) ::  kmyp              !<
-       REAL(wp) ::  mask_west         !< flag to mask vertical wall west of the grid point
-       REAL(wp) ::  mask_east         !< flag to mask vertical wall east of the grid point
-       REAL(wp) ::  mask_south        !< flag to mask vertical wall south of the grid point
-       REAL(wp) ::  mask_north        !< flag to mask vertical wall north of the grid point
 
 
 
+       !$acc data copy( tend ) &
+       !$acc copyin( u, v, w ) &
+       !$acc present( km ) &
+       !$acc present( ddzu, ddzw, rho_air, drho_air_zw )
+
+       !$acc parallel
+       !$acc loop gang vector collapse(3)
        DO  i = nxl, nxr
           DO  j = nys, nyn
              DO  k = nzb+1, nzt-1
 !
 !--             Predetermine flag to mask topography and wall-bounded grid points.
-                flag       = MERGE( 1.0_wp, 0.0_wp,                            &
-                                    BTEST( wall_flags_0(k,j,i),   3 ) )
-                mask_east  = MERGE( 1.0_wp, 0.0_wp,                            &
-                                    BTEST( wall_flags_0(k,j,i+1), 3 ) )
-                mask_west  = MERGE( 1.0_wp, 0.0_wp,                            &
-                                    BTEST( wall_flags_0(k,j,i-1), 3 ) )
-                mask_south = MERGE( 1.0_wp, 0.0_wp,                            &
-                                    BTEST( wall_flags_0(k,j-1,i), 3 ) )
-                mask_north = MERGE( 1.0_wp, 0.0_wp,                            &
-                                    BTEST( wall_flags_0(k,j+1,i), 3 ) )
 !
 !--             Interpolate eddy diffusivities on staggered gridpoints
                 kmxp = 0.25_wp * ( km(k,j,i)   +   km(k,j,i+1) +               &
@@ -188,62 +174,35 @@
                                    km(k,j-1,i) + km(k+1,j-1,i) )
 
                 tend(k,j,i) = tend(k,j,i)                                      &
-                       + ( mask_east *  kmxp * (                               &
+                                    + ( kmxp * (                               &
                                    ( w(k,j,i+1)   - w(k,j,i)   ) * ddx         &
                                  + ( u(k+1,j,i+1) - u(k,j,i+1) ) * ddzu(k+1)   &
                                                )                               &
-                         - mask_west * kmxm *  (                               &
+                                     - kmxm *  (                               &
                                    ( w(k,j,i)     - w(k,j,i-1) ) * ddx         &
                                  + ( u(k+1,j,i)   - u(k,j,i)   ) * ddzu(k+1)   &
                                                )                               &
-                         ) * ddx                                 * flag        &
-                       + ( mask_north * kmyp * (                               &
+                                      ) * ddx                                  &
+                                    + ( kmyp * (                               &
                                    ( w(k,j+1,i)   - w(k,j,i)   ) * ddy         &
                                  + ( v(k+1,j+1,i) - v(k,j+1,i) ) * ddzu(k+1)   &
                                                )                               &
-                         - mask_south * kmym * (                               &
+                                      - kmym * (                               &
                                    ( w(k,j,i)     - w(k,j-1,i) ) * ddy         &
                                  + ( v(k+1,j,i)   - v(k,j,i)   ) * ddzu(k+1)   &
                                                )                               &
-                         ) * ddy                                 * flag        &
+                                      ) * ddy                                  &
                        + 2.0_wp * (                                            &
                          km(k+1,j,i) * ( w(k+1,j,i) - w(k,j,i) )   * ddzw(k+1) &
                                      * rho_air(k+1)                            &
                        - km(k,j,i)   * ( w(k,j,i)   - w(k-1,j,i) ) * ddzw(k)   &
                                      * rho_air(k)                              &
-                                  ) * ddzu(k+1) * drho_air_zw(k) * flag
-             ENDDO
-
-!
-!--          Add horizontal momentum flux v'w' at north- (l=0) and south-facing (l=1)
-!--          surfaces. Note, in the the flat case, loops won't be entered as
-!--          start_index > end_index. Furtermore, note, no vertical natural surfaces
-!--          so far.
-!--          Default-type surfaces
-             DO  l = 0, 1
-                surf_s = surf_def_v(l)%start_index(j,i)
-                surf_e = surf_def_v(l)%end_index(j,i)
-                DO  m = surf_s, surf_e
-                   k           = surf_def_v(l)%k(m)
-                   tend(k,j,i) = tend(k,j,i) +                                 &
-                                     surf_def_v(l)%mom_flux_w(m) * ddy
-                ENDDO
-             ENDDO
-!
-!--          Add horizontal momentum flux u'w' at east- (l=2) and west-facing (l=3)
-!--          surface.
-!--          Default-type surfaces
-             DO  l = 2, 3
-                surf_s = surf_def_v(l)%start_index(j,i)
-                surf_e = surf_def_v(l)%end_index(j,i)
-                DO  m = surf_s, surf_e
-                   k           = surf_def_v(l)%k(m)
-                   tend(k,j,i) = tend(k,j,i) +                                 &
-                                     surf_def_v(l)%mom_flux_w(m) * ddx
-                ENDDO
+                                  ) * ddzu(k+1) * drho_air_zw(k)
              ENDDO
           ENDDO
        ENDDO
+       !$acc end parallel
+       !$acc end data
 
     END SUBROUTINE diffusion_w
 

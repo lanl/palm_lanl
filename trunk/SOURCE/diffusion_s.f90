@@ -120,17 +120,13 @@
 ! ------------
 !> Call for all grid points
 !------------------------------------------------------------------------------!
-    SUBROUTINE diffusion_s( s, s_flux_def_h_up,                       &
-                               s_flux_def_h_down, s_flux_t,                    &
-                               s_flux_def_v_north, s_flux_def_v_south,         &
-                               s_flux_def_v_east,  s_flux_def_v_west,          &
-                               s_flux_solar_t)
+    SUBROUTINE diffusion_s( s, s_flux_t, s_flux_solar_t)
 
        USE arrays_3d,                                                          &
            ONLY:  dzw, ddzu, ddzw, kh, tend, drho_air, rho_air_zw, solar3d
 
        USE control_parameters,                                                 &
-           ONLY: use_surface_fluxes, use_top_fluxes, ideal_solar_division,     &
+           ONLY: use_top_fluxes, ideal_solar_division,     &
                  ideal_solar_efolding1, ideal_solar_efolding2
 
        USE grid_variables,                                                     &
@@ -143,7 +139,7 @@
        USE kinds
 
        USE surface_mod,                                                        &
-           ONLY :  surf_def_h, surf_def_v
+           ONLY :  surf_def_h
 
        IMPLICIT NONE
 
@@ -159,18 +155,8 @@
        REAL(wp) ::  flux2             !< solar flux temp variable
        REAL(wp) ::  flag
        REAL(wp) ::  mask_bottom       !< flag to mask vertical upward-facing surface
-       REAL(wp) ::  mask_east         !< flag to mask vertical surface east of the grid point
-       REAL(wp) ::  mask_north        !< flag to mask vertical surface north of the grid point
-       REAL(wp) ::  mask_south        !< flag to mask vertical surface south of the grid point
-       REAL(wp) ::  mask_west         !< flag to mask vertical surface west of the grid point
        REAL(wp) ::  mask_top          !< flag to mask vertical downward-facing surface
 
-       REAL(wp), DIMENSION(1:surf_def_v(0)%ns) ::  s_flux_def_v_north !< flux at north-facing vertical default-type surfaces
-       REAL(wp), DIMENSION(1:surf_def_v(1)%ns) ::  s_flux_def_v_south !< flux at south-facing vertical default-type surfaces
-       REAL(wp), DIMENSION(1:surf_def_v(2)%ns) ::  s_flux_def_v_east  !< flux at east-facing vertical default-type surfaces
-       REAL(wp), DIMENSION(1:surf_def_v(3)%ns) ::  s_flux_def_v_west  !< flux at west-facing vertical default-type surfaces
-       REAL(wp), DIMENSION(1:surf_def_h(0)%ns) ::  s_flux_def_h_up    !< flux at horizontal upward-facing default-type surfaces
-       REAL(wp), DIMENSION(1:surf_def_h(1)%ns) ::  s_flux_def_h_down  !< flux at horizontal donwward-facing default-type surfaces
        REAL(wp), DIMENSION(1:surf_def_h(2)%ns) ::  s_flux_t           !< flux at model top
 
 #if defined( __nopointer )
@@ -180,94 +166,40 @@
 #endif
 
        REAL(wp), DIMENSION(1:surf_def_h(2)%ns),INTENT(IN),OPTIONAL :: s_flux_solar_t  !<solar flux at sfc
-!$acc parallel
-!$acc loop gang vector collapse(3)
-        DO  i = nxl, nxr
-          DO  j = nys,nyn
-!
-!--          Compute horizontal diffusion
-             DO  k = nzb+1, nzt
-!
-!--             Predetermine flag to mask topography and wall-bounded grid points
-                flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
-!
-!--             Predetermine flag to mask wall-bounded grid points, equivalent to
-!--             former s_outer array
-                mask_west  = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i-1), 0 ) )
-                mask_east  = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i+1), 0 ) )
-                mask_south = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j-1,i), 0 ) )
-                mask_north = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j+1,i), 0 ) )
 
+!-- Compute horizontal diffusion
+
+       !$acc data copy( tend ) &
+       !$acc copyin( s, s_flux_t, s_flux_solar_t ) &
+       !$acc copyout( solar3d ) &
+       !$acc present( kh ) &
+       !$acc present( ddzu, ddzw, rho_air_zw, drho_air, wall_flags_0 )
+
+       !$acc parallel
+       !$acc loop gang vector collapse(3)
+       DO  i = nxl, nxr
+          DO  j = nys,nyn
+             DO  k = nzb+1, nzt
                 tend(k,j,i) = tend(k,j,i)                                      &
                                           + 0.5_wp * (                         &
-                        mask_east  * ( kh(k,j,i) + kh(k,j,i+1) )               &
+                                     ( kh(k,j,i) + kh(k,j,i+1) )               &
                                    * ( s(k,j,i+1) - s(k,j,i)   )               &
-                      - mask_west  * ( kh(k,j,i) + kh(k,j,i-1) )               &
+                                   - ( kh(k,j,i) + kh(k,j,i-1) )               &
                                    * ( s(k,j,i)   - s(k,j,i-1) )               &
-                                                     ) * ddx2 * flag           &
+                                                     ) * ddx2                  &
                                           + 0.5_wp * (                         &
-                        mask_north * ( kh(k,j,i) + kh(k,j+1,i) )               &
+                                     ( kh(k,j,i) + kh(k,j+1,i) )               &
                                    * ( s(k,j+1,i) - s(k,j,i)   )               &
-                      - mask_south * ( kh(k,j,i) + kh(k,j-1,i) )               &
+                                   - ( kh(k,j,i) + kh(k,j-1,i) )               &
                                    * ( s(k,j,i)   - s(k,j-1,i) )               &
-                                                     ) * ddy2 * flag
+                                                     ) * ddy2
              ENDDO
           ENDDO
        ENDDO
 
-!$acc loop gang vector collapse(2)
-     DO i=nxl,nxr
-       DO j=nys,nyn
-!
-
-!--          Apply prescribed horizontal wall heatflux where necessary. First,
-!--          determine start and end index for respective (j,i)-index. Please
-!--          note, in the flat case following loop will not be entered, as
-!--          surf_s=1 and surf_e=0. Furtermore, note, no vertical natural surfaces
-!--          so far.
-!--          First, for default-type surfaces
-!--          North-facing vertical default-type surfaces
-             surf_s = surf_def_v(0)%start_index(j,i)
-             surf_e = surf_def_v(0)%end_index(j,i)
-             !$acc loop vector
-             DO  m = surf_s, surf_e
-                k           = surf_def_v(0)%k(m)
-                tend(k,j,i) = tend(k,j,i) + s_flux_def_v_north(m) * ddy
-             ENDDO
-!
-!--          South-facing vertical default-type surfaces
-             surf_s = surf_def_v(1)%start_index(j,i)
-             surf_e = surf_def_v(1)%end_index(j,i)
-             !$acc loop vector
-             DO  m = surf_s, surf_e
-                k           = surf_def_v(1)%k(m)
-                tend(k,j,i) = tend(k,j,i) + s_flux_def_v_south(m) * ddy
-             ENDDO
-!
-!--          East-facing vertical default-type surfaces
-             surf_s = surf_def_v(2)%start_index(j,i)
-             surf_e = surf_def_v(2)%end_index(j,i)
-             !$acc loop vector
-             DO  m = surf_s, surf_e
-                k           = surf_def_v(2)%k(m)
-                tend(k,j,i) = tend(k,j,i) + s_flux_def_v_east(m) * ddx
-             ENDDO
-!
-!--          West-facing vertical default-type surfaces
-             surf_s = surf_def_v(3)%start_index(j,i)
-             surf_e = surf_def_v(3)%end_index(j,i)
-             !$acc loop vector
-             DO  m = surf_s, surf_e
-                k           = surf_def_v(3)%k(m)
-                tend(k,j,i) = tend(k,j,i) + s_flux_def_v_west(m) * ddx
-             ENDDO
-      ENDDO
-ENDDO
-
-!$acc loop gang vector collapse(3)
-     DO i=nxl,nxr
-       DO j=nys,nyn
-
+       !$acc loop gang vector collapse(3)
+       DO i = nxl, nxr
+          DO j = nys, nyn
 !
 !--          Compute vertical diffusion. In case that surface fluxes have been
 !--          prescribed or computed at bottom and/or top, index k starts/ends at
@@ -303,60 +235,29 @@ ENDDO
              ENDDO
           ENDDO
        ENDDO
-!$acc end parallel
+       !$acc end parallel
 
-!$acc parallel copyin(s_flux_solar_t(:),s_flux_def_h_up(:),s_flux_t(:),s_flux_def_h_down(:),ddzw(:)) copy(tend(:,nys:nyn,nxl:nxr))  copyin(surf_def_h(:),dzw(nzb+1:nzt))  copy(solar3d(nzb+1:nzt,nys:nyn,nxl:nxr))  copyin(drho_air(:))
-!$acc loop gang vector collapse(2)
-     DO i=nxl,nxr
-       DO j=nys,nyn
-
-!--          Vertical diffusion at horizontal walls.
-             IF ( use_surface_fluxes )  THEN
-!
-!--             Default-type surfaces, upward-facing
-                surf_s = surf_def_h(0)%start_index(j,i)
-                surf_e = surf_def_h(0)%end_index(j,i)
+       !$acc parallel
+       !$acc loop gang vector collapse(2)
+       DO i=nxl,nxr
+          DO j=nys,nyn
+             !LPV adding solar forcing with depth
+             IF ( PRESENT(s_flux_solar_t )) THEN
+                m = surf_def_h(2)%start_index(j,i)
+                zval = 0.0_wp
                 !$acc loop vector
-                DO  m = surf_s, surf_e
+                DO k = nzt,nzb+1,-1
+                   flux1 = (1.0_wp - ideal_solar_division)*exp(ideal_solar_efolding2*zval) + &
+                             ideal_solar_division*exp(ideal_solar_efolding1*zval)
+                   zval = zval - dzw(k)
+                   flux2 = (1.0_wp - ideal_solar_division)*exp(ideal_solar_efolding2*zval) + &
+                   ideal_solar_division*exp(ideal_solar_efolding1*zval)
 
-                   k   = surf_def_h(0)%k(m)
-                   tend(k,j,i) = tend(k,j,i) + s_flux_def_h_up(m)              &
-                                       * ddzw(k) * drho_air(k)
+                   tend(k,j,i) = tend(k,j,i) - s_flux_solar_t(m)*(flux1 - flux2) / dzw(k)
 
+                   solar3d(k,j,i) = -s_flux_solar_t(m)*(flux1 - flux2) / dzw(k)
                 ENDDO
-!
-!--             Default-type surfaces, downward-facing
-                surf_s = surf_def_h(1)%start_index(j,i)
-                surf_e = surf_def_h(1)%end_index(j,i)
-                !$acc loop vector
-                DO  m = surf_s, surf_e
-
-                   k   = surf_def_h(1)%k(m)
-                   tend(k,j,i) = tend(k,j,i) + s_flux_def_h_down(m)            &
-                                       * ddzw(k) * drho_air(k)
-
-                ENDDO
-              ENDIF
-                !LPV adding solar forcing with depth
-                IF ( PRESENT(s_flux_solar_t )) THEN
-                  m = surf_def_h(2)%start_index(j,i)
-
-                  zval = 0.0_wp
-                  !$acc loop vector
-                  DO k = nzt,nzb+1,-1
-                      flux1 = (1.0_wp - ideal_solar_division)*exp(ideal_solar_efolding2*zval) + &
-                                ideal_solar_division*exp(ideal_solar_efolding1*zval)
-                      zval = zval - dzw(k)
-                      flux2 = (1.0_wp - ideal_solar_division)*exp(ideal_solar_efolding2*zval) + &
-                      ideal_solar_division*exp(ideal_solar_efolding1*zval)
-
-                      tend(k,j,i) = tend(k,j,i) - s_flux_solar_t(m)*(flux1 - flux2) / dzw(k)
-
-                      solar3d(k,j,i) = -s_flux_solar_t(m)*(flux1 - flux2) / dzw(k)
-                  ENDDO
-
-                ENDIF
-
+             ENDIF
 
 !
 !--          Vertical diffusion at the last computational gridpoint along z-direction
@@ -371,11 +272,11 @@ ENDDO
                            + ( - s_flux_t(m) ) * ddzw(k) * drho_air(k)
                 ENDDO
              ENDIF
-
           ENDDO
        ENDDO
-!$acc end parallel
-    END SUBROUTINE diffusion_s
+       !$acc end parallel
+       !$acc end data
 
+    END SUBROUTINE diffusion_s
 
  END MODULE diffusion_s_mod

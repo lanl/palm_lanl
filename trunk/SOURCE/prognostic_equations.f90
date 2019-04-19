@@ -610,10 +610,7 @@
        call cpu_log( log_point(41), 'pt diffusion' , 'start')
 
        CALL diffusion_s( pt,                                                   &
-                         surf_def_h(0)%shf, surf_def_h(1)%shf,                 &
                          surf_def_h(2)%shf,                                    &
-                         surf_def_v(0)%shf, surf_def_v(1)%shf,                 &
-                         surf_def_v(2)%shf, surf_def_v(3)%shf,                 &
                          surf_def_h(2)%shf_sol )
 
        call cpu_log( log_point(41), 'pt diffusion' , 'stop')
@@ -680,10 +677,7 @@
        CALL advec_s_ws( sa, 'sa' )
 
        CALL diffusion_s( sa,                                                   &
-                         surf_def_h(0)%sasws, surf_def_h(1)%sasws,             &
-                         surf_def_h(2)%sasws,                                  &
-                         surf_def_v(0)%sasws, surf_def_v(1)%sasws,             &
-                         surf_def_v(2)%sasws, surf_def_v(3)%sasws)
+                         surf_def_h(2)%sasws)
 
 !
 !--    If required, compute Stokes-advection term

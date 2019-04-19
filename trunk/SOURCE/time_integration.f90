@@ -398,7 +398,7 @@
 
     USE indices,                                                               &
         ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, nyn, nyng, nys, nysg, nzb, nzt, &
-               wall_flags_0
+               wall_flags_0, advc_flags_1
 
     USE interfaces
 
@@ -488,6 +488,7 @@
 !$acc      copyin( l_wall ) &
 !$acc      copyin( surf_def_h ) &
 !$acc      copyin( wall_flags_0 ) &
+!$acc      copyin( advc_flags_1 ) &
 !$acc      copyin( tsc ) &
 !!$acc      copyin( tend ) &
 !!$acc      copyin( u, v, w ) &
@@ -546,9 +547,9 @@ print *, simulated_time
           IF ( ( ws_scheme_mom .OR. ws_scheme_sca )  .AND.  &
                intermediate_timestep_count == 1 )  CALL ws_statistics
 !
-          !$acc update device(e)
+          !$acc update device( e )
           CALL prognostic_equations_vector
-          !$acc update self(e_p)
+          !$acc update self( e_p )
             !
 !
 !--       Exchange of ghost points (lateral boundary conditions)

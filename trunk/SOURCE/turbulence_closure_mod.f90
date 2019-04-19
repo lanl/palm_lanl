@@ -114,25 +114,25 @@
 #if defined( __nopointer )
     USE arrays_3d,                                                             &
         ONLY:  dd2zu, diss, diss_p, dzu, e, e_p, kh, km,                       &
-               mean_inflow_profiles, prho, pt, tdiss_m, te_m, tend, u, v, w,   &
+               mean_inflow_profiles, prho, te_m, tend, u, v, w,   &
                u_stk, v_stk
 #else
     USE arrays_3d,                                                             &
         ONLY:  dd2zu, diss, diss_p, dzu, e, e_1, e_2, e_3,    &
-               e_p, kh, km, mean_inflow_profiles, prho, pt, tdiss_m,           &
+               e_p, kh, km, mean_inflow_profiles, prho,            &
                te_m, tend, u, v, w, u_stk, v_stk
 #endif
 
     USE control_parameters,                                                    &
-        ONLY:  dt_3d, e_init, humidity, inflow_l,          &
-               atmos_ocean_sign, g, use_single_reference_value,                &
+        ONLY:  dt_3d, e_init, inflow_l,          &
+               atmos_ocean_sign, g,                 &
                wall_adjustment, wall_adjustment_factor,                        &
                initializing_actions, intermediate_timestep_count,              &
                intermediate_timestep_count_max, kappa, les_mw,    &
-               plant_canopy, prandtl_number,            &
-               pt_reference, simulated_time,&
+               prandtl_number,            &
+               simulated_time,&
                timestep_scheme, turbulence_closure, turbulent_inflow,          &
-               use_upstream_for_tke, ws_scheme_sca,             &
+               ws_scheme_sca,             &
                stokes_force
 
     USE advec_ws,                                                              &
@@ -1410,7 +1410,6 @@
     REAL(wp)     ::  l              !< mixing length
     REAL(wp)     ::  ll             !< adjusted l
     REAL(wp)     ::  def
-    ! REAL(wp)     ::  dudz, dvdz, dwdx, dwdy
 
     REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn,nxl:nxr) ::  dudx, dudy, dudz
     REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn,nxl:nxr) ::  dvdx, dvdy, dvdz
@@ -1423,6 +1422,7 @@
     CALL cpu_log( log_point(16), 'tke-equation', 'start' )
 
     sbt = tsc(2)
+
     tend = 0.0_wp
     IF ( timestep_scheme(1:5) == 'runge' )  THEN
       CALL advec_s_ws( e, 'e' )
@@ -1441,8 +1441,8 @@
     !$acc copyin( u, v, w )
 
     !$acc parallel present( g, drho_air_zw ) &
+    !$acc present( tend ) &
     !$acc present( dd2zu, ddzw ) &
-    !!$acc present( u, v, w ) &
     !$acc present( km, kh, prho ) &
     !$acc create( dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz )
     !$acc loop collapse(3)
@@ -1694,7 +1694,7 @@
 
     USE control_parameters,                                                    &
         ONLY:  e_min, outflow_l, outflow_n, outflow_r, outflow_s,              &
-               atmos_ocean_sign, g, use_single_reference_value,                &
+               atmos_ocean_sign, g,                &
                wall_adjustment, wall_adjustment_factor
 
     USE grid_variables,                                                        &

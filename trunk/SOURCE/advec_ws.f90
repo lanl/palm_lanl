@@ -1137,16 +1137,16 @@
        REAL(wp) ::  flux_n, flux_s, flux_r, flux_l, flux_t, flux_d !<
        REAL(wp) ::  diss_n, diss_s, diss_r, diss_l, diss_t, diss_d !<
 
-       REAL(wp), DIMENSION(nzb:nzt,nysg:nyng,nxlg:nxrg)   ::  diss_t_arr !<
-       REAL(wp), DIMENSION(nzb:nzt,nysg:nyng,nxlg:nxrg)   ::  flux_t_arr !<
+       ! REAL(wp), DIMENSION(nzb:nzt,nysg:nyng,nxlg:nxrg)   ::  diss_t_arr !<
+       ! REAL(wp), DIMENSION(nzb:nzt,nysg:nyng,nxlg:nxrg)   ::  flux_t_arr !<
 
-       !$acc data copyin( sk, u, v, w, advc_flags_1 ) &
-       !$acc copy( tend ) &
-       !$acc copyout(flux_t_arr, diss_t_arr) &
+       !$acc data copy( tend ) &
+!       !$acc copyout(flux_t_arr, diss_t_arr) &
+       !$acc copyin( sk, u, v, w )
+
+       !$acc parallel present ( advc_flags_1 ) &
        !$acc present( ddzw ) &
        !$acc present( rho_air_zw, drho_air )
-!!
-       !$acc parallel
        !$acc loop collapse(2)
        DO  i = nxl, nxr
           DO j = nys, nyn
@@ -1373,8 +1373,8 @@
 
                 flux_d                 = flux_t
                 diss_d                 = diss_t
-                flux_t_arr(k,j,i) = flux_t
-                diss_t_arr(k,j,i) = diss_t
+                ! flux_t_arr(k,j,i) = flux_t
+                ! diss_t_arr(k,j,i) = diss_t
 
              ENDDO
              !$acc loop seq
@@ -1484,8 +1484,8 @@
 
                 flux_d                 = flux_t
                 diss_d                 = diss_t
-                flux_t_arr(k,j,i) = flux_t
-                diss_t_arr(k,j,i) = diss_t
+                ! flux_t_arr(k,j,i) = flux_t
+                ! diss_t_arr(k,j,i) = diss_t
 
              ENDDO
           ENDDO

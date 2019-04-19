@@ -127,8 +127,7 @@
            ONLY:  ddzu, ddzw, km, tend, u, v, w, drho_air, rho_air_zw
 
        USE control_parameters,                                                 &
-           ONLY:  constant_top_momentumflux, use_surface_fluxes,               &
-                  use_top_fluxes
+           ONLY:  constant_top_momentumflux, use_top_fluxes
 
        USE grid_variables,                                                     &
            ONLY:  ddx, ddx2, ddy
@@ -139,7 +138,7 @@
        USE kinds
 
        USE surface_mod,                                                        &
-           ONLY :  surf_def_h, surf_def_v
+           ONLY :  surf_def_h
 
        IMPLICIT NONE
 
@@ -157,8 +156,6 @@
        REAL(wp)     ::  kmzm          !<
        REAL(wp)     ::  kmzp          !<
        REAL(wp)     ::  mask_bottom   !< flag to mask vertical upward-facing surface
-       REAL(wp)     ::  mask_north    !< flag to mask vertical surface north of the grid point
-       REAL(wp)     ::  mask_south    !< flag to mask vertical surface south of the grid point
        REAL(wp)     ::  mask_top      !< flag to mask vertical downward-facing surface
 
 

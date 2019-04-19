@@ -118,7 +118,7 @@
                u_stk, v_stk
 #else
     USE arrays_3d,                                                             &
-        ONLY:  dd2zu, diss, diss_1, diss_2, diss_3, diss_p, dzu, e, e_1, e_2, e_3,    &
+        ONLY:  dd2zu, diss, diss_p, dzu, e, e_1, e_2, e_3,    &
                e_p, kh, km, mean_inflow_profiles, prho, pt, tdiss_m,           &
                te_m, tend, u, v, w, u_stk, v_stk
 #endif
@@ -183,12 +183,6 @@
     REAL(wp)     :: l_stable        !< mixing length according to stratification
     REAL(wp)     :: ll              !< adjusted l_grid
     REAL(wp)     :: var_reference   !< var at reference height
-
-    !> @todo remove debug variables
-    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE :: diss_prod1, diss_adve1, diss_diff1, &
-                                               diss_prod2, diss_adve2, diss_diff2, &
-                                               diss_prod3, diss_adve3, diss_diff3, &
-                                               dummy1, dummy2, dummy3
 
 
     PUBLIC c_0, rans_const_c, rans_const_sigma
@@ -366,12 +360,6 @@
        CASE ( 'diss' )
           unit = 'm2/s3'
 
-       CASE ( 'diss1', 'diss2',                         &                      !> @todo remove later
-              'diss_prod1', 'diss_adve1', 'diss_diff1', &
-              'diss_prod2', 'diss_adve2', 'diss_diff2', &
-              'diss_prod3', 'diss_adve3', 'diss_diff3', 'dummy3'  )
-          unit = 'debug output'
-
        CASE ( 'kh', 'km' )
           unit = 'm2/s'
 
@@ -407,14 +395,6 @@
     SELECT CASE ( TRIM( var ) )
 
        CASE ( 'diss', 'diss_xy', 'diss_xz', 'diss_yz' )
-          grid_x = 'x'
-          grid_y = 'y'
-          grid_z = 'zu'
-
-       CASE ( 'diss1', 'diss2',                         &                       !> @todo remove later
-              'diss_prod1', 'diss_adve1', 'diss_diff1', &
-              'diss_prod2', 'diss_adve2', 'diss_diff2', &
-              'diss_prod3', 'diss_adve3', 'diss_diff3', 'dummy3' )
           grid_x = 'x'
           grid_y = 'y'
           grid_z = 'zu'
@@ -805,138 +785,6 @@
              ENDDO
           ENDIF
 
-       CASE ( 'dummy3' )                                                        !> @todo remove later
-          IF ( av == 0 )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb_do, nzt_do
-                      local_pf(i,j,k) = dummy3(k,j,i)
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
-
-       CASE ( 'diss1' )                                                         !> @todo remove later
-          IF ( av == 0 )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb_do, nzt_do
-                      local_pf(i,j,k) = dummy1(k,j,i)
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
-
-       CASE ( 'diss2' )                                                         !> @todo remove later
-          IF ( av == 0 )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb_do, nzt_do
-                      local_pf(i,j,k) = dummy2(k,j,i)
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
-
-       CASE ( 'diss_prod1' )                                                    !> @todo remove later
-          IF ( av == 0 )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb_do, nzt_do
-                      local_pf(i,j,k) = diss_prod1(k,j,i)
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
-
-       CASE ( 'diss_adve1' )                                                    !> @todo remove later
-          IF ( av == 0 )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb_do, nzt_do
-                      local_pf(i,j,k) = diss_adve1(k,j,i)
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
-
-       CASE ( 'diss_diff1' )                                                    !> @todo remove later
-          IF ( av == 0 )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb_do, nzt_do
-                      local_pf(i,j,k) = diss_diff1(k,j,i)
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
-
-       CASE ( 'diss_prod2' )                                                    !> @todo remove later
-          IF ( av == 0 )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb_do, nzt_do
-                      local_pf(i,j,k) = diss_prod2(k,j,i)
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
-
-       CASE ( 'diss_adve2' )                                                    !> @todo remove later
-          IF ( av == 0 )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb_do, nzt_do
-                      local_pf(i,j,k) = diss_adve2(k,j,i)
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
-
-       CASE ( 'diss_diff2' )                                                    !> @todo remove later
-          IF ( av == 0 )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb_do, nzt_do
-                      local_pf(i,j,k) = diss_diff2(k,j,i)
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
-
-       CASE ( 'diss_prod3' )                                                    !> @todo remove later
-          IF ( av == 0 )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb_do, nzt_do
-                      local_pf(i,j,k) = diss_prod3(k,j,i)
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
-
-       CASE ( 'diss_adve3' )                                                    !> @todo remove later
-          IF ( av == 0 )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb_do, nzt_do
-                      local_pf(i,j,k) = diss_adve3(k,j,i)
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
-
-       CASE ( 'diss_diff3' )                                                    !> @todo remove later
-          IF ( av == 0 )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb_do, nzt_do
-                      local_pf(i,j,k) = diss_diff3(k,j,i)
-                   ENDDO
-                ENDDO
-             ENDDO
-          ENDIF
-
        CASE DEFAULT
           found = .FALSE.
 
@@ -948,9 +796,7 @@
  SUBROUTINE tcm_deallocate_arrays
     IMPLICIT NONE
 
-    deallocate(kh, km, dummy1, dummy2, dummy3, diss_adve1)
-    deallocate(diss_adve2, diss_adve3, diss_prod1, diss_prod2)
-    deallocate(diss_prod3, diss_diff1, diss_diff2, diss_diff3)
+    deallocate(kh, km)
     deallocate(l_grid, l_wall)
 #if defined( __nopointer )
     deallocate(e,e_p,te_m)
@@ -970,31 +816,6 @@
 
     ALLOCATE( kh(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
     ALLOCATE( km(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-
-    ALLOCATE( dummy1(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )                           !> @todo remove later
-    ALLOCATE( dummy2(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-    ALLOCATE( dummy3(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-    ALLOCATE( diss_adve1(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-    ALLOCATE( diss_adve2(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-    ALLOCATE( diss_adve3(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-    ALLOCATE( diss_prod1(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-    ALLOCATE( diss_prod2(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-    ALLOCATE( diss_prod3(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-    ALLOCATE( diss_diff1(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-    ALLOCATE( diss_diff2(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-    ALLOCATE( diss_diff3(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
-    dummy1 = 0.0_wp
-    dummy2 = 0.0_wp
-    dummy3 = 0.0_wp
-    diss_adve1 = 0.0_wp
-    diss_adve2 = 0.0_wp
-    diss_adve3 = 0.0_wp
-    diss_prod1 = 0.0_wp
-    diss_prod2 = 0.0_wp
-    diss_prod3 = 0.0_wp
-    diss_diff1 = 0.0_wp
-    diss_diff2 = 0.0_wp
-    diss_diff3 = 0.0_wp
 
 #if defined( __nopointer )
     ALLOCATE( e(nzb:nzt+1,nysg:nyng,nxlg:nxrg)    )
@@ -1045,7 +866,6 @@
 !
 !-- Initialize mixing length
     CALL tcm_init_mixing_length
-    dummy3 = l_wall                 !> @todo remove later
 
 !
 !-- Actions for initial runs

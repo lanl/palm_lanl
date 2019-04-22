@@ -399,7 +399,7 @@
 
     USE indices,                                                               &
         ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, nyn, nyng, nys, nysg, nzb, nzt, &
-               wall_flags_0, advc_flags_1
+               wall_flags_0, advc_flags_1, advc_flags_2
 
     USE interfaces
 
@@ -491,7 +491,7 @@
 !$acc      copyin( l_wall ) &
 !$acc      copyin( surf_def_h ) &
 !$acc      copyin( wall_flags_0 ) &
-!$acc      copyin( advc_flags_1 ) &
+!$acc      copyin( advc_flags_1, advc_flags_2 ) &
 !$acc      copyin( tsc ) &
 !!$acc      copyin( tend ) &
 !!$acc      copyin( u, v, w ) &

@@ -1147,13 +1147,10 @@
        !$acc parallel present ( advc_flags_1 ) &
        !$acc present( ddzw ) &
        !$acc present( rho_air_zw, drho_air )
-       !$acc loop collapse(2)
+       !$acc loop collapse(3)
        DO  i = nxl, nxr
           DO j = nys, nyn
-             flux_d    = 0.0_wp
-             diss_d    = 0.0_wp
-             !$acc loop seq
-             DO  k = nzb+1, nzb_max
+             DO  k = nzb+1, nzt
 
                 ! flux at the left edge
                 ibit2 = IBITS(advc_flags_1(k,j,i-1),2,1)
@@ -1197,7 +1194,7 @@
                 ibit0 = IBITS(advc_flags_1(k,j,i),0,1)
 
                 u_comp    = u(k,j,i+1) - u_gtrans
-                flux_r = u_comp * (                                        &
+                flux_r = u_comp * (                                           &
                           ( 37.0_wp * ibit2 * adv_sca_5                       &
                       +      7.0_wp * ibit1 * adv_sca_3                       &
                       +               ibit0 * adv_sca_1                       &
@@ -1210,9 +1207,9 @@
                    +      (           ibit2 * adv_sca_5                       &
                           ) *                                                 &
                              ( sk(k,j,i+3) + sk(k,j,i-2) )                    &
-                                     )
+                                  )
 
-                diss_r = -ABS( u_comp ) * (                                &
+                diss_r = -ABS( u_comp ) * (                                   &
                           ( 10.0_wp * ibit2 * adv_sca_5                       &
                        +     3.0_wp * ibit1 * adv_sca_3                       &
                        +              ibit0 * adv_sca_1                       &
@@ -1225,7 +1222,7 @@
                    +      (           ibit2 * adv_sca_5                       &
                           ) *                                                 &
                              ( sk(k,j,i+3) - sk(k,j,i-2) )                    &
-                                             )
+                                          )
 
                 ! flux at the south edge
                 ibit5 = IBITS(advc_flags_1(k,j-1,i),5,1)
@@ -1269,7 +1266,7 @@
                 ibit3 = IBITS(advc_flags_1(k,j,i),3,1)
 
                 v_comp    = v(k,j+1,i) - v_gtrans
-                flux_n = v_comp * (                                        &
+                flux_n = v_comp * (                                           &
                           ( 37.0_wp * ibit5 * adv_sca_5                       &
                        +     7.0_wp * ibit4 * adv_sca_3                       &
                        +              ibit3 * adv_sca_1                       &
@@ -1282,9 +1279,9 @@
                    +      (           ibit5 * adv_sca_5                       &
                           ) *                                                 &
                              ( sk(k,j+3,i) + sk(k,j-2,i) )                    &
-                                     )
+                                  )
 
-                diss_n = -ABS( v_comp ) * (                                &
+                diss_n = -ABS( v_comp ) * (                                   &
                           ( 10.0_wp * ibit5 * adv_sca_5                       &
                        +     3.0_wp * ibit4 * adv_sca_3                       &
                        +              ibit3 * adv_sca_1                       &
@@ -1297,10 +1294,49 @@
                    +      (           ibit5 * adv_sca_5                       &
                           ) *                                                 &
                              ( sk(k,j+3,i) - sk(k,j-2,i) )                    &
-                                             )
+                                          )
 !
 !--             k index has to be modified near bottom and top, else array
 !--             subscripts will be exceeded.
+                ! flux at bottom
+                ibit8 = IBITS(advc_flags_1(k-1,j,i),8,1)
+                ibit7 = IBITS(advc_flags_1(k-1,j,i),7,1)
+                ibit6 = IBITS(advc_flags_1(k-1,j,i),6,1)
+
+                k_pp  = k + 2 * ibit8
+                k_mm  = k - 2 * ( ibit7 + ibit8 )
+                k_mmm = k - 3 * ibit8
+
+                flux_d = w(k-1,j,i) * rho_air_zw(k-1) * (                     &
+                           ( 37.0_wp * ibit8 * adv_sca_5                      &
+                        +     7.0_wp * ibit7 * adv_sca_3                      &
+                        +           ibit6 * adv_sca_1                         &
+                           ) *                                                &
+                                   ( sk(k,j,i)  + sk(k-1,j,i)    )            &
+                    -      (  8.0_wp * ibit8 * adv_sca_5                      &
+                        +              ibit7 * adv_sca_3                      &
+                           ) *                                                &
+                                   ( sk(k+1,j,i) + sk(k_mm,j,i)  )            &
+                    +      (           ibit8 * adv_sca_5                      &
+                           ) *     ( sk(k_pp,j,i)+ sk(k_mmm,j,i) )            &
+                                                        )
+
+                diss_d = -ABS( w(k-1,j,i) ) * rho_air_zw(k-1) * (             &
+                           ( 10.0_wp * ibit8 * adv_sca_5                      &
+                        +     3.0_wp * ibit7 * adv_sca_3                      &
+                        +              ibit6 * adv_sca_1                      &
+                           ) *                                                &
+                                   ( sk(k,j,i)   - sk(k-1,j,i)    )           &
+                    -      (  5.0_wp * ibit8 * adv_sca_5                      &
+                        +              ibit7 * adv_sca_3                      &
+                           ) *                                                &
+                                   ( sk(k+1,j,i)  - sk(k_mm,j,i)  )           &
+                    +      (           ibit8 * adv_sca_5                      &
+                           ) *                                                &
+                                   ( sk(k_pp,j,i) - sk(k_mmm,j,i) )           &
+                                                                )
+
+                ! flux at top
                 ibit8 = IBITS(advc_flags_1(k,j,i),8,1)
                 ibit7 = IBITS(advc_flags_1(k,j,i),7,1)
                 ibit6 = IBITS(advc_flags_1(k,j,i),6,1)
@@ -1310,7 +1346,7 @@
                 k_mm  = k - 2 * ibit8
 
 
-                flux_t = w(k,j,i) * rho_air_zw(k) * (                      &
+                flux_t = w(k,j,i) * rho_air_zw(k) * (                         &
                            ( 37.0_wp * ibit8 * adv_sca_5                      &
                         +     7.0_wp * ibit7 * adv_sca_3                      &
                         +           ibit6 * adv_sca_1                         &
@@ -1322,9 +1358,9 @@
                                    ( sk(k_pp,j,i) + sk(k-1,j,i)  )            &
                     +      (           ibit8 * adv_sca_5                      &
                            ) *     ( sk(k_ppp,j,i)+ sk(k_mm,j,i) )            &
-                                       )
+                                                    )
 
-                diss_t = -ABS( w(k,j,i) ) * rho_air_zw(k) * (              &
+                diss_t = -ABS( w(k,j,i) ) * rho_air_zw(k) * (                 &
                            ( 10.0_wp * ibit8 * adv_sca_5                      &
                         +     3.0_wp * ibit7 * adv_sca_3                      &
                         +              ibit6 * adv_sca_1                      &
@@ -1337,7 +1373,7 @@
                     +      (           ibit8 * adv_sca_5                      &
                            ) *                                                &
                                    ( sk(k_ppp,j,i) - sk(k_mm,j,i) )           &
-                                               )
+                                                            )
 !
 !--             Calculate the divergence of the velocity field. A respective
 !--             correction is needed to overcome numerical instabilities caused
@@ -1371,119 +1407,6 @@
                                               * drho_air(k) * ddzw(k)          &
                                             ) + sk(k,j,i) * div
 
-                flux_d                 = flux_t
-                diss_d                 = diss_t
-                ! flux_t_arr(k,j,i) = flux_t
-                ! diss_t_arr(k,j,i) = diss_t
-
-             ENDDO
-             !$acc loop seq
-             DO  k = nzb_max+1, nzt
-
-                ! left
-                u_comp = u(k,j,i) - u_gtrans
-                flux_l = u_comp * (                              &
-                                      37.0_wp * ( sk(k,j,i)   + sk(k,j,i-1) ) &
-                                    -  8.0_wp * ( sk(k,j,i+1) + sk(k,j,i-2) ) &
-                                    +           ( sk(k,j,i+2) + sk(k,j,i-3) ) &
-                                               ) * adv_sca_5
-
-                diss_l = -ABS( u_comp ) * (                      &
-                                      10.0_wp * ( sk(k,j,i)   - sk(k,j,i-1) ) &
-                                    -  5.0_wp * ( sk(k,j,i+1) - sk(k,j,i-2) ) &
-                                    +           ( sk(k,j,i+2) - sk(k,j,i-3) ) &
-                                                       ) * adv_sca_5
-                ! right
-                u_comp    = u(k,j,i+1) - u_gtrans
-                flux_r = u_comp * (                                        &
-                      37.0_wp * ( sk(k,j,i+1) + sk(k,j,i)   )                 &
-                    -  8.0_wp * ( sk(k,j,i+2) + sk(k,j,i-1) )                 &
-                    +           ( sk(k,j,i+3) + sk(k,j,i-2) ) ) * adv_sca_5
-                diss_r = -ABS( u_comp ) * (                                &
-                      10.0_wp * ( sk(k,j,i+1) - sk(k,j,i)   )                 &
-                    -  5.0_wp * ( sk(k,j,i+2) - sk(k,j,i-1) )                 &
-                    +           ( sk(k,j,i+3) - sk(k,j,i-2) ) ) * adv_sca_5
-                ! south
-                v_comp = v(k,j,i) - v_gtrans
-                flux_s = v_comp * (                               &
-                                    37.0_wp * ( sk(k,j,i)   + sk(k,j-1,i) )  &
-                                  -  8.0_wp * ( sk(k,j+1,i) + sk(k,j-2,i) )  &
-                                  +           ( sk(k,j+2,i) + sk(k,j-3,i) )  &
-                                             ) * adv_sca_5
-                diss_s = -ABS( v_comp ) * (                      &
-                                    10.0_wp * ( sk(k,j,i)   - sk(k,j-1,i) )  &
-                                  -  5.0_wp * ( sk(k,j+1,i) - sk(k,j-2,i) )  &
-                                  +             sk(k,j+2,i) - sk(k,j-3,i)    &
-                                                      ) * adv_sca_5
-                ! north
-                v_comp    = v(k,j+1,i) - v_gtrans
-                flux_n = v_comp * (                                        &
-                      37.0_wp * ( sk(k,j+1,i) + sk(k,j,i)   )                 &
-                    -  8.0_wp * ( sk(k,j+2,i) + sk(k,j-1,i) )                 &
-                    +           ( sk(k,j+3,i) + sk(k,j-2,i) ) ) * adv_sca_5
-                diss_n = -ABS( v_comp ) * (                                &
-                      10.0_wp * ( sk(k,j+1,i) - sk(k,j,i)   )                 &
-                    -  5.0_wp * ( sk(k,j+2,i) - sk(k,j-1,i) )                 &
-                    +           ( sk(k,j+3,i) - sk(k,j-2,i) ) ) * adv_sca_5
-!
-!--             k index has to be modified near bottom and top, else array
-!--             subscrpts will be exceeded.
-                ibit8 = IBITS(advc_flags_1(k,j,i),8,1)
-                ibit7 = IBITS(advc_flags_1(k,j,i),7,1)
-                ibit6 = IBITS(advc_flags_1(k,j,i),6,1)
-
-                k_ppp = k + 3 * ibit8
-                k_pp  = k + 2 * ( 1 - ibit6  )
-                k_mm  = k - 2 * ibit8
-
-
-                flux_t = w(k,j,i) * rho_air_zw(k) * (                      &
-                           ( 37.0_wp * ibit8 * adv_sca_5                      &
-                        +     7.0_wp * ibit7 * adv_sca_3                      &
-                        +              ibit6 * adv_sca_1                      &
-                           ) *                                                &
-                                   ( sk(k+1,j,i)  + sk(k,j,i)     )           &
-                    -      (  8.0_wp * ibit8 * adv_sca_5                      &
-                        +              ibit7 * adv_sca_3                      &
-                           ) *                                                &
-                                   ( sk(k_pp,j,i) + sk(k-1,j,i)   )           &
-                    +      (           ibit8 * adv_sca_5                      &
-                           ) *     ( sk(k_ppp,j,i)+ sk(k_mm,j,i)  )           &
-                                       )
-
-                diss_t = -ABS( w(k,j,i) ) * rho_air_zw(k) * (              &
-                           ( 10.0_wp * ibit8 * adv_sca_5                      &
-                        +     3.0_wp * ibit7 * adv_sca_3                      &
-                        +              ibit6 * adv_sca_1                      &
-                           ) *                                                &
-                                   ( sk(k+1,j,i)   - sk(k,j,i)    )           &
-                    -      (  5.0_wp * ibit8 * adv_sca_5                      &
-                        +              ibit7 * adv_sca_3                      &
-                           ) *                                                &
-                                   ( sk(k_pp,j,i)  - sk(k-1,j,i)  )           &
-                    +      (           ibit8 * adv_sca_5                      &
-                           ) *                                                &
-                                   ( sk(k_ppp,j,i) - sk(k_mm,j,i) )           &
-                                               )
-!
-!--             Calculate the divergence of the velocity field. A respective
-!--             correction is needed to overcome numerical instabilities introduced
-!--             by a not sufficient reduction of divergences near topography.
-                div         =   ( u(k,j,i+1) - u(k,j,i)   ) * ddx              &
-                              + ( v(k,j+1,i) - v(k,j,i)   ) * ddy              &
-                              + ( w(k,j,i)   * rho_air_zw(k) -                 &
-                                  w(k-1,j,i) * rho_air_zw(k-1)                 &
-                                ) * drho_air(k) * ddzw(k)
-
-                tend(k,j,i) = tend(k,j,i) - (                                 &
-                        ( flux_r + diss_r - flux_l - diss_l ) * ddx           &
-                      + ( flux_n + diss_n - flux_s - diss_s ) * ddy           &
-                      + ( flux_t + diss_t - flux_d - diss_d )                 &
-                                              * drho_air(k) * ddzw(k) &
-                                            ) + sk(k,j,i) * div
-
-                flux_d                 = flux_t
-                diss_d                 = diss_t
                 ! flux_t_arr(k,j,i) = flux_t
                 ! diss_t_arr(k,j,i) = diss_t
 

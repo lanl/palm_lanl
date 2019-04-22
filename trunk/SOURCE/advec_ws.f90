@@ -1503,12 +1503,12 @@
        INTEGER(iwp) ::  k_ppp  !<
        INTEGER(iwp) ::  tn = 0 !<
 
-       REAL(wp)    ::  div    !<
-       REAL(wp)    ::  gu     !<
-       REAL(wp)    ::  gv     !<
-       REAL(wp)    ::  u_comp !<
-       REAL(wp)    ::  v_comp !<
-       REAL(wp)    ::  w_comp !<
+       REAL(wp) ::  div    !<
+       REAL(wp) ::  gu     !<
+       REAL(wp) ::  gv     !<
+       REAL(wp) ::  u_comp !<
+       REAL(wp) ::  v_comp !<
+       REAL(wp) ::  w_comp !<
        REAL(wp) ::  flux_n, flux_s, flux_r, flux_l, flux_t, flux_d !<
        REAL(wp) ::  diss_n, diss_s, diss_r, diss_l, diss_t, diss_d !<
 
@@ -1516,6 +1516,7 @@
        gv = 2.0_wp * v_gtrans
 
 !--    Computation of interior fluxes and tendency terms
+
        !$acc data copy( tend ) &
        !$acc copyin( u, v, w )
 
@@ -1781,9 +1782,10 @@
 
 
                 tend(k,j,i) = tend(k,j,i) - (                                  &
-                 ( flux_r + diss_r - flux_l - diss_l ) * ddx                   &
-               + ( flux_n + diss_n - flux_s - diss_s ) * ddy                   &
-               + ( flux_t + diss_t - flux_d - diss_d ) * drho_air(k) * ddzw(k) &
+                       ( flux_r + diss_r - flux_l - diss_l ) * ddx             &
+                     + ( flux_n + diss_n - flux_s - diss_s ) * ddy             &
+                     + ( flux_t + diss_t - flux_d - diss_d ) * ddzw(k)         &
+                                                             * drho_air(k)     &
                                             ) + div * u(k,j,i)
 
 !
@@ -1813,8 +1815,8 @@
        ENDDO
        !$acc end parallel
        !$acc end data
-       ! sums_us2_ws_l(nzb,tn) = sums_us2_ws_l(nzb+1,tn)
 
+       ! sums_us2_ws_l(nzb,tn) = sums_us2_ws_l(nzb+1,tn)
 
     END SUBROUTINE advec_u_ws
 
@@ -1862,230 +1864,222 @@
        INTEGER(iwp) ::  j      !<
        INTEGER(iwp) ::  k      !<
        INTEGER(iwp) ::  k_mm   !<
+       INTEGER(iwp) ::  k_mmm   !<
        INTEGER(iwp) ::  k_pp   !<
        INTEGER(iwp) ::  k_ppp  !<
        INTEGER(iwp) ::  tn = 0 !<
 
-       REAL(wp)    ::  diss_d !<
-       REAL(wp)    ::  div    !<
-       REAL(wp)    ::  flux_d !<
-       REAL(wp)    ::  gu     !<
-       REAL(wp)    ::  gv     !<
-       REAL(wp)    ::  u_comp !<
-       REAL(wp)    ::  w_comp !<
-
-       REAL(wp), DIMENSION(nzb+1:nzt) ::  swap_diss_y_local_v !<
-       REAL(wp), DIMENSION(nzb+1:nzt) ::  swap_flux_y_local_v !<
-
-       REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  swap_diss_x_local_v !<
-       REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn) ::  swap_flux_x_local_v !<
-
-       REAL(wp), DIMENSION(nzb:nzt) ::  diss_n !<
-       REAL(wp), DIMENSION(nzb:nzt) ::  diss_r !<
-       REAL(wp), DIMENSION(nzb:nzt) ::  diss_t !<
-       REAL(wp), DIMENSION(nzb:nzt) ::  flux_n !<
-       REAL(wp), DIMENSION(nzb:nzt) ::  flux_r !<
-       REAL(wp), DIMENSION(nzb:nzt) ::  flux_t !<
-       REAL(wp), DIMENSION(nzb:nzt) ::  v_comp !<
+       REAL(wp) ::  div    !<
+       REAL(wp) ::  gu     !<
+       REAL(wp) ::  gv     !<
+       REAL(wp) ::  u_comp !<
+       REAL(wp) ::  v_comp !<
+       REAL(wp) ::  w_comp !<
+       REAL(wp) ::  flux_n, flux_s, flux_r, flux_l, flux_t, flux_d !<
+       REAL(wp) ::  diss_n, diss_s, diss_r, diss_l, diss_t, diss_d !<
 
        gu = 2.0_wp * u_gtrans
        gv = 2.0_wp * v_gtrans
 !
-!--    First compute the whole left boundary of the processor domain
-       i = nxl
-       DO  j = nysv, nyn
-          DO  k = nzb+1, nzb_max
+!--    Computation of interior fluxes and tendency terms
 
-             ibit20 = IBITS(advc_flags_1(k,j,i-1),20,1)
-             ibit19 = IBITS(advc_flags_1(k,j,i-1),19,1)
-             ibit18 = IBITS(advc_flags_1(k,j,i-1),18,1)
+       !$acc data copy( tend ) &
+       !$acc copyin( u, v, w )
 
-             u_comp                   = u(k,j-1,i) + u(k,j,i) - gu
-             swap_flux_x_local_v(k,j) = u_comp * (                             &
-                                      ( 37.0_wp * ibit20 * adv_mom_5              &
-                                   +     7.0_wp * ibit19 * adv_mom_3              &
-                                   +              ibit18 * adv_mom_1              &
-                                      ) *                                      &
-                                     ( v(k,j,i)   + v(k,j,i-1) )               &
-                               -      (  8.0_wp * ibit20 * adv_mom_5              &
-                                   +              ibit19 * adv_mom_3              &
-                                      ) *                                      &
-                                     ( v(k,j,i+1) + v(k,j,i-2) )               &
-                               +      (           ibit20 * adv_mom_5              &
-                                      ) *                                      &
-                                     ( v(k,j,i+2) + v(k,j,i-3) )               &
-                                                 )
-
-              swap_diss_x_local_v(k,j) = - ABS( u_comp ) * (                   &
-                                      ( 10.0_wp * ibit20 * adv_mom_5              &
-                                   +     3.0_wp * ibit19 * adv_mom_3              &
-                                   +              ibit18 * adv_mom_1              &
-                                      ) *                                      &
-                                     ( v(k,j,i)   - v(k,j,i-1) )               &
-                               -      (  5.0_wp * ibit20 * adv_mom_5              &
-                                   +              ibit19 * adv_mom_3              &
-                                      ) *                                      &
-                                     ( v(k,j,i+1) - v(k,j,i-2) )               &
-                               +      (           ibit20 * adv_mom_5              &
-                                      ) *                                      &
-                                     ( v(k,j,i+2) - v(k,j,i-3) )               &
-                                                           )
-
-          ENDDO
-
-          DO  k = nzb_max+1, nzt
-
-             u_comp                   = u(k,j-1,i) + u(k,j,i) - gu
-             swap_flux_x_local_v(k,j) = u_comp * (                            &
-                             37.0_wp * ( v(k,j,i) + v(k,j,i-1)   )               &
-                           -  8.0_wp * ( v(k,j,i+1) + v(k,j,i-2) )               &
-                           +           ( v(k,j,i+2) + v(k,j,i-3) ) ) * adv_mom_5
-             swap_diss_x_local_v(k,j) = - ABS( u_comp ) * (                   &
-                             10.0_wp * ( v(k,j,i) - v(k,j,i-1)   )               &
-                           -  5.0_wp * ( v(k,j,i+1) - v(k,j,i-2) )               &
-                           +           ( v(k,j,i+2) - v(k,j,i-3) ) ) * adv_mom_5
-
-          ENDDO
-
-       ENDDO
-
+       !$acc parallel present ( advc_flags_1 ) &
+       !$acc present( ddzw ) &
+       !$acc present( rho_air_zw, drho_air )
+       !$acc loop collapse(3)
        DO i = nxl, nxr
-
-          j = nysv
-          DO  k = nzb+1, nzb_max
-
-             ibit23 = IBITS(advc_flags_1(k,j-1,i),23,1)
-             ibit22 = IBITS(advc_flags_1(k,j-1,i),22,1)
-             ibit21 = IBITS(advc_flags_1(k,j-1,i),21,1)
-
-             v_comp(k)              = v(k,j,i) + v(k,j-1,i) - gv
-             swap_flux_y_local_v(k) = v_comp(k) * (                           &
-                                   ( 37.0_wp * ibit23 * adv_mom_5                &
-                                +     7.0_wp * ibit22 * adv_mom_3                &
-                                +              ibit21 * adv_mom_1                &
-                                   ) *                                        &
-                                     ( v(k,j,i)   + v(k,j-1,i) )              &
-                            -      (  8.0_wp * ibit23 * adv_mom_5                &
-                                +              ibit22 * adv_mom_3                &
-                                   ) *                                        &
-                                     ( v(k,j+1,i) + v(k,j-2,i) )              &
-                            +      (           ibit23 * adv_mom_5                &
-                                   ) *                                        &
-                                     ( v(k,j+2,i) + v(k,j-3,i) )              &
-                                                 )
-
-             swap_diss_y_local_v(k) = - ABS( v_comp(k) ) * (                  &
-                                   ( 10.0_wp * ibit23 * adv_mom_5                &
-                                +     3.0_wp * ibit22 * adv_mom_3                &
-                                +              ibit21 * adv_mom_1                &
-                                   ) *                                        &
-                                     ( v(k,j,i)   - v(k,j-1,i) )              &
-                            -      (  5.0_wp * ibit23 * adv_mom_5                &
-                                +              ibit22 * adv_mom_3                &
-                                   ) *                                        &
-                                     ( v(k,j+1,i) - v(k,j-2,i) )              &
-                            +      (           ibit23 * adv_mom_5                &
-                                   ) *                                        &
-                                     ( v(k,j+2,i) - v(k,j-3,i) )              &
-                                                          )
-
-          ENDDO
-
-          DO  k = nzb_max+1, nzt
-
-             v_comp(k)              = v(k,j,i) + v(k,j-1,i) - gv
-             swap_flux_y_local_v(k) = v_comp(k) * (                           &
-                           37.0_wp * ( v(k,j,i) + v(k,j-1,i)   )                 &
-                         -  8.0_wp * ( v(k,j+1,i) + v(k,j-2,i) )                 &
-                         +           ( v(k,j+2,i) + v(k,j-3,i) ) ) * adv_mom_5
-             swap_diss_y_local_v(k) = - ABS( v_comp(k) ) * (                  &
-                           10.0_wp * ( v(k,j,i) - v(k,j-1,i)   )                 &
-                         -  5.0_wp * ( v(k,j+1,i) - v(k,j-2,i) )                 &
-                         +           ( v(k,j+2,i) - v(k,j-3,i) ) ) * adv_mom_5
-
-          ENDDO
-
           DO  j = nysv, nyn
+             DO  k = nzb+1, nzt
 
-             flux_t(0) = 0.0_wp
-             diss_t(0) = 0.0_wp
-             flux_d    = 0.0_wp
-             diss_d    = 0.0_wp
+                ! left
+                ibit20 = IBITS(advc_flags_1(k,j,i-1),20,1)
+                ibit19 = IBITS(advc_flags_1(k,j,i-1),19,1)
+                ibit18 = IBITS(advc_flags_1(k,j,i-1),18,1)
 
-             DO  k = nzb+1, nzb_max
+                u_comp = u(k,j-1,i) + u(k,j,i) - gu
+                flux_l = u_comp * (                                            &
+                          ( 37.0_wp * ibit20 * adv_mom_5                       &
+                       +     7.0_wp * ibit19 * adv_mom_3                       &
+                       +              ibit18 * adv_mom_1                       &
+                          ) *                                                  &
+                         ( v(k,j,i)   + v(k,j,i-1) )                           &
+                   -      (  8.0_wp * ibit20 * adv_mom_5                       &
+                       +              ibit19 * adv_mom_3                       &
+                          ) *                                                  &
+                         ( v(k,j,i+1) + v(k,j,i-2) )                           &
+                   +      (           ibit20 * adv_mom_5                       &
+                          ) *                                                  &
+                         ( v(k,j,i+2) + v(k,j,i-3) )                           &
+                                  )
 
+                diss_l = - ABS( u_comp ) * (                                   &
+                          ( 10.0_wp * ibit20 * adv_mom_5                       &
+                       +     3.0_wp * ibit19 * adv_mom_3                       &
+                       +              ibit18 * adv_mom_1                       &
+                          ) *                                                  &
+                         ( v(k,j,i)   - v(k,j,i-1) )                           &
+                   -      (  5.0_wp * ibit20 * adv_mom_5                       &
+                       +              ibit19 * adv_mom_3                       &
+                          ) *                                                  &
+                         ( v(k,j,i+1) - v(k,j,i-2) )                           &
+                   +      (           ibit20 * adv_mom_5                       &
+                          ) *                                                  &
+                         ( v(k,j,i+2) - v(k,j,i-3) )                           &
+                                           )
+
+                ! right
                 ibit20 = IBITS(advc_flags_1(k,j,i),20,1)
                 ibit19 = IBITS(advc_flags_1(k,j,i),19,1)
                 ibit18 = IBITS(advc_flags_1(k,j,i),18,1)
 
                 u_comp    = u(k,j-1,i+1) + u(k,j,i+1) - gu
-                flux_r(k) = u_comp * (                                       &
-                          ( 37.0_wp * ibit20 * adv_mom_5                        &
-                       +     7.0_wp * ibit19 * adv_mom_3                        &
-                       +              ibit18 * adv_mom_1                        &
-                          ) *                                                &
-                                 ( v(k,j,i+1) + v(k,j,i)   )                 &
-                   -      (  8.0_wp * ibit20 * adv_mom_5                        &
-                       +              ibit19 * adv_mom_3                        &
-                          ) *                                                &
-                                 ( v(k,j,i+2) + v(k,j,i-1) )                 &
-                   +      (           ibit20 * adv_mom_5                        &
-                          ) *                                                &
-                                 ( v(k,j,i+3) + v(k,j,i-2) )                 &
-                                     )
+                flux_r = u_comp * (                                            &
+                          ( 37.0_wp * ibit20 * adv_mom_5                       &
+                       +     7.0_wp * ibit19 * adv_mom_3                       &
+                       +              ibit18 * adv_mom_1                       &
+                          ) *                                                  &
+                                 ( v(k,j,i+1) + v(k,j,i)   )                   &
+                   -      (  8.0_wp * ibit20 * adv_mom_5                       &
+                       +              ibit19 * adv_mom_3                       &
+                          ) *                                                  &
+                                 ( v(k,j,i+2) + v(k,j,i-1) )                   &
+                   +      (           ibit20 * adv_mom_5                       &
+                          ) *                                                  &
+                                 ( v(k,j,i+3) + v(k,j,i-2) )                   &
+                                  )
 
-                diss_r(k) = - ABS( u_comp ) * (                              &
-                          ( 10.0_wp * ibit20 * adv_mom_5                        &
-                       +     3.0_wp * ibit19 * adv_mom_3                        &
-                       +              ibit18 * adv_mom_1                        &
-                          ) *                                                &
-                                 ( v(k,j,i+1) - v(k,j,i)  )                  &
-                   -      (  5.0_wp * ibit20 * adv_mom_5                        &
-                       +              ibit19 * adv_mom_3                        &
-                          ) *                                                &
-                                 ( v(k,j,i+2) - v(k,j,i-1) )                 &
-                   +      (           ibit20 * adv_mom_5                        &
-                          ) *                                                &
-                                 ( v(k,j,i+3) - v(k,j,i-2) )                 &
-                                              )
+                diss_r = - ABS( u_comp ) * (                                   &
+                          ( 10.0_wp * ibit20 * adv_mom_5                       &
+                       +     3.0_wp * ibit19 * adv_mom_3                       &
+                       +              ibit18 * adv_mom_1                       &
+                          ) *                                                  &
+                                 ( v(k,j,i+1) - v(k,j,i)  )                    &
+                   -      (  5.0_wp * ibit20 * adv_mom_5                       &
+                       +              ibit19 * adv_mom_3                       &
+                          ) *                                                  &
+                                 ( v(k,j,i+2) - v(k,j,i-1) )                   &
+                   +      (           ibit20 * adv_mom_5                       &
+                          ) *                                                  &
+                                 ( v(k,j,i+3) - v(k,j,i-2) )                   &
+                                           )
 
+                ! south
+                ibit23 = IBITS(advc_flags_1(k,j-1,i),23,1)
+                ibit22 = IBITS(advc_flags_1(k,j-1,i),22,1)
+                ibit21 = IBITS(advc_flags_1(k,j-1,i),21,1)
+
+                v_comp = v(k,j,i) + v(k,j-1,i) - gv
+                flux_s = v_comp * (                                            &
+                                   ( 37.0_wp * ibit23 * adv_mom_5              &
+                                +     7.0_wp * ibit22 * adv_mom_3              &
+                                +              ibit21 * adv_mom_1              &
+                                   ) *                                         &
+                                     ( v(k,j,i)   + v(k,j-1,i) )               &
+                            -      (  8.0_wp * ibit23 * adv_mom_5              &
+                                +              ibit22 * adv_mom_3              &
+                                   ) *                                         &
+                                     ( v(k,j+1,i) + v(k,j-2,i) )               &
+                            +      (           ibit23 * adv_mom_5              &
+                                   ) *                                         &
+                                     ( v(k,j+2,i) + v(k,j-3,i) )               &
+                                  )
+
+                diss_s = - ABS( v_comp ) * (                  &
+                                   ( 10.0_wp * ibit23 * adv_mom_5              &
+                                +     3.0_wp * ibit22 * adv_mom_3              &
+                                +              ibit21 * adv_mom_1              &
+                                   ) *                                         &
+                                     ( v(k,j,i)   - v(k,j-1,i) )               &
+                            -      (  5.0_wp * ibit23 * adv_mom_5              &
+                                +              ibit22 * adv_mom_3              &
+                                   ) *                                         &
+                                     ( v(k,j+1,i) - v(k,j-2,i) )               &
+                            +      (           ibit23 * adv_mom_5              &
+                                   ) *                                         &
+                                     ( v(k,j+2,i) - v(k,j-3,i) )               &
+                                           )
+
+                ! north
                 ibit23 = IBITS(advc_flags_1(k,j,i),23,1)
                 ibit22 = IBITS(advc_flags_1(k,j,i),22,1)
                 ibit21 = IBITS(advc_flags_1(k,j,i),21,1)
 
-                v_comp(k) = v(k,j+1,i) + v(k,j,i)
-                flux_n(k) = ( v_comp(k) - gv ) * (                           &
-                          ( 37.0_wp * ibit23 * adv_mom_5                        &
-                       +     7.0_wp * ibit22 * adv_mom_3                        &
-                       +              ibit21 * adv_mom_1                        &
-                          ) *                                                &
-                                 ( v(k,j+1,i) + v(k,j,i)   )                 &
-                   -      (  8.0_wp * ibit23 * adv_mom_5                        &
-                       +              ibit22 * adv_mom_3                        &
-                          ) *                                                &
-                                 ( v(k,j+2,i) + v(k,j-1,i) )                 &
-                   +      (           ibit23 * adv_mom_5                        &
-                          ) *                                                &
-                                 ( v(k,j+3,i) + v(k,j-2,i) )                 &
-                                     )
+                v_comp = v(k,j+1,i) + v(k,j,i) - gv
+                flux_n = v_comp * (                                            &
+                          ( 37.0_wp * ibit23 * adv_mom_5                       &
+                       +     7.0_wp * ibit22 * adv_mom_3                       &
+                       +              ibit21 * adv_mom_1                       &
+                          ) *                                                  &
+                                 ( v(k,j+1,i) + v(k,j,i)   )                   &
+                   -      (  8.0_wp * ibit23 * adv_mom_5                       &
+                       +              ibit22 * adv_mom_3                       &
+                          ) *                                                  &
+                                 ( v(k,j+2,i) + v(k,j-1,i) )                   &
+                   +      (           ibit23 * adv_mom_5                       &
+                          ) *                                                  &
+                                 ( v(k,j+3,i) + v(k,j-2,i) )                   &
+                                  )
 
-                diss_n(k) = - ABS( v_comp(k) - gv ) * (                      &
-                          ( 10.0_wp * ibit23 * adv_mom_5                        &
-                       +     3.0_wp * ibit22 * adv_mom_3                        &
-                       +              ibit21 * adv_mom_1                        &
-                          ) *                                                &
-                                 ( v(k,j+1,i) - v(k,j,i)  )                  &
-                   -      (  5.0_wp * ibit23 * adv_mom_5                        &
-                       +              ibit22 * adv_mom_3                        &
-                          ) *                                                &
-                                 ( v(k,j+2,i) - v(k,j-1,i) )                 &
-                   +      (           ibit23 * adv_mom_5                        &
-                          ) *                                                &
-                                 ( v(k,j+3,i) - v(k,j-2,i) )                 &
-                                                      )
+                diss_n = - ABS( v_comp ) * (                                   &
+                          ( 10.0_wp * ibit23 * adv_mom_5                       &
+                       +     3.0_wp * ibit22 * adv_mom_3                       &
+                       +              ibit21 * adv_mom_1                       &
+                          ) *                                                  &
+                                 ( v(k,j+1,i) - v(k,j,i)  )                    &
+                   -      (  5.0_wp * ibit23 * adv_mom_5                       &
+                       +              ibit22 * adv_mom_3                       &
+                          ) *                                                  &
+                                 ( v(k,j+2,i) - v(k,j-1,i) )                   &
+                   +      (           ibit23 * adv_mom_5                       &
+                          ) *                                                  &
+                                 ( v(k,j+3,i) - v(k,j-2,i) )                   &
+                                           )
 !
 !--             k index has to be modified near bottom and top, else array
 !--             subscripts will be exceeded.
+                ! bottom
+                ibit26 = IBITS(advc_flags_1(k-1,j,i),26,1)
+                ibit25 = IBITS(advc_flags_1(k-1,j,i),25,1)
+                ibit24 = IBITS(advc_flags_1(k-1,j,i),24,1)
+
+                k_pp  = k + 2 * ibit26
+                k_mm  = k - 2 * ( ibit25 + ibit26 )
+                k_mmm = k - 3 * ibit26
+
+                w_comp    = w(k-1,j-1,i) + w(k-1,j,i)
+                flux_d = w_comp * rho_air_zw(k-1) * (                          &
+                          ( 37.0_wp * ibit26 * adv_mom_5                       &
+                       +     7.0_wp * ibit25 * adv_mom_3                       &
+                       +              ibit24 * adv_mom_1                       &
+                          ) *                                                  &
+                             ( v(k,j,i)   + v(k-1,j,i)    )                    &
+                   -      (  8.0_wp * ibit26 * adv_mom_5                       &
+                       +              ibit25 * adv_mom_3                       &
+                          ) *                                                  &
+                             ( v(k+1,j,i)  + v(k_mm,j,i)  )                    &
+                   +      (           ibit26 * adv_mom_5                       &
+                          ) *                                                  &
+                             ( v(k_pp,j,i) + v(k_mmm,j,i) )                    &
+                                                    )
+
+                diss_d = - ABS( w_comp ) * rho_air_zw(k-1) * (                 &
+                          ( 10.0_wp * ibit26 * adv_mom_5                       &
+                       +     3.0_wp * ibit25 * adv_mom_3                       &
+                       +              ibit24 * adv_mom_1                       &
+                          ) *                                                  &
+                             ( v(k,j,i)   - v(k-1,j,i)    )                    &
+                   -      (  5.0_wp * ibit26 * adv_mom_5                       &
+                       +              ibit25 * adv_mom_3                       &
+                          ) *                                                  &
+                             ( v(k+1,j,i)  - v(k_mm,j,i)  )                    &
+                   +      (           ibit26 * adv_mom_5                       &
+                          ) *                                                  &
+                             ( v(k_pp,j,i) - v(k_mmm,j,i) )                    &
+                                                           )
+                ! top
                 ibit26 = IBITS(advc_flags_1(k,j,i),26,1)
                 ibit25 = IBITS(advc_flags_1(k,j,i),25,1)
                 ibit24 = IBITS(advc_flags_1(k,j,i),24,1)
@@ -2095,231 +2089,102 @@
                 k_mm  = k - 2 * ibit26
 
                 w_comp    = w(k,j-1,i) + w(k,j,i)
-                flux_t(k) = w_comp * rho_air_zw(k) * (                       &
-                          ( 37.0_wp * ibit26 * adv_mom_5                        &
-                       +     7.0_wp * ibit25 * adv_mom_3                        &
-                       +              ibit24 * adv_mom_1                        &
-                          ) *                                                &
-                             ( v(k+1,j,i)   + v(k,j,i)    )                  &
-                   -      (  8.0_wp * ibit26 * adv_mom_5                        &
-                       +              ibit25 * adv_mom_3                        &
-                          ) *                                                &
-                             ( v(k_pp,j,i)  + v(k-1,j,i)  )                  &
-                   +      (           ibit26 * adv_mom_5                        &
-                          ) *                                                &
-                             ( v(k_ppp,j,i) + v(k_mm,j,i) )                  &
-                                      )
+                flux_t = w_comp * rho_air_zw(k) * (                            &
+                          ( 37.0_wp * ibit26 * adv_mom_5                       &
+                       +     7.0_wp * ibit25 * adv_mom_3                       &
+                       +              ibit24 * adv_mom_1                       &
+                          ) *                                                  &
+                             ( v(k+1,j,i)   + v(k,j,i)    )                    &
+                   -      (  8.0_wp * ibit26 * adv_mom_5                       &
+                       +              ibit25 * adv_mom_3                       &
+                          ) *                                                  &
+                             ( v(k_pp,j,i)  + v(k-1,j,i)  )                    &
+                   +      (           ibit26 * adv_mom_5                       &
+                          ) *                                                  &
+                             ( v(k_ppp,j,i) + v(k_mm,j,i) )                    &
+                                                  )
 
-                diss_t(k) = - ABS( w_comp ) * rho_air_zw(k) * (              &
-                          ( 10.0_wp * ibit26 * adv_mom_5                        &
-                       +     3.0_wp * ibit25 * adv_mom_3                        &
-                       +              ibit24 * adv_mom_1                        &
-                          ) *                                                &
-                             ( v(k+1,j,i)   - v(k,j,i)    )                  &
-                   -      (  5.0_wp * ibit26 * adv_mom_5                        &
-                       +              ibit25 * adv_mom_3                        &
-                          ) *                                                &
-                             ( v(k_pp,j,i)  - v(k-1,j,i)  )                  &
-                   +      (           ibit26 * adv_mom_5                        &
-                          ) *                                                &
-                             ( v(k_ppp,j,i) - v(k_mm,j,i) )                  &
-                                               )
+                diss_t = - ABS( w_comp ) * rho_air_zw(k) * (                   &
+                          ( 10.0_wp * ibit26 * adv_mom_5                       &
+                       +     3.0_wp * ibit25 * adv_mom_3                       &
+                       +              ibit24 * adv_mom_1                       &
+                          ) *                                                  &
+                             ( v(k+1,j,i)   - v(k,j,i)    )                    &
+                   -      (  5.0_wp * ibit26 * adv_mom_5                       &
+                       +              ibit25 * adv_mom_3                       &
+                          ) *                                                  &
+                             ( v(k_pp,j,i)  - v(k-1,j,i)  )                    &
+                   +      (           ibit26 * adv_mom_5                       &
+                          ) *                                                  &
+                             ( v(k_ppp,j,i) - v(k_mm,j,i) )                    &
+                                                           )
 !
 !--             Calculate the divergence of the velocity field. A respective
 !--             correction is needed to overcome numerical instabilities caused
 !--             by a not sufficient reduction of divergences near topography.
-                div = ( ( ( u_comp     + gu )                                 &
-                                       * ( ibit18 + ibit19 + ibit20 )         &
-                - ( u(k,j-1,i)   + u(k,j,i) )                                 &
-                                       * ( IBITS(advc_flags_1(k,j,i-1),18,1)  &
-                                         + IBITS(advc_flags_1(k,j,i-1),19,1)  &
-                                         + IBITS(advc_flags_1(k,j,i-1),20,1)  &
-                                         )                                    &
-                  ) * ddx                                                     &
-               +  ( v_comp(k)                                                 &
-                                       * ( ibit21 + ibit22 + ibit23 )         &
-                - ( v(k,j,i)     + v(k,j-1,i) )                               &
-                                       * ( IBITS(advc_flags_1(k,j-1,i),21,1)  &
-                                         + IBITS(advc_flags_1(k,j-1,i),22,1)  &
-                                         + IBITS(advc_flags_1(k,j-1,i),23,1)  &
-                                         )                                    &
-                  ) * ddy                                                     &
-               +  ( w_comp * rho_air_zw(k)                                    &
-                                       * ( ibit24 + ibit25 + ibit26 )         &
-                - ( w(k-1,j-1,i) + w(k-1,j,i) ) * rho_air_zw(k-1)             &
-                                       * ( IBITS(advc_flags_1(k-1,j,i),24,1)  &
-                                         + IBITS(advc_flags_1(k-1,j,i),25,1)  &
-                                         + IBITS(advc_flags_1(k-1,j,i),26,1)  &
-                                         )                                    &
-                   ) * drho_air(k) * ddzw(k)                                  &
+                div = ( ( ( u_comp     + gu )                                  &
+                                       * ( ibit18 + ibit19 + ibit20 )          &
+                - ( u(k,j-1,i)   + u(k,j,i) )                                  &
+                                       * ( IBITS(advc_flags_1(k,j,i-1),18,1)   &
+                                         + IBITS(advc_flags_1(k,j,i-1),19,1)   &
+                                         + IBITS(advc_flags_1(k,j,i-1),20,1)   &
+                                         )                                     &
+                  ) * ddx                                                      &
+               +  ( ( v_comp           + gv )                                  &
+                                       * ( ibit21 + ibit22 + ibit23 )          &
+                - ( v(k,j,i)     + v(k,j-1,i) )                                &
+                                       * ( IBITS(advc_flags_1(k,j-1,i),21,1)   &
+                                         + IBITS(advc_flags_1(k,j-1,i),22,1)   &
+                                         + IBITS(advc_flags_1(k,j-1,i),23,1)   &
+                                         )                                     &
+                  ) * ddy                                                      &
+               +  ( w_comp * rho_air_zw(k)                                     &
+                                       * ( ibit24 + ibit25 + ibit26 )          &
+                - ( w(k-1,j-1,i) + w(k-1,j,i) ) * rho_air_zw(k-1)              &
+                                       * ( IBITS(advc_flags_1(k-1,j,i),24,1)   &
+                                         + IBITS(advc_flags_1(k-1,j,i),25,1)   &
+                                         + IBITS(advc_flags_1(k-1,j,i),26,1)   &
+                                         )                                     &
+                   ) * drho_air(k) * ddzw(k)                                   &
                 ) * 0.5_wp
 
 
-                tend(k,j,i) = tend(k,j,i) - (                                 &
-                       ( flux_r(k) + diss_r(k)                                &
-                     -   swap_flux_x_local_v(k,j) - swap_diss_x_local_v(k,j)  &
-                       ) * ddx                                                &
-                     + ( flux_n(k) + diss_n(k)                                &
-                     -   swap_flux_y_local_v(k) - swap_diss_y_local_v(k)      &
-                       ) * ddy                                                &
-                     + ( ( flux_t(k) + diss_t(k) )                            &
-                     -   ( flux_d    + diss_d    )                            &
-                       ) * drho_air(k) * ddzw(k)                              &
-                                            )  + v(k,j,i) * div
-
-                swap_flux_x_local_v(k,j) = flux_r(k)
-                swap_diss_x_local_v(k,j) = diss_r(k)
-                swap_flux_y_local_v(k)   = flux_n(k)
-                swap_diss_y_local_v(k)   = diss_n(k)
-                flux_d                   = flux_t(k)
-                diss_d                   = diss_t(k)
+                tend(k,j,i) = tend(k,j,i) - (                                  &
+                       ( flux_r + diss_r - flux_l - diss_l ) * ddx             &
+                     + ( flux_n + diss_n - flux_s - diss_s ) * ddy             &
+                     + ( flux_t + diss_t - flux_d - diss_d ) * ddzw(k)         &
+                                                             * drho_air(k)     &
+                                            ) + v(k,j,i) * div
 
 !
 !--             Statistical Evaluation of v'v'. The factor has to be applied
 !--             for right evaluation when gallilei_trans = .T. .
-                sums_vs2_ws_l(k,tn) = sums_vs2_ws_l(k,tn)                      &
-                + ( flux_n(k)                                                  &
-                    * ( v_comp(k) - 2.0_wp * hom(k,1,2,0)                   )  &
-                    / ( v_comp(k) - gv + SIGN( 1.0E-20_wp, v_comp(k) - gv ) )  &
-               +   diss_n(k)                                                   &
-                    *   ABS( v_comp(k) - 2.0_wp * hom(k,1,2,0)              )  &
-                    / ( ABS( v_comp(k) - gv ) + 1.0E-20_wp                  )  &
-                  ) *   weight_substep(intermediate_timestep_count)
+                ! sums_vs2_ws_l(k,tn) = sums_vs2_ws_l(k,tn)                      &
+                ! + ( flux_n(k)                                                  &
+                !     * ( v_comp(k) - 2.0_wp * hom(k,1,2,0)                   )  &
+                !     / ( v_comp(k) - gv + SIGN( 1.0E-20_wp, v_comp(k) - gv ) )  &
+               ! +   diss_n(k)                                                   &
+                !     *   ABS( v_comp(k) - 2.0_wp * hom(k,1,2,0)              )  &
+                !     / ( ABS( v_comp(k) - gv ) + 1.0E-20_wp                  )  &
+                !   ) *   weight_substep(intermediate_timestep_count)
 !
 !--             Statistical Evaluation of w'u'.
-                sums_wsvs_ws_l(k,tn) = sums_wsvs_ws_l(k,tn)                    &
-                + ( flux_t(k)                                                  &
-                    * ( w_comp - 2.0_wp * hom(k,1,3,0)                   )     &
-                    / ( w_comp + SIGN( 1.0E-20_wp, w_comp )              )     &
-               +   diss_t(k)                                                   &
-                    *   ABS( w_comp - 2.0_wp * hom(k,1,3,0)              )     &
-                    / ( ABS( w_comp ) + 1.0E-20_wp                       )     &
-                  ) *   weight_substep(intermediate_timestep_count)
-
-             ENDDO
-
-             DO  k = nzb_max+1, nzt
-
-                u_comp    = u(k,j-1,i+1) + u(k,j,i+1) - gu
-                flux_r(k) = u_comp * (                                        &
-                      37.0_wp * ( v(k,j,i+1) + v(k,j,i)   )                      &
-                    -  8.0_wp * ( v(k,j,i+2) + v(k,j,i-1) )                      &
-                    +           ( v(k,j,i+3) + v(k,j,i-2) ) ) * adv_mom_5
-
-                diss_r(k) = - ABS( u_comp ) * (                               &
-                      10.0_wp * ( v(k,j,i+1) - v(k,j,i) )                        &
-                    -  5.0_wp * ( v(k,j,i+2) - v(k,j,i-1) )                      &
-                    +           ( v(k,j,i+3) - v(k,j,i-2) ) ) * adv_mom_5
-
-
-                v_comp(k) = v(k,j+1,i) + v(k,j,i)
-                flux_n(k) = ( v_comp(k) - gv ) * (                            &
-                      37.0_wp * ( v(k,j+1,i) + v(k,j,i)   )                      &
-                    -  8.0_wp * ( v(k,j+2,i) + v(k,j-1,i) )                      &
-                      +         ( v(k,j+3,i) + v(k,j-2,i) ) ) * adv_mom_5
-
-                diss_n(k) = - ABS( v_comp(k) - gv ) * (                       &
-                      10.0_wp * ( v(k,j+1,i) - v(k,j,i)   )                      &
-                    -  5.0_wp * ( v(k,j+2,i) - v(k,j-1,i) )                      &
-                    +           ( v(k,j+3,i) - v(k,j-2,i) ) ) * adv_mom_5
-!
-!--             k index has to be modified near bottom and top, else array
-!--             subscripts will be exceeded.
-                ibit26 = IBITS(advc_flags_1(k,j,i),26,1)
-                ibit25 = IBITS(advc_flags_1(k,j,i),25,1)
-                ibit24 = IBITS(advc_flags_1(k,j,i),24,1)
-
-                k_ppp = k + 3 * ibit26
-                k_pp  = k + 2 * ( 1 - ibit24  )
-                k_mm  = k - 2 * ibit26
-
-                w_comp    = w(k,j-1,i) + w(k,j,i)
-                flux_t(k) = w_comp * rho_air_zw(k) * (                       &
-                          ( 37.0_wp * ibit26 * adv_mom_5                        &
-                       +     7.0_wp * ibit25 * adv_mom_3                        &
-                       +              ibit24 * adv_mom_1                        &
-                          ) *                                                &
-                             ( v(k+1,j,i)   + v(k,j,i)    )                  &
-                   -      (  8.0_wp * ibit26 * adv_mom_5                        &
-                       +              ibit25 * adv_mom_3                        &
-                          ) *                                                &
-                             ( v(k_pp,j,i)  + v(k-1,j,i)  )                  &
-                   +      (           ibit26 * adv_mom_5                        &
-                          ) *                                                &
-                             ( v(k_ppp,j,i) + v(k_mm,j,i) )                  &
-                                      )
-
-                diss_t(k) = - ABS( w_comp ) * rho_air_zw(k) * (              &
-                          ( 10.0_wp * ibit26 * adv_mom_5                        &
-                       +     3.0_wp * ibit25 * adv_mom_3                        &
-                       +              ibit24 * adv_mom_1                        &
-                          ) *                                                &
-                             ( v(k+1,j,i)   - v(k,j,i)    )                  &
-                   -      (  5.0_wp * ibit26 * adv_mom_5                        &
-                       +              ibit25 * adv_mom_3                        &
-                          ) *                                                &
-                             ( v(k_pp,j,i)  - v(k-1,j,i)  )                  &
-                   +      (           ibit26 * adv_mom_5                        &
-                          ) *                                                &
-                             ( v(k_ppp,j,i) - v(k_mm,j,i) )                  &
-                                               )
-!
-!--             Calculate the divergence of the velocity field. A respective
-!--             correction is needed to overcome numerical instabilities caused
-!--             by a not sufficient reduction of divergences near topography.
-                div = ( ( u_comp + gu - ( u(k,j-1,i)   + u(k,j,i)   ) ) * ddx &
-                     +  ( v_comp(k)   - ( v(k,j,i)     + v(k,j-1,i) ) ) * ddy &
-                     +  (   w_comp                      * rho_air_zw(k) -     &
-                          ( w(k-1,j-1,i) + w(k-1,j,i) ) * rho_air_zw(k-1)     &
-                        ) * drho_air(k) * ddzw(k)                             &
-                      ) * 0.5_wp
-
-                tend(k,j,i) = tend(k,j,i) - (                                 &
-                       ( flux_r(k) + diss_r(k)                                &
-                     -   swap_flux_x_local_v(k,j) - swap_diss_x_local_v(k,j)  &
-                       ) * ddx                                                &
-                     + ( flux_n(k) + diss_n(k)                                &
-                     -   swap_flux_y_local_v(k) - swap_diss_y_local_v(k)      &
-                       ) * ddy                                                &
-                     + ( ( flux_t(k) + diss_t(k) )                            &
-                     -   ( flux_d    + diss_d    )                            &
-                       ) * drho_air(k) * ddzw(k)                              &
-                                            )  + v(k,j,i) * div
-
-                swap_flux_x_local_v(k,j) = flux_r(k)
-                swap_diss_x_local_v(k,j) = diss_r(k)
-                swap_flux_y_local_v(k)   = flux_n(k)
-                swap_diss_y_local_v(k)   = diss_n(k)
-                flux_d                   = flux_t(k)
-                diss_d                   = diss_t(k)
-
-!
-!--             Statistical Evaluation of v'v'. The factor has to be applied
-!--             for right evaluation when gallilei_trans = .T. .
-                sums_vs2_ws_l(k,tn) = sums_vs2_ws_l(k,tn)                      &
-                + ( flux_n(k)                                                  &
-                    * ( v_comp(k) - 2.0_wp * hom(k,1,2,0)                   )  &
-                    / ( v_comp(k) - gv + SIGN( 1.0E-20_wp, v_comp(k) - gv ) )  &
-               +   diss_n(k)                                                   &
-                    *   ABS( v_comp(k) - 2.0_wp * hom(k,1,2,0)              )  &
-                    / ( ABS( v_comp(k) - gv ) + 1.0E-20_wp                  )  &
-                  ) *   weight_substep(intermediate_timestep_count)
-!
-!--             Statistical Evaluation of w'u'.
-                sums_wsvs_ws_l(k,tn) = sums_wsvs_ws_l(k,tn)                    &
-                + ( flux_t(k)                                                  &
-                    * ( w_comp - 2.0_wp * hom(k,1,3,0)                   )     &
-                    / ( w_comp + SIGN( 1.0E-20_wp, w_comp )              )     &
-               +   diss_t(k)                                                   &
-                    *   ABS( w_comp - 2.0_wp * hom(k,1,3,0)              )     &
-                    / ( ABS( w_comp ) + 1.0E-20_wp                       )     &
-                  ) *   weight_substep(intermediate_timestep_count)
+                ! sums_wsvs_ws_l(k,tn) = sums_wsvs_ws_l(k,tn)                    &
+                ! + ( flux_t(k)                                                  &
+                !     * ( w_comp - 2.0_wp * hom(k,1,3,0)                   )     &
+                !     / ( w_comp + SIGN( 1.0E-20_wp, w_comp )              )     &
+               ! +   diss_t(k)                                                   &
+                !     *   ABS( w_comp - 2.0_wp * hom(k,1,3,0)              )     &
+                !     / ( ABS( w_comp ) + 1.0E-20_wp                       )     &
+                !   ) *   weight_substep(intermediate_timestep_count)
 
              ENDDO
           ENDDO
        ENDDO
-       sums_vs2_ws_l(nzb,tn) = sums_vs2_ws_l(nzb+1,tn)
+       !$acc end parallel
+       !$acc end data
 
+       ! sums_vs2_ws_l(nzb,tn) = sums_vs2_ws_l(nzb+1,tn)
 
     END SUBROUTINE advec_v_ws
 

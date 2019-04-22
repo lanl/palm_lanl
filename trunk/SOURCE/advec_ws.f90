@@ -260,27 +260,12 @@
 !------------------------------------------------------------------------------!
     SUBROUTINE ws_init
 
-       USE arrays_3d,                                                          &
-           ONLY:  diss_l_diss, diss_l_e, diss_l_nc, diss_l_nr, diss_l_pt,      &
-                  diss_l_q, diss_l_qc, diss_l_qr, diss_l_s, diss_l_sa,         &
-                  diss_l_u, diss_l_v, diss_l_w, flux_l_diss, flux_l_e,         &
-                  flux_l_nc, flux_l_nr, flux_l_pt, flux_l_q, flux_l_qc,        &
-                  flux_l_qr, flux_l_s, flux_l_sa, flux_l_u, flux_l_v,          &
-                  flux_l_w, diss_s_diss, diss_s_e, diss_s_nc,  diss_s_nr,      &
-                  diss_s_pt, diss_s_q, diss_s_qc, diss_s_qr, diss_s_s,         &
-                  diss_s_sa, diss_s_u, diss_s_v,  diss_s_w, flux_s_diss,       &
-                  flux_s_e, flux_s_nc, flux_s_nr, flux_s_pt, flux_s_q,         &
-                  flux_s_qc, flux_s_qr, flux_s_s, flux_s_sa, flux_s_u,         &
-                  flux_s_v, flux_s_w
-
        USE constants,                                                          &
            ONLY:  adv_mom_1, adv_mom_3, adv_mom_5, adv_sca_1, adv_sca_3,       &
                   adv_sca_5
 
        USE control_parameters,                                                 &
-           ONLY:  cloud_physics, humidity, loop_optimization,                  &
-                  passive_scalar, microphysics_morrison, microphysics_seifert, &
-                  ocean, ws_scheme_mom, ws_scheme_sca
+           ONLY:  ws_scheme_mom, ws_scheme_sca
 
        USE indices,                                                            &
            ONLY:  nyn, nys, nzb, nzt
@@ -290,11 +275,9 @@
        USE pegrid
 
        USE statistics,                                                         &
-           ONLY:  sums_us2_ws_l, sums_vs2_ws_l, sums_ws2_ws_l, sums_wsncs_ws_l,&
-                  sums_wsnrs_ws_l,sums_wspts_ws_l, sums_wsqcs_ws_l,            &
-                  sums_wsqrs_ws_l, sums_wsqs_ws_l, sums_wsss_ws_l,             &
-                  sums_wssas_ws_l,  sums_wsss_ws_l, sums_wsus_ws_l,            &
-                  sums_wsvs_ws_l
+           ONLY:  sums_us2_ws_l, sums_vs2_ws_l, sums_ws2_ws_l,                 &
+                  sums_wspts_ws_l, sums_wssas_ws_l,                            &
+                  sums_wsus_ws_l, sums_wsvs_ws_l
 
 
 !
@@ -328,56 +311,8 @@
           ALLOCATE( sums_wspts_ws_l(nzb:nzt+1,0:threads_per_task-1) )
           sums_wspts_ws_l = 0.0_wp
 
-          IF ( ocean )  THEN
-             ALLOCATE( sums_wssas_ws_l(nzb:nzt+1,0:threads_per_task-1) )
-             sums_wssas_ws_l = 0.0_wp
-          ENDIF
-
-       ENDIF
-
-!
-!--    Arrays needed for reasons of speed optimization for cache version.
-!--    For the vector version the buffer arrays are not necessary,
-!--    because the the fluxes can swapped directly inside the loops of the
-!--    advection routines.
-       IF ( loop_optimization /= 'vector' )  THEN
-
-          IF ( ws_scheme_mom )  THEN
-
-             ALLOCATE( flux_s_u(nzb+1:nzt,0:threads_per_task-1),               &
-                       flux_s_v(nzb+1:nzt,0:threads_per_task-1),               &
-                       flux_s_w(nzb+1:nzt,0:threads_per_task-1),               &
-                       diss_s_u(nzb+1:nzt,0:threads_per_task-1),               &
-                       diss_s_v(nzb+1:nzt,0:threads_per_task-1),               &
-                       diss_s_w(nzb+1:nzt,0:threads_per_task-1) )
-             ALLOCATE( flux_l_u(nzb+1:nzt,nys:nyn,0:threads_per_task-1),       &
-                       flux_l_v(nzb+1:nzt,nys:nyn,0:threads_per_task-1),       &
-                       flux_l_w(nzb+1:nzt,nys:nyn,0:threads_per_task-1),       &
-                       diss_l_u(nzb+1:nzt,nys:nyn,0:threads_per_task-1),       &
-                       diss_l_v(nzb+1:nzt,nys:nyn,0:threads_per_task-1),       &
-                       diss_l_w(nzb+1:nzt,nys:nyn,0:threads_per_task-1) )
-
-          ENDIF
-
-          IF ( ws_scheme_sca )  THEN
-
-             ALLOCATE( flux_s_pt(nzb+1:nzt,0:threads_per_task-1),              &
-                       flux_s_e(nzb+1:nzt,0:threads_per_task-1),               &
-                       diss_s_pt(nzb+1:nzt,0:threads_per_task-1),              &
-                       diss_s_e(nzb+1:nzt,0:threads_per_task-1) )
-             ALLOCATE( flux_l_pt(nzb+1:nzt,nys:nyn,0:threads_per_task-1),      &
-                       flux_l_e(nzb+1:nzt,nys:nyn,0:threads_per_task-1),       &
-                       diss_l_pt(nzb+1:nzt,nys:nyn,0:threads_per_task-1),      &
-                       diss_l_e(nzb+1:nzt,nys:nyn,0:threads_per_task-1) )
-
-             IF ( ocean )  THEN
-                ALLOCATE( flux_s_sa(nzb+1:nzt,0:threads_per_task-1),           &
-                          diss_s_sa(nzb+1:nzt,0:threads_per_task-1) )
-                ALLOCATE( flux_l_sa(nzb+1:nzt,nys:nyn,0:threads_per_task-1),   &
-                          diss_l_sa(nzb+1:nzt,nys:nyn,0:threads_per_task-1) )
-             ENDIF
-
-          ENDIF
+          ALLOCATE( sums_wssas_ws_l(nzb:nzt+1,0:threads_per_task-1) )
+          sums_wssas_ws_l = 0.0_wp
 
        ENDIF
 
@@ -1037,17 +972,14 @@
     SUBROUTINE ws_statistics
 
        USE control_parameters,                                                 &
-           ONLY:  cloud_physics, humidity, passive_scalar, ocean,              &
-                  microphysics_morrison, microphysics_seifert, ws_scheme_mom,  &
-                  ws_scheme_sca
+           ONLY:  ws_scheme_mom, ws_scheme_sca
 
        USE kinds
 
        USE statistics,                                                         &
-           ONLY:  sums_us2_ws_l, sums_vs2_ws_l, sums_ws2_ws_l, sums_wsncs_ws_l,&
-                  sums_wsnrs_ws_l, sums_wspts_ws_l, sums_wsqcs_ws_l,           &
-                  sums_wsqrs_ws_l, sums_wsqs_ws_l, sums_wsss_ws_l,             &
-                  sums_wssas_ws_l, sums_wsus_ws_l, sums_wsvs_ws_l
+           ONLY:  sums_us2_ws_l, sums_vs2_ws_l, sums_ws2_ws_l,                 &
+                  sums_wspts_ws_l, sums_wssas_ws_l,                            &
+                  sums_wsus_ws_l, sums_wsvs_ws_l
 
 
        IMPLICIT NONE
@@ -1152,7 +1084,7 @@
           DO j = nys, nyn
              DO  k = nzb+1, nzt
 
-                ! flux at the left edge
+                ! left
                 ibit2 = IBITS(advc_flags_1(k,j,i-1),2,1)
                 ibit1 = IBITS(advc_flags_1(k,j,i-1),1,1)
                 ibit0 = IBITS(advc_flags_1(k,j,i-1),0,1)
@@ -1188,7 +1120,7 @@
                                           ( sk(k,j,i+2) - sk(k,j,i-3) )       &
                                                         )
 
-                ! flux at the right edge
+                ! right
                 ibit2 = IBITS(advc_flags_1(k,j,i),2,1)
                 ibit1 = IBITS(advc_flags_1(k,j,i),1,1)
                 ibit0 = IBITS(advc_flags_1(k,j,i),0,1)
@@ -1224,7 +1156,7 @@
                              ( sk(k,j,i+3) - sk(k,j,i-2) )                    &
                                           )
 
-                ! flux at the south edge
+                ! south
                 ibit5 = IBITS(advc_flags_1(k,j-1,i),5,1)
                 ibit4 = IBITS(advc_flags_1(k,j-1,i),4,1)
                 ibit3 = IBITS(advc_flags_1(k,j-1,i),3,1)
@@ -1260,7 +1192,7 @@
                                           ( sk(k,j+2,i) - sk(k,j-3,i)    )    &
                                                      )
 
-                ! flux at the north edge
+                ! north
                 ibit5 = IBITS(advc_flags_1(k,j,i),5,1)
                 ibit4 = IBITS(advc_flags_1(k,j,i),4,1)
                 ibit3 = IBITS(advc_flags_1(k,j,i),3,1)
@@ -1298,7 +1230,7 @@
 !
 !--             k index has to be modified near bottom and top, else array
 !--             subscripts will be exceeded.
-                ! flux at bottom
+                ! bottom
                 ibit8 = IBITS(advc_flags_1(k-1,j,i),8,1)
                 ibit7 = IBITS(advc_flags_1(k-1,j,i),7,1)
                 ibit6 = IBITS(advc_flags_1(k-1,j,i),6,1)
@@ -1336,7 +1268,7 @@
                                    ( sk(k_pp,j,i) - sk(k_mmm,j,i) )           &
                                                                 )
 
-                ! flux at top
+                ! top
                 ibit8 = IBITS(advc_flags_1(k,j,i),8,1)
                 ibit7 = IBITS(advc_flags_1(k,j,i),7,1)
                 ibit6 = IBITS(advc_flags_1(k,j,i),6,1)
@@ -2543,27 +2475,12 @@
 
     SUBROUTINE ws_finalize
 
-       USE arrays_3d,                                                          &
-           ONLY:  diss_l_diss, diss_l_e, diss_l_nc, diss_l_nr, diss_l_pt,      &
-                  diss_l_q, diss_l_qc, diss_l_qr, diss_l_s, diss_l_sa,         &
-                  diss_l_u, diss_l_v, diss_l_w, flux_l_diss, flux_l_e,         &
-                  flux_l_nc, flux_l_nr, flux_l_pt, flux_l_q, flux_l_qc,        &
-                  flux_l_qr, flux_l_s, flux_l_sa, flux_l_u, flux_l_v,          &
-                  flux_l_w, diss_s_diss, diss_s_e, diss_s_nc,  diss_s_nr,      &
-                  diss_s_pt, diss_s_q, diss_s_qc, diss_s_qr, diss_s_s,         &
-                  diss_s_sa, diss_s_u, diss_s_v,  diss_s_w, flux_s_diss,       &
-                  flux_s_e, flux_s_nc, flux_s_nr, flux_s_pt, flux_s_q,         &
-                  flux_s_qc, flux_s_qr, flux_s_s, flux_s_sa, flux_s_u,         &
-                  flux_s_v, flux_s_w
-
        USE constants,                                                          &
            ONLY:  adv_mom_1, adv_mom_3, adv_mom_5, adv_sca_1, adv_sca_3,       &
                   adv_sca_5
 
        USE control_parameters,                                                 &
-           ONLY:  cloud_physics, humidity, loop_optimization,                  &
-                  passive_scalar, microphysics_morrison, microphysics_seifert, &
-                  ocean, ws_scheme_mom, ws_scheme_sca
+           ONLY:  ws_scheme_mom, ws_scheme_sca
 
        USE indices,                                                            &
            ONLY:  nyn, nys, nzb, nzt
@@ -2591,36 +2508,6 @@
           DEALLOCATE( sums_wspts_ws_l )
 
           DEALLOCATE( sums_wssas_ws_l )
-
-       ENDIF
-
-!
-!--    Arrays needed for reasons of speed optimization for cache version.
-!--    For the vector version the buffer arrays are not necessary,
-!--    because the the fluxes can swapped directly inside the loops of the
-!--    advection routines.
-       IF ( loop_optimization /= 'vector' )  THEN
-
-          IF ( ws_scheme_mom )  THEN
-
-             DEALLOCATE( flux_s_u, flux_s_v, flux_s_w, diss_s_u,               &
-                       diss_s_v, diss_s_w )
-             DEALLOCATE( flux_l_u, flux_l_v, flux_l_w,       &
-                       diss_l_u, diss_l_v, diss_l_w )
-
-          ENDIF
-
-          IF ( ws_scheme_sca )  THEN
-
-             DEALLOCATE( flux_s_pt, flux_s_e, diss_s_pt, diss_s_e )
-             DEALLOCATE( flux_l_pt, flux_l_e, diss_l_pt, diss_l_e )
-
-             IF ( ocean )  THEN
-                DEALLOCATE( flux_s_sa, diss_s_sa )
-                DEALLOCATE( flux_l_sa, diss_l_sa )
-             ENDIF
-
-          ENDIF
 
        ENDIF
 

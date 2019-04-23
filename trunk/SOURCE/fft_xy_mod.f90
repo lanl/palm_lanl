@@ -155,9 +155,7 @@
     USE indices,                                                               &
         ONLY:  nx, ny, nz
 
-#if defined( __fftw )
     USE, INTRINSIC ::  ISO_C_BINDING
-#endif
 
     USE kinds
 
@@ -165,17 +163,17 @@
         ONLY:  nxl_y, nxr_y, nyn_x, nys_x, nzb_x, nzb_y, nzt_x, nzt_y
 
 #ifdef __GPU
+
     USE cudafor
 
     USE cufft
-    #endif
+
+ #endif
 
     IMPLICIT NONE
 
     PRIVATE
-    PUBLIC fft_x, fft_x_1d, fft_y, fft_y_1d, fft_init, fft_x_m, fft_y_m,    &
-            fft_finalize
-#define MY_DEBUG print *,"DEBUG",__LINE__,__FILE__
+    PUBLIC fft_x, fft_y, fft_init, fft_finalize
 
     INTEGER(iwp), DIMENSION(:), ALLOCATABLE, SAVE ::  ifax_x  !<
     INTEGER(iwp), DIMENSION(:), ALLOCATABLE, SAVE ::  ifax_y  !<
@@ -191,17 +189,17 @@
     REAL(wp), DIMENSION(:), ALLOCATABLE, SAVE ::  trigs_y  !<
 
 #ifdef __GPU
+
     INTEGER :: nx_cC, ny_cC
 
     INTEGER, SAVE :: batch1, batch2
 
     COMPLEX(wp), DEVICE, DIMENSION(:,:,:), ALLOCATABLE, SAVE ::       &
             x_out_dev, y_out_dev
-    REAL(wp), DEVICE, DIMENSION(:), ALLOCATABLE, SAVE :: x_in_dev, y_in_dev
     INTEGER, SAVE :: plan_xf_dev, plan_xi_dev, plan_yf_dev, plan_yi_dev
-#endif
 
-#ifdef __fftw
+#else
+
     INCLUDE  'fftw3.f03'
     INTEGER(KIND=C_INT) ::  nx_c  !<
     INTEGER(KIND=C_INT) ::  ny_c  !<
@@ -218,6 +216,7 @@
     !$OMP THREADPRIVATE( x_out, y_out, x_in, y_in )
 
     TYPE(C_PTR), SAVE ::  plan_xf, plan_xi, plan_yf, plan_yi
+
 #endif
     !
 !-- Public interfaces
@@ -229,25 +228,9 @@
        MODULE PROCEDURE fft_x
     END INTERFACE fft_x
 
-    INTERFACE fft_x_1d
-       MODULE PROCEDURE fft_x_1d
-    END INTERFACE fft_x_1d
-
     INTERFACE fft_y
        MODULE PROCEDURE fft_y
     END INTERFACE fft_y
-
-    INTERFACE fft_y_1d
-       MODULE PROCEDURE fft_y_1d
-    END INTERFACE fft_y_1d
-
-    INTERFACE fft_x_m
-       MODULE PROCEDURE fft_x_m
-    END INTERFACE fft_x_m
-
-    INTERFACE fft_y_m
-       MODULE PROCEDURE fft_y_m
-    END INTERFACE fft_y_m
 
  CONTAINS
 
@@ -269,10 +252,9 @@
           init_fft = .TRUE.
        ENDIF
 !
-#if defined ( __GPU )
+#ifdef __GPU
        nx_cC = nx+1
        ny_cC = ny+1
-       ALLOCATE( x_in_dev(0:nx), y_in_dev(0:ny))
        ALLOCATE( x_out_dev(0:(nx+1)/2,nys_x:nyn_x,nzb_x:nzt_x) )
        ALLOCATE( y_out_dev(0:(ny+1)/2,nxl_y:nxr_y,nzb_y:nzt_y) )
 
@@ -283,25 +265,27 @@
        ierr = cufftPlan1d( plan_yf_dev, ny_cC, CUFFT_D2Z, batch2)
        ierr = cufftPlan1d( plan_yi_dev, ny_cC, CUFFT_Z2D, batch2)
 #else
-          nx_c = nx+1
-          ny_c = ny+1
-          !$OMP PARALLEL
-          ALLOCATE( x_in(0:nx+2), y_in(0:ny+2), x_out(0:(nx+1)/2),             &
-                    y_out(0:(ny+1)/2) )
-          !$OMP END PARALLEL
-          plan_xf = FFTW_PLAN_DFT_R2C_1D( nx_c, x_in, x_out, FFTW_ESTIMATE )
-          plan_xi = FFTW_PLAN_DFT_C2R_1D( nx_c, x_out, x_in, FFTW_ESTIMATE )
-          plan_yf = FFTW_PLAN_DFT_R2C_1D( ny_c, y_in, y_out, FFTW_ESTIMATE )
-          plan_yi = FFTW_PLAN_DFT_C2R_1D( ny_c, y_out, y_in, FFTW_ESTIMATE )
+       nx_c = nx+1
+       ny_c = ny+1
+       !$OMP PARALLEL
+       ALLOCATE( x_in(0:nx+2), y_in(0:ny+2), x_out(0:(nx+1)/2),             &
+                 y_out(0:(ny+1)/2) )
+       !$OMP END PARALLEL
+       plan_xf = FFTW_PLAN_DFT_R2C_1D( nx_c, x_in, x_out, FFTW_ESTIMATE )
+       plan_xi = FFTW_PLAN_DFT_C2R_1D( nx_c, x_out, x_in, FFTW_ESTIMATE )
+       plan_yf = FFTW_PLAN_DFT_R2C_1D( ny_c, y_in, y_out, FFTW_ESTIMATE )
+       plan_yi = FFTW_PLAN_DFT_C2R_1D( ny_c, y_out, y_in, FFTW_ESTIMATE )
 #endif
 
 
     END SUBROUTINE fft_init
 
     SUBROUTINE fft_finalize
-            #ifdef __GPU
-            DEALLOCATE(x_in_dev, y_in_dev, y_out_dev, x_out_dev)
-            #endif
+
+#ifdef __GPU
+       DEALLOCATE(y_out_dev, x_out_dev)
+#endif
+
     END SUBROUTINE fft_finalize
 
 
@@ -427,67 +411,6 @@
           ENDIF
 #endif
     END SUBROUTINE fft_x
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Fourier-transformation along x-direction.
-!> Version for 1D-decomposition.
-!> It uses internal algorithms (Singleton or Temperton) or
-!> system-specific routines, if they are available
-!------------------------------------------------------------------------------!
-
-    SUBROUTINE fft_x_1d( ar, direction )
-
-
-       IMPLICIT NONE
-
-       CHARACTER (LEN=*) ::  direction  !<
-
-       INTEGER(iwp) ::  i               !<
-       INTEGER(iwp) ::  ishape(1)       !<
-
-       LOGICAL ::  forward_fft          !<
-
-       REAL(wp), DIMENSION(0:nx)   ::  ar     !<
-       REAL(wp), DIMENSION(0:nx+2) ::  work   !<
-       REAL(wp), DIMENSION(nx+2)   ::  work1  !<
-
-       COMPLEX(wp), DIMENSION(:), ALLOCATABLE ::  cwork  !<
-       IF ( direction == 'forward' )  THEN
-          forward_fft = .TRUE.
-       ELSE
-          forward_fft = .FALSE.
-       ENDIF
-
-      #if defined( __fftw )
-          IF ( forward_fft )  THEN
-
-             x_in(0:nx) = ar(0:nx)
-             CALL FFTW_EXECUTE_DFT_R2C( plan_xf, x_in, x_out )
-
-             DO  i = 0, (nx+1)/2
-                ar(i) = REAL( x_out(i), KIND=wp ) / ( nx+1 )
-             ENDDO
-             DO  i = 1, (nx+1)/2 - 1
-                ar(nx+1-i) = AIMAG( x_out(i) ) / ( nx+1 )
-             ENDDO
-
-         ELSE
-
-             x_out(0) = CMPLX( ar(0), 0.0_wp, KIND=wp )
-             DO  i = 1, (nx+1)/2 - 1
-                x_out(i) = CMPLX( ar(i), ar(nx+1-i), KIND=wp )
-             ENDDO
-             x_out((nx+1)/2) = CMPLX( ar((nx+1)/2), 0.0_wp, KIND=wp )
-
-             CALL FFTW_EXECUTE_DFT_C2R( plan_xi, x_out, x_in)
-             ar(0:nx) = x_in(0:nx)
-
-         ENDIF
-#endif
-
-          END SUBROUTINE fft_x_1d
 
 !------------------------------------------------------------------------------!
 ! Description:
@@ -634,125 +557,6 @@
           ENDIF
 #endif
     END SUBROUTINE fft_y
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Fourier-transformation along y-direction.
-!> Version for 1D-decomposition.
-!> It uses internal algorithms (Singleton or Temperton) or
-!> system-specific routines, if they are available.
-!------------------------------------------------------------------------------!
-
-    SUBROUTINE fft_y_1d( ar, direction )
-
-
-       IMPLICIT NONE
-
-       CHARACTER (LEN=*) ::  direction
-
-       INTEGER(iwp) ::  j          !<
-       INTEGER(iwp) ::  jshape(1)  !<
-
-       LOGICAL ::  forward_fft  !<
-
-       REAL(wp), DIMENSION(0:ny)    ::  ar     !<
-       REAL(wp), DIMENSION(0:ny+2)  ::  work   !<
-       REAL(wp), DIMENSION(ny+2)    ::  work1  !<
-
-       COMPLEX(wp), DIMENSION(:), ALLOCATABLE ::  cwork  !<
-             IF ( direction == 'forward' )  THEN
-          forward_fft = .TRUE.
-       ELSE
-          forward_fft = .FALSE.
-       ENDIF
-
-      #if defined( __fftw )
-          IF ( forward_fft )  THEN
-
-             y_in(0:ny) = ar(0:ny)
-             CALL FFTW_EXECUTE_DFT_R2C( plan_yf, y_in, y_out )
-
-             DO  j = 0, (ny+1)/2
-                ar(j) = REAL( y_out(j), KIND=wp ) / (ny+1)
-             ENDDO
-             DO  j = 1, (ny+1)/2 - 1
-                ar(ny+1-j) = AIMAG( y_out(j) ) / (ny+1)
-             ENDDO
-
-          ELSE
-
-             y_out(0) = CMPLX( ar(0), 0.0_wp, KIND=wp )
-             DO  j = 1, (ny+1)/2 - 1
-                y_out(j) = CMPLX( ar(j), ar(ny+1-j), KIND=wp )
-             ENDDO
-             y_out((ny+1)/2) = CMPLX( ar((ny+1)/2), 0.0_wp, KIND=wp )
-
-             CALL FFTW_EXECUTE_DFT_C2R( plan_yi, y_out, y_in )
-             ar(0:ny) = y_in(0:ny)
-
-          ENDIF
-#endif
-
-          END SUBROUTINE fft_y_1d
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Fourier-transformation along x-direction.
-!> Version for 1d domain decomposition
-!> using multiple 1D FFT from Math Keisan on NEC or Temperton-algorithm
-!> (no singleton-algorithm on NEC because it does not vectorize)
-!------------------------------------------------------------------------------!
-
-    SUBROUTINE fft_x_m( ar, direction )
-
-
-       IMPLICIT NONE
-
-       CHARACTER (LEN=*) ::  direction  !<
-
-       INTEGER(iwp) ::  i     !<
-       INTEGER(iwp) ::  k     !<
-       INTEGER(iwp) ::  siza  !<
-       INTEGER(iwp) ::  sizw  !< required on NEC only
-
-       REAL(wp), DIMENSION(0:nx,nz)       ::  ar     !<
-       REAL(wp), DIMENSION(0:nx+3,nz+1)   ::  ai     !<
-       REAL(wp), DIMENSION(6*(nx+4),nz+1) ::  work1  !<
-
-       COMPLEX(wp), DIMENSION(:,:), ALLOCATABLE ::  work  !< required on NEC only
-    END SUBROUTINE fft_x_m
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Fourier-transformation along y-direction.
-!> Version for 1d domain decomposition
-!> using multiple 1D FFT from Math Keisan on NEC or Temperton-algorithm
-!> (no singleton-algorithm on NEC because it does not vectorize)
-!------------------------------------------------------------------------------!
-
-    SUBROUTINE fft_y_m( ar, ny1, direction )
-
-
-       IMPLICIT NONE
-
-       CHARACTER (LEN=*) ::  direction  !<
-
-       INTEGER(iwp) ::  j     !<
-       INTEGER(iwp) ::  k     !<
-       INTEGER(iwp) ::  ny1   !<
-       INTEGER(iwp) ::  siza  !<
-       INTEGER(iwp) ::  sizw  !< required on NEC only
-
-       REAL(wp), DIMENSION(0:ny1,nz)      ::  ar     !<
-       REAL(wp), DIMENSION(0:ny+3,nz+1)   ::  ai     !<
-       REAL(wp), DIMENSION(6*(ny+4),nz+1) ::  work1  !<
-
-       COMPLEX(wp), DIMENSION(:,:), ALLOCATABLE ::  work !< required on NEC only
-
-    END SUBROUTINE fft_y_m
 
 
  END MODULE fft_xy

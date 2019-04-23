@@ -261,212 +261,177 @@
        ALLOCATE(ar_x_d(0:nx,nys_x:nyn_x,nzb_x:nzt_x))
 #endif
 !
-!--    Two-dimensional Fourier Transformation in x- and y-direction.
-       IF ( pdims(2) == 1  .AND.  pdims(1) > 1 )  THEN
-
-!
-!--       1d-domain-decomposition along x:
-!--       FFT along y and transposition y --> x
-          CALL ffty_tr_yx( ar, ar )
-
-!
-!--       FFT along x, solving the tridiagonal system and backward FFT
-          CALL fftx_tri_fftx( ar )
-
-!
-!--       Transposition x --> y and backward FFT along y
-          CALL tr_xy_ffty( ar, ar )
-
-       ELSEIF ( pdims(1) == 1 .AND. pdims(2) > 1 )  THEN
-
-!
-!--       1d-domain-decomposition along y:
-!--       FFT along x and transposition x --> y
-          CALL fftx_tr_xy( ar, ar )
-
-!
-!--       FFT along y, solving the tridiagonal system and backward FFT
-          CALL ffty_tri_ffty( ar )
-
-!
-!--       Transposition y --> x and backward FFT along x
-          CALL tr_yx_fftx( ar, ar )
-
-       ! ELSEIF ( .NOT. transpose_compute_overlap )  THEN
-       ELSE
 
 #ifdef __GPU
 
-          CALL cpu_log(log_point_s(5), 'fft routines', 'start')
+       CALL cpu_log(log_point_s(5), 'fft routines', 'start')
 
-          ar_d = ar
+       ar_d = ar
 
-!--       2d-domain-decomposition or no decomposition (1 PE run)
-!--       Transposition z --> x
+!--    2d-domain-decomposition or no decomposition (1 PE run)
+!--    Transposition z --> x
 
-          !$acc parallel
-          !$acc loop collapse(3)
-          DO  k = 1,nz
-              DO  i = nxl, nxr
-                  DO  j = nys, nyn
-                      ar_x_d(i,j,k) = ar_d(k,j,i)
-                  ENDDO
-              ENDDO
-          ENDDO
-          !$acc end parallel
+       !$acc parallel
+       !$acc loop collapse(3)
+       DO  k = 1,nz
+           DO  i = nxl, nxr
+               DO  j = nys, nyn
+                   ar_x_d(i,j,k) = ar_d(k,j,i)
+               ENDDO
+           ENDDO
+       ENDDO
+       !$acc end parallel
 
-          CALL fft_x( ar_x_d, 'forward' )
+       CALL fft_x( ar_x_d, 'forward' )
 
-!--       Transposition x --> y
+!--    Transposition x --> y
 
-          !$acc parallel
-          !$acc loop collapse(3)
-          DO  i = 0, nx
-              DO  k = nzb_x, nzt_x
-                  DO  j = nys_x, nyn_x
-                      ar_y_d(j,i,k) = ar_x_d(i,j,k)
-                  ENDDO
-              ENDDO
-          ENDDO
-          !$acc end parallel
+       !$acc parallel
+       !$acc loop collapse(3)
+       DO  i = 0, nx
+           DO  k = nzb_x, nzt_x
+               DO  j = nys_x, nyn_x
+                   ar_y_d(j,i,k) = ar_x_d(i,j,k)
+               ENDDO
+           ENDDO
+       ENDDO
+       !$acc end parallel
 
-          CALL fft_y( ar_y_d, 'forward' )
+       CALL fft_y( ar_y_d, 'forward' )
 
-          !$acc parallel
-          !$acc loop collapse(3)
+       !$acc parallel
+       !$acc loop collapse(3)
+       DO  j = 0, ny
+           DO  k = nzb_y, nzt_y
+               DO  i = nxl_y, nxr_y
+                   ar_z_d(i,j,k) = ar_y_d(j,i,k)
+               ENDDO
+           ENDDO
+       ENDDO
+       !$acc end parallel
+
+       !ar_z = ar_z_d
+!
+!--    Solve the tridiagonal equation system along z
+       CALL tridia_substi( ar_z_d )
+
+!
+!--    Inverse Fourier Transformation
+!--    Transposition z --> y
+
+       !$acc parallel
+       !$acc loop collapse(3)
+       DO  k = nzb_y, nzt_y
           DO  j = 0, ny
-              DO  k = nzb_y, nzt_y
-                  DO  i = nxl_y, nxr_y
-                      ar_z_d(i,j,k) = ar_y_d(j,i,k)
-                  ENDDO
-              ENDDO
+             DO  i = nxl_y, nxr_y
+                ar_y_d(j,i,k) = ar_z_d(i,j,k)
+             ENDDO
           ENDDO
-          !$acc end parallel
+       ENDDO
+       !$acc end parallel
 
-          !ar_z = ar_z_d
+       CALL fft_y( ar_y_d, 'backward')
 !
-!--       Solve the tridiagonal equation system along z
-          CALL tridia_substi( ar_z_d )
+!--    Transposition y --> x
 
-!
-!--       Inverse Fourier Transformation
-!--       Transposition z --> y
-
-          !$acc parallel
-          !$acc loop collapse(3)
+       !$acc parallel
+       !$acc loop collapse(3)
+       DO  i = nxl_y, nxr_y
           DO  k = nzb_y, nzt_y
              DO  j = 0, ny
-                DO  i = nxl_y, nxr_y
-                   ar_y_d(j,i,k) = ar_z_d(i,j,k)
-                ENDDO
+                ar_x_d(i,j,k) = ar_y_d(j,i,k)
              ENDDO
           ENDDO
-          !$acc end parallel
+       ENDDO
+       !$acc end parallel
 
-          CALL fft_y( ar_y_d, 'backward')
-!
-!--       Transposition y --> x
+       CALL fft_x( ar_x_d, 'backward' )
 
-          !$acc parallel
-          !$acc loop collapse(3)
-          DO  i = nxl_y, nxr_y
-             DO  k = nzb_y, nzt_y
-                DO  j = 0, ny
-                   ar_x_d(i,j,k) = ar_y_d(j,i,k)
-                ENDDO
+!--    Transposition x --> z
+
+       !$acc parallel
+       !$acc loop collapse(3)
+       DO  i = nxl, nxr
+          DO  j = nys, nyn
+             DO  k = 1, nz
+                ar_d(k,j,i) = ar_x_d(i,j,k)
              ENDDO
           ENDDO
-          !$acc end parallel
+       ENDDO
+       !$acc end parallel
 
-          CALL fft_x( ar_x_d, 'backward' )
+       ar = ar_d
 
-!--       Transposition x --> z
-
-          !$acc parallel
-          !$acc loop collapse(3)
-          DO  i = nxl, nxr
-             DO  j = nys, nyn
-                DO  k = 1, nz
-                   ar_d(k,j,i) = ar_x_d(i,j,k)
-                ENDDO
-             ENDDO
-          ENDDO
-          !$acc end parallel
-
-          ar = ar_d
-
-          CALL cpu_log(log_point_s(5), 'fft routines', 'stop')
+       CALL cpu_log(log_point_s(5), 'fft routines', 'stop')
 
 #else
 !
-!--       2d-domain-decomposition or no decomposition (1 PE run)
-!--       Transposition z --> x
-          CALL cpu_log( log_point_s(5), 'transpo forward', 'start' )
-          CALL resort_for_zx( ar, ar_inv )
-          CALL transpose_zx( ar_inv, ar )
-          CALL cpu_log( log_point_s(5), 'transpo forward', 'pause' )
+!--    2d-domain-decomposition or no decomposition (1 PE run)
+!--    Transposition z --> x
+       CALL cpu_log( log_point_s(5), 'transpo forward', 'start' )
+       CALL resort_for_zx( ar, ar_inv )
+       CALL transpose_zx( ar_inv, ar )
+       CALL cpu_log( log_point_s(5), 'transpo forward', 'pause' )
 
-          CALL cpu_log( log_point_s(4), 'fft_x', 'start' )
-          CALL fft_x( ar, 'forward' )
-          CALL cpu_log( log_point_s(4), 'fft_x', 'pause' )
-
-!
-!--       Transposition x --> y
-          CALL cpu_log( log_point_s(5), 'transpo forward', 'continue' )
-          CALL resort_for_xy( ar, ar_inv )
-          CALL transpose_xy( ar_inv, ar )
-          CALL cpu_log( log_point_s(5), 'transpo forward', 'pause' )
-
-          CALL cpu_log( log_point_s(7), 'fft_y', 'start' )
-          CALL fft_y( ar, 'forward')
-          CALL cpu_log( log_point_s(7), 'fft_y', 'pause' )
+       CALL cpu_log( log_point_s(4), 'fft_x', 'start' )
+       CALL fft_x( ar, 'forward' )
+       CALL cpu_log( log_point_s(4), 'fft_x', 'pause' )
 
 !
-!--       Transposition y --> z
-          CALL cpu_log( log_point_s(5), 'transpo forward', 'continue' )
-          CALL resort_for_yz( ar, ar_inv )
-          CALL transpose_yz( ar_inv, ar )
-          CALL cpu_log( log_point_s(5), 'transpo forward', 'stop' )
+!--    Transposition x --> y
+       CALL cpu_log( log_point_s(5), 'transpo forward', 'continue' )
+       CALL resort_for_xy( ar, ar_inv )
+       CALL transpose_xy( ar_inv, ar )
+       CALL cpu_log( log_point_s(5), 'transpo forward', 'pause' )
+
+       CALL cpu_log( log_point_s(7), 'fft_y', 'start' )
+       CALL fft_y( ar, 'forward')
+       CALL cpu_log( log_point_s(7), 'fft_y', 'pause' )
 
 !
-!--       Solve the tridiagonal equation system along z
-          CALL cpu_log( log_point_s(6), 'tridia', 'start' )
-          CALL tridia_substi( ar )
-          CALL cpu_log( log_point_s(6), 'tridia', 'stop' )
+!--    Transposition y --> z
+       CALL cpu_log( log_point_s(5), 'transpo forward', 'continue' )
+       CALL resort_for_yz( ar, ar_inv )
+       CALL transpose_yz( ar_inv, ar )
+       CALL cpu_log( log_point_s(5), 'transpo forward', 'stop' )
 
 !
-!--       Inverse Fourier Transformation
-!--       Transposition z --> y
-          CALL cpu_log( log_point_s(8), 'transpo invers', 'start' )
-          CALL transpose_zy( ar, ar_inv )
-          CALL resort_for_zy( ar_inv, ar )
-          CALL cpu_log( log_point_s(8), 'transpo invers', 'pause' )
-
-          CALL cpu_log( log_point_s(7), 'fft_y', 'continue' )
-          CALL fft_y( ar, 'backward')
-          CALL cpu_log( log_point_s(7), 'fft_y', 'stop' )
+!--    Solve the tridiagonal equation system along z
+       CALL cpu_log( log_point_s(6), 'tridia', 'start' )
+       CALL tridia_substi( ar )
+       CALL cpu_log( log_point_s(6), 'tridia', 'stop' )
 
 !
-!--       Transposition y --> x
-          CALL cpu_log( log_point_s(8), 'transpo invers', 'continue' )
-          CALL transpose_yx( ar, ar_inv )
-          CALL resort_for_yx( ar_inv, ar )
-          CALL cpu_log( log_point_s(8), 'transpo invers', 'pause' )
+!--    Inverse Fourier Transformation
+!--    Transposition z --> y
+       CALL cpu_log( log_point_s(8), 'transpo invers', 'start' )
+       CALL transpose_zy( ar, ar_inv )
+       CALL resort_for_zy( ar_inv, ar )
+       CALL cpu_log( log_point_s(8), 'transpo invers', 'pause' )
 
-          CALL cpu_log( log_point_s(4), 'fft_x', 'continue' )
-          CALL fft_x( ar, 'backward' )
-          CALL cpu_log( log_point_s(4), 'fft_x', 'stop' )
+       CALL cpu_log( log_point_s(7), 'fft_y', 'continue' )
+       CALL fft_y( ar, 'backward')
+       CALL cpu_log( log_point_s(7), 'fft_y', 'stop' )
 
 !
-!--       Transposition x --> z
-          CALL cpu_log( log_point_s(8), 'transpo invers', 'continue' )
-          CALL transpose_xz( ar, ar_inv )
-          CALL resort_for_xz( ar_inv, ar )
-          CALL cpu_log( log_point_s(8), 'transpo invers', 'stop' )
+!--    Transposition y --> x
+       CALL cpu_log( log_point_s(8), 'transpo invers', 'continue' )
+       CALL transpose_yx( ar, ar_inv )
+       CALL resort_for_yx( ar_inv, ar )
+       CALL cpu_log( log_point_s(8), 'transpo invers', 'pause' )
+
+       CALL cpu_log( log_point_s(4), 'fft_x', 'continue' )
+       CALL fft_x( ar, 'backward' )
+       CALL cpu_log( log_point_s(4), 'fft_x', 'stop' )
+
+!
+!--    Transposition x --> z
+       CALL cpu_log( log_point_s(8), 'transpo invers', 'continue' )
+       CALL transpose_xz( ar, ar_inv )
+       CALL resort_for_xz( ar_inv, ar )
+       CALL cpu_log( log_point_s(8), 'transpo invers', 'stop' )
 
 #endif
-
-       ENDIF
 
        CALL cpu_log( log_point_s(3), 'poisfft', 'stop' )
 
@@ -475,792 +440,5 @@
 #endif
 
     END SUBROUTINE poisfft
-
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Fourier-transformation along y with subsequent transposition y --> x for
-!> a 1d-decomposition along x.
-!>
-!> @attention The performance of this routine is much faster on the NEC-SX6,
-!>            if the first index of work_ffty_vec is odd. Otherwise
-!>            memory bank conflicts may occur (especially if the index is a
-!>            multiple of 128). That's why work_ffty_vec is dimensioned as
-!>            0:ny+1.
-!>            Of course, this will not work if users are using an odd number
-!>            of gridpoints along y.
-!------------------------------------------------------------------------------!
-    SUBROUTINE ffty_tr_yx( f_in, f_out )
-
-       USE control_parameters,                                                 &
-           ONLY:  loop_optimization
-
-       USE cpulog,                                                             &
-           ONLY:  cpu_log, log_point_s
-
-       USE kinds
-
-       USE pegrid
-
-       IMPLICIT NONE
-
-       INTEGER(iwp)            ::  i            !<
-       INTEGER(iwp)            ::  iend         !<
-       INTEGER(iwp)            ::  iouter       !<
-       INTEGER(iwp)            ::  ir           !<
-       INTEGER(iwp)            ::  j            !<
-       INTEGER(iwp)            ::  k            !<
-
-       INTEGER(iwp), PARAMETER ::  stridex = 4  !<
-
-       REAL(wp), DIMENSION(1:nz,0:ny,nxl:nxr)             ::  f_in   !<
-       REAL(wp), DIMENSION(nnx,1:nz,nys_x:nyn_x,pdims(1)) ::  f_out  !<
-       REAL(wp), DIMENSION(nxl:nxr,1:nz,0:ny)             ::  work   !<
-
-       REAL(wp), DIMENSION(:,:), ALLOCATABLE   ::  work_ffty      !<
-       REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  work_ffty_vec  !<
-
-!
-!--    Carry out the FFT along y, where all data are present due to the
-!--    1d-decomposition along x. Resort the data in a way that x becomes
-!--    the first index.
-       CALL cpu_log( log_point_s(7), 'fft_y_1d', 'start' )
-
-       IF ( loop_optimization == 'vector' )  THEN
-
-          ALLOCATE( work_ffty_vec(0:ny+1,1:nz,nxl:nxr) )
-!
-!--       Code optimized for vector processors
-          !$OMP PARALLEL PRIVATE ( i, j, k )
-          !$OMP DO
-          DO  i = nxl, nxr
-
-             DO  j = 0, ny
-                DO  k = 1, nz
-                   work_ffty_vec(j,k,i) = f_in(k,j,i)
-                ENDDO
-             ENDDO
-
-             CALL fft_y_m( work_ffty_vec(:,:,i), ny+1, 'forward' )
-
-          ENDDO
-
-          !$OMP DO
-          DO  k = 1, nz
-             DO  j = 0, ny
-                DO  i = nxl, nxr
-                   work(i,k,j) = work_ffty_vec(j,k,i)
-                ENDDO
-             ENDDO
-          ENDDO
-          !$OMP END PARALLEL
-
-          DEALLOCATE( work_ffty_vec )
-
-       ELSE
-!
-!--       Cache optimized code.
-          ALLOCATE( work_ffty(0:ny,stridex) )
-!
-!--       The i-(x-)direction is split into a strided outer loop and an inner
-!--       loop for better cache performance
-          !$OMP PARALLEL PRIVATE (i,iend,iouter,ir,j,k,work_ffty)
-          !$OMP DO
-          DO  iouter = nxl, nxr, stridex
-
-             iend = MIN( iouter+stridex-1, nxr )  ! Upper bound for inner i loop
-
-             DO  k = 1, nz
-
-                DO  i = iouter, iend
-
-                   ir = i-iouter+1  ! counter within a stride
-                   DO  j = 0, ny
-                      work_ffty(j,ir) = f_in(k,j,i)
-                   ENDDO
-!
-!--                FFT along y
-                   CALL fft_y_1d( work_ffty(:,ir), 'forward' )
-
-                ENDDO
-
-!
-!--             Resort
-                DO  j = 0, ny
-                   DO  i = iouter, iend
-                      work(i,k,j) = work_ffty(j,i-iouter+1)
-                   ENDDO
-                ENDDO
-
-             ENDDO
-
-          ENDDO
-          !$OMP END PARALLEL
-
-          DEALLOCATE( work_ffty )
-
-       ENDIF
-
-       CALL cpu_log( log_point_s(7), 'fft_y_1d', 'pause' )
-
-!
-!--    Transpose array
-#if defined( __parallel )
-       CALL cpu_log( log_point_s(32), 'mpi_alltoall', 'start' )
-       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-       CALL MPI_ALLTOALL( work(nxl,1,0),      sendrecvcount_xy, MPI_REAL, &
-                          f_out(1,1,nys_x,1), sendrecvcount_xy, MPI_REAL, &
-                          comm1dx, ierr )
-       CALL cpu_log( log_point_s(32), 'mpi_alltoall', 'stop' )
-#endif
-
-    END SUBROUTINE ffty_tr_yx
-
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!>  Transposition x --> y with a subsequent backward Fourier transformation for
-!>  a 1d-decomposition along x
-!------------------------------------------------------------------------------!
-    SUBROUTINE tr_xy_ffty( f_in, f_out )
-
-       USE control_parameters,                                                 &
-           ONLY:  loop_optimization
-
-       USE cpulog,                                                             &
-           ONLY:  cpu_log, log_point_s
-
-       USE kinds
-
-       USE pegrid
-
-       IMPLICIT NONE
-
-       INTEGER(iwp)            ::  i            !<
-       INTEGER(iwp)            ::  iend         !<
-       INTEGER(iwp)            ::  iouter       !<
-       INTEGER(iwp)            ::  ir           !<
-       INTEGER(iwp)            ::  j            !<
-       INTEGER(iwp)            ::  k            !<
-
-       INTEGER(iwp), PARAMETER ::  stridex = 4  !<
-
-       REAL(wp), DIMENSION(nnx,1:nz,nys_x:nyn_x,pdims(1)) ::  f_in   !<
-       REAL(wp), DIMENSION(1:nz,0:ny,nxl:nxr)             ::  f_out  !<
-       REAL(wp), DIMENSION(nxl:nxr,1:nz,0:ny)             ::  work   !<
-
-       REAL(wp), DIMENSION(:,:), ALLOCATABLE   ::  work_ffty         !<
-       REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  work_ffty_vec     !<
-
-!
-!--    Transpose array
-#if defined( __parallel )
-       CALL cpu_log( log_point_s(32), 'mpi_alltoall', 'start' )
-       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-       CALL MPI_ALLTOALL( f_in(1,1,nys_x,1), sendrecvcount_xy, MPI_REAL, &
-                          work(nxl,1,0),     sendrecvcount_xy, MPI_REAL, &
-                          comm1dx, ierr )
-       CALL cpu_log( log_point_s(32), 'mpi_alltoall', 'stop' )
-#endif
-
-!
-!--    Resort the data in a way that y becomes the first index and carry out the
-!--    backward fft along y.
-       CALL cpu_log( log_point_s(7), 'fft_y_1d', 'continue' )
-
-       IF ( loop_optimization == 'vector' )  THEN
-
-          ALLOCATE( work_ffty_vec(0:ny+1,1:nz,nxl:nxr) )
-!
-!--       Code optimized for vector processors
-          !$OMP PARALLEL PRIVATE ( i, j, k )
-          !$OMP DO
-          DO  k = 1, nz
-             DO  j = 0, ny
-                DO  i = nxl, nxr
-                   work_ffty_vec(j,k,i) = work(i,k,j)
-                ENDDO
-             ENDDO
-          ENDDO
-
-          !$OMP DO
-          DO  i = nxl, nxr
-
-             CALL fft_y_m( work_ffty_vec(:,:,i), ny+1, 'backward' )
-
-             DO  j = 0, ny
-                DO  k = 1, nz
-                   f_out(k,j,i) = work_ffty_vec(j,k,i)
-                ENDDO
-             ENDDO
-
-          ENDDO
-          !$OMP END PARALLEL
-
-          DEALLOCATE( work_ffty_vec )
-
-       ELSE
-!
-!--       Cache optimized code.
-          ALLOCATE( work_ffty(0:ny,stridex) )
-!
-!--       The i-(x-)direction is split into a strided outer loop and an inner
-!--       loop for better cache performance
-          !$OMP PARALLEL PRIVATE ( i, iend, iouter, ir, j, k, work_ffty )
-          !$OMP DO
-          DO  iouter = nxl, nxr, stridex
-
-             iend = MIN( iouter+stridex-1, nxr )  ! Upper bound for inner i loop
-
-             DO  k = 1, nz
-!
-!--             Resort
-                DO  j = 0, ny
-                   DO  i = iouter, iend
-                      work_ffty(j,i-iouter+1) = work(i,k,j)
-                   ENDDO
-                ENDDO
-
-                DO  i = iouter, iend
-
-!
-!--                FFT along y
-                   ir = i-iouter+1  ! counter within a stride
-                   CALL fft_y_1d( work_ffty(:,ir), 'backward' )
-
-                   DO  j = 0, ny
-                      f_out(k,j,i) = work_ffty(j,ir)
-                   ENDDO
-                ENDDO
-
-             ENDDO
-
-          ENDDO
-          !$OMP END PARALLEL
-
-          DEALLOCATE( work_ffty )
-
-       ENDIF
-
-       CALL cpu_log( log_point_s(7), 'fft_y_1d', 'stop' )
-
-    END SUBROUTINE tr_xy_ffty
-
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> FFT along x, solution of the tridiagonal system and backward FFT for
-!> a 1d-decomposition along x
-!>
-!> @warning this subroutine may still not work for hybrid parallelization
-!>          with OpenMP (for possible necessary changes see the original
-!>          routine poisfft_hybrid, developed by Klaus Ketelsen, May 2002)
-!------------------------------------------------------------------------------!
-    SUBROUTINE fftx_tri_fftx( ar )
-
-       USE control_parameters,                                                 &
-           ONLY:  loop_optimization
-
-       USE cpulog,                                                             &
-           ONLY:  cpu_log, log_point_s
-
-       USE grid_variables,                                                     &
-           ONLY:  ddx2, ddy2
-
-       USE kinds
-
-       USE pegrid
-
-       IMPLICIT NONE
-
-       INTEGER(iwp) ::  i                   !<
-       INTEGER(iwp) ::  j                   !<
-       INTEGER(iwp) ::  k                   !<
-       INTEGER(iwp) ::  m                   !<
-       INTEGER(iwp) ::  n                   !<
-       INTEGER(iwp) ::  omp_get_thread_num  !<
-       INTEGER(iwp) ::  tn                  !<
-
-       REAL(wp), DIMENSION(0:nx)                          ::  work_fftx  !<
-       REAL(wp), DIMENSION(0:nx,1:nz)                     ::  work_trix  !<
-       REAL(wp), DIMENSION(nnx,1:nz,nys_x:nyn_x,pdims(1)) ::  ar         !<
-       REAL(wp), DIMENSION(:,:,:,:), ALLOCATABLE          ::  tri        !<
-
-
-       CALL cpu_log( log_point_s(33), 'fft_x_1d + tridia', 'start' )
-
-       ALLOCATE( tri(5,0:nx,0:nz-1,0:threads_per_task-1) )
-
-       tn = 0              ! Default thread number in case of one thread
-!$OMP  PARALLEL DO PRIVATE ( i, j, k, m, n, tn, work_fftx, work_trix )
-       DO  j = nys_x, nyn_x
-
-!$        tn = omp_get_thread_num()
-
-          IF ( loop_optimization == 'vector' )  THEN
-!
-!--          Code optimized for vector processors
-             DO  k = 1, nz
-
-                m = 0
-                DO  n = 1, pdims(1)
-                   DO  i = 1, nnx
-                      work_trix(m,k) = ar(i,k,j,n)
-                      m = m + 1
-                   ENDDO
-                ENDDO
-
-             ENDDO
-
-             CALL fft_x_m( work_trix, 'forward' )
-
-          ELSE
-!
-!--          Cache optimized code
-             DO  k = 1, nz
-
-                m = 0
-                DO  n = 1, pdims(1)
-                   DO  i = 1, nnx
-                      work_fftx(m) = ar(i,k,j,n)
-                      m = m + 1
-                   ENDDO
-                ENDDO
-
-                CALL fft_x_1d( work_fftx, 'forward' )
-
-                DO  i = 0, nx
-                   work_trix(i,k) = work_fftx(i)
-                ENDDO
-
-             ENDDO
-
-          ENDIF
-
-!
-!--       Solve the linear equation system
-          CALL tridia_1dd( ddx2, ddy2, nx, ny, j, work_trix, tri(:,:,:,tn) )
-
-          IF ( loop_optimization == 'vector' )  THEN
-!
-!--          Code optimized for vector processors
-             CALL fft_x_m( work_trix, 'backward' )
-
-             DO  k = 1, nz
-
-                m = 0
-                DO  n = 1, pdims(1)
-                   DO  i = 1, nnx
-                      ar(i,k,j,n) = work_trix(m,k)
-                      m = m + 1
-                   ENDDO
-                ENDDO
-
-             ENDDO
-
-          ELSE
-!
-!--          Cache optimized code
-             DO  k = 1, nz
-
-                DO  i = 0, nx
-                   work_fftx(i) = work_trix(i,k)
-                ENDDO
-
-                CALL fft_x_1d( work_fftx, 'backward' )
-
-                m = 0
-                DO  n = 1, pdims(1)
-                   DO  i = 1, nnx
-                      ar(i,k,j,n) = work_fftx(m)
-                      m = m + 1
-                   ENDDO
-                ENDDO
-
-             ENDDO
-
-          ENDIF
-
-       ENDDO
-
-       DEALLOCATE( tri )
-
-       CALL cpu_log( log_point_s(33), 'fft_x_1d + tridia', 'stop' )
-
-    END SUBROUTINE fftx_tri_fftx
-
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Fourier-transformation along x with subsequent transposition x --> y for
-!> a 1d-decomposition along y.
-!>
-!> @attention NEC-branch of this routine may significantly profit from
-!>            further optimizations. So far, performance is much worse than
-!>            for routine ffty_tr_yx (more than three times slower).
-!------------------------------------------------------------------------------!
-    SUBROUTINE fftx_tr_xy( f_in, f_out )
-
-
-       USE control_parameters,                                                 &
-           ONLY:  loop_optimization
-
-       USE cpulog,                                                             &
-           ONLY:  cpu_log, log_point_s
-
-       USE kinds
-
-       USE pegrid
-
-       IMPLICIT NONE
-
-       INTEGER(iwp) ::  i  !<
-       INTEGER(iwp) ::  j  !<
-       INTEGER(iwp) ::  k  !<
-
-       REAL(wp), DIMENSION(0:nx,1:nz,nys:nyn)             ::  work_fftx  !<
-       REAL(wp), DIMENSION(1:nz,nys:nyn,0:nx)             ::  f_in       !<
-       REAL(wp), DIMENSION(nny,1:nz,nxl_y:nxr_y,pdims(2)) ::  f_out      !<
-       REAL(wp), DIMENSION(nys:nyn,1:nz,0:nx)             ::  work       !<
-
-!
-!--    Carry out the FFT along x, where all data are present due to the
-!--    1d-decomposition along y. Resort the data in a way that y becomes
-!--    the first index.
-       CALL cpu_log( log_point_s(4), 'fft_x_1d', 'start' )
-
-       IF ( loop_optimization == 'vector' )  THEN
-!
-!--       Code for vector processors
-!$OMP     PARALLEL PRIVATE ( i, j, k )
-!$OMP     DO
-          DO  i = 0, nx
-
-             DO  j = nys, nyn
-                DO  k = 1, nz
-                   work_fftx(i,k,j) = f_in(k,j,i)
-                ENDDO
-             ENDDO
-
-          ENDDO
-
-!$OMP     DO
-          DO  j = nys, nyn
-
-             CALL fft_x_m( work_fftx(:,:,j), 'forward' )
-
-             DO  k = 1, nz
-                DO  i = 0, nx
-                   work(j,k,i) = work_fftx(i,k,j)
-                ENDDO
-             ENDDO
-
-          ENDDO
-!$OMP     END PARALLEL
-
-       ELSE
-
-!
-!--       Cache optimized code (there might be still a potential for better
-!--       optimization).
-!$OMP     PARALLEL PRIVATE (i,j,k)
-!$OMP     DO
-          DO  i = 0, nx
-
-             DO  j = nys, nyn
-                DO  k = 1, nz
-                   work_fftx(i,k,j) = f_in(k,j,i)
-                ENDDO
-             ENDDO
-
-          ENDDO
-
-!$OMP     DO
-          DO  j = nys, nyn
-             DO  k = 1, nz
-
-                CALL fft_x_1d( work_fftx(0:nx,k,j), 'forward' )
-
-                DO  i = 0, nx
-                   work(j,k,i) = work_fftx(i,k,j)
-                ENDDO
-             ENDDO
-
-          ENDDO
-!$OMP     END PARALLEL
-
-       ENDIF
-       CALL cpu_log( log_point_s(4), 'fft_x_1d', 'pause' )
-
-!
-!--    Transpose array
-#if defined( __parallel )
-       CALL cpu_log( log_point_s(32), 'mpi_alltoall', 'start' )
-       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-       CALL MPI_ALLTOALL( work(nys,1,0),      sendrecvcount_xy, MPI_REAL, &
-                          f_out(1,1,nxl_y,1), sendrecvcount_xy, MPI_REAL, &
-                          comm1dy, ierr )
-       CALL cpu_log( log_point_s(32), 'mpi_alltoall', 'stop' )
-#endif
-
-    END SUBROUTINE fftx_tr_xy
-
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Transposition y --> x with a subsequent backward Fourier transformation for
-!> a 1d-decomposition along x.
-!------------------------------------------------------------------------------!
-    SUBROUTINE tr_yx_fftx( f_in, f_out )
-
-
-       USE control_parameters,                                                 &
-           ONLY:  loop_optimization
-
-       USE cpulog,                                                             &
-           ONLY:  cpu_log, log_point_s
-
-       USE kinds
-
-       USE pegrid
-
-       IMPLICIT NONE
-
-       INTEGER(iwp) ::  i  !<
-       INTEGER(iwp) ::  j  !<
-       INTEGER(iwp) ::  k  !<
-
-       REAL(wp), DIMENSION(0:nx,1:nz,nys:nyn)             ::  work_fftx  !<
-       REAL(wp), DIMENSION(nny,1:nz,nxl_y:nxr_y,pdims(2)) ::  f_in       !<
-       REAL(wp), DIMENSION(1:nz,nys:nyn,0:nx)             ::  f_out      !<
-       REAL(wp), DIMENSION(nys:nyn,1:nz,0:nx)             ::  work       !<
-
-!
-!--    Transpose array
-#if defined( __parallel )
-       CALL cpu_log( log_point_s(32), 'mpi_alltoall', 'start' )
-       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
-       CALL MPI_ALLTOALL( f_in(1,1,nxl_y,1), sendrecvcount_xy, MPI_REAL, &
-                          work(nys,1,0),     sendrecvcount_xy, MPI_REAL, &
-                          comm1dy, ierr )
-       CALL cpu_log( log_point_s(32), 'mpi_alltoall', 'stop' )
-#endif
-
-!
-!--    Carry out the FFT along x, where all data are present due to the
-!--    1d-decomposition along y. Resort the data in a way that y becomes
-!--    the first index.
-       CALL cpu_log( log_point_s(4), 'fft_x_1d', 'continue' )
-
-       IF ( loop_optimization == 'vector' )  THEN
-!
-!--       Code optimized for vector processors
-!$OMP     PARALLEL PRIVATE ( i, j, k )
-!$OMP     DO
-          DO  j = nys, nyn
-
-             DO  k = 1, nz
-                DO  i = 0, nx
-                   work_fftx(i,k,j) = work(j,k,i)
-                ENDDO
-             ENDDO
-
-             CALL fft_x_m( work_fftx(:,:,j), 'backward' )
-
-          ENDDO
-
-!$OMP     DO
-          DO  i = 0, nx
-             DO  j = nys, nyn
-                DO  k = 1, nz
-                   f_out(k,j,i) = work_fftx(i,k,j)
-                ENDDO
-             ENDDO
-          ENDDO
-!$OMP     END PARALLEL
-
-       ELSE
-
-!
-!--       Cache optimized code (there might be still a potential for better
-!--       optimization).
-!$OMP     PARALLEL PRIVATE (i,j,k)
-!$OMP     DO
-          DO  j = nys, nyn
-             DO  k = 1, nz
-
-                DO  i = 0, nx
-                   work_fftx(i,k,j) = work(j,k,i)
-                ENDDO
-
-                CALL fft_x_1d( work_fftx(0:nx,k,j), 'backward' )
-
-             ENDDO
-          ENDDO
-
-!$OMP     DO
-          DO  i = 0, nx
-             DO  j = nys, nyn
-                DO  k = 1, nz
-                   f_out(k,j,i) = work_fftx(i,k,j)
-                ENDDO
-             ENDDO
-          ENDDO
-!$OMP     END PARALLEL
-
-       ENDIF
-       CALL cpu_log( log_point_s(4), 'fft_x_1d', 'stop' )
-
-    END SUBROUTINE tr_yx_fftx
-
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> FFT along y, solution of the tridiagonal system and backward FFT for
-!> a 1d-decomposition along y.
-!>
-!> @warning this subroutine may still not work for hybrid parallelization
-!>          with OpenMP (for possible necessary changes see the original
-!>          routine poisfft_hybrid, developed by Klaus Ketelsen, May 2002)
-!------------------------------------------------------------------------------!
-    SUBROUTINE ffty_tri_ffty( ar )
-
-
-       USE control_parameters,                                                 &
-           ONLY:  loop_optimization
-
-       USE cpulog,                                                             &
-           ONLY:  cpu_log, log_point_s
-
-       USE grid_variables,                                                     &
-           ONLY:  ddx2, ddy2
-
-       USE kinds
-
-       USE pegrid
-
-       IMPLICIT NONE
-
-       INTEGER(iwp) ::  i                   !<
-       INTEGER(iwp) ::  j                   !<
-       INTEGER(iwp) ::  k                   !<
-       INTEGER(iwp) ::  m                   !<
-       INTEGER(iwp) ::  n                   !<
-       INTEGER(iwp) ::  omp_get_thread_num  !<
-       INTEGER(iwp) ::  tn                  !<
-
-       REAL(wp), DIMENSION(0:ny)                          ::  work_ffty  !<
-       REAL(wp), DIMENSION(0:ny,1:nz)                     ::  work_triy  !<
-       REAL(wp), DIMENSION(nny,1:nz,nxl_y:nxr_y,pdims(2)) ::  ar         !<
-       REAL(wp), DIMENSION(:,:,:,:), ALLOCATABLE          ::  tri        !<
-
-
-       CALL cpu_log( log_point_s(39), 'fft_y_1d + tridia', 'start' )
-
-       ALLOCATE( tri(5,0:ny,0:nz-1,0:threads_per_task-1) )
-
-       tn = 0           ! Default thread number in case of one thread
-!$OMP  PARALLEL DO PRIVATE ( i, j, k, m, n, tn, work_ffty, work_triy )
-       DO  i = nxl_y, nxr_y
-
-!$        tn = omp_get_thread_num()
-
-          IF ( loop_optimization == 'vector' )  THEN
-!
-!--          Code optimized for vector processors
-             DO  k = 1, nz
-
-                m = 0
-                DO  n = 1, pdims(2)
-                   DO  j = 1, nny
-                      work_triy(m,k) = ar(j,k,i,n)
-                      m = m + 1
-                   ENDDO
-                ENDDO
-
-             ENDDO
-
-             CALL fft_y_m( work_triy, ny, 'forward' )
-
-          ELSE
-!
-!--          Cache optimized code
-             DO  k = 1, nz
-
-                m = 0
-                DO  n = 1, pdims(2)
-                   DO  j = 1, nny
-                      work_ffty(m) = ar(j,k,i,n)
-                      m = m + 1
-                   ENDDO
-                ENDDO
-
-                CALL fft_y_1d( work_ffty, 'forward' )
-
-                DO  j = 0, ny
-                   work_triy(j,k) = work_ffty(j)
-                ENDDO
-
-             ENDDO
-
-          ENDIF
-
-!
-!--       Solve the linear equation system
-          CALL tridia_1dd( ddy2, ddx2, ny, nx, i, work_triy, tri(:,:,:,tn) )
-
-          IF ( loop_optimization == 'vector' )  THEN
-!
-!--          Code optimized for vector processors
-             CALL fft_y_m( work_triy, ny, 'backward' )
-
-             DO  k = 1, nz
-
-                m = 0
-                DO  n = 1, pdims(2)
-                   DO  j = 1, nny
-                      ar(j,k,i,n) = work_triy(m,k)
-                      m = m + 1
-                   ENDDO
-                ENDDO
-
-             ENDDO
-
-          ELSE
-!
-!--          Cache optimized code
-             DO  k = 1, nz
-
-                DO  j = 0, ny
-                   work_ffty(j) = work_triy(j,k)
-                ENDDO
-
-                CALL fft_y_1d( work_ffty, 'backward' )
-
-                m = 0
-                DO  n = 1, pdims(2)
-                   DO  j = 1, nny
-                      ar(j,k,i,n) = work_ffty(m)
-                      m = m + 1
-                   ENDDO
-                ENDDO
-
-             ENDDO
-
-          ENDIF
-
-       ENDDO
-
-       DEALLOCATE( tri )
-
-       CALL cpu_log( log_point_s(39), 'fft_y_1d + tridia', 'stop' )
-
-    END SUBROUTINE ffty_tri_ffty
 
  END MODULE poisfft_mod

@@ -19,13 +19,13 @@
 !
 ! Current revisions:
 ! -----------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: transpose.f90 2718 2018-01-02 08:49:38Z maronga $
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 !
@@ -33,15 +33,15 @@
 !
 ! 2118 2017-01-17 16:38:49Z raasch
 ! OpenACC directives removed
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doygen readable 
-! 
+! Code annotations made doygen readable
+!
 ! 1324 2014-03-21 09:13:16Z suehring
-! Bugfix: ONLY statement for module pegrid removed 
+! Bugfix: ONLY statement for module pegrid removed
 !
 ! 1320 2014-03-20 08:40:49Z raasch
 ! ONLY-attribute added to USE-statements,
@@ -50,7 +50,7 @@
 ! old module precision_kind is removed,
 ! revision history before 2012 removed,
 ! comment fields (!:) to be used for variable explanations added to
-! all variable declaration statements 
+! all variable declaration statements
 !
 ! 1318 2014-03-17 13:35:16Z raasch
 ! cpu_log_nowait parameter added to cpu measurements of the transpositions
@@ -91,7 +91,7 @@
 !> is carried out in transpose_xy
 !------------------------------------------------------------------------------!
  SUBROUTINE resort_for_xy( f_in, f_inv )
- 
+
 
      USE indices,                                                              &
          ONLY:  nx
@@ -103,13 +103,13 @@
 
      IMPLICIT NONE
 
-     REAL(wp) ::  f_in(0:nx,nys_x:nyn_x,nzb_x:nzt_x)  !< 
-     REAL(wp) ::  f_inv(nys_x:nyn_x,nzb_x:nzt_x,0:nx) !< 
+     REAL(wp) ::  f_in(0:nx,nys_x:nyn_x,nzb_x:nzt_x)  !<
+     REAL(wp) ::  f_inv(nys_x:nyn_x,nzb_x:nzt_x,0:nx) !<
 
 
-     INTEGER(iwp) ::  i !< 
-     INTEGER(iwp) ::  j !< 
-     INTEGER(iwp) ::  k !< 
+     INTEGER(iwp) ::  i !<
+     INTEGER(iwp) ::  j !<
+     INTEGER(iwp) ::  k !<
 !
 !-- Rearrange indices of input array in order to make data to be send
 !-- by MPI contiguous
@@ -142,7 +142,7 @@
 
     USE indices,                                                               &
         ONLY:  nx, ny
-        
+
     USE kinds
 
     USE pegrid
@@ -152,16 +152,16 @@
 
     IMPLICIT NONE
 
-    INTEGER(iwp) ::  i  !< 
-    INTEGER(iwp) ::  j  !< 
-    INTEGER(iwp) ::  k  !< 
-    INTEGER(iwp) ::  l  !< 
-    INTEGER(iwp) ::  ys !< 
- 
-    REAL(wp) ::  f_inv(nys_x:nyn_x,nzb_x:nzt_x,0:nx) !< 
-    REAL(wp) ::  f_out(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) !< 
+    INTEGER(iwp) ::  i  !<
+    INTEGER(iwp) ::  j  !<
+    INTEGER(iwp) ::  k  !<
+    INTEGER(iwp) ::  l  !<
+    INTEGER(iwp) ::  ys !<
 
-    REAL(wp), DIMENSION(nyn_x-nys_x+1,nzb_y:nzt_y,nxl_y:nxr_y,0:pdims(2)-1) ::  work !< 
+    REAL(wp) ::  f_inv(nys_x:nyn_x,nzb_x:nzt_x,0:nx) !<
+    REAL(wp) ::  f_out(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) !<
+
+    REAL(wp), DIMENSION(nyn_x-nys_x+1,nzb_y:nzt_y,nxl_y:nxr_y,0:pdims(2)-1) ::  work !<
 
 
     IF ( numprocs /= 1 )  THEN
@@ -229,12 +229,12 @@
 
      IMPLICIT NONE
 
-     REAL(wp) ::  f_inv(nys:nyn,nxl:nxr,1:nz) !< 
-     REAL(wp) ::  f_out(1:nz,nys:nyn,nxl:nxr) !< 
+     REAL(wp) ::  f_inv(nys:nyn,nxl:nxr,1:nz) !<
+     REAL(wp) ::  f_out(1:nz,nys:nyn,nxl:nxr) !<
 
-     INTEGER(iwp) ::  i !< 
-     INTEGER(iwp) ::  j !< 
-     INTEGER(iwp) ::  k !< 
+     INTEGER(iwp) ::  i !<
+     INTEGER(iwp) ::  j !<
+     INTEGER(iwp) ::  k !<
 !
 !-- Rearrange indices of input array in order to make data to be send
 !-- by MPI contiguous.
@@ -279,16 +279,16 @@
 
     IMPLICIT NONE
 
-    INTEGER(iwp) ::  i  !< 
-    INTEGER(iwp) ::  j  !< 
-    INTEGER(iwp) ::  k  !< 
-    INTEGER(iwp) ::  l  !< 
-    INTEGER(iwp) ::  xs !< 
+    INTEGER(iwp) ::  i  !<
+    INTEGER(iwp) ::  j  !<
+    INTEGER(iwp) ::  k  !<
+    INTEGER(iwp) ::  l  !<
+    INTEGER(iwp) ::  xs !<
 
-    REAL(wp) ::  f_in(0:nx,nys_x:nyn_x,nzb_x:nzt_x) !< 
-    REAL(wp) ::  f_inv(nys:nyn,nxl:nxr,1:nz) !< 
+    REAL(wp) ::  f_in(0:nx,nys_x:nyn_x,nzb_x:nzt_x) !<
+    REAL(wp) ::  f_inv(nys:nyn,nxl:nxr,1:nz) !<
 
-    REAL(wp), DIMENSION(nys_x:nyn_x,nnx,nzb_x:nzt_x,0:pdims(1)-1) ::  work !< 
+    REAL(wp), DIMENSION(nys_x:nyn_x,nnx,nzb_x:nzt_x,0:pdims(1)-1) ::  work !<
 
 
 !
@@ -362,13 +362,13 @@
 
      IMPLICIT NONE
 
-     REAL(wp) ::  f_inv(nys_x:nyn_x,nzb_x:nzt_x,0:nx) !< 
-     REAL(wp) ::  f_out(0:nx,nys_x:nyn_x,nzb_x:nzt_x) !< 
+     REAL(wp) ::  f_inv(nys_x:nyn_x,nzb_x:nzt_x,0:nx) !<
+     REAL(wp) ::  f_out(0:nx,nys_x:nyn_x,nzb_x:nzt_x) !<
 
 
-     INTEGER(iwp) ::  i !< 
-     INTEGER(iwp) ::  j !< 
-     INTEGER(iwp) ::  k !< 
+     INTEGER(iwp) ::  i !<
+     INTEGER(iwp) ::  j !<
+     INTEGER(iwp) ::  k !<
 !
 !-- Rearrange indices of input array in order to make data to be send
 !-- by MPI contiguous
@@ -411,16 +411,16 @@
 
     IMPLICIT NONE
 
-    INTEGER(iwp) ::  i  !< 
-    INTEGER(iwp) ::  j  !< 
-    INTEGER(iwp) ::  k  !< 
-    INTEGER(iwp) ::  l  !< 
-    INTEGER(iwp) ::  ys !< 
+    INTEGER(iwp) ::  i  !<
+    INTEGER(iwp) ::  j  !<
+    INTEGER(iwp) ::  k  !<
+    INTEGER(iwp) ::  l  !<
+    INTEGER(iwp) ::  ys !<
 
-    REAL(wp) ::  f_in(0:ny,nxl_y:nxr_y,nzb_y:nzt_y)  !< 
-    REAL(wp) ::  f_inv(nys_x:nyn_x,nzb_x:nzt_x,0:nx) !< 
+    REAL(wp) ::  f_in(0:ny,nxl_y:nxr_y,nzb_y:nzt_y)  !<
+    REAL(wp) ::  f_inv(nys_x:nyn_x,nzb_x:nzt_x,0:nx) !<
 
-    REAL(wp), DIMENSION(nyn_x-nys_x+1,nzb_y:nzt_y,nxl_y:nxr_y,0:pdims(2)-1) ::  work !< 
+    REAL(wp), DIMENSION(nyn_x-nys_x+1,nzb_y:nzt_y,nxl_y:nxr_y,0:pdims(2)-1) ::  work !<
 
 
     IF ( numprocs /= 1 )  THEN
@@ -499,17 +499,17 @@
 
     IMPLICIT NONE
 
-    INTEGER(iwp) ::  i  !< 
-    INTEGER(iwp) ::  j  !< 
-    INTEGER(iwp) ::  k  !< 
-    INTEGER(iwp) ::  l  !< 
-    INTEGER(iwp) ::  m  !< 
-    INTEGER(iwp) ::  xs !< 
+    INTEGER(iwp) ::  i  !<
+    INTEGER(iwp) ::  j  !<
+    INTEGER(iwp) ::  k  !<
+    INTEGER(iwp) ::  l  !<
+    INTEGER(iwp) ::  m  !<
+    INTEGER(iwp) ::  xs !<
 
-    REAL(wp) ::  f_in(1:nz,nys:nyn,nxl:nxr)          !< 
-    REAL(wp) ::  f_inv(nxl:nxr,1:nz,nys:nyn)         !< 
-    REAL(wp) ::  f_out(0:nx,nys_x:nyn_x,nzb_x:nzt_x) !< 
-    REAL(wp) ::  work(nnx*nny*nnz)                   !< 
+    REAL(wp) ::  f_in(1:nz,nys:nyn,nxl:nxr)          !<
+    REAL(wp) ::  f_inv(nxl:nxr,1:nz,nys:nyn)         !<
+    REAL(wp) ::  f_out(0:nx,nys_x:nyn_x,nzb_x:nzt_x) !<
+    REAL(wp) ::  work(nnx*nny*nnz)                   !<
 #if defined( __parallel )
 
 !
@@ -571,12 +571,12 @@
 
      IMPLICIT NONE
 
-     REAL(wp) ::  f_in(0:ny,nxl_y:nxr_y,nzb_y:nzt_y)  !< 
-     REAL(wp) ::  f_inv(nxl_y:nxr_y,nzb_y:nzt_y,0:ny) !< 
+     REAL(wp) ::  f_in(0:ny,nxl_y:nxr_y,nzb_y:nzt_y)  !<
+     REAL(wp) ::  f_inv(nxl_y:nxr_y,nzb_y:nzt_y,0:ny) !<
 
-     INTEGER(iwp) ::  i !< 
-     INTEGER(iwp) ::  j !< 
-     INTEGER(iwp) ::  k !< 
+     INTEGER(iwp) ::  i !<
+     INTEGER(iwp) ::  j !<
+     INTEGER(iwp) ::  k !<
 
 !
 !-- Rearrange indices of input array in order to make data to be send
@@ -620,16 +620,16 @@
 
     IMPLICIT NONE
 
-    INTEGER(iwp) ::  i  !< 
-    INTEGER(iwp) ::  j  !< 
-    INTEGER(iwp) ::  k  !< 
-    INTEGER(iwp) ::  l  !< 
-    INTEGER(iwp) ::  zs !< 
+    INTEGER(iwp) ::  i  !<
+    INTEGER(iwp) ::  j  !<
+    INTEGER(iwp) ::  k  !<
+    INTEGER(iwp) ::  l  !<
+    INTEGER(iwp) ::  zs !<
 
-    REAL(wp) ::  f_inv(nxl_y:nxr_y,nzb_y:nzt_y,0:ny) !< 
-    REAL(wp) ::  f_out(nxl_z:nxr_z,nys_z:nyn_z,1:nz) !< 
+    REAL(wp) ::  f_inv(nxl_y:nxr_y,nzb_y:nzt_y,0:ny) !<
+    REAL(wp) ::  f_out(nxl_z:nxr_z,nys_z:nyn_z,1:nz) !<
 
-    REAL(wp), DIMENSION(nxl_z:nxr_z,nzt_y-nzb_y+1,nys_z:nyn_z,0:pdims(1)-1) ::  work !< 
+    REAL(wp), DIMENSION(nxl_z:nxr_z,nzt_y-nzb_y+1,nys_z:nyn_z,0:pdims(1)-1) ::  work !<
 
 
 !
@@ -698,12 +698,12 @@
 
      IMPLICIT NONE
 
-     REAL(wp) ::  f_in(1:nz,nys:nyn,nxl:nxr)  !< 
-     REAL(wp) ::  f_inv(nys:nyn,nxl:nxr,1:nz) !< 
+     REAL(wp) ::  f_in(1:nz,nys:nyn,nxl:nxr)  !<
+     REAL(wp) ::  f_inv(nys:nyn,nxl:nxr,1:nz) !<
 
-     INTEGER(iwp) ::  i !< 
-     INTEGER(iwp) ::  j !< 
-     INTEGER(iwp) ::  k !< 
+     INTEGER(iwp) ::  i !<
+     INTEGER(iwp) ::  j !<
+     INTEGER(iwp) ::  k !<
 
 !
 !-- Rearrange indices of input array in order to make data to be send
@@ -747,16 +747,16 @@
 
     IMPLICIT NONE
 
-    INTEGER(iwp) ::  i  !< 
-    INTEGER(iwp) ::  j  !< 
-    INTEGER(iwp) ::  k  !< 
-    INTEGER(iwp) ::  l  !< 
-    INTEGER(iwp) ::  xs !< 
+    INTEGER(iwp) ::  i  !<
+    INTEGER(iwp) ::  j  !<
+    INTEGER(iwp) ::  k  !<
+    INTEGER(iwp) ::  l  !<
+    INTEGER(iwp) ::  xs !<
 
-    REAL(wp) ::  f_inv(nys:nyn,nxl:nxr,1:nz)         !< 
-    REAL(wp) ::  f_out(0:nx,nys_x:nyn_x,nzb_x:nzt_x) !< 
+    REAL(wp) ::  f_inv(nys:nyn,nxl:nxr,1:nz)         !<
+    REAL(wp) ::  f_out(0:nx,nys_x:nyn_x,nzb_x:nzt_x) !<
 
-    REAL(wp), DIMENSION(nys_x:nyn_x,nnx,nzb_x:nzt_x,0:pdims(1)-1) ::  work !< 
+    REAL(wp), DIMENSION(nys_x:nyn_x,nnx,nzb_x:nzt_x,0:pdims(1)-1) ::  work !<
 
 
 !
@@ -764,7 +764,6 @@
 !-- of the data is necessary and no transposition has to be done.
     IF ( pdims(1) == 1 )  THEN
 
-            print *, shape(f_out)
 !$OMP  PARALLEL PRIVATE ( i, j, k )
 !$OMP  DO
        DO  k = 1, nz
@@ -829,13 +828,13 @@
 
      IMPLICIT NONE
 
-     REAL(wp) ::  f_inv(nxl_y:nxr_y,nzb_y:nzt_y,0:ny) !< 
-     REAL(wp) ::  f_out(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) !< 
+     REAL(wp) ::  f_inv(nxl_y:nxr_y,nzb_y:nzt_y,0:ny) !<
+     REAL(wp) ::  f_out(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) !<
 
 
-     INTEGER(iwp) ::  i !< 
-     INTEGER(iwp) ::  j !< 
-     INTEGER(iwp) ::  k !< 
+     INTEGER(iwp) ::  i !<
+     INTEGER(iwp) ::  j !<
+     INTEGER(iwp) ::  k !<
 
 !
 !-- Rearrange indices of input array in order to make data to be send
@@ -879,14 +878,14 @@
 
     IMPLICIT NONE
 
-    INTEGER(iwp) ::  i  !< 
-    INTEGER(iwp) ::  j  !< 
-    INTEGER(iwp) ::  k  !< 
-    INTEGER(iwp) ::  l  !< 
-    INTEGER(iwp) ::  zs !< 
+    INTEGER(iwp) ::  i  !<
+    INTEGER(iwp) ::  j  !<
+    INTEGER(iwp) ::  k  !<
+    INTEGER(iwp) ::  l  !<
+    INTEGER(iwp) ::  zs !<
 
-    REAL(wp) ::  f_in(nxl_z:nxr_z,nys_z:nyn_z,1:nz)  !< 
-    REAL(wp) ::  f_inv(nxl_y:nxr_y,nzb_y:nzt_y,0:ny) !< 
+    REAL(wp) ::  f_in(nxl_z:nxr_z,nys_z:nyn_z,1:nz)  !<
+    REAL(wp) ::  f_inv(nxl_y:nxr_y,nzb_y:nzt_y,0:ny) !<
 
     REAL(wp), DIMENSION(nxl_z:nxr_z,nzt_y-nzb_y+1,nys_z:nyn_z,0:pdims(1)-1) ::  work !<
 
@@ -968,17 +967,17 @@
 
     IMPLICIT NONE
 
-    INTEGER(iwp) ::  i  !< 
-    INTEGER(iwp) ::  j  !< 
-    INTEGER(iwp) ::  k  !< 
-    INTEGER(iwp) ::  l  !< 
-    INTEGER(iwp) ::  m  !< 
-    INTEGER(iwp) ::  ys !< 
+    INTEGER(iwp) ::  i  !<
+    INTEGER(iwp) ::  j  !<
+    INTEGER(iwp) ::  k  !<
+    INTEGER(iwp) ::  l  !<
+    INTEGER(iwp) ::  m  !<
+    INTEGER(iwp) ::  ys !<
 
-    REAL(wp) ::  f_in(1:nz,nys:nyn,nxl:nxr)              !< 
-    REAL(wp) ::  f_inv(nys:nyn,nxl:nxr,1:nz)             !< 
-    REAL(wp) ::  f_out(0:ny,nxl_yd:nxr_yd,nzb_yd:nzt_yd) !< 
-    REAL(wp) ::  work(nnx*nny*nnz)                       !< 
+    REAL(wp) ::  f_in(1:nz,nys:nyn,nxl:nxr)              !<
+    REAL(wp) ::  f_inv(nys:nyn,nxl:nxr,1:nz)             !<
+    REAL(wp) ::  f_out(0:ny,nxl_yd:nxr_yd,nzb_yd:nzt_yd) !<
+    REAL(wp) ::  work(nnx*nny*nnz)                       !<
 
 #if defined( __parallel )
 

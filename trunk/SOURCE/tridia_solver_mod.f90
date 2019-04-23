@@ -19,13 +19,13 @@
 !
 ! Current revisions:
 ! ------------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: tridia_solver_mod.f90 2718 2018-01-02 08:49:38Z maronga $
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 !
@@ -33,13 +33,13 @@
 !
 ! 2118 2017-01-17 16:38:49Z raasch
 ! OpenACC directives removed
-! 
+!
 ! 2037 2016-10-26 11:15:40Z knoop
 ! Anelastic approximation implemented
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1850 2016-04-08 13:29:27Z maronga
 ! Module renamed
 !
@@ -52,13 +52,13 @@
 !
 ! 1804 2016-04-05 16:30:18Z maronga
 ! Removed code for parameter file check (__check)
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1406 2014-05-16 13:47:01Z raasch
 ! bugfix for pgi 14.4: declare create moved after array declaration
-! 
+!
 ! 1342 2014-03-26 17:04:47Z kanani
 ! REAL constants defined as wp-kind
 !
@@ -72,7 +72,7 @@
 ! old module precision_kind is removed,
 ! revision history before 2012 removed,
 ! comment fields (!:) to be used for variable explanations added to
-! all variable declaration statements 
+! all variable declaration statements
 !
 ! 1257 2013-11-08 15:18:40Z raasch
 ! openacc loop and loop vector clauses removed, declare create moved after
@@ -103,7 +103,7 @@
 !> by using the Thomas algorithm
 !------------------------------------------------------------------------------!
  MODULE tridia_solver
- 
+
 
     USE indices,                                                               &
         ONLY:  nx, ny, nz
@@ -119,7 +119,7 @@
 
     IMPLICIT NONE
 
-    REAL(wp), ALLOCATABLE ::  ddzuw(:,:) !< 
+    REAL(wp), ALLOCATABLE ::  ddzuw(:,:) !<
 
     PRIVATE
 
@@ -136,11 +136,11 @@
 
  CONTAINS
 
-    subroutine tridia_deallocate
+    SUBROUTINE tridia_deallocate
 
-       deallocate(ddzuw)
+       DEALLOCATE(ddzuw)
 
-    end subroutine tridia_deallocate
+    END SUBROUTINE tridia_deallocate
 
 !------------------------------------------------------------------------------!
 ! Description:
@@ -156,17 +156,17 @@
 
        IMPLICIT NONE
 
-       INTEGER(iwp) ::  k !< 
+       INTEGER(iwp) ::  k !<
 
 
        ALLOCATE( ddzuw(0:nz-1,3) )
 
        DO  k = 0, nz-1
-          ddzuw(k,1) = ddzu_pres(k+1) * ddzw(k+1) !* rho_air_zw(k)
-          ddzuw(k,2) = ddzu_pres(k+2) * ddzw(k+1) !* rho_air_zw(k+1)
+          ddzuw(k,1) = ddzu_pres(k+1) * ddzw(k+1) * rho_air_zw(k)
+          ddzuw(k,2) = ddzu_pres(k+2) * ddzw(k+1) * rho_air_zw(k+1)
           ddzuw(k,3) = -1.0_wp * &
-                       ( ddzu_pres(k+2) * ddzw(k+1)  +        &
-                         ddzu_pres(k+1) * ddzw(k+1) )
+                       ( ddzu_pres(k+2) * ddzw(k+1) * rho_air_zw(k+1) +        &
+                         ddzu_pres(k+1) * ddzw(k+1) * rho_air_zw(k) )
        ENDDO
 !
 !--    Calculate constant coefficients of the tridiagonal matrix
@@ -207,13 +207,13 @@
 
           IMPLICIT NONE
 
-          INTEGER(iwp) ::  i    !< 
-          INTEGER(iwp) ::  j    !< 
-          INTEGER(iwp) ::  k    !< 
-          INTEGER(iwp) ::  nnxh !< 
-          INTEGER(iwp) ::  nnyh !< 
+          INTEGER(iwp) ::  i    !<
+          INTEGER(iwp) ::  j    !<
+          INTEGER(iwp) ::  k    !<
+          INTEGER(iwp) ::  nnxh !<
+          INTEGER(iwp) ::  nnyh !<
 
-          REAL(wp)    ::  ll(nxl_z:nxr_z,nys_z:nyn_z) !< 
+          REAL(wp)    ::  ll(nxl_z:nxr_z,nys_z:nyn_z) !<
 
 
           nnxh = ( nx + 1 ) / 2
@@ -283,7 +283,7 @@
     SUBROUTINE tridia_substi( ar )
 
 
-          USE arrays_3d,                                                       & 
+          USE arrays_3d,                                                       &
               ONLY:  tri
 
           USE control_parameters,                                              &
@@ -293,84 +293,77 @@
 
           IMPLICIT NONE
 
-          INTEGER(iwp) ::  i !< 
-          INTEGER(iwp) ::  j !< 
-          INTEGER(iwp) ::  k !< 
+          INTEGER(iwp) ::  i !<
+          INTEGER(iwp) ::  j !<
+          INTEGER(iwp) ::  k !<
 
-          #ifdef __GPU
-             REAL(wp), DEVICE :: ar(nxl_z:nxr_z,nys_z:nyn_z,1:nz)
-          #else
-             REAL(wp)     ::  ar(nxl_z:nxr_z,nys_z:nyn_z,1:nz) !< 
-             REAL(wp), DEVICE, ALLOCATABLE :: ar_d(:,:,:)
-          #endif
+#ifdef __GPU
+          REAL(wp), DEVICE :: ar(nxl_z:nxr_z,nys_z:nyn_z,1:nz)
           REAL(wp), DEVICE, ALLOCATABLE :: ar1(:,:,:), tri_d(:,:,:,:)
-          REAL(wp), DEVICE, ALLOCATABLE :: ddzuw_d(:,:)
 
-          #ifndef __GPU
-            
-            allocate(ar_d(nxl_z:nxr_z,nys_z:nyn_z,1:nz))
-            ar_d = ar
-          #endif
+          ALLOCATE( ar1(nxl_z:nxr_z,nys_z:nyn_z,0:nz-1) ) !<
+          ALLOCATE( tri_d(nxl_z:nxr_z,nys_z:nyn_z,0:nz-1,2) )
 
-          allocate(ar1(nxl_z:nxr_z,nys_z:nyn_z,0:nz-1)) !< 
-          allocate(tri_d(nxl_z:nxr_z,nys_z:nyn_z,0:nz-1,2))
-           ALLOCATE( ddzuw_d(0:nz-1,3) )
+          tri_d = tri
+#else
+          REAL(wp)     ::  ar(nxl_z:nxr_z,nys_z:nyn_z,1:nz) !<
+          REAL(wp), DIMENSION(nxl_z:nxr_z,nys_z:nyn_z,0:nz-1)   ::  ar1 !<
+#endif
+
 !
 !--       Forward substitution
-          tri_d = tri
-          ddzuw_d = ddzuw
-          !$acc parallel 
-          !$acc loop 
+          !$acc parallel
+          !$acc loop
           DO  k = 0, nz - 1
             !$acc loop collapse(2)
              DO  j = nys_z, nyn_z
                 DO  i = nxl_z, nxr_z
 
-                #ifdef __GPU
-                    IF ( k == 0 )  THEN
+#ifdef __GPU
+                   IF ( k == 0 )  THEN
                       ar1(i,j,k) = ar(i,j,k+1)
                    ELSE
                       ar1(i,j,k) = ar(i,j,k+1) - tri_d(i,j,k,2) * ar1(i,j,k-1)
                    ENDIF
-                #else
-
+#else
                    IF ( k == 0 )  THEN
-                      ar1(i,j,k) = ar_d(i,j,k+1)
+                      ar1(i,j,k) = ar(i,j,k+1)
                    ELSE
-                      ar1(i,j,k) = ar_d(i,j,k+1) - tri_d(i,j,k,2) * ar1(i,j,k-1)
+                      ar1(i,j,k) = ar(i,j,k+1) - tri(i,j,k,2) * ar1(i,j,k-1)
                    ENDIF
+#endif
 
-                 #endif
                 ENDDO
              ENDDO
           ENDDO
-          
+
 !
 !--       Backward substitution
 !--       Note, the 1.0E-20 in the denominator is due to avoid divisions
 !--       by zero appearing if the pressure bc is set to neumann at the top of
 !--       the model domain.
-         !$acc loop 
+          !$acc loop
           DO  k = nz-1, 0, -1
              !$acc loop collapse(2)
               DO  j = nys_z, nyn_z
                 DO  i = nxl_z, nxr_z
 
-                 #ifdef __GPU
+#ifdef __GPU
                    IF ( k == nz-1 )  THEN
                       ar(i,j,k+1) = ar1(i,j,k) / ( tri_d(i,j,k,1) + 1.0E-20_wp )
                    ELSE
                       ar(i,j,k+1) = ( ar1(i,j,k) - ddzuw(k,2) * ar(i,j,k+2) ) &
                               / tri_d(i,j,k,1)
                    ENDIF
-                 #else
+#else
                    IF ( k == nz-1 )  THEN
-                      ar_d(i,j,k+1) = ar1(i,j,k) / ( tri_d(i,j,k,1) + 1.0E-20_wp )
+                      ar(i,j,k+1) = ar1(i,j,k) / ( tri(i,j,k,1) + 1.0E-20_wp )
                    ELSE
-                      ar_d(i,j,k+1) = ( ar1(i,j,k) - ddzuw(k,2) * ar_d(i,j,k+2) ) &
-                              / tri_d(i,j,k,1)
+                      ar(i,j,k+1) = ( ar1(i,j,k) - ddzuw(k,2) * ar(i,j,k+2) ) &
+                              / tri(i,j,k,1)
                    ENDIF
-                 #endif
+#endif
+
                 ENDDO
              ENDDO
           ENDDO
@@ -383,19 +376,12 @@
              IF ( nys_z == 0  .AND.  nxl_z == 0 )  THEN
                 !$acc loop
                 DO  k = 1, nz
-                #ifdef __GPU
                    ar(nxl_z,nys_z,k) = 0.0_wp
-                #else
-                   ar_d(nxl_z,nys_z,k) = 0.0_wp
-                #endif
                 ENDDO
              ENDIF
           ENDIF
 
           !$acc end parallel
-          #ifndef __GPU
-             ar = ar_d
-          #endif
 
     END SUBROUTINE tridia_substi
 
@@ -418,12 +404,12 @@
 
           IMPLICIT NONE
 
-          INTEGER(iwp) ::  i  !< 
-          INTEGER(iwp) ::  j  !< 
-          INTEGER(iwp) ::  jj !< 
-          INTEGER(iwp) ::  k  !< 
+          INTEGER(iwp) ::  i  !<
+          INTEGER(iwp) ::  j  !<
+          INTEGER(iwp) ::  jj !<
+          INTEGER(iwp) ::  k  !<
 
-          REAL(wp)     ::  ar(nxl_z:nxr_z,nys_z:nyn_z,1:nz) !< 
+          REAL(wp)     ::  ar(nxl_z:nxr_z,nys_z:nyn_z,1:nz) !<
 
           REAL(wp), DIMENSION(nxl_z:nxr_z,nys_z:nyn_z,0:nz-1) ::  ar1 !<
 
@@ -485,16 +471,16 @@
     SUBROUTINE split
 
 
-          USE arrays_3d,                                                       & 
+          USE arrays_3d,                                                       &
               ONLY:  tri, tric
 
           USE kinds
 
           IMPLICIT NONE
 
-          INTEGER(iwp) ::  i !< 
-          INTEGER(iwp) ::  j !< 
-          INTEGER(iwp) ::  k !< 
+          INTEGER(iwp) ::  i !<
+          INTEGER(iwp) ::  j !<
+          INTEGER(iwp) ::  k !<
 !
 !--       Splitting
           DO  j = nys_z, nyn_z
@@ -528,7 +514,7 @@
 !>            On NEC, tri should not be passed (except for routine substi_1dd)
 !>            because this causes very bad performance.
 !------------------------------------------------------------------------------!
- 
+
     SUBROUTINE tridia_1dd( ddx2, ddy2, nx, ny, j, ar, tri_for_1d )
 
 
@@ -542,20 +528,20 @@
 
        IMPLICIT NONE
 
-       INTEGER(iwp) ::  i                  !< 
-       INTEGER(iwp) ::  j                  !< 
-       INTEGER(iwp) ::  k                  !< 
-       INTEGER(iwp) ::  nnyh               !< 
-       INTEGER(iwp) ::  nx                 !< 
-       INTEGER(iwp) ::  ny                 !< 
-       INTEGER(iwp) ::  omp_get_thread_num !< 
-       INTEGER(iwp) ::  tn                 !< 
+       INTEGER(iwp) ::  i                  !<
+       INTEGER(iwp) ::  j                  !<
+       INTEGER(iwp) ::  k                  !<
+       INTEGER(iwp) ::  nnyh               !<
+       INTEGER(iwp) ::  nx                 !<
+       INTEGER(iwp) ::  ny                 !<
+       INTEGER(iwp) ::  omp_get_thread_num !<
+       INTEGER(iwp) ::  tn                 !<
 
-       REAL(wp)     ::  ddx2 !< 
-       REAL(wp)     ::  ddy2 !< 
+       REAL(wp)     ::  ddx2 !<
+       REAL(wp)     ::  ddy2 !<
 
-       REAL(wp), DIMENSION(0:nx,1:nz)     ::  ar         !< 
-       REAL(wp), DIMENSION(5,0:nx,0:nz-1) ::  tri_for_1d !< 
+       REAL(wp), DIMENSION(0:nx,1:nz)     ::  ar         !<
+       REAL(wp), DIMENSION(5,0:nx,0:nz-1) ::  tri_for_1d !<
 
 
        nnyh = ( ny + 1 ) / 2
@@ -599,15 +585,15 @@
 
           IMPLICIT NONE
 
-          INTEGER(iwp) ::  i    !< 
-          INTEGER(iwp) ::  j    !< 
-          INTEGER(iwp) ::  k    !< 
-          INTEGER(iwp) ::  nnxh !< 
+          INTEGER(iwp) ::  i    !<
+          INTEGER(iwp) ::  j    !<
+          INTEGER(iwp) ::  k    !<
+          INTEGER(iwp) ::  nnxh !<
 
-          REAL(wp)     ::  a !< 
-          REAL(wp)     ::  c !< 
+          REAL(wp)     ::  a !<
+          REAL(wp)     ::  c !<
 
-          REAL(wp), DIMENSION(0:nx) ::  l !< 
+          REAL(wp), DIMENSION(0:nx) ::  l !<
 
 
           nnxh = ( nx + 1 ) / 2
@@ -661,8 +647,8 @@
 
           IMPLICIT NONE
 
-          INTEGER(iwp) ::  i !< 
-          INTEGER(iwp) ::  k !< 
+          INTEGER(iwp) ::  i !<
+          INTEGER(iwp) ::  k !<
 
 
 !
@@ -690,12 +676,12 @@
 
           IMPLICIT NONE
 
-          INTEGER(iwp) ::  i !< 
-          INTEGER(iwp) ::  k !< 
+          INTEGER(iwp) ::  i !<
+          INTEGER(iwp) ::  k !<
 
-          REAL(wp), DIMENSION(0:nx,nz)       ::  ar         !< 
-          REAL(wp), DIMENSION(0:nx,0:nz-1)   ::  ar1        !< 
-          REAL(wp), DIMENSION(5,0:nx,0:nz-1) ::  tri_for_1d !< 
+          REAL(wp), DIMENSION(0:nx,nz)       ::  ar         !<
+          REAL(wp), DIMENSION(0:nx,0:nz-1)   ::  ar1        !<
+          REAL(wp), DIMENSION(5,0:nx,0:nz-1) ::  tri_for_1d !<
 
 !
 !--       Forward substitution

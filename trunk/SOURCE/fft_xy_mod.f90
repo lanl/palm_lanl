@@ -168,7 +168,7 @@
 
     USE cufft
 
- #endif
+#endif
 
     IMPLICIT NONE
 
@@ -322,7 +322,7 @@
           forward_fft = .FALSE.
        ENDIF
 
-#if defined( __GPU)
+#ifdef __GPU
 
        if ( forward_fft )  THEN
 
@@ -410,6 +410,7 @@
 
           ENDIF
 #endif
+
     END SUBROUTINE fft_x
 
 !------------------------------------------------------------------------------!
@@ -451,7 +452,7 @@
        LOGICAL ::  forward_fft  !<
 
 
-#if defined( __GPU)
+#ifdef __GPU
        REAL(wp), DEVICE, DIMENSION(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) :: ar
 #else
        REAL(wp), DIMENSION(0:ny,nxl_y:nxr_y,nzb_y:nzt_y) ::  ar
@@ -463,7 +464,7 @@
           forward_fft = .FALSE.
        ENDIF
 
-#if defined( __GPU )
+#ifdef __GPU
        IF ( forward_fft )  THEN
 
           ierr = cufftExecD2Z( plan_yf_dev, ar, y_out_dev)
@@ -556,6 +557,7 @@
 
           ENDIF
 #endif
+
     END SUBROUTINE fft_y
 
 

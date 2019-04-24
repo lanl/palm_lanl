@@ -1,0 +1,11 @@
+# Contents of this file are included in palm's makefile if the simple install
+# process (palm_simple_install) is used.
+# Please adjust compiling parameters as required for your system.
+
+PROG=palm
+F90=ifort
+F90_SER=ifort
+FFTW=/usr/projects/climate/qingli/fftw3_intel
+COPT= -cpp -r8 -D__netcdf -D__netcdf4 -D__lc
+F90FLAGS= -g -cpp -r8 -align all -ftz -fno-alias -no-scalar-rep -no-prec-div -no-prec-sqrt -ip -nbs -convert little_endian -I$(NETCDF)/include -I$(FFTW)/include
+LDFLAGS= -g -cpp -r8 -align all -ftz -fno-alias -no-scalar-rep -no-prec-div -no-prec-sqrt -ip -nbs -L$(NETCDF)/lib -L$(HDF5_PATH)/lib -L$(FFTW)/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lszip -lfftw3

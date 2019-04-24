@@ -154,7 +154,7 @@
 
 
     USE fft_xy,                                                                &
-        ONLY:  fft_init, fft_y, fft_y_1d, fft_y_m, fft_x, fft_x_1d, fft_x_m
+        ONLY:  fft_init, fft_y, fft_x
 
     USE indices,                                                               &
         ONLY:  nnx, nny, nx, nxl, nxr, ny, nys, nyn, nz

@@ -1445,9 +1445,11 @@
     !$acc present( dd2zu, ddzw ) &
     !$acc present( km, kh, prho ) &
     !$acc create( dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz )
-    !$acc loop collapse(3)
+    !$acc loop
     DO  i = nxl, nxr
+       !$acc loop
        DO  j = nys, nyn
+          !$acc loop
           DO  k = nzb+1, nzt
              !-- Calculate TKE production by shear. Here, no additional
              !-- wall-bounded code is considered.
@@ -1539,9 +1541,11 @@
     !!!$acc present ( u, v, w, u_stk, v_stk ) &
     !!$acc present ( km )
     !IF ( stokes_force ) THEN
-    !   !$acc loop collapse(3)
+    !   !$acc loop
     !   DO  i = nxl, nxr
+    !      !$acc loop
     !      DO  j = nys, nyn
+    !         !$acc loop
     !         DO  k = nzb+1, nzt
 !!
 !!--             Predetermine flag to mask topography
@@ -1582,9 +1586,11 @@
     !$acc present( e, e_p, te_m ) &
     !$acc present( km, prho )
 
-    !$acc loop collapse(3)
+    !$acc loop
     DO  i = nxl, nxr
+       !$acc loop
        DO  j = nys, nyn
+          !$acc loop
           DO  k = nzb+1, nzt
     !
     !-- Determine the mixing length for LES closure
@@ -1758,9 +1764,10 @@
     !$acc present( dd2zu, l_grid ) &
     !$acc present( l_wall)
     !$acc parallel
-    !$acc loop collapse(3)
+    !$acc loop collapse(2)
     DO  i = nxlg, nxrg
        DO  j = nysg, nyng
+          !$acc loop
           DO  k = nzb+1, nzt
 
 !

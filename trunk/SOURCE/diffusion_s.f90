@@ -176,9 +176,11 @@
        !$acc present( ddzu, ddzw, dzw, rho_air_zw, drho_air, wall_flags_0 )
 
        !$acc parallel
-       !$acc loop gang vector collapse(3)
+       !$acc loop
        DO  i = nxl, nxr
+          !$acc loop
           DO  j = nys,nyn
+             !$acc loop
              DO  k = nzb+1, nzt
                 tend(k,j,i) = tend(k,j,i)                                      &
                                           + 0.5_wp * (                         &
@@ -197,14 +199,16 @@
           ENDDO
        ENDDO
 
-       !$acc loop gang vector collapse(3)
+       !$acc loop
        DO i = nxl, nxr
+          !$acc loop
           DO j = nys, nyn
 !
 !--          Compute vertical diffusion. In case that surface fluxes have been
 !--          prescribed or computed at bottom and/or top, index k starts/ends at
-!--          nzb+2 or nzt-1, respectively. Model top is also mask if top flux
+!--          kkb+2 or nzt-1, respectively. Model top is also mask if top flux
 !--          is given.
+             !$acc loop
              DO  k = nzb+1, nzt
 !
 !--             Determine flags to mask topography below and above. Flag 0 is
@@ -238,14 +242,14 @@
        !$acc end parallel
 
        !$acc parallel
-       !$acc loop gang vector collapse(2)
+       !$acc loop collapse(2)
        DO i=nxl,nxr
           DO j=nys,nyn
              !LPV adding solar forcing with depth
              IF ( PRESENT(s_flux_solar_t )) THEN
                 m = surf_def_h(2)%start_index(j,i)
                 zval = 0.0_wp
-                !$acc loop vector
+                !$acc loop
                 DO k = nzt,nzb+1,-1
                    flux1 = (1.0_wp - ideal_solar_division)*exp(ideal_solar_efolding2*zval) + &
                              ideal_solar_division*exp(ideal_solar_efolding1*zval)
@@ -264,7 +268,7 @@
              IF ( use_top_fluxes )  THEN
                 surf_s = surf_def_h(2)%start_index(j,i)
                 surf_e = surf_def_h(2)%end_index(j,i)
-                !$acc loop vector
+                !$acc loop
                 DO  m = surf_s, surf_e
 
                    k   = surf_def_h(2)%k(m)

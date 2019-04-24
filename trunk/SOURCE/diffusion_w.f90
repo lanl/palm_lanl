@@ -156,9 +156,11 @@
        !$acc present( ddzu, ddzw, rho_air, drho_air_zw )
 
        !$acc parallel
-       !$acc loop gang vector collapse(3)
+       !$acc loop
        DO  i = nxl, nxr
+          !$acc loop
           DO  j = nys, nyn
+             !$acc loop
              DO  k = nzb+1, nzt-1
 !
 !--             Predetermine flag to mask topography and wall-bounded grid points.

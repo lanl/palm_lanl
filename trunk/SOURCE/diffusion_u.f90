@@ -166,9 +166,11 @@
        !$acc present( ddzu, ddzw, rho_air_zw, drho_air, wall_flags_0 )
 
        !$acc parallel
-       !$acc loop gang vector collapse(3)
+       !$acc loop
        DO  i = nxlu, nxr
+          !$acc loop
           DO  j = nys, nyn
+             !$acc loop
              DO  k = nzb+1, nzt
 !
 !--             Predetermine flag to mask topography and wall-bounded grid points.
@@ -204,9 +206,11 @@
 !-- loop, and added further below, else, simple gradient approach is
 !-- applied. Model top is also mask if top-momentum flux is given.
 
-       !$acc loop gang vector collapse(3)
+       !$acc loop
        DO  i = nxlu, nxr
+          !$acc loop
           DO  j = nys, nyn
+             !$acc loop
              DO  k = nzb+1, nzt
 !
 !--             Determine flags to mask topography below and above. Flag 1 is
@@ -242,7 +246,7 @@
        !$acc end parallel
 
        !$acc parallel
-       !$acc loop gang vector collapse(2)
+       !$acc loop collapse(2)
        DO  i = nxlu, nxr
           DO  j = nys, nyn
 !
@@ -250,7 +254,7 @@
              IF ( use_top_fluxes  .AND.  constant_top_momentumflux )  THEN
                 surf_s = surf_def_h(2)%start_index(j,i)
                 surf_e = surf_def_h(2)%end_index(j,i)
-                !$acc loop vector
+                !$acc loop
                 DO  m = surf_s, surf_e
 
                    k   = surf_def_h(2)%k(m)

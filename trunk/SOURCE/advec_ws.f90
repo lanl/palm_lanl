@@ -1079,9 +1079,11 @@
        !$acc parallel present ( advc_flags_1 ) &
        !$acc present( ddzw ) &
        !$acc present( rho_air_zw, drho_air )
-       !$acc loop collapse(3)
+       !$acc loop
        DO  i = nxl, nxr
+          !$acc loop
           DO j = nys, nyn
+             !$acc loop
              DO  k = nzb+1, nzt
 
                 ! left
@@ -1455,9 +1457,11 @@
        !$acc parallel present ( advc_flags_1 ) &
        !$acc present( ddzw ) &
        !$acc present( rho_air_zw, drho_air )
-       !$acc loop collapse(3)
+       !$acc loop
        DO i = nxlu, nxr
+          !$acc loop
           DO  j = nys, nyn
+             !$acc loop
              DO  k = nzb+1, nzt
 
                 ! left
@@ -1821,9 +1825,11 @@
        !$acc parallel present ( advc_flags_1 ) &
        !$acc present( ddzw ) &
        !$acc present( rho_air_zw, drho_air )
-       !$acc loop collapse(3)
+       !$acc loop
        DO i = nxl, nxr
+          !$acc loop
           DO  j = nysv, nyn
+             !$acc loop
              DO  k = nzb+1, nzt
 
                 ! left
@@ -2189,9 +2195,11 @@
        !$acc parallel present ( advc_flags_1, advc_flags_2 ) &
        !$acc present( ddzu ) &
        !$acc present( rho_air, drho_air_zw )
-       !$acc loop collapse(3)
+       !$acc loop
        DO i = nxl, nxr
+          !$acc loop
           DO  j = nys, nyn
+             !$acc loop
              DO  k = nzb+1, nzt
 
                 ! left

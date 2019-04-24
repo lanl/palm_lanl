@@ -783,6 +783,7 @@
                                                nys, nyn, nxl, nxr )
        ENDDO
 !
+      num_surf_v_l = 0
 
 #if defined( __parallel )
        CALL MPI_ALLREDUCE( num_surf_v_l, num_surf_v, 1, MPI_INTEGER, MPI_SUM, comm2d, ierr)
@@ -1540,11 +1541,9 @@
              surf%j(num_h) = j
              surf%k(num_h) = k
 !
-             IF ( ocean ) THEN
-               surf%shf(num_h) = 0.0_wp
-               surf%sasws(num_h) = 0.0_wp
-               surf%shf_sol(num_h) = 0.0_wp
-             endif
+             surf%shf(num_h) = 0.0_wp
+             surf%sasws(num_h) = 0.0_wp
+             surf%shf_sol(num_h) = 0.0_wp
 
 !--          Initialize top heat flux
              IF ( constant_top_heatflux )                                      &

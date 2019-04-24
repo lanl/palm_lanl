@@ -589,40 +589,41 @@
        sbt = tsc(2)
 !
        tend = 0.0_wp
-       call cpu_log( log_point(40), 'pt advection', 'start')
+       CALL cpu_log( log_point(40), 'pt advection', 'start')
        CALL advec_s_ws( pt, 'pt' )
-       call cpu_log( log_point(40), 'pt advection', 'stop')
+       CALL cpu_log( log_point(40), 'pt advection', 'stop')
 
-       k = nzt
-       DO i = nxl, nxr
-          DO j = nys,nyn
-                 IF (idealized_diurnal) THEN
-                    m = surf_def_h(2)%start_index(j,i)
-                    wb_sfc = g*(surf_def_h(2)%shf(m)*alpha_T(k,j,i) -        &
-                                     surf_def_h(2)%sasws(m)*beta_S(k,j,i))
-                    tod = simulated_time / 86400.0_wp
-                    arg1 = cos(2.0_wp*pi*(tod - 0.75_wp))
-                    surf_def_h(2)%shf_sol(m) = wb_solar*max(arg1,0.0_wp)
-                ENDIF
-          enddo
-       enddo
+       IF (idealized_diurnal) THEN
+          k = nzt
+          DO i = nxl, nxr
+             DO j = nys,nyn
+                       m = surf_def_h(2)%start_index(j,i)
+                       wb_sfc = g*(surf_def_h(2)%shf(m)*alpha_T(k,j,i) -        &
+                                        surf_def_h(2)%sasws(m)*beta_S(k,j,i))
+                       tod = simulated_time / 86400.0_wp
+                       arg1 = cos(2.0_wp*pi*(tod - 0.75_wp))
+                       surf_def_h(2)%shf_sol(m) = wb_solar*max(arg1,0.0_wp)
+             ENDDO
+          ENDDO
+       ENDIF
 
-       call cpu_log( log_point(41), 'pt diffusion' , 'start')
+       CALL cpu_log( log_point(41), 'pt diffusion' , 'start')
 
        CALL diffusion_s( pt,                                                   &
                          surf_def_h(2)%shf,                                    &
                          surf_def_h(2)%shf_sol )
 
-       call cpu_log( log_point(41), 'pt diffusion' , 'stop')
+       CALL cpu_log( log_point(41), 'pt diffusion' , 'stop')
 
-       call cpu_log( log_point(42), 'pt stokes' ,'start')
+
+       CALL cpu_log( log_point(42), 'pt stokes' ,'start')
 !
 !--    If required, compute Stokes-advection term
        IF ( ocean .AND. stokes_force ) THEN
           CALL stokes_force_s( pt )
        ENDIF
 
-       call cpu_log( log_point(42), 'pt stokes', 'stop' )
+       CALL cpu_log( log_point(42), 'pt stokes', 'stop' )
 
 !
 !--    Prognostic equation for potential temperature

@@ -97,7 +97,7 @@
 ! dt_data_output, dt_disturb, dt_data_output_av, dt_dopr
 ! end_time
 
-   call init_control_parameters
+   ! call init_control_parameters
 
 !   dt_data_output = dtDataOutput
 !   dt_disturb = dtDisturb

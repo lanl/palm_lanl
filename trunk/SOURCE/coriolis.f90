@@ -127,67 +127,73 @@
        flag_force = MERGE( 0.0_wp, 1.0_wp, forcing )
 !
 !--    Compute Coriolis terms for the three velocity components
+       !$acc data copy( tend ) &
+       !$acc copyin( u, v, w ) &
+       !$acc present( ug, vg  )
        SELECT CASE ( component )
 
 !
 !--       u-component
           CASE ( 1 )
+             !$acc parallel
+             !$acc loop
              DO  i = nxlu, nxr
+                !$acc loop
                 DO  j = nys, nyn
+                   !$acc loop
                    DO  k = nzb+1, nzt
 !
-!--                   Predetermine flag to mask topography
-                      flag = MERGE( 1.0_wp, 0.0_wp,                            &
-                                    BTEST( wall_flags_0(k,j,i), 1 ) )
-
                       tend(k,j,i) = tend(k,j,i) + f  *    ( 0.25_wp *          &
                                    ( v(k,j,i-1) + v(k,j,i) + v(k,j+1,i-1) +    &
                                      v(k,j+1,i) ) - vg(k) * flag_force         &
-                                                          ) * flag           &
+                                                          )                    &
                                                 - fs *    ( 0.25_wp *          &
                                    ( w(k-1,j,i-1) + w(k-1,j,i) + w(k,j,i-1) +  &
                                      w(k,j,i)   )                              &
-                                                          ) * flag
+                                                          )
                    ENDDO
                 ENDDO
              ENDDO
+             !$acc end parallel
 
 !
 !--       v-component
           CASE ( 2 )
+             !$acc parallel
+             !$acc loop
              DO  i = nxl, nxr
+                !$acc loop
                 DO  j = nysv, nyn
+                   !$acc loop
                    DO  k = nzb+1, nzt
 !
-!--                   Predetermine flag to mask topography
-                      flag = MERGE( 1.0_wp, 0.0_wp,                            &
-                                    BTEST( wall_flags_0(k,j,i), 2 ) )
-
                       tend(k,j,i) = tend(k,j,i) - f *     ( 0.25_wp *          &
                                    ( u(k,j-1,i) + u(k,j,i) + u(k,j-1,i+1) +    &
                                      u(k,j,i+1) ) - ug(k) * flag_force         &
-                                                          ) * flag
+                                                          )
                    ENDDO
                 ENDDO
              ENDDO
+             !$acc end parallel
 
 !
 !--       w-component
           CASE ( 3 )
+             !$acc parallel
+             !$acc loop
              DO  i = nxl, nxr
+                !$acc loop
                 DO  j = nys, nyn
+                   !$acc loop
                    DO  k = nzb+1, nzt
 !
-!--                   Predetermine flag to mask topography
-                      flag = MERGE( 1.0_wp, 0.0_wp,                            &
-                                    BTEST( wall_flags_0(k,j,i), 3 ) )
-
                       tend(k,j,i) = tend(k,j,i) + fs * 0.25_wp *               &
                                    ( u(k,j,i) + u(k+1,j,i) + u(k,j,i+1) +      &
-                                     u(k+1,j,i+1) ) * flag
+                                     u(k+1,j,i+1) )
                    ENDDO
                 ENDDO
              ENDDO
+             !$acc end parallel
 
           CASE DEFAULT
 
@@ -195,6 +201,7 @@
              CALL message( 'coriolis', 'PA0173', 1, 2, 0, 6, 0 )
 
        END SELECT
+       !$acc end data
 
     END SUBROUTINE coriolis
 

@@ -353,7 +353,7 @@
                v_p, w, w_p, alpha_T, beta_S, solar3d, sa, &
                ddzu, ddzw, dzw, dd2zu, drho_air, drho_air_zw,                  &
                rho_air, rho_air_zw, kh, km, te_m,          &
-               u_stk, v_stk
+               u_stk, v_stk, ug, vg
 
     USE calc_mean_profile_mod,                                                 &
         ONLY:  calc_mean_profile
@@ -494,6 +494,7 @@
 !$acc      copyin( wall_flags_0 ) &
 !$acc      copyin( advc_flags_1, advc_flags_2 ) &
 !$acc      copyin( tsc ) &
+!$acc      copyin( ug, vg ) &
 !!$acc      copyin( tend ) &
 !!$acc      copyin( u, v, w ) &
 !!$acc      copyin( u_stk, v_stk ) &

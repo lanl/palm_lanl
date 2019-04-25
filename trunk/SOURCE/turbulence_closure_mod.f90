@@ -1735,7 +1735,7 @@
 
 !
 !-- Initialization for calculation of the mixing length profile
-    sums_l_l = 0.0_wp
+    ! sums_l_l = 0.0_wp
 
 !
 !-- Compute the turbulent diffusion coefficient for momentum
@@ -1759,10 +1759,12 @@
     ENDIF
 
     !$OMP DO
-    !$acc data copy(sums_l_l(nzb+1:nzt,0:statistic_regions,0),rmask(nysg:nyng,nxlg:nxrg,0:statistic_regions)) &
+    !$acc data copyout( sums_l_l(nzb+1:nzt,0:statistic_regions,0) ) &
     !$acc present( kh, km, e, prho ) &
-    !$acc present( dd2zu, l_grid ) &
+    !$acc present( dd2zu, l_grid, rmask ) &
     !$acc present( l_wall)
+
+    sums_l_l = 0.0_wp
     !$acc parallel
     !$acc loop collapse(2)
     DO  i = nxlg, nxrg
@@ -1821,7 +1823,7 @@
 !
 !-- Upward-facing
     !$OMP PARALLEL DO PRIVATE( i, j, k )
-    !$acc parallel present(km, kh)
+    !$acc parallel present(km, kh, bc_h)
     !$acc loop
     DO  m = 1, bc_h(0)%ns
        i = bc_h(0)%i(m)

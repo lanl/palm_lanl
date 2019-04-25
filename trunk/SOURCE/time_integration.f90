@@ -416,14 +416,13 @@
     USE prognostic_equations_mod,                                              &
         ONLY:  prognostic_equations_vector
     USE statistics,                                                            &
-        ONLY:  flow_statistics_called, hom, pr_palm, sums_ls_l, u_max,         &
-               u_max_ijk, v_max, v_max_ijk, w_max, w_max_ijk
+        ONLY:  flow_statistics_called, hom, rmask
 
     USE surface_layer_fluxes_mod,                                              &
         ONLY:  surface_layer_fluxes
 
     USE surface_mod,                                                           &
-        ONLY:  surf_def_h
+        ONLY:  surf_def_h, bc_h
 
     USE turbulence_closure_mod,                                                &
         ONLY:  tcm_diffusivities, production_e_init, &
@@ -487,9 +486,11 @@
 !$acc      copyin( ddzu ) &
 !$acc      copyin( ddzw ) &
 !$acc      copyin( dzw ) &
+!$acc      copyin( bc_h ) &
 !$acc      copyin( l_grid ) &
 !$acc      copyin( l_wall ) &
 !$acc      copyin( surf_def_h ) &
+!$acc      copyin( rmask ) &
 !$acc      copyin( wall_flags_0 ) &
 !$acc      copyin( advc_flags_1, advc_flags_2 ) &
 !$acc      copyin( tsc ) &

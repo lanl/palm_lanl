@@ -172,8 +172,7 @@
        !$acc data copy( tend ) &
        !$acc copyin( s, s_flux_t, s_flux_solar_t ) &
        !$acc copyout( solar3d ) &
-       !!$acc present( kh, surf_def_h ) &
-       !$acc present( surf_def_h ) &
+       !$acc present( kh, surf_def_h ) &
        !$acc present( ddzu, ddzw, dzw, rho_air_zw, drho_air, wall_flags_0 )
 
        !$acc parallel

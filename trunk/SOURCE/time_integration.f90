@@ -499,7 +499,7 @@
 !!$acc      copyin( u_stk, v_stk ) &
 !!$acc      copyin( e, e_p ) &
 !!$acc      copyin( te_m ) &
-!!$acc      copyin( kh, km ) &
+!$acc      copyin( kh, km ) &
 !!$acc      copyin( prho ) &
 !$acc      copyin( ug, vg )
 
@@ -624,7 +624,8 @@ print *, simulated_time
           CALL cpu_log( log_point(17), 'diffusivities', 'start' )
 !          !$acc update device(e, prho)
           CALL tcm_diffusivities
-!          !$acc update self(km, kh, e)
+          !!$acc update self(km, kh, e)
+          !$acc update self(km, kh)
           CALL cpu_log( log_point(17), 'diffusivities', 'stop' )
 !
 

@@ -1747,7 +1747,8 @@
     IF ( e_min > 0.0_wp )  THEN
        !$OMP DO
        !!$acc parallel present(e, wall_flags_0)
-       !!$acc loop collapse(3)
+       !$acc parallel present( wall_flags_0 )
+       !$acc loop collapse(3)
        DO  i = nxlg, nxrg
           DO  j = nysg, nyng
              DO  k = nzb+1, nzt
@@ -1755,21 +1756,22 @@
              ENDDO
           ENDDO
        ENDDO
-       !!$acc end parallel
+       !$acc end parallel
     ENDIF
 
     !$OMP DO
-    !!$acc data copyout( sums_l_l(nzb+1:nzt,0:statistic_regions,0) ) &
+    !$acc data copyout( sums_l_l(nzb+1:nzt,0:statistic_regions,0) ) &
     !!$acc present( kh, km, e, prho ) &
-    !!$acc present( dd2zu, l_grid, rmask ) &
-    !!$acc present( l_wall)
+    !$acc present( kh, km ) &
+    !$acc present( dd2zu, l_grid, rmask ) &
+    !$acc present( l_wall)
 
     sums_l_l = 0.0_wp
-    !!$acc parallel
-    !!$acc loop collapse(2)
+    !$acc parallel
+    !$acc loop collapse(2)
     DO  i = nxlg, nxrg
        DO  j = nysg, nyng
-          !!$acc loop
+          !$acc loop
           DO  k = nzb+1, nzt
 
 !
@@ -1806,8 +1808,8 @@
           ENDDO
        ENDDO
     ENDDO
-    !!$acc end parallel
-    !!$acc end data
+    !$acc end parallel
+    !$acc end data
 
     sums_l_l(nzt+1,:,tn) = sums_l_l(nzt,:,tn)   ! quasi boundary-condition for
                                                 ! data output
@@ -1823,8 +1825,8 @@
 !
 !-- Upward-facing
     !$OMP PARALLEL DO PRIVATE( i, j, k )
-    !!$acc parallel present(km, kh, bc_h)
-    !!$acc loop
+    !$acc parallel present(km, kh, bc_h)
+    !$acc loop
     DO  m = 1, bc_h(0)%ns
        i = bc_h(0)%i(m)
        j = bc_h(0)%j(m)
@@ -1835,7 +1837,7 @@
 !
 !-- Downward facing surfaces
     !$OMP PARALLEL DO PRIVATE( i, j, k )
-    !!$acc loop
+    !$acc loop
     DO  m = 1, bc_h(1)%ns
        i = bc_h(1)%i(m)
        j = bc_h(1)%j(m)
@@ -1847,14 +1849,14 @@
 !
 !-- Model top
     !$OMP PARALLEL DO
-    !!$acc loop collapse(2)
+    !$acc loop collapse(2)
     DO  i = nxlg, nxrg
        DO  j = nysg, nyng
           km(nzt+1,j,i) = km(nzt,j,i)
           kh(nzt+1,j,i) = kh(nzt,j,i)
        ENDDO
     ENDDO
-    !!$acc end parallel
+    !$acc end parallel
 
  END SUBROUTINE tcm_diffusivities
 

@@ -157,8 +157,7 @@
 
        !$acc data copy( tend ) &
        !$acc copyin( u, v, w ) &
-       !!$acc present( km, surf_def_h ) &
-       !$acc present( surf_def_h ) &
+       !$acc present( km, surf_def_h ) &
        !$acc present( ddzu, ddzw, rho_air_zw, drho_air, wall_flags_0 )
 
        !$acc parallel

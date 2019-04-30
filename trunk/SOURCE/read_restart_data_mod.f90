@@ -601,6 +601,8 @@
                 READ ( 13 )  scalar_advec
              CASE ( 'slope_offset' )
                 READ ( 13 )  slope_offset
+             CASE ( 'slope_parallel_gradients' )
+                READ ( 13 )  slope_parallel_gradients
              CASE ( 'simulated_time' )
                 READ ( 13 )  simulated_time
              CASE ( 'spectrum_x' )

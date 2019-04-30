@@ -1582,8 +1582,7 @@
     !!$acc parallel present( g, drho_air, rho_air_zw ) &
     !!$acc present( dd2zu, ddzu, ddzw, l_grid ) &
     !!$acc present( l_wall) &
-    !!$acc present( tsc ) &
-    !!$acc present( e, e_p, te_m ) &
+    !!!$acc present( e, e_p, te_m ) &
     !!$acc present( km, prho )
 
     !!$acc loop
@@ -1633,11 +1632,22 @@
                                        - ( 0.19_wp + 0.74_wp * l / ll )        &
                                          * e(k,j,i) * SQRT( e(k,j,i) ) / l
 
-      !
-      !--    Prognostic equation for TKE.
-      !--    Eliminate negative TKE values, which can occur due to numerical
-      !--    reasons in the course of the integration. In such cases the old TKE
-      !--    value is reduced by 90%.
+          ENDDO
+       ENDDO
+    ENDDO
+    !!$acc end parallel
+
+    !
+    !--    Prognostic equation for TKE.
+    !--    Eliminate negative TKE values, which can occur due to numerical
+    !--    reasons in the course of the integration. In such cases the old TKE
+    !--    value is reduced by 90%.
+
+    !$acc parallel present(te_m, tsc)
+    !$acc loop collapse(3)
+    DO  i = nxl, nxr
+       DO  j = nys, nyn
+          DO  k = nzb+1, nzt
              e_p(k,j,i) = e(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +        &
                                               tsc(3) * te_m(k,j,i) )        &
                                      )
@@ -1646,7 +1656,7 @@
           ENDDO
        ENDDO
     ENDDO
-    !!$acc end parallel
+    !$acc end parallel
 
 !-- end of inline subroutine diffusion_e()
 

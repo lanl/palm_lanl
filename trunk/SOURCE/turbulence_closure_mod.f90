@@ -1653,9 +1653,10 @@
 !
 !-- Calculate tendencies for the next Runge-Kutta step
     !!$acc parallel present( te_m, tend )
+    !$acc parallel present( te_m )
     IF ( timestep_scheme(1:5) == 'runge' )  THEN
        IF ( intermediate_timestep_count == 1 )  THEN
-          !!$acc loop collapse(3)
+          !$acc loop collapse(3)
           DO  i = nxl, nxr
              DO  j = nys, nyn
                 DO  k = nzb+1, nzt
@@ -1665,7 +1666,7 @@
           ENDDO
        ELSEIF ( intermediate_timestep_count < &
                 intermediate_timestep_count_max )  THEN
-          !!$acc loop collapse(3)
+          !$acc loop collapse(3)
           DO  i = nxl, nxr
              DO  j = nys, nyn
                 DO  k = nzb+1, nzt
@@ -1676,7 +1677,8 @@
           ENDDO
        ENDIF
     ENDIF
-    !!$acc end parallel
+    !$acc end parallel
+    !$acc update self(te_m)
     !!$acc end data
 
     CALL cpu_log( log_point(16), 'tke-equation', 'stop' )

@@ -498,7 +498,7 @@
 !!$acc      copyin( u, v, w ) &
 !!$acc      copyin( u_stk, v_stk ) &
 !!$acc      copyin( e, e_p ) &
-!!$acc      copyin( te_m ) &
+!$acc      copyin( te_m ) &
 !$acc      copyin( kh, km ) &
 !$acc      copyin( prho ) &
 !$acc      copyin( ug, vg )

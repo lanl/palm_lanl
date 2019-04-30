@@ -1747,7 +1747,7 @@
     IF ( e_min > 0.0_wp )  THEN
        !$OMP DO
        !!$acc parallel present(e, wall_flags_0)
-       !$acc parallel present( wall_flags_0 )
+       !$acc parallel
        !$acc loop collapse(3)
        DO  i = nxlg, nxrg
           DO  j = nysg, nyng
@@ -1762,7 +1762,7 @@
     !$OMP DO
     !$acc data copyout( sums_l_l(nzb+1:nzt,0:statistic_regions,0) ) &
     !!$acc present( kh, km, e, prho ) &
-    !$acc present( kh, km ) &
+    !$acc present( kh, km, prho ) &
     !$acc present( dd2zu, l_grid, rmask ) &
     !$acc present( l_wall)
 

@@ -500,7 +500,7 @@
 !!$acc      copyin( e, e_p ) &
 !!$acc      copyin( te_m ) &
 !$acc      copyin( kh, km ) &
-!!$acc      copyin( prho ) &
+!$acc      copyin( prho ) &
 !$acc      copyin( ug, vg )
 
 !
@@ -623,6 +623,7 @@ print *, simulated_time
 !--       Compute the diffusion coefficients
           CALL cpu_log( log_point(17), 'diffusivities', 'start' )
 !          !$acc update device(e, prho)
+          !$acc update device(prho)
           CALL tcm_diffusivities
           !!$acc update self(km, kh, e)
           !$acc update self(km, kh)

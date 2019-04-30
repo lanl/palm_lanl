@@ -152,7 +152,7 @@
 
        !$acc data copy( tend ) &
        !$acc copyin( u, v, w ) &
-       !$acc present( km ) &
+       !!$acc present( km ) &
        !$acc present( ddzu, ddzw, rho_air, drho_air_zw )
 
        !$acc parallel

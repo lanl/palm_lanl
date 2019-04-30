@@ -494,14 +494,14 @@
 !$acc      copyin( wall_flags_0 ) &
 !$acc      copyin( advc_flags_1, advc_flags_2 ) &
 !$acc      copyin( tsc ) &
-!$acc      copyin( ug, vg ) &
 !!$acc      copyin( tend ) &
 !!$acc      copyin( u, v, w ) &
 !!$acc      copyin( u_stk, v_stk ) &
-!$acc      copyin( e, e_p ) &
-!$acc      copyin( te_m ) &
-!$acc      copyin( kh, km ) &
-!$acc      copyin( prho )
+!!$acc      copyin( e, e_p ) &
+!!$acc      copyin( te_m ) &
+!!$acc      copyin( kh, km ) &
+!!$acc      copyin( prho ) &
+!$acc      copyin( ug, vg )
 
 !
 !-- At beginning determine the first time step
@@ -552,9 +552,9 @@ print *, simulated_time
           IF ( ( ws_scheme_mom .OR. ws_scheme_sca )  .AND.  &
                intermediate_timestep_count == 1 )  CALL ws_statistics
 !
-          !$acc update device( e )
+!          !$acc update device( e )
           CALL prognostic_equations_vector
-          !$acc update self( e_p )
+!          !$acc update self( e_p )
             !
 !
 !--       Exchange of ghost points (lateral boundary conditions)
@@ -622,9 +622,9 @@ print *, simulated_time
 
 !--       Compute the diffusion coefficients
           CALL cpu_log( log_point(17), 'diffusivities', 'start' )
-          !$acc update device(e, prho)
+!          !$acc update device(e, prho)
           CALL tcm_diffusivities
-          !$acc update self(km, kh, e)
+!          !$acc update self(km, kh, e)
           CALL cpu_log( log_point(17), 'diffusivities', 'stop' )
 !
 

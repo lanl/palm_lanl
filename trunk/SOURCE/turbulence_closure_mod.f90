@@ -1436,20 +1436,20 @@
 !-- TKE production
 !   Inline subroutine production_e()
 
-    !$acc update device( prho )
-    !$acc data copy( tend ) &
-    !$acc copyin( u, v, w )
+    !!$acc update device( prho )
+    !!$acc data copy( tend ) &
+    !!$acc copyin( u, v, w )
 
-    !$acc parallel present( g, drho_air_zw ) &
-    !$acc present( tend ) &
-    !$acc present( dd2zu, ddzw ) &
-    !$acc present( km, kh, prho ) &
-    !$acc create( dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz )
-    !$acc loop
+    !!$acc parallel present( g, drho_air_zw ) &
+    !!$acc present( tend ) &
+    !!$acc present( dd2zu, ddzw ) &
+    !!$acc present( km, kh, prho ) &
+    !!$acc create( dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz )
+    !!$acc loop
     DO  i = nxl, nxr
-       !$acc loop
+       !!$acc loop
        DO  j = nys, nyn
-          !$acc loop
+          !!$acc loop
           DO  k = nzb+1, nzt
              !-- Calculate TKE production by shear. Here, no additional
              !-- wall-bounded code is considered.
@@ -1497,19 +1497,19 @@
           ENDDO
        ENDDO
     ENDDO
-    !$acc end parallel
+    !!$acc end parallel
 
-!    !$acc end data
+!    !!$acc end data
 
     !
     !-- Apply top flux
-!    !$acc data copy( tend )
+!    !!$acc data copy( tend )
 
-    !$acc parallel present( g, drho_air_zw ) &
-    !$acc present( dd2zu ) &
-    !$acc present( surf_def_h ) &
-    !$acc present( prho )
-    !$acc loop collapse(2)
+    !!$acc parallel present( g, drho_air_zw ) &
+    !!$acc present( dd2zu ) &
+    !!$acc present( surf_def_h ) &
+    !!$acc present( prho )
+    !!$acc loop collapse(2)
     DO  i = nxl, nxr
        DO  j = nys, nyn
           surf_s = surf_def_h(2)%start_index(j,i)
@@ -1522,9 +1522,9 @@
           ENDDO
        ENDDO
     ENDDO
-    !$acc end parallel
+    !!$acc end parallel
 
-!    !$acc end data
+!    !!$acc end data
 
 !-- end inline subroutine production_e()
 
@@ -1532,20 +1532,20 @@
 !!--    Compute Stokes production term in e equation
 !!      Inline subroutine stokes_production_e()
 
-    !!$acc data copy(tend) &
-    !!$acc copyin( u, v, w, u_stk, v_stk )
+    !!!$acc data copy(tend) &
+    !!!$acc copyin( u, v, w, u_stk, v_stk )
 
-    !!!$acc update device( u, v, w, u_stk, v_stk )
-    !!$acc parallel present( dd2zu ) &
-    !!$acc present ( wall_flags_0 ) &
-    !!!$acc present ( u, v, w, u_stk, v_stk ) &
-    !!$acc present ( km )
+    !!!!$acc update device( u, v, w, u_stk, v_stk )
+    !!!$acc parallel present( dd2zu ) &
+    !!!$acc present ( wall_flags_0 ) &
+    !!!!$acc present ( u, v, w, u_stk, v_stk ) &
+    !!!$acc present ( km )
     !IF ( stokes_force ) THEN
-    !   !$acc loop
+    !   !!$acc loop
     !   DO  i = nxl, nxr
-    !      !$acc loop
+    !      !!$acc loop
     !      DO  j = nys, nyn
-    !         !$acc loop
+    !         !!$acc loop
     !         DO  k = nzb+1, nzt
 !!
 !!--             Predetermine flag to mask topography
@@ -1570,27 +1570,27 @@
     !      ENDDO
     !   ENDDO
     !ENDIF
-    !!$acc end parallel
+    !!!$acc end parallel
 !-- end inline subroutine stokes_production_e()
 
 !
 !-- Calculate the tendency terms due to diffusion
 !   Inline subroutine diffusion_e()
 
-!    !$acc data copy(tend)
+!    !!$acc data copy(tend)
 
-    !$acc parallel present( g, drho_air, rho_air_zw ) &
-    !$acc present( dd2zu, ddzu, ddzw, l_grid ) &
-    !$acc present( l_wall) &
-    !$acc present( tsc ) &
-    !$acc present( e, e_p, te_m ) &
-    !$acc present( km, prho )
+    !!$acc parallel present( g, drho_air, rho_air_zw ) &
+    !!$acc present( dd2zu, ddzu, ddzw, l_grid ) &
+    !!$acc present( l_wall) &
+    !!$acc present( tsc ) &
+    !!$acc present( e, e_p, te_m ) &
+    !!$acc present( km, prho )
 
-    !$acc loop
+    !!$acc loop
     DO  i = nxl, nxr
-       !$acc loop
+       !!$acc loop
        DO  j = nys, nyn
-          !$acc loop
+          !!$acc loop
           DO  k = nzb+1, nzt
     !
     !-- Determine the mixing length for LES closure
@@ -1646,16 +1646,16 @@
           ENDDO
        ENDDO
     ENDDO
-    !$acc end parallel
+    !!$acc end parallel
 
 !-- end of inline subroutine diffusion_e()
 
 !
 !-- Calculate tendencies for the next Runge-Kutta step
-    !$acc parallel present( te_m, tend )
+    !!$acc parallel present( te_m, tend )
     IF ( timestep_scheme(1:5) == 'runge' )  THEN
        IF ( intermediate_timestep_count == 1 )  THEN
-          !$acc loop collapse(3)
+          !!$acc loop collapse(3)
           DO  i = nxl, nxr
              DO  j = nys, nyn
                 DO  k = nzb+1, nzt
@@ -1665,7 +1665,7 @@
           ENDDO
        ELSEIF ( intermediate_timestep_count < &
                 intermediate_timestep_count_max )  THEN
-          !$acc loop collapse(3)
+          !!$acc loop collapse(3)
           DO  i = nxl, nxr
              DO  j = nys, nyn
                 DO  k = nzb+1, nzt
@@ -1676,8 +1676,8 @@
           ENDDO
        ENDIF
     ENDIF
-    !$acc end parallel
-    !$acc end data
+    !!$acc end parallel
+    !!$acc end data
 
     CALL cpu_log( log_point(16), 'tke-equation', 'stop' )
 
@@ -1746,8 +1746,8 @@
 !-- Introduce an optional minimum tke
     IF ( e_min > 0.0_wp )  THEN
        !$OMP DO
-       !$acc parallel present(e, wall_flags_0)
-       !$acc loop collapse(3)
+       !!$acc parallel present(e, wall_flags_0)
+       !!$acc loop collapse(3)
        DO  i = nxlg, nxrg
           DO  j = nysg, nyng
              DO  k = nzb+1, nzt
@@ -1755,21 +1755,21 @@
              ENDDO
           ENDDO
        ENDDO
-       !$acc end parallel
+       !!$acc end parallel
     ENDIF
 
     !$OMP DO
-    !$acc data copyout( sums_l_l(nzb+1:nzt,0:statistic_regions,0) ) &
-    !$acc present( kh, km, e, prho ) &
-    !$acc present( dd2zu, l_grid, rmask ) &
-    !$acc present( l_wall)
+    !!$acc data copyout( sums_l_l(nzb+1:nzt,0:statistic_regions,0) ) &
+    !!$acc present( kh, km, e, prho ) &
+    !!$acc present( dd2zu, l_grid, rmask ) &
+    !!$acc present( l_wall)
 
     sums_l_l = 0.0_wp
-    !$acc parallel
-    !$acc loop collapse(2)
+    !!$acc parallel
+    !!$acc loop collapse(2)
     DO  i = nxlg, nxrg
        DO  j = nysg, nyng
-          !$acc loop
+          !!$acc loop
           DO  k = nzb+1, nzt
 
 !
@@ -1806,8 +1806,8 @@
           ENDDO
        ENDDO
     ENDDO
-    !$acc end parallel
-    !$acc end data
+    !!$acc end parallel
+    !!$acc end data
 
     sums_l_l(nzt+1,:,tn) = sums_l_l(nzt,:,tn)   ! quasi boundary-condition for
                                                 ! data output
@@ -1823,8 +1823,8 @@
 !
 !-- Upward-facing
     !$OMP PARALLEL DO PRIVATE( i, j, k )
-    !$acc parallel present(km, kh, bc_h)
-    !$acc loop
+    !!$acc parallel present(km, kh, bc_h)
+    !!$acc loop
     DO  m = 1, bc_h(0)%ns
        i = bc_h(0)%i(m)
        j = bc_h(0)%j(m)
@@ -1835,7 +1835,7 @@
 !
 !-- Downward facing surfaces
     !$OMP PARALLEL DO PRIVATE( i, j, k )
-    !$acc loop
+    !!$acc loop
     DO  m = 1, bc_h(1)%ns
        i = bc_h(1)%i(m)
        j = bc_h(1)%j(m)
@@ -1847,14 +1847,14 @@
 !
 !-- Model top
     !$OMP PARALLEL DO
-    !$acc loop collapse(2)
+    !!$acc loop collapse(2)
     DO  i = nxlg, nxrg
        DO  j = nysg, nyng
           km(nzt+1,j,i) = km(nzt,j,i)
           kh(nzt+1,j,i) = kh(nzt,j,i)
        ENDDO
     ENDDO
-    !$acc end parallel
+    !!$acc end parallel
 
  END SUBROUTINE tcm_diffusivities
 

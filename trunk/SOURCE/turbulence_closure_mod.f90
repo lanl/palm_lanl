@@ -1436,20 +1436,20 @@
 !-- TKE production
 !   Inline subroutine production_e()
 
-    !!$acc update device( prho )
+    !$acc update device( prho )
     !!$acc data copy( tend ) &
     !!$acc copyin( u, v, w )
 
-    !!$acc parallel present( g, drho_air_zw ) &
+    !$acc parallel present( g, drho_air_zw ) &
     !!$acc present( tend ) &
-    !!$acc present( dd2zu, ddzw ) &
-    !!$acc present( km, kh, prho ) &
-    !!$acc create( dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz )
-    !!$acc loop
+    !$acc present( dd2zu, ddzw ) &
+    !$acc present( km, kh, prho ) &
+    !$acc create( dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz )
+    !$acc loop
     DO  i = nxl, nxr
-       !!$acc loop
+       !$acc loop
        DO  j = nys, nyn
-          !!$acc loop
+          !$acc loop
           DO  k = nzb+1, nzt
              !-- Calculate TKE production by shear. Here, no additional
              !-- wall-bounded code is considered.
@@ -1497,19 +1497,16 @@
           ENDDO
        ENDDO
     ENDDO
-    !!$acc end parallel
-
-!    !!$acc end data
+    !$acc end parallel
 
     !
     !-- Apply top flux
-!    !!$acc data copy( tend )
 
-    !!$acc parallel present( g, drho_air_zw ) &
-    !!$acc present( dd2zu ) &
-    !!$acc present( surf_def_h ) &
-    !!$acc present( prho )
-    !!$acc loop collapse(2)
+    !$acc parallel present( g, drho_air_zw ) &
+    !$acc present( dd2zu ) &
+    !$acc present( surf_def_h ) &
+    !$acc present( prho )
+    !$acc loop collapse(2)
     DO  i = nxl, nxr
        DO  j = nys, nyn
           surf_s = surf_def_h(2)%start_index(j,i)
@@ -1522,9 +1519,7 @@
           ENDDO
        ENDDO
     ENDDO
-    !!$acc end parallel
-
-!    !!$acc end data
+    !$acc end parallel
 
 !-- end inline subroutine production_e()
 
@@ -1576,8 +1571,6 @@
 !
 !-- Calculate the tendency terms due to diffusion
 !   Inline subroutine diffusion_e()
-
-!    !!$acc data copy(tend)
 
     !!$acc parallel present( g, drho_air, rho_air_zw ) &
     !!$acc present( dd2zu, ddzu, ddzw, l_grid ) &

@@ -669,6 +669,9 @@
        CALL wrd_write_string( 'scalar_advec' ) 
        WRITE ( 14 )  scalar_advec
 
+       CALL wrd_write_string( 'scalar_rayleigh_damping' ) 
+       WRITE ( 14 )  scalar_rayleigh_damping
+       
        CALL wrd_write_string( 'slope_offset' ) 
        WRITE ( 14 )  slope_offset
 
@@ -859,6 +862,9 @@
        CALL wrd_write_string( 'v_max_ijk' ) 
        WRITE ( 14 )  v_max_ijk
 
+       CALL wrd_write_string( 'velocity_rayleigh_damping' ) 
+       WRITE ( 14 )  velocity_rayleigh_damping
+       
        CALL wrd_write_string( 'ventilation_effect' ) 
        WRITE ( 14 )  ventilation_effect
 

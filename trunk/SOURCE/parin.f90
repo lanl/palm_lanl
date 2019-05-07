@@ -571,10 +571,10 @@
              ug_vertical_gradient_level, use_surface_fluxes, use_cmax,         &
              use_top_fluxes, use_ug_for_galilei_tr, use_upstream_for_tke,      &
              uv_heights, u_bulk, u_profile,                                    &
-             v0_stk, vg_surface, vg_vertical_gradient,                         &
-             vg_vertical_gradient_level, v_bulk, v_profile, ventilation_effect,&
-             wall_adjustment, wall_heatflux, wall_humidityflux,                &
-             wall_salinityflux, wall_scalarflux,                               &
+             v0_stk, velocity_rayleigh_damping, vg_surface,                    &
+             vg_vertical_gradient, vg_vertical_gradient_level, v_bulk,         &
+             v_profile, ventilation_effect, wall_adjustment, wall_heatflux,    &
+             wall_humidityflux, wall_salinityflux, wall_scalarflux,            &
              wave_age, wind_dir, wind_speed,                                   &
              y_shift, zeta_max, zeta_min,                                      &
              z0h_factor
@@ -653,10 +653,10 @@
              ug_vertical_gradient_level, use_surface_fluxes, use_cmax,         &
              use_top_fluxes, use_ug_for_galilei_tr, use_upstream_for_tke,      &
              uv_heights, u_bulk, u_profile,                                    &
-             v0_stk,  vg_surface, vg_vertical_gradient,                        &
-             vg_vertical_gradient_level, v_bulk, v_profile, ventilation_effect,&
-             wall_adjustment, wall_heatflux, wall_humidityflux,                &
-             wall_salinityflux, wall_scalarflux,                               &
+             v0_stk, velocity_rayleigh_damping, vg_surface,                    &
+             vg_vertical_gradient, vg_vertical_gradient_level, v_bulk,         &
+             v_profile, ventilation_effect, wall_adjustment, wall_heatflux,    &
+             wall_humidityflux, wall_salinityflux, wall_scalarflux,            &
              wave_age, wind_dir, wind_speed,                                   &
              y_shift, zeta_max, zeta_min,                                      &
              z0h_factor

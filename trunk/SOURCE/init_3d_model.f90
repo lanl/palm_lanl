@@ -61,7 +61,7 @@
 ! 2977 2018-04-17 10:27:57Z kanani
 ! Implement changes from branch radiation (r2948-2971) with minor modifications
 ! (moh.hefny):
-! - set radiation_interactions according to the existence of urban/land vertical
+! - set radiation_interactions according to the existence of urbandland vertical
 !   surfaces and trees to activiate RTM
 ! - set average_radiation to TRUE if RTM is activiated
 ! 
@@ -2629,7 +2629,7 @@
        ENDIF
     ENDIF
     IF ( scalar_rayleigh_damping )  rdf_sc = rdf
-
+    IF ( .NOT. velocity_rayleigh_damping ) rdf = 0.0_wp
 !
 !-- Initialize the starting level and the vertical smoothing factor used for 
 !-- the external pressure gradient

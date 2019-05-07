@@ -601,6 +601,8 @@
                 READ ( 13 )  sa_vertical_gradient_level
              CASE ( 'scalar_advec' )
                 READ ( 13 )  scalar_advec
+             CASE ( 'scalar_rayleigh_damping' )
+                READ ( 13 )  scalar_rayleigh_damping
              CASE ( 'slope_offset' )
                 READ ( 13 )  slope_offset
              CASE ( 'simulated_time' )
@@ -733,6 +735,8 @@
                 READ ( 13 )  v_max
              CASE ( 'v_max_ijk' )
                 READ ( 13 )  v_max_ijk
+             CASE ( 'velocity_rayleigh_damping' )
+                READ ( 13 )  velocity_rayleigh_damping
              CASE ( 'ventilation_effect' )
                 READ ( 13 )  ventilation_effect
              CASE ( 'vg' )

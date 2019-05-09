@@ -400,26 +400,35 @@
     call cpu_log( log_point(46), 'u stokes', 'start')
     !
 !-- If required, compute Stokes forces
-    IF ( ocean .AND. stokes_force ) THEN
-       CALL stokes_force_uvw( 1 )
-    ENDIF
-    call cpu_log( log_point(46), 'u stokes', 'stop')
+!    IF ( ocean .AND. stokes_force ) THEN
+!       CALL stokes_force_uvw( 1 )
+!    ENDIF
+!    call cpu_log( log_point(46), 'u stokes', 'stop')
 !
 !-- External pressure gradient
+    !$acc data copy( tend )
+    !$acc parallel present( dpdxy, dp_smooth_factor )
     IF ( dp_external )  THEN
+       !$acc loop collapse(2)
        DO  i = nxlu, nxr
           DO  j = nys, nyn
+             !$acc loop seq
              DO  k = dp_level_ind_b+1, nzt
                 tend(k,j,i) = tend(k,j,i) - dpdxy(1) * dp_smooth_factor(k)
              ENDDO
           ENDDO
        ENDDO
     ENDIF
+    !$acc end parallel
 
 !
 !-- Prognostic equation for u-velocity component
+    !$acc parallel present( tsc, wall_flags_0, rdf ) &
+    !$acc present( u, u_p, tu_m, u_init )
+    !$acc loop collapse(2)
     DO  i = nxlu, nxr
        DO  j = nys, nyn
+          !$acc loop seq
           DO  k = nzb+1, nzt
              u_p(k,j,i) = u(k,j,i) + ( dt_3d * ( tsc(2) * tend(k,j,i) +          &
                                                  tsc(3) * tu_m(k,j,i) )          &
@@ -431,11 +440,14 @@
           ENDDO
        ENDDO
     ENDDO
+    !$acc end parallel
 
 !
 !-- Calculate tendencies for the next Runge-Kutta step
+    !$acc parallel present( tu_m, tend )
     IF ( timestep_scheme(1:5) == 'runge' )  THEN
        IF ( intermediate_timestep_count == 1 )  THEN
+          !$acc loop collapse(3)
           DO  i = nxlu, nxr
              DO  j = nys, nyn
                 DO  k = nzb+1, nzt
@@ -445,6 +457,7 @@
           ENDDO
        ELSEIF ( intermediate_timestep_count < &
                 intermediate_timestep_count_max )  THEN
+          !$acc loop collapse(3)
           DO  i = nxlu, nxr
              DO  j = nys, nyn
                 DO  k = nzb+1, nzt
@@ -455,6 +468,9 @@
           ENDDO
        ENDIF
     ENDIF
+    !$acc end parallel
+    !$acc update self(tu_m)
+    !$acc end data
 
     CALL cpu_log( log_point(5), 'u-equation', 'stop' )
 !

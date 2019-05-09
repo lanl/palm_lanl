@@ -1452,7 +1452,8 @@
 !--    Computation of interior fluxes and tendency terms
 
        !$acc data copy( tend ) &
-       !$acc copyin( u, v, w )
+       !$acc present( u ) &
+       !$acc copyin( v, w )
 
        !$acc parallel present ( advc_flags_1 ) &
        !$acc present( ddzw ) &

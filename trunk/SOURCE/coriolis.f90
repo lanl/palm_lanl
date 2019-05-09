@@ -128,7 +128,8 @@
 !
 !--    Compute Coriolis terms for the three velocity components
        !$acc data copy( tend ) &
-       !$acc copyin( u, v, w ) &
+       !$acc present( u ) &
+       !$acc copyin( v, w ) &
        !$acc present( ug, vg  )
        SELECT CASE ( component )
 

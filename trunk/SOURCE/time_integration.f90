@@ -352,8 +352,8 @@
                ref_state, rho_ocean, s, s_p, sa_p, tend, u, u_p, v,            &
                v_p, w, w_p, alpha_T, beta_S, solar3d, sa, &
                ddzu, ddzw, dzw, dd2zu, drho_air, drho_air_zw,                  &
-               rho_air, rho_air_zw, kh, km, te_m,          &
-               u_stk, v_stk, ug, vg
+               rho_air, rho_air_zw, kh, km, te_m, tu_m,          &
+               u_stk, v_stk, ug, vg, u_init, rdf
 
     USE calc_mean_profile_mod,                                                 &
         ONLY:  calc_mean_profile
@@ -392,7 +392,7 @@
                use_initial_profile_as_reference,                               &
                use_single_reference_value, uv_exposure, u_gtrans, v_gtrans,    &
                virtual_flight, wind_turbine, ws_scheme_mom, ws_scheme_sca,     &
-               stokes_force
+               stokes_force, dp_smooth_factor, dpdxy
 
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point, log_point_s
@@ -493,12 +493,15 @@
 !$acc      copyin( rmask ) &
 !$acc      copyin( wall_flags_0 ) &
 !$acc      copyin( advc_flags_1, advc_flags_2 ) &
+!$acc      copyin( dp_smooth_factor, dpdxy ) &
 !$acc      copyin( tsc ) &
+!$acc       copyin( rdf ) &
 !!$acc      copyin( tend ) &
 !!$acc      copyin( u, v, w ) &
 !!$acc      copyin( u_stk, v_stk ) &
-!$acc      copyin( e, e_p ) &
-!$acc      copyin( te_m ) &
+!$acc       copyin( u_init ) &
+!$acc      copyin( u, u_p, tu_m ) &
+!$acc      copyin( e, e_p, te_m ) &
 !$acc      copyin( kh, km ) &
 !$acc      copyin( prho ) &
 !$acc      copyin( ug, vg )
@@ -552,9 +555,9 @@ print *, simulated_time
           IF ( ( ws_scheme_mom .OR. ws_scheme_sca )  .AND.  &
                intermediate_timestep_count == 1 )  CALL ws_statistics
 !
-          !$acc update device( e )
+          !$acc update device( u, e )
           CALL prognostic_equations_vector
-          !$acc update self( e_p )
+          !$acc update self( u_p, e_p )
             !
 !
 !--       Exchange of ghost points (lateral boundary conditions)

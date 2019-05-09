@@ -1439,11 +1439,12 @@
 !   Inline subroutine production_e()
 
     !$acc update device( prho )
-    !!$acc data copy( tend ) &
-    !!$acc copyin( u, v, w )
+    !$acc data copy( tend ) &
+    !$acc copyout(e_p) &
+    !$acc copyin( u, v, w, e )
 
     !$acc parallel present( g, drho_air_zw ) &
-    !!$acc present( tend ) &
+    !$acc present( tend ) &
     !$acc present( dd2zu, ddzw ) &
     !$acc present( km, kh, prho ) &
     !$acc create( dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz )
@@ -1505,6 +1506,7 @@
     !-- Apply top flux
 
     !$acc parallel present( g, drho_air_zw ) &
+    !$acc present( tend ) &
     !$acc present( dd2zu ) &
     !$acc present( surf_def_h ) &
     !$acc present( prho )
@@ -1575,9 +1577,9 @@
 !   Inline subroutine diffusion_e()
 
     !$acc parallel present( g, drho_air, rho_air_zw ) &
+    !$acc present( tend ) &
     !$acc present( dd2zu, ddzu, ddzw ) &
     !$acc present( l_grid, l_wall) &
-    !!$acc present( e, e_p, te_m ) &
     !$acc present( km, prho )
 
     !$acc loop
@@ -1657,8 +1659,7 @@
 
 !
 !-- Calculate tendencies for the next Runge-Kutta step
-    !!$acc parallel present( te_m, tend )
-    !$acc parallel present( te_m )
+    !$acc parallel present( te_m, tend )
     IF ( timestep_scheme(1:5) == 'runge' )  THEN
        IF ( intermediate_timestep_count == 1 )  THEN
           !$acc loop collapse(3)
@@ -1684,7 +1685,7 @@
     ENDIF
     !$acc end parallel
     !$acc update self(te_m)
-    !!$acc end data
+    !$acc end data
 
     CALL cpu_log( log_point(16), 'tke-equation', 'stop' )
 

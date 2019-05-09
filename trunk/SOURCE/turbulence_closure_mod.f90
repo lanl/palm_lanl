@@ -1440,8 +1440,8 @@
 
     !$acc update device( prho )
     !$acc data copy( tend ) &
-    !$acc copyout(e_p) &
-    !$acc copyin( u, v, w, e )
+    !$acc present( e, e_p ) &
+    !$acc copyin( u, v, w )
 
     !$acc parallel present( g, drho_air_zw ) &
     !$acc present( tend ) &
@@ -1515,6 +1515,7 @@
        DO  j = nys, nyn
           surf_s = surf_def_h(2)%start_index(j,i)
           surf_e = surf_def_h(2)%end_index(j,i)
+          !$acc loop seq
           DO  m = surf_s, surf_e
              k = surf_def_h(2)%k(m)
              tend(k,j,i) = tend(k,j,i) + g / prho(k,j,i) *         &
@@ -1580,6 +1581,7 @@
     !$acc present( tend ) &
     !$acc present( dd2zu, ddzu, ddzw ) &
     !$acc present( l_grid, l_wall) &
+    !$acc present(te_m, tsc) &
     !$acc present( km, prho )
 
     !$acc loop
@@ -1629,22 +1631,12 @@
                                        - ( 0.19_wp + 0.74_wp * l / ll )        &
                                          * e(k,j,i) * SQRT( e(k,j,i) ) / l
 
-          ENDDO
-       ENDDO
-    ENDDO
-    !$acc end parallel
-
     !
     !--    Prognostic equation for TKE.
     !--    Eliminate negative TKE values, which can occur due to numerical
     !--    reasons in the course of the integration. In such cases the old TKE
     !--    value is reduced by 90%.
 
-    !$acc parallel present(te_m, tsc)
-    !$acc loop collapse(3)
-    DO  i = nxl, nxr
-       DO  j = nys, nyn
-          DO  k = nzb+1, nzt
              e_p(k,j,i) = e(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +        &
                                               tsc(3) * te_m(k,j,i) )        &
                                      )

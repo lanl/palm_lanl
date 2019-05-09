@@ -1387,7 +1387,8 @@
         ONLY:  ddzu, ddzw, drho_air, drho_air_zw, rho_air_zw
 
     USE control_parameters,                                                    &
-        ONLY:  f, scalar_advec, tsc
+        ONLY:  f, scalar_advec, tsc, atmos_ocean_sign, g,                      &
+               wall_adjustment, wall_adjustment_factor
 
     USE grid_variables,                                                        &
         ONLY:  ddx, ddy, ddx2, ddy2
@@ -1405,10 +1406,11 @@
     INTEGER(iwp) ::  surf_s  !< start index of surface elements at given i-j position
 
     REAL(wp)     ::  sbt     !< wheighting factor for sub-time step
-    REAL(wp)     ::  dvar_dz         !< vertical gradient of var
+    REAL(wp)     ::  dvar_dz        !< vertical gradient of var
     REAL(wp)     ::  flag           !< flag to mask topography
     REAL(wp)     ::  l              !< mixing length
     REAL(wp)     ::  ll             !< adjusted l
+    REAL(wp)     ::  l_stable       !< mixing length according to stratification
     REAL(wp)     ::  def
 
     REAL(wp), DIMENSION(nzb+1:nzt,nys:nyn,nxl:nxr) ::  dudx, dudy, dudz
@@ -1572,17 +1574,17 @@
 !-- Calculate the tendency terms due to diffusion
 !   Inline subroutine diffusion_e()
 
-    !!$acc parallel present( g, drho_air, rho_air_zw ) &
-    !!$acc present( dd2zu, ddzu, ddzw, l_grid ) &
-    !!$acc present( l_wall) &
-    !!!$acc present( e, e_p, te_m ) &
-    !!$acc present( km, prho )
+    !$acc parallel present( g, drho_air, rho_air_zw ) &
+    !$acc present( dd2zu, ddzu, ddzw ) &
+    !$acc present( l_grid, l_wall) &
+    !!$acc present( e, e_p, te_m ) &
+    !$acc present( km, prho )
 
-    !!$acc loop
+    !$acc loop
     DO  i = nxl, nxr
-       !!$acc loop
+       !$acc loop
        DO  j = nys, nyn
-          !!$acc loop
+          !$acc loop
           DO  k = nzb+1, nzt
     !
     !-- Determine the mixing length for LES closure
@@ -1628,7 +1630,7 @@
           ENDDO
        ENDDO
     ENDDO
-    !!$acc end parallel
+    !$acc end parallel
 
     !
     !--    Prognostic equation for TKE.

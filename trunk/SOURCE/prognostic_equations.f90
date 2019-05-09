@@ -570,13 +570,18 @@
     call cpu_log( log_point(47), 'w buoy', 'stop')
     !
 !-- If required, compute Stokes forces
-    IF ( ocean .AND. stokes_force ) THEN
-       CALL stokes_force_uvw( 3 )
-    ENDIF
+!    IF ( ocean .AND. stokes_force ) THEN
+!       CALL stokes_force_uvw( 3 )
+!    ENDIF
 !
 !-- Prognostic equation for w-velocity component
+    !$acc data copy( tend )
+    !$acc parallel present( tsc, wall_flags_0, rdf ) &
+    !$acc present( w, w_p, tw_m )
+    !$acc loop collapse(2)
     DO  i = nxl, nxr
        DO  j = nys, nyn
+          !$acc loop seq
           DO  k = nzb+1, nzt-1
              w_p(k,j,i) = w(k,j,i) + ( dt_3d * ( tsc(2) * tend(k,j,i) +        &
                                                  tsc(3) * tw_m(k,j,i) )        &
@@ -587,11 +592,14 @@
           ENDDO
        ENDDO
     ENDDO
+    !$acc end parallel
 
 !
 !-- Calculate tendencies for the next Runge-Kutta step
+    !$acc parallel present( tw_m, tend )
     IF ( timestep_scheme(1:5) == 'runge' )  THEN
        IF ( intermediate_timestep_count == 1 )  THEN
+          !$acc loop collapse(3)
           DO  i = nxl, nxr
              DO  j = nys, nyn
                 DO  k = nzb+1, nzt-1
@@ -601,6 +609,7 @@
           ENDDO
        ELSEIF ( intermediate_timestep_count < &
                 intermediate_timestep_count_max )  THEN
+          !$acc loop collapse(3)
           DO  i = nxl, nxr
              DO  j = nys, nyn
                 DO  k = nzb+1, nzt-1
@@ -611,6 +620,9 @@
           ENDDO
        ENDIF
     ENDIF
+    !$acc end parallel
+    !$acc update self(tw_m)
+    !$acc end data
 
     CALL cpu_log( log_point(7), 'w-equation', 'stop' )
 

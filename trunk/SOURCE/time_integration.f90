@@ -352,7 +352,7 @@
                ref_state, rho_ocean, s, s_p, sa_p, tend, u, u_p, v,            &
                v_p, w, w_p, alpha_T, beta_S, solar3d, sa, &
                ddzu, ddzw, dzw, dd2zu, drho_air, drho_air_zw,                  &
-               rho_air, rho_air_zw, kh, km, te_m, tu_m, tv_m,          &
+               rho_air, rho_air_zw, kh, km, te_m, tu_m, tv_m, tw_m,          &
                u_stk, v_stk, ug, vg, u_init, v_init, rdf
 
     USE calc_mean_profile_mod,                                                 &
@@ -497,11 +497,11 @@
 !$acc      copyin( tsc ) &
 !$acc       copyin( rdf ) &
 !!$acc      copyin( tend ) &
-!!$acc      copyin( u, v, w ) &
 !!$acc      copyin( u_stk, v_stk ) &
 !$acc       copyin( u_init, v_init ) &
 !$acc      copyin( u, u_p, tu_m ) &
 !$acc      copyin( v, v_p, tv_m ) &
+!$acc      copyin( w, w_p, tw_m ) &
 !$acc      copyin( e, e_p, te_m ) &
 !$acc      copyin( kh, km ) &
 !$acc      copyin( prho ) &
@@ -556,9 +556,9 @@ print *, simulated_time
           IF ( ( ws_scheme_mom .OR. ws_scheme_sca )  .AND.  &
                intermediate_timestep_count == 1 )  CALL ws_statistics
 !
-          !$acc update device( u, v, e )
+          !$acc update device( u, v, w, e )
           CALL prognostic_equations_vector
-          !$acc update self( u_p, v_p, e_p )
+          !$acc update self( u_p, v_p, w_p, e_p )
             !
 !
 !--       Exchange of ghost points (lateral boundary conditions)

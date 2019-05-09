@@ -1441,7 +1441,7 @@
     !$acc update device( prho )
     !$acc data copy( tend ) &
     !$acc present( e, e_p ) &
-    !$acc copyin( u, v, w )
+    !$acc present( u, v, w )
 
     !$acc parallel present( g, drho_air_zw ) &
     !$acc present( tend ) &

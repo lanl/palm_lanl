@@ -484,24 +484,33 @@
 
 !
 !-- If required, compute Stokes forces
-    IF ( ocean .AND. stokes_force ) THEN
-       CALL stokes_force_uvw( 2 )
-    ENDIF
+!    IF ( ocean .AND. stokes_force ) THEN
+!       CALL stokes_force_uvw( 2 )
+!    ENDIF
 !
 !-- External pressure gradient
+    !$acc data copy( tend )
+    !$acc parallel present( dpdxy, dp_smooth_factor )
     IF ( dp_external )  THEN
+       !$acc loop collapse(2)
        DO  i = nxl, nxr
           DO  j = nysv, nyn
+             !$acc loop seq
              DO  k = dp_level_ind_b+1, nzt
                 tend(k,j,i) = tend(k,j,i) - dpdxy(2) * dp_smooth_factor(k)
              ENDDO
           ENDDO
        ENDDO
     ENDIF
+    !$acc end parallel
 !
 !-- Prognostic equation for v-velocity component
+    !$acc parallel present( tsc, wall_flags_0, rdf ) &
+    !$acc present( v, v_p, tv_m, v_init )
+    !$acc loop collapse(2)
     DO  i = nxl, nxr
        DO  j = nysv, nyn
+          !$acc loop seq
           DO  k = nzb+1, nzt
              v_p(k,j,i) = v(k,j,i) + ( dt_3d * ( tsc(2) * tend(k,j,i) +        &
                                                  tsc(3) * tv_m(k,j,i) )        &
@@ -513,11 +522,14 @@
           ENDDO
        ENDDO
     ENDDO
+    !$acc end parallel
 
 !
 !-- Calculate tendencies for the next Runge-Kutta step
+    !$acc parallel present( tv_m, tend )
     IF ( timestep_scheme(1:5) == 'runge' )  THEN
        IF ( intermediate_timestep_count == 1 )  THEN
+          !$acc loop collapse(3)
           DO  i = nxl, nxr
              DO  j = nysv, nyn
                 DO  k = nzb+1, nzt
@@ -527,6 +539,7 @@
           ENDDO
        ELSEIF ( intermediate_timestep_count < &
                 intermediate_timestep_count_max )  THEN
+          !$acc loop collapse(3)
           DO  i = nxl, nxr
              DO  j = nysv, nyn
                 DO  k = nzb+1, nzt
@@ -537,6 +550,9 @@
           ENDDO
        ENDIF
     ENDIF
+    !$acc end parallel
+    !$acc update self(tv_m)
+    !$acc end data
 
     CALL cpu_log( log_point(6), 'v-equation', 'stop' )
 

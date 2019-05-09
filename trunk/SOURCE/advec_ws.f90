@@ -1074,7 +1074,8 @@
 
        !$acc data copy( tend ) &
 !       !$acc copyout(flux_t_arr, diss_t_arr) &
-       !$acc copyin( sk, u, v, w )
+       !$acc present( u, v ) &
+       !$acc copyin( sk, w )
 
        !$acc parallel present ( advc_flags_1 ) &
        !$acc present( ddzw ) &
@@ -1452,8 +1453,8 @@
 !--    Computation of interior fluxes and tendency terms
 
        !$acc data copy( tend ) &
-       !$acc present( u ) &
-       !$acc copyin( v, w )
+       !$acc present( u, v ) &
+       !$acc copyin( w )
 
        !$acc parallel present ( advc_flags_1 ) &
        !$acc present( ddzw ) &
@@ -1821,7 +1822,8 @@
 !--    Computation of interior fluxes and tendency terms
 
        !$acc data copy( tend ) &
-       !$acc copyin( u, v, w )
+       !$acc present( u, v ) &
+       !$acc copyin( w )
 
        !$acc parallel present ( advc_flags_1 ) &
        !$acc present( ddzw ) &
@@ -2191,7 +2193,8 @@
 !--    Computation of interior fluxes and tendency terms
 
        !$acc data copy( tend ) &
-       !$acc copyin( u, v, w )
+       !$acc present( u, v ) &
+       !$acc copyin( w )
 
        !$acc parallel present ( advc_flags_1, advc_flags_2 ) &
        !$acc present( ddzu ) &

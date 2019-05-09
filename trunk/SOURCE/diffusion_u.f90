@@ -161,8 +161,8 @@
 
 !-- Compute horizontal diffusion
        !$acc data copy( tend ) &
-       !$acc present( u ) &
-       !$acc copyin( v, w ) &
+       !$acc present( u, v ) &
+       !$acc copyin(  w ) &
        !$acc present( km, surf_def_h ) &
        !$acc present( ddzu, ddzw, rho_air_zw, drho_air, wall_flags_0 )
 

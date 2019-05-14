@@ -169,7 +169,7 @@
 
 !-- Compute horizontal diffusion
 
-       !$acc data copy( tend ) &
+       !$acc data present( tend ) &
        !$acc copyin( s, s_flux_t, s_flux_solar_t ) &
        !$acc copyout( solar3d ) &
        !$acc present( kh, surf_def_h ) &

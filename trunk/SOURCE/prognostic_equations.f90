@@ -584,9 +584,7 @@
     CALL diffusion_w
     CALL coriolis( 3 )
 
-    call cpu_log( log_point(47), 'w buoy', 'start')
     CALL buoyancy( rho_ocean, 3 )
-    call cpu_log( log_point(47), 'w buoy', 'stop')
     !
 !-- If required, compute Stokes forces
 !    IF ( ocean .AND. stokes_force ) THEN
@@ -640,7 +638,6 @@
     ENDIF
     !$acc end parallel
     !$acc update self(tw_m)
-    !$acc end data
 
     CALL cpu_log( log_point(7), 'w-equation', 'stop' )
 
@@ -650,9 +647,6 @@
 !--    pt-tendency terms with communication
     sbt = tsc(2)
 !
-    ! tend = 0.0_wp
-    !$acc data copyout( tend )
-
     !$acc parallel present( tend )
     !$acc loop collapse(3)
     DO  i = nxl, nxr
@@ -665,92 +659,92 @@
     !$acc end parallel
 
     CALL advec_s_ws( pt, 'pt' )
-    !$acc end data
 
-       IF (idealized_diurnal) THEN
-          k = nzt
-          DO i = nxl, nxr
-             DO j = nys,nyn
-                       m = surf_def_h(2)%start_index(j,i)
-                       wb_sfc = g*(surf_def_h(2)%shf(m)*alpha_T(k,j,i) -        &
-                                        surf_def_h(2)%sasws(m)*beta_S(k,j,i))
-                       tod = simulated_time / 86400.0_wp
-                       arg1 = cos(2.0_wp*pi*(tod - 0.75_wp))
-                       surf_def_h(2)%shf_sol(m) = wb_solar*max(arg1,0.0_wp)
-             ENDDO
-          ENDDO
-       ENDIF
-
-       CALL cpu_log( log_point(41), 'pt diffusion' , 'start')
-
-       CALL diffusion_s( pt,                                                   &
-                         surf_def_h(2)%shf,                                    &
-                         surf_def_h(2)%shf_sol )
-
-       CALL cpu_log( log_point(41), 'pt diffusion' , 'stop')
-
-
-       CALL cpu_log( log_point(42), 'pt stokes' ,'start')
-!
-!--    If required, compute Stokes-advection term
-       IF ( ocean .AND. stokes_force ) THEN
-          CALL stokes_force_s( pt )
-       ENDIF
-
-       CALL cpu_log( log_point(42), 'pt stokes', 'stop' )
-
-!
-!--    Prognostic equation for potential temperature
-       DO  i = nxl, nxr
-          DO  j = nys, nyn
-             DO  k = nzb+1, nzt
-                pt_p(k,j,i) = pt(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +      &
-                                                   tsc(3) * tpt_m(k,j,i) )     &
-                                                 - tsc(5) *                    &
-                                                   ( pt(k,j,i) - pt_init(k) ) *&
-                                          ( rdf_sc(k) + ptdf_x(i) + ptdf_y(j) )&
-                                          )                                    &
-                                   * MERGE( 1.0_wp, 0.0_wp,                    &
-                                             BTEST( wall_flags_0(k,j,i), 0 )   &
-                                          )
-             ENDDO
+    IF (idealized_diurnal) THEN
+       k = nzt
+       DO i = nxl, nxr
+          DO j = nys,nyn
+                    m = surf_def_h(2)%start_index(j,i)
+                    wb_sfc = g*(surf_def_h(2)%shf(m)*alpha_T(k,j,i) -        &
+                                     surf_def_h(2)%sasws(m)*beta_S(k,j,i))
+                    tod = simulated_time / 86400.0_wp
+                    arg1 = cos(2.0_wp*pi*(tod - 0.75_wp))
+                    surf_def_h(2)%shf_sol(m) = wb_solar*max(arg1,0.0_wp)
           ENDDO
        ENDDO
+    ENDIF
+    !$acc update device(surf_def_h)
+
+    CALL diffusion_s( pt,                                                   &
+                      surf_def_h(2)%shf,                                    &
+                      surf_def_h(2)%shf_sol )
+
+!-- If required, compute Stokes-advection term
+    ! IF ( ocean .AND. stokes_force ) THEN
+    !    CALL stokes_force_s( pt )
+    ! ENDIF
+
+!
+!-- Prognostic equation for potential temperature
+    !$acc parallel present( tsc, wall_flags_0, rdf_sc ) &
+    !$acc present( ptdf_x, ptdf_y ) &
+    !$acc present( pt, pt_p, tpt_m, pt_init )
+    !$acc loop collapse(2)
+    DO  i = nxl, nxr
+       DO  j = nys, nyn
+          !$acc loop seq
+          DO  k = nzb+1, nzt
+             pt_p(k,j,i) = pt(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +        &
+                                                tsc(3) * tpt_m(k,j,i) )       &
+                                              - tsc(5) *                      &
+                                                ( pt(k,j,i) - pt_init(k) ) *  &
+                                       ( rdf_sc(k) + ptdf_x(i) + ptdf_y(j) )  &
+                                       )                                      &
+                                * MERGE( 1.0_wp, 0.0_wp,                      &
+                                          BTEST( wall_flags_0(k,j,i), 0 )     &
+                                       )
+          ENDDO
+       ENDDO
+    ENDDO
+    !$acc end parallel
+
 !
 !--    Calculate tendencies for the next Runge-Kutta step
-       IF ( timestep_scheme(1:5) == 'runge' )  THEN
-          IF ( intermediate_timestep_count == 1 )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb+1, nzt
-                      tpt_m(k,j,i) = tend(k,j,i)
-                   ENDDO
+    !$acc parallel present( tpt_m, tend )
+    IF ( timestep_scheme(1:5) == 'runge' )  THEN
+       IF ( intermediate_timestep_count == 1 )  THEN
+          !$acc loop collapse(3)
+          DO  i = nxl, nxr
+             DO  j = nys, nyn
+                DO  k = nzb+1, nzt
+                   tpt_m(k,j,i) = tend(k,j,i)
                 ENDDO
              ENDDO
-          ELSEIF ( intermediate_timestep_count < &
-                   intermediate_timestep_count_max )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb+1, nzt
-                      tpt_m(k,j,i) =   -9.5625_wp * tend(k,j,i) +              &
-                                        5.3125_wp * tpt_m(k,j,i)
-                   ENDDO
+          ENDDO
+       ELSEIF ( intermediate_timestep_count < &
+                intermediate_timestep_count_max )  THEN
+          !$acc loop collapse(3)
+          DO  i = nxl, nxr
+             DO  j = nys, nyn
+                DO  k = nzb+1, nzt
+                   tpt_m(k,j,i) =   -9.5625_wp * tend(k,j,i) +              &
+                                     5.3125_wp * tpt_m(k,j,i)
                 ENDDO
              ENDDO
-          ENDIF
+          ENDDO
        ENDIF
+    ENDIF
+    !$acc end parallel
+    !$acc update self(tpt_m)
 
-       CALL cpu_log( log_point(13), 'pt-equation', 'stop' )
+    CALL cpu_log( log_point(13), 'pt-equation', 'stop' )
 
-       CALL cpu_log( log_point(37), 'sa-equation', 'start' )
+    CALL cpu_log( log_point(37), 'sa-equation', 'start' )
 
 !
-!--    sa-tendency terms with communication
+!-- sa-tendency terms with communication
     sbt = tsc(2)
 !
-    ! tend = 0.0_wp
-    !$acc data copyout( tend )
-
     !$acc parallel present( tend )
     !$acc loop collapse(3)
     DO  i = nxl, nxr
@@ -763,67 +757,79 @@
     !$acc end parallel
 
     CALL advec_s_ws( sa, 'sa' )
-    !$acc end data
 
-       CALL diffusion_s( sa,                                                   &
-                         surf_def_h(2)%sasws)
-
-!
-!--    If required, compute Stokes-advection term
-       IF ( stokes_force ) THEN
-          CALL stokes_force_s( sa )
-       ENDIF
+    CALL diffusion_s( sa,                                                   &
+                      surf_def_h(2)%sasws)
 
 !
-!--    Prognostic equation for salinity
-       DO  i = nxl, nxr
-          DO  j = nys, nyn
-             DO  k = nzb+1, nzt
-                sa_p(k,j,i) = sa(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +      &
-                                                   tsc(3) * tsa_m(k,j,i) )     &
-                                                 - tsc(5) * rdf_sc(k) *        &
-                                                 ( sa(k,j,i) - sa_init(k) )    &
-                                          )                                    &
-                                   * MERGE( 1.0_wp, 0.0_wp,                    &
-                                             BTEST( wall_flags_0(k,j,i), 0 )   &
-                                          )
-                IF ( sa_p(k,j,i) < 0.0_wp )  sa_p(k,j,i) = 0.1_wp * sa(k,j,i)
-             ENDDO
+!-- If required, compute Stokes-advection term
+    ! IF ( stokes_force ) THEN
+    !    CALL stokes_force_s( sa )
+    ! ENDIF
+
+!
+!-- Prognostic equation for salinity
+    !$acc parallel present( tsc, wall_flags_0, rdf_sc ) &
+    !$acc present( sa, sa_p, tsa_m, sa_init )
+    !$acc loop collapse(2)
+    DO  i = nxl, nxr
+       DO  j = nys, nyn
+          !$acc loop seq
+          DO  k = nzb+1, nzt
+             sa_p(k,j,i) = sa(k,j,i) + ( dt_3d * ( sbt * tend(k,j,i) +      &
+                                                tsc(3) * tsa_m(k,j,i) )     &
+                                              - tsc(5) * rdf_sc(k) *        &
+                                              ( sa(k,j,i) - sa_init(k) )    &
+                                       )                                    &
+                                * MERGE( 1.0_wp, 0.0_wp,                    &
+                                          BTEST( wall_flags_0(k,j,i), 0 )   &
+                                       )
+             IF ( sa_p(k,j,i) < 0.0_wp )  sa_p(k,j,i) = 0.1_wp * sa(k,j,i)
           ENDDO
        ENDDO
+    ENDDO
+    !$acc end parallel
 
 !
-!--    Calculate tendencies for the next Runge-Kutta step
-       IF ( timestep_scheme(1:5) == 'runge' )  THEN
-          IF ( intermediate_timestep_count == 1 )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb+1, nzt
-                      tsa_m(k,j,i) = tend(k,j,i)
-                   ENDDO
+!-- Calculate tendencies for the next Runge-Kutta step
+    !$acc parallel present( tsa_m, tend )
+    IF ( timestep_scheme(1:5) == 'runge' )  THEN
+       IF ( intermediate_timestep_count == 1 )  THEN
+          !$acc loop collapse(3)
+          DO  i = nxl, nxr
+             DO  j = nys, nyn
+                DO  k = nzb+1, nzt
+                   tsa_m(k,j,i) = tend(k,j,i)
                 ENDDO
              ENDDO
-          ELSEIF ( intermediate_timestep_count < &
-                   intermediate_timestep_count_max )  THEN
-             DO  i = nxl, nxr
-                DO  j = nys, nyn
-                   DO  k = nzb+1, nzt
-                      tsa_m(k,j,i) =   -9.5625_wp * tend(k,j,i) +              &
-                                        5.3125_wp * tsa_m(k,j,i)
-                   ENDDO
+          ENDDO
+       ELSEIF ( intermediate_timestep_count < &
+                intermediate_timestep_count_max )  THEN
+          !$acc loop collapse(3)
+          DO  i = nxl, nxr
+             DO  j = nys, nyn
+                DO  k = nzb+1, nzt
+                   tsa_m(k,j,i) =   -9.5625_wp * tend(k,j,i) +              &
+                                     5.3125_wp * tsa_m(k,j,i)
                 ENDDO
              ENDDO
-          ENDIF
+          ENDDO
        ENDIF
+    ENDIF
+    !$acc end parallel
+    !$acc update self(tsa_m)
+    !$acc end data
 
-       CALL cpu_log( log_point(37), 'sa-equation', 'stop' )
+    CALL cpu_log( log_point(37), 'sa-equation', 'stop' )
 
 !
-!--    Calculate density by the equation of state for seawater
-       CALL cpu_log( log_point(38), 'eqns-seawater', 'start' )
-       CALL eqn_state_seawater
-       CALL cpu_log( log_point(38), 'eqns-seawater', 'stop' )
+!-- Calculate density by the equation of state for seawater
+    CALL cpu_log( log_point(38), 'eqns-seawater', 'start' )
+    !$acc update self(pt_p, sa_p)
+    CALL eqn_state_seawater
+    CALL cpu_log( log_point(38), 'eqns-seawater', 'stop' )
 
+!-- Turbulence closure model
     CALL tcm_prognostic()
 
  END SUBROUTINE prognostic_equations_vector

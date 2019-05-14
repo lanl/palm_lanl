@@ -347,13 +347,15 @@
         ONLY:  ws_statistics, ws_finalize
 
     USE arrays_3d,                                                             &
-        ONLY:  p, diss, diss_p, dzu, e, e_p, nc, nc_p, nr, nr_p, prho, pt, pt_p, pt_init, &
+        ONLY:  p, dzu, e, e_p, nc, nc_p, nr, nr_p, prho, pt, pt_p, pt_init, sa_init, &
                q_init, q, qc, qc_p, ql, ql_c, ql_v, ql_vp, qr, qr_p, q_p,      &
                ref_state, rho_ocean, s, s_p, sa_p, tend, u, u_p, v,            &
                v_p, w, w_p, alpha_T, beta_S, solar3d, sa, &
                ddzu, ddzw, dzw, dd2zu, drho_air, drho_air_zw,                  &
-               rho_air, rho_air_zw, kh, km, te_m, tu_m, tv_m, tw_m,          &
-               u_stk, v_stk, ug, vg, u_init, v_init, rdf
+               rho_air, rho_air_zw, kh, km,                                    &
+               te_m, tu_m, tv_m, tw_m, tpt_m, tsa_m,     &
+               u_stk, v_stk, ug, vg, u_init, v_init, rdf, rdf_sc,              &
+               ptdf_x, ptdf_y
 
     USE calc_mean_profile_mod,                                                 &
         ONLY:  calc_mean_profile
@@ -470,8 +472,7 @@
 ! !$acc       copyin( pt_init ) &
 ! !$acc       copyin( sa_init ) &
 ! !$acc       copyin( tsc ) &
-! !$acc       copyin( ptdf_x ) &
-! !$acc       copyin( ptdf_y ) &
+! !$acc       copyin( etdf_x ) &
 ! !$acc       copyin( wall_flags_0 ) &
 ! !$acc       copyin( timestep_scheme ) &
 ! !$acc       copyin( rdf ) &
@@ -494,15 +495,18 @@
 !$acc      copyin( wall_flags_0 ) &
 !$acc      copyin( advc_flags_1, advc_flags_2 ) &
 !$acc      copyin( dp_smooth_factor, dpdxy ) &
+!$acc      copyin( ptdf_x, ptdf_y ) &
 !$acc      copyin( tsc ) &
-!$acc       copyin( rdf ) &
-!!$acc      copyin( tend ) &
+!$acc       copyin( rdf, rdf_sc ) &
 !!$acc      copyin( u_stk, v_stk ) &
 !$acc      copyin( u_init, v_init ) &
+!$acc      copyin( pt_init, sa_init ) &
 !$acc      copyin( u, u_p, tu_m ) &
 !$acc      copyin( v, v_p, tv_m ) &
 !$acc      copyin( w, w_p, tw_m ) &
 !$acc      copyin( e, e_p, te_m ) &
+!$acc      copyin( pt, pt_p, tpt_m ) &
+!$acc      copyin( sa, sa_p, tsa_m ) &
 !$acc      copyin( kh, km ) &
 !$acc      copyin( prho ) &
 !$acc      copyin( ug, vg )
@@ -556,9 +560,9 @@ print *, simulated_time
           IF ( ( ws_scheme_mom .OR. ws_scheme_sca )  .AND.  &
                intermediate_timestep_count == 1 )  CALL ws_statistics
 !
-          !$acc update device( u, v, w, e )
+          !$acc update device( u, v, w, e, pt, sa)
           CALL prognostic_equations_vector
-          !$acc update self( u_p, v_p, w_p, e_p )
+          !$acc update self( u_p, v_p, w_p, e_p, pt_p, sa_p )
             !
 !
 !--       Exchange of ghost points (lateral boundary conditions)

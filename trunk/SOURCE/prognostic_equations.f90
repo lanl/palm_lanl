@@ -648,12 +648,24 @@
 
 !
 !--    pt-tendency terms with communication
-       sbt = tsc(2)
+    sbt = tsc(2)
 !
-       tend = 0.0_wp
-       CALL cpu_log( log_point(40), 'pt advection', 'start')
-       CALL advec_s_ws( pt, 'pt' )
-       CALL cpu_log( log_point(40), 'pt advection', 'stop')
+    ! tend = 0.0_wp
+    !$acc data copyout( tend )
+
+    !$acc parallel present( tend )
+    !$acc loop collapse(3)
+    DO  i = nxl, nxr
+       DO  j = nys, nyn
+          DO  k = nzb, nzt
+             tend(k,j,i) = 0.0_wp
+          ENDDO
+       ENDDO
+    ENDDO
+    !$acc end parallel
+
+    CALL advec_s_ws( pt, 'pt' )
+    !$acc end data
 
        IF (idealized_diurnal) THEN
           k = nzt
@@ -734,10 +746,24 @@
 
 !
 !--    sa-tendency terms with communication
-       sbt = tsc(2)
+    sbt = tsc(2)
 !
-       tend = 0.0_wp
-       CALL advec_s_ws( sa, 'sa' )
+    ! tend = 0.0_wp
+    !$acc data copyout( tend )
+
+    !$acc parallel present( tend )
+    !$acc loop collapse(3)
+    DO  i = nxl, nxr
+       DO  j = nys, nyn
+          DO  k = nzb, nzt
+             tend(k,j,i) = 0.0_wp
+          ENDDO
+       ENDDO
+    ENDDO
+    !$acc end parallel
+
+    CALL advec_s_ws( sa, 'sa' )
+    !$acc end data
 
        CALL diffusion_s( sa,                                                   &
                          surf_def_h(2)%sasws)

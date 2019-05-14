@@ -1425,26 +1425,37 @@
 
     sbt = tsc(2)
 
-    tend = 0.0_wp
+    !$acc data create( tend )
+
+    !$acc parallel present( tend )
+    !$acc loop collapse(3)
+    DO  i = nxl, nxr
+       DO  j = nys, nyn
+          DO  k = nzb, nzt
+             tend(k,j,i) = 0.0_wp
+          ENDDO
+       ENDDO
+    ENDDO
+    !$acc end parallel
+
     IF ( timestep_scheme(1:5) == 'runge' )  THEN
       CALL advec_s_ws( e, 'e' )
     ENDIF
 
     ! Compute Stokes-advection if required
-    IF ( stokes_force ) THEN
-       CALL stokes_force_s( e )
-    ENDIF
+    ! IF ( stokes_force ) THEN
+    !    CALL stokes_force_s( e )
+    ! ENDIF
 
 !-- TKE production
 !   Inline subroutine production_e()
 
     !$acc update device( prho )
-    !$acc data copy( tend ) &
-    !$acc present( e, e_p ) &
-    !$acc present( u, v, w )
 
     !$acc parallel present( g, drho_air_zw ) &
     !$acc present( tend ) &
+    !$acc present( e, e_p ) &
+    !$acc present( u, v, w ) &
     !$acc present( dd2zu, ddzw ) &
     !$acc present( km, kh, prho ) &
     !$acc create( dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz )

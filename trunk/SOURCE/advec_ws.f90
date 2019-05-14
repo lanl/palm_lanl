@@ -1072,7 +1072,7 @@
        ! REAL(wp), DIMENSION(nzb:nzt,nysg:nyng,nxlg:nxrg)   ::  diss_t_arr !<
        ! REAL(wp), DIMENSION(nzb:nzt,nysg:nyng,nxlg:nxrg)   ::  flux_t_arr !<
 
-       !$acc data copy( tend ) &
+       !$acc data present( tend ) &
 !       !$acc copyout(flux_t_arr, diss_t_arr) &
        !$acc present( u, v, w ) &
        !$acc copyin( sk )

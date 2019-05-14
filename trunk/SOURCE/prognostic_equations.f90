@@ -471,7 +471,6 @@
        ENDIF
     ENDIF
     !$acc end parallel
-    !$acc update self(tu_m)
 
     CALL cpu_log( log_point(5), 'u-equation', 'stop' )
 !
@@ -561,7 +560,6 @@
        ENDIF
     ENDIF
     !$acc end parallel
-    !$acc update self(tv_m)
 
     CALL cpu_log( log_point(6), 'v-equation', 'stop' )
 
@@ -637,7 +635,6 @@
        ENDIF
     ENDIF
     !$acc end parallel
-    !$acc update self(tw_m)
 
     CALL cpu_log( log_point(7), 'w-equation', 'stop' )
 
@@ -662,6 +659,8 @@
 
     IF (idealized_diurnal) THEN
        k = nzt
+       !$acc parallel present( alpha_T, beta_S, surf_def_h )
+       !$acc loop collapse(2)
        DO i = nxl, nxr
           DO j = nys,nyn
                     m = surf_def_h(2)%start_index(j,i)
@@ -672,8 +671,8 @@
                     surf_def_h(2)%shf_sol(m) = wb_solar*max(arg1,0.0_wp)
           ENDDO
        ENDDO
+       !$acc end parallel
     ENDIF
-    !$acc update device(surf_def_h)
 
     CALL diffusion_s( pt,                                                   &
                       surf_def_h(2)%shf,                                    &
@@ -735,7 +734,6 @@
        ENDIF
     ENDIF
     !$acc end parallel
-    !$acc update self(tpt_m)
 
     CALL cpu_log( log_point(13), 'pt-equation', 'stop' )
 
@@ -817,7 +815,6 @@
        ENDIF
     ENDIF
     !$acc end parallel
-    !$acc update self(tsa_m)
     !$acc end data
 
     CALL cpu_log( log_point(37), 'sa-equation', 'stop' )
@@ -825,7 +822,6 @@
 !
 !-- Calculate density by the equation of state for seawater
     CALL cpu_log( log_point(38), 'eqns-seawater', 'start' )
-    !$acc update self(pt_p, sa_p)
     CALL eqn_state_seawater
     CALL cpu_log( log_point(38), 'eqns-seawater', 'stop' )
 

@@ -172,11 +172,14 @@
        REAL(wp) ::  sa2    !<
 
 
+       !$acc parallel present( pt_p, sa_p ) &
+       !$acc present( hyp, rho_ocean, prho, alpha_T, beta_S )
 
+       !$acc loop collapse(2)
        DO  i = nxl, nxr
           DO  j = nys, nyn
+             !$acc loop seq
              DO  k = nzb+1, nzt
-
              !
 !--             Pressure is needed in dbar
                 p1 = hyp(k) * 1E-4_wp
@@ -255,9 +258,12 @@
 
           ENDDO
        ENDDO
+       !$acc end parallel
 !
 !--    Neumann conditions at up/downward-facing surfaces
        !$OMP PARALLEL DO PRIVATE( i, j, k )
+       !$acc parallel present( bc_h, prho, rho_ocean )
+       !$acc loop
        DO  m = 1, bc_h(0)%ns
           i = bc_h(0)%i(m)
           j = bc_h(0)%j(m)
@@ -268,6 +274,7 @@
 !
 !--    Downward facing surfaces
        !$OMP PARALLEL DO PRIVATE( i, j, k )
+       !$acc loop
        DO  m = 1, bc_h(1)%ns
           i = bc_h(1)%i(m)
           j = bc_h(1)%j(m)
@@ -275,6 +282,7 @@
           prho(k+1,j,i)      = prho(k,j,i)
           rho_ocean(k+1,j,i) = rho_ocean(k,j,i)
        ENDDO
+       !$acc end parallel
 
     END SUBROUTINE eqn_state_seawater
 

@@ -1450,8 +1450,6 @@
 !-- TKE production
 !   Inline subroutine production_e()
 
-    !$acc update device( prho )
-
     !$acc parallel present( g, drho_air_zw ) &
     !$acc present( tend ) &
     !$acc present( e, e_p ) &
@@ -1590,6 +1588,7 @@
 
     !$acc parallel present( g, drho_air, rho_air_zw ) &
     !$acc present( tend ) &
+    !$acc present( e, e_p ) &
     !$acc present( dd2zu, ddzu, ddzw ) &
     !$acc present( l_grid, l_wall) &
     !$acc present(te_m, tsc) &
@@ -1757,8 +1756,7 @@
 !-- Introduce an optional minimum tke
     IF ( e_min > 0.0_wp )  THEN
        !$OMP DO
-       !!$acc parallel present(e, wall_flags_0)
-       !$acc parallel
+       !$acc parallel present(e, wall_flags_0)
        !$acc loop collapse(3)
        DO  i = nxlg, nxrg
           DO  j = nysg, nyng
@@ -1772,8 +1770,7 @@
 
     !$OMP DO
     !$acc data copyout( sums_l_l(nzb+1:nzt,0:statistic_regions,0) ) &
-    !!$acc present( kh, km, e, prho ) &
-    !$acc present( kh, km, prho ) &
+    !$acc present( kh, km, e, prho ) &
     !$acc present( dd2zu, l_grid, rmask ) &
     !$acc present( l_wall)
 

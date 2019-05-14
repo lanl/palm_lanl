@@ -347,7 +347,7 @@
         ONLY:  ws_statistics, ws_finalize
 
     USE arrays_3d,                                                             &
-        ONLY:  p, dzu, e, e_p, nc, nc_p, nr, nr_p, prho, pt, pt_p, pt_init, sa_init, &
+        ONLY:  p, hyp, dzu, e, e_p, nc, nc_p, nr, nr_p, prho, pt, pt_p, pt_init, sa_init, &
                q_init, q, qc, qc_p, ql, ql_c, ql_v, ql_vp, qr, qr_p, q_p,      &
                ref_state, rho_ocean, s, s_p, sa_p, tend, u, u_p, v,            &
                v_p, w, w_p, alpha_T, beta_S, solar3d, sa, &
@@ -417,6 +417,7 @@
 
     USE prognostic_equations_mod,                                              &
         ONLY:  prognostic_equations_vector
+
     USE statistics,                                                            &
         ONLY:  flow_statistics_called, hom, rmask
 
@@ -496,6 +497,7 @@
 !$acc      copyin( advc_flags_1, advc_flags_2 ) &
 !$acc      copyin( dp_smooth_factor, dpdxy ) &
 !$acc      copyin( ptdf_x, ptdf_y ) &
+!$acc      copyin( hyp ) &
 !$acc      copyin( tsc ) &
 !$acc       copyin( rdf, rdf_sc ) &
 !!$acc      copyin( u_stk, v_stk ) &
@@ -508,7 +510,8 @@
 !$acc      copyin( pt, pt_p, tpt_m ) &
 !$acc      copyin( sa, sa_p, tsa_m ) &
 !$acc      copyin( kh, km ) &
-!$acc      copyin( prho ) &
+!$acc      copyin( prho, rho_ocean ) &
+!$acc      copyin( alpha_T, beta_S, solar3d ) &
 !$acc      copyin( ug, vg )
 
 !
@@ -560,9 +563,10 @@ print *, simulated_time
           IF ( ( ws_scheme_mom .OR. ws_scheme_sca )  .AND.  &
                intermediate_timestep_count == 1 )  CALL ws_statistics
 !
-          !$acc update device( u, v, w, e, pt, sa)
+          !$acc update device( u, v, w, e, pt, sa, rho_ocean, prho, alpha_T, beta_S)
           CALL prognostic_equations_vector
-          !$acc update self( u_p, v_p, w_p, e_p, pt_p, sa_p )
+          !$acc update self( u_p, v_p, w_p, e_p, pt_p, sa_p, tu_m, tv_m, tw_m, tpt_m, tsa_m ) &
+          !$acc self( rho_ocean, prho, alpha_T, beta_S, solar3d )
             !
 !
 !--       Exchange of ghost points (lateral boundary conditions)

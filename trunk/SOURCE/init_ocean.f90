@@ -84,7 +84,8 @@
 
 
     USE arrays_3d,                                                             &
-        ONLY:  dzu, hyp, pt_init, ref_state, sa_init, zu, zw
+        ONLY:  dzu, hyp, pt_init, ref_state, sa_init, zu, zw,                  &
+               pt_p, sa_p, rho_ocean, prho, alpha_T, beta_S
 
     USE control_parameters,                                                    &
         ONLY:  g, molecular_viscosity, prho_reference, rho_surface,            &
@@ -96,6 +97,9 @@
 
     USE indices,                                                               &
         ONLY:  nzb, nzt
+
+    USE surface_mod,                                                           &
+       ONLY :  bc_h
 
     USE kinds
 
@@ -191,7 +195,10 @@
 !
 !-- Calculate the 3d array of initial in situ and potential density,
 !-- based on the initial temperature and salinity profile
+    !$acc data copyin( pt_p, sa_p, hyp, bc_h ) &
+    !$acc copyout( rho_ocean, prho, alpha_T, beta_S )
     CALL eqn_state_seawater
+    !$acc end data
 
 !
 !-- Store initial density profile

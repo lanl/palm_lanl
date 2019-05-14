@@ -1075,7 +1075,7 @@
        !$acc data present( tend ) &
 !       !$acc copyout(flux_t_arr, diss_t_arr) &
        !$acc present( u, v, w ) &
-       !$acc copyin( sk )
+       !$acc present( sk )
 
        !$acc parallel present ( advc_flags_1 ) &
        !$acc present( ddzw ) &

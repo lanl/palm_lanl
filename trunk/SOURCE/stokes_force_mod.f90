@@ -237,7 +237,7 @@
 
 !--    Compute Stokes-advection term for the tracer equation
        !$acc parallel present( tend, u_stk, v_stk, wall_flags_0 ) &
-       !$acc copyin( sk )
+       !$acc present( sk )
        !$acc loop
        DO  i = nxl, nxr
           !$acc loop

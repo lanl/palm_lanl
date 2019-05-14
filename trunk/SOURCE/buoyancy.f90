@@ -161,8 +161,12 @@
        IF ( .NOT. sloping_surface )  THEN
 !
 !--       Normal case: horizontal surface
+          !$acc parallel copyin( var, ref_state ) &
+          !$acc present( tend, wall_flags_0, g )
+          !$acc loop collapse(2)
           DO  i = nxl, nxr
              DO  j = nys, nyn
+                !$acc loop seq
                 DO  k = nzb+1, nzt-1
 
                    tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g * 0.5_wp *  &
@@ -174,6 +178,7 @@
                 ENDDO
              ENDDO
           ENDDO
+          !$acc end parallel
 
        ELSE
 !

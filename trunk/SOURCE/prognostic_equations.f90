@@ -383,30 +383,32 @@
 !-- u-velocity component
     CALL cpu_log( log_point(5), 'u-equation', 'start' )
 
-    tend = 0.0_wp
+    !$acc data create(tend)
 
-    call cpu_log( log_point(43), 'u advec', 'start')
+    !$acc parallel present( tend )
+    !$acc loop collapse(3)
+    DO  i = nxl, nxr
+       DO  j = nys, nyn
+          DO  k = nzb, nzt
+             tend(k,j,i) = 0.0_wp
+          ENDDO
+       ENDDO
+    ENDDO
+    !$acc end parallel
+
     CALL advec_u_ws
-    call cpu_log( log_point(43), 'u advec', 'stop')
 
-    call cpu_log( log_point(44), 'u diffusion', 'start')
     CALL diffusion_u
-    call cpu_log( log_point(44), 'u diffusion', 'stop')
 
-    call cpu_log( log_point(45), 'u coriolis', 'start')
     CALL coriolis( 1 )
-    call cpu_log( log_point(45), 'u coriolis', 'stop')
 
-    call cpu_log( log_point(46), 'u stokes', 'start')
     !
 !-- If required, compute Stokes forces
 !    IF ( ocean .AND. stokes_force ) THEN
 !       CALL stokes_force_uvw( 1 )
 !    ENDIF
-!    call cpu_log( log_point(46), 'u stokes', 'stop')
 !
 !-- External pressure gradient
-    !$acc data copy( tend )
     !$acc parallel present( dpdxy, dp_smooth_factor )
     IF ( dp_external )  THEN
        !$acc loop collapse(2)
@@ -470,14 +472,23 @@
     ENDIF
     !$acc end parallel
     !$acc update self(tu_m)
-    !$acc end data
 
     CALL cpu_log( log_point(5), 'u-equation', 'stop' )
 !
 !-- v-velocity component
     CALL cpu_log( log_point(6), 'v-equation', 'start' )
 
-    tend = 0.0_wp
+    !$acc parallel present( tend )
+    !$acc loop collapse(3)
+    DO  i = nxl, nxr
+       DO  j = nys, nyn
+          DO  k = nzb, nzt
+             tend(k,j,i) = 0.0_wp
+          ENDDO
+       ENDDO
+    ENDDO
+    !$acc end parallel
+
     CALL advec_v_ws
     CALL diffusion_v
     CALL coriolis( 2 )
@@ -489,7 +500,6 @@
 !    ENDIF
 !
 !-- External pressure gradient
-    !$acc data copy( tend )
     !$acc parallel present( dpdxy, dp_smooth_factor )
     IF ( dp_external )  THEN
        !$acc loop collapse(2)
@@ -552,7 +562,6 @@
     ENDIF
     !$acc end parallel
     !$acc update self(tv_m)
-    !$acc end data
 
     CALL cpu_log( log_point(6), 'v-equation', 'stop' )
 
@@ -560,7 +569,17 @@
 !-- w-velocity component
     CALL cpu_log( log_point(7), 'w-equation', 'start' )
 
-    tend = 0.0_wp
+    !$acc parallel present( tend )
+    !$acc loop collapse(3)
+    DO  i = nxl, nxr
+       DO  j = nys, nyn
+          DO  k = nzb, nzt
+             tend(k,j,i) = 0.0_wp
+          ENDDO
+       ENDDO
+    ENDDO
+    !$acc end parallel
+
     CALL advec_w_ws
     CALL diffusion_w
     CALL coriolis( 3 )
@@ -575,7 +594,6 @@
 !    ENDIF
 !
 !-- Prognostic equation for w-velocity component
-    !$acc data copy( tend )
     !$acc parallel present( tsc, wall_flags_0, rdf ) &
     !$acc present( w, w_p, tw_m )
     !$acc loop collapse(2)

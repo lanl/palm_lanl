@@ -498,7 +498,7 @@
 !$acc       copyin( rdf ) &
 !!$acc      copyin( tend ) &
 !!$acc      copyin( u_stk, v_stk ) &
-!$acc       copyin( u_init, v_init ) &
+!$acc      copyin( u_init, v_init ) &
 !$acc      copyin( u, u_p, tu_m ) &
 !$acc      copyin( v, v_p, tv_m ) &
 !$acc      copyin( w, w_p, tw_m ) &

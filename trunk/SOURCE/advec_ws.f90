@@ -1452,10 +1452,11 @@
 
 !--    Computation of interior fluxes and tendency terms
 
-       !$acc data copy( tend ) &
+       !$acc data present( tend ) &
        !$acc present( u, v, w )
 
        !$acc parallel present ( advc_flags_1 ) &
+       !$acc present( tend ) &
        !$acc present( ddzw ) &
        !$acc present( rho_air_zw, drho_air )
        !$acc loop
@@ -1820,7 +1821,7 @@
 !
 !--    Computation of interior fluxes and tendency terms
 
-       !$acc data copy( tend ) &
+       !$acc data present( tend ) &
        !$acc present( u, v, w )
 
        !$acc parallel present ( advc_flags_1 ) &
@@ -2190,7 +2191,7 @@
 !
 !--    Computation of interior fluxes and tendency terms
 
-       !$acc data copy( tend ) &
+       !$acc data present( tend ) &
        !$acc present( u, v, w )
 
        !$acc parallel present ( advc_flags_1, advc_flags_2 ) &

@@ -127,7 +127,7 @@
        flag_force = MERGE( 0.0_wp, 1.0_wp, forcing )
 !
 !--    Compute Coriolis terms for the three velocity components
-       !$acc data copy( tend ) &
+       !$acc data pcopy( tend ) &
        !$acc present( u, v, w ) &
        !$acc present( ug, vg  )
        SELECT CASE ( component )

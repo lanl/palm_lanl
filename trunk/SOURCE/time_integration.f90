@@ -447,43 +447,12 @@
                             !< steering of run control output interval
     REAL(wp) ::  tsrp_org   !< original value of time_since_reference_point
 
-! !$acc data    copy( tend ) &
-! !$acc         copy( tu_m ) &
-! !$acc         copy( tv_m ) &
-! !$acc         copy( tw_m ) &
-! !$acc         copy( tpt_m ) &
-! !$acc         copy( tsa_m ) &
-! !$acc         copy( u ) &
-! !$acc         copy( v ) &
-! !$acc         copy( w ) &
-! !$acc         copy( pt ) &
-! !$acc         copy( sa ) &
-! !$acc         copy( u_p ) &
-! !$acc         copy( v_p ) &
-! !$acc         copy( w_p ) &
-! !$acc         copy( pt_p ) &
-! !$acc         copy( sa_p ) &
-! !$acc       copyin( ddzu ) &
-! !$acc       copyin( ddzw ) &
-! !$acc       copyin( dd2zu ) &
-! !$acc       copyin( u_init ) &
-! !$acc       copyin( v_init ) &
-! !$acc       copyin( ug ) &
-! !$acc       copyin( vg ) &
-! !$acc       copyin( pt_init ) &
-! !$acc       copyin( sa_init ) &
-! !$acc       copyin( tsc ) &
-! !$acc       copyin( etdf_x ) &
-! !$acc       copyin( wall_flags_0 ) &
-! !$acc       copyin( timestep_scheme ) &
-! !$acc       copyin( rdf ) &
-! !$acc       copyin( rdf_sc )
-
 !$acc data copyin( g ) &
 !$acc      copyin( drho_air ) &
 !$acc      copyin( drho_air_zw ) &
 !$acc      copyin( rho_air ) &
 !$acc      copyin( rho_air_zw ) &
+!$acc      copyin( ref_state ) &
 !$acc      copyin( dd2zu ) &
 !$acc      copyin( ddzu ) &
 !$acc      copyin( ddzw ) &
@@ -563,7 +532,7 @@ print *, simulated_time
           IF ( ( ws_scheme_mom .OR. ws_scheme_sca )  .AND.  &
                intermediate_timestep_count == 1 )  CALL ws_statistics
 !
-          !$acc update device( u, v, w, e, pt, sa, rho_ocean, prho, alpha_T, beta_S)
+          !$acc update device( u, v, w, e, pt, sa, rho_ocean, prho, alpha_T, beta_S, ref_state)
           CALL prognostic_equations_vector
           !$acc update self( u_p, v_p, w_p, e_p, pt_p, sa_p, tu_m, tv_m, tw_m, tpt_m, tsa_m ) &
           !$acc self( rho_ocean, prho, alpha_T, beta_S, solar3d )

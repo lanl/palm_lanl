@@ -161,8 +161,8 @@
        IF ( .NOT. sloping_surface )  THEN
 !
 !--       Normal case: horizontal surface
-          !$acc parallel copyin( var, ref_state ) &
-          !$acc present( tend, wall_flags_0, g )
+          !$acc parallel copyin( var ) &
+          !$acc present( tend, wall_flags_0, g, ref_state )
           !$acc loop collapse(2)
           DO  i = nxl, nxr
              DO  j = nys, nyn

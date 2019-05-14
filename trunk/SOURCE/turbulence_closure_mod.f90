@@ -1677,8 +1677,8 @@
     USE grid_variables,                                                        &
         ONLY:  dx, dy
 
-    USE statistics,                                                            &
-        ONLY :  rmask, sums_l_l
+    ! USE statistics,                                                            &
+    !     ONLY :  rmask, sums_l_l
 
     USE surface_mod,                                                           &
         ONLY :  bc_h, surf_def_h, surf_def_v
@@ -1730,12 +1730,13 @@
     ENDIF
 
     !$OMP DO
-    !$acc data copyout( sums_l_l(nzb+1:nzt,0:statistic_regions,0) ) &
-    !$acc present( kh, km, e, prho ) &
-    !$acc present( dd2zu, l_grid, rmask ) &
+    !$acc data present( kh, km, e, prho ) &
+    !$acc present( dd2zu, l_grid ) &
+    !!$acc present( rmask ) &
+    !!$acc copyout( sums_l_l(nzb+1:nzt,0:statistic_regions,0) ) &
     !$acc present( l_wall)
 
-    sums_l_l = 0.0_wp
+    ! sums_l_l = 0.0_wp
     !$acc parallel
     !$acc loop collapse(2)
     DO  i = nxlg, nxrg
@@ -1770,9 +1771,9 @@
              kh(k,j,i) = ( 1.0_wp + 2.0_wp * l / ll ) * km(k,j,i)
 !
 !--          Summation for averaged profile (cf. flow_statistics)
-             DO  sr = 0, statistic_regions
-                sums_l_l(k,sr,tn) = sums_l_l(k,sr,tn) + l * rmask(j,i,sr)
-             ENDDO
+             ! DO  sr = 0, statistic_regions
+             !    sums_l_l(k,sr,tn) = sums_l_l(k,sr,tn) + l * rmask(j,i,sr)
+             ! ENDDO
 
           ENDDO
        ENDDO
@@ -1780,7 +1781,7 @@
     !$acc end parallel
     !$acc end data
 
-    sums_l_l(nzt+1,:,tn) = sums_l_l(nzt,:,tn)   ! quasi boundary-condition for
+    ! sums_l_l(nzt+1,:,tn) = sums_l_l(nzt,:,tn)   ! quasi boundary-condition for
                                                 ! data output
 !$OMP END PARALLEL
 

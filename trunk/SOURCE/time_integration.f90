@@ -461,7 +461,7 @@
 !$acc      copyin( l_grid ) &
 !$acc      copyin( l_wall ) &
 !$acc      copyin( surf_def_h ) &
-!$acc      copyin( rmask ) &
+!!$acc      copyin( rmask ) &
 !$acc      copyin( wall_flags_0 ) &
 !$acc      copyin( advc_flags_1, advc_flags_2 ) &
 !$acc      copyin( dp_smooth_factor, dpdxy ) &

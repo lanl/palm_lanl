@@ -90,13 +90,20 @@
        REAL(wp)     ::  flag       !< flag to mask topography
 !
 !--    Compute Stokes forces for the three velocity components
+       !$acc data present( tend ) &
+       !$acc present( u_stk, v_stk, wall_flags_0 ) &
+       !$acc present( u, v, w )
        SELECT CASE ( component )
 
 !
 !--       u-component
           CASE ( 1 )
+             !$acc parallel
+             !$acc loop
              DO  i = nxlu, nxr
+                !$acc loop
                 DO  j = nys, nyn
+                   !$acc loop
                    DO  k = nzb+1, nzt
 !
 !--                   Predetermine flag to mask topography
@@ -115,12 +122,17 @@
                    ENDDO
                 ENDDO
              ENDDO
+             !$acc end parallel
 
 !
 !--       v-component
           CASE ( 2 )
+             !$acc parallel
+             !$acc loop
              DO  i = nxl, nxr
+                !$acc loop
                 DO  j = nysv, nyn
+                   !$acc loop
                    DO  k = nzb+1, nzt
 !
 !--                   Predetermine flag to mask topography
@@ -139,12 +151,17 @@
                    ENDDO
                 ENDDO
              ENDDO
+             !$acc end parallel
 
 !
 !--       w-component
           CASE ( 3 )
+             !$acc parallel
+             !$acc loop
              DO  i = nxl, nxr
+                !$acc loop
                 DO  j = nys, nyn
+                   !$acc loop
                    DO  k = nzb+1, nzt
 !
 !--                   Predetermine flag to mask topography
@@ -171,6 +188,7 @@
                    ENDDO
                 ENDDO
              ENDDO
+             !$acc end parallel
 
           CASE DEFAULT
 
@@ -178,6 +196,7 @@
              CALL message( 'Stokes_force_uvw', 'PA0601', 1, 2, 0, 6, 0 )
 
       END SELECT
+      !$acc end data
 
     END SUBROUTINE stokes_force_uvw
 
@@ -217,8 +236,13 @@
 #endif
 
 !--    Compute Stokes-advection term for the tracer equation
+       !$acc parallel present( tend, u_stk, v_stk, wall_flags_0 ) &
+       !$acc copyin( sk )
+       !$acc loop
        DO  i = nxl, nxr
+          !$acc loop
           DO  j = nys, nyn
+             !$acc loop
              DO  k = nzb+1, nzt
 !
 !--             Predetermine flag to mask topography
@@ -233,6 +257,7 @@
              ENDDO
           ENDDO
        ENDDO
+       !$acc end parallel
 
     END SUBROUTINE stokes_force_s
 
@@ -266,8 +291,14 @@
        REAL(wp)     ::  dudz, dvdz, dwdx, dwdy
 
 !--    Compute Stokes-advection term for the tracer equation
+       !$acc parallel present( tend, u, v, w, km ) &
+       !$acc present( u_stk, v_stk ) &
+       !$acc present( wall_flags_0, dd2zu )
+       !$acc loop
        DO  i = nxl, nxr
+          !$acc loop
           DO  j = nys, nyn
+             !$acc loop
              DO  k = nzb+1, nzt
 !
 !--             Predetermine flag to mask topography
@@ -291,6 +322,7 @@
              ENDDO
           ENDDO
        ENDDO
+       !$acc end parallel
 
     END SUBROUTINE stokes_production_e
 

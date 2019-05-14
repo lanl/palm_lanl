@@ -1538,49 +1538,10 @@
 !-- end inline subroutine production_e()
 
 
-!!--    Compute Stokes production term in e equation
-!!      Inline subroutine stokes_production_e()
-
-    !!!$acc data copy(tend) &
-    !!!$acc copyin( u, v, w, u_stk, v_stk )
-
-    !!!!$acc update device( u, v, w, u_stk, v_stk )
-    !!!$acc parallel present( dd2zu ) &
-    !!!$acc present ( wall_flags_0 ) &
-    !!!!$acc present ( u, v, w, u_stk, v_stk ) &
-    !!!$acc present ( km )
-    !IF ( stokes_force ) THEN
-    !   !!$acc loop
-    !   DO  i = nxl, nxr
-    !      !!$acc loop
-    !      DO  j = nys, nyn
-    !         !!$acc loop
-    !         DO  k = nzb+1, nzt
-!!
-!!--             Predetermine flag to mask topography
-    !            flag = MERGE( 1.0_wp, 0.0_wp,                                  &
-    !                          BTEST( wall_flags_0(k,j,i), 29 ) )
-!!
-!!--             Stokes-production term
-    !            dudz(k,j,i) = 0.5_wp  * ( u(k+1,j,i) + u(k+1,j,i+1) -                 &
-    !                               u(k-1,j,i) - u(k-1,j,i+1) ) * dd2zu(k)
-    !            dwdx(k,j,i) = 0.25_wp * ( w(k,j,i+1) + w(k-1,j,i+1) -                 &
-    !                               w(k,j,i-1) - w(k-1,j,i-1) ) * ddx
-    !            dvdz(k,j,i) = 0.5_wp  * ( v(k+1,j,i) + v(k+1,j+1,i) -                 &
-    !                               v(k-1,j,i) - v(k-1,j+1,i) ) * dd2zu(k)
-    !            dwdy(k,j,i) = 0.25_wp * ( w(k,j+1,i) + w(k-1,j+1,i) -                 &
-    !                               w(k,j-1,i) - w(k-1,j-1,i) ) * ddy
-    !            tend(k,j,i) = tend(k,j,i) + km(k,j,i) * (                      &
-    !                          ( u_stk(k+1) - u_stk(k-1) ) * dd2zu(k) *         &
-    !                          ( dudz(k,j,i) + dwdx(k,j,i) ) +                                &
-    !                          ( v_stk(k+1) - v_stk(k-1) ) * dd2zu(k) *         &
-    !                          ( dvdz(k,j,i) + dwdy(k,j,i) )           ) * flag
-    !         ENDDO
-    !      ENDDO
-    !   ENDDO
-    !ENDIF
-    !!!$acc end parallel
-!-- end inline subroutine stokes_production_e()
+!-- Compute Stokes production term in e equation
+    IF ( stokes_force ) THEN
+       CALL stokes_production_e
+    ENDIF
 
 !
 !-- Calculate the tendency terms due to diffusion

@@ -469,7 +469,7 @@
 !$acc      copyin( hyp ) &
 !$acc      copyin( tsc ) &
 !$acc       copyin( rdf, rdf_sc ) &
-!!$acc      copyin( u_stk, v_stk ) &
+!$acc      copyin( u_stk, v_stk ) &
 !$acc      copyin( u_init, v_init ) &
 !$acc      copyin( pt_init, sa_init ) &
 !$acc      copyin( u, u_p, tu_m ) &

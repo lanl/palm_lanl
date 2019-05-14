@@ -404,9 +404,9 @@
 
     !
 !-- If required, compute Stokes forces
-!    IF ( ocean .AND. stokes_force ) THEN
-!       CALL stokes_force_uvw( 1 )
-!    ENDIF
+    IF ( ocean .AND. stokes_force ) THEN
+       CALL stokes_force_uvw( 1 )
+    ENDIF
 !
 !-- External pressure gradient
     !$acc parallel present( dpdxy, dp_smooth_factor )
@@ -494,9 +494,9 @@
 
 !
 !-- If required, compute Stokes forces
-!    IF ( ocean .AND. stokes_force ) THEN
-!       CALL stokes_force_uvw( 2 )
-!    ENDIF
+    IF ( ocean .AND. stokes_force ) THEN
+       CALL stokes_force_uvw( 2 )
+    ENDIF
 !
 !-- External pressure gradient
     !$acc parallel present( dpdxy, dp_smooth_factor )
@@ -585,9 +585,9 @@
     CALL buoyancy( rho_ocean, 3 )
     !
 !-- If required, compute Stokes forces
-!    IF ( ocean .AND. stokes_force ) THEN
-!       CALL stokes_force_uvw( 3 )
-!    ENDIF
+    IF ( ocean .AND. stokes_force ) THEN
+       CALL stokes_force_uvw( 3 )
+    ENDIF
 !
 !-- Prognostic equation for w-velocity component
     !$acc parallel present( tsc, wall_flags_0, rdf ) &
@@ -679,9 +679,9 @@
                       surf_def_h(2)%shf_sol )
 
 !-- If required, compute Stokes-advection term
-    ! IF ( ocean .AND. stokes_force ) THEN
-    !    CALL stokes_force_s( pt )
-    ! ENDIF
+    IF ( ocean .AND. stokes_force ) THEN
+       CALL stokes_force_s( pt )
+    ENDIF
 
 !
 !-- Prognostic equation for potential temperature
@@ -761,9 +761,9 @@
 
 !
 !-- If required, compute Stokes-advection term
-    ! IF ( stokes_force ) THEN
-    !    CALL stokes_force_s( sa )
-    ! ENDIF
+    IF ( stokes_force ) THEN
+       CALL stokes_force_s( sa )
+    ENDIF
 
 !
 !-- Prognostic equation for salinity

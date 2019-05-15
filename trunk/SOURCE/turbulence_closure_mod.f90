@@ -1847,6 +1847,8 @@
 
 #if defined( __nopointer )
 
+    !$acc parallel present( e, e_p )
+    !$acc loop collapse(3)
     DO  i = nxlg, nxrg
        DO  j = nysg, nyng
           DO  k = nzb, nzt+1
@@ -1854,6 +1856,7 @@
           ENDDO
        ENDDO
     ENDDO
+    !$acc end parallel
 
 #else
 

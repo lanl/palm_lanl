@@ -166,6 +166,9 @@
 #if defined( __nopointer )
     CALL cpu_log( log_point(28), 'swap_timelevel (nop)', 'start' )
 
+    !$acc parallel present( u, v, w, pt, sa ) &
+    !$acc present( u_p, v_p, w_p, pt_p, sa_p )
+    !$acc loop collapse(3)
     DO  i = nxlg, nxrg
        DO  j = nysg, nyng
           DO  k = nzb, nzt+1
@@ -173,16 +176,13 @@
              v(k,j,i)  = v_p(k,j,i)
              w(k,j,i)  = w_p(k,j,i)
              pt(k,j,i) = pt_p(k,j,i)
+             sa(k,j,i) = sa_p(k,j,i)
           ENDDO
        ENDDO
     ENDDO
+    !$acc end parallel
 
     CALL tcm_swap_timelevel ( 0 )
-
-    sa = sa_p
-
-    IF ( passive_scalar )  s = s_p
-
 
     CALL cpu_log( log_point(28), 'swap_timelevel (nop)', 'stop' )
 #else

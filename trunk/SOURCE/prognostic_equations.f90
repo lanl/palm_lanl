@@ -292,7 +292,7 @@
                intermediate_timestep_count_max, large_scale_forcing,           &
                large_scale_subsidence, microphysics_morrison,                  &
                microphysics_seifert, microphysics_sat_adjust, neutral, nudging,&
-               ocean, outflow_l, outflow_s, passive_scalar, plant_canopy,      &
+               ocean, outflow_l, outflow_s,      &
                prho_reference, prho_reference,                                 &
                prho_reference, pt_reference, pt_reference, pt_reference,       &
                scalar_advec, scalar_advec, simulated_time, sloping_surface,    &

@@ -560,7 +560,9 @@ print *, simulated_time
           CALL boundary_conds
 !
 !--       Swap the time levels in preparation for the next time step.
+          !$acc update device( u_p, v_p, w_p, e_p, pt_p, sa_p )
           CALL swap_timelevel
+          !$acc update self( u, v, w, e, pt, sa )
 !
 !--       Temperature offset must be imposed at cyclic boundaries in x-direction
 !--       when a sloping surface is used

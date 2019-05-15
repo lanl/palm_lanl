@@ -414,7 +414,7 @@
     ENDIF
 #endif
     !$acc end data
-    !$acc update self(w)
+    !$acc update self( w )
 
 !
 !-- For completeness, set the divergence sum of all statistic regions to those
@@ -433,99 +433,122 @@
     CALL poisfft( d )
 
 !
-!--    Store computed perturbation pressure and set boundary condition in
-!--    z-direction
-       !$OMP PARALLEL DO PRIVATE (i,j,k)
-       DO  i = nxl, nxr
-          DO  j = nys, nyn
-             DO  k = nzb+1, nzt
-                tend(k,j,i) = d(k,j,i)
-             ENDDO
+!-- Store computed perturbation pressure and set boundary condition in
+!-- z-direction
+    !$OMP PARALLEL DO PRIVATE (i,j,k)
+    !$acc data copyout( tend ) &
+    !$acc copyin( d )
+
+    !$acc parallel present( tend, d )
+    !$acc loop collapse(3)
+    DO  i = nxl, nxr
+       DO  j = nys, nyn
+          DO  k = nzb+1, nzt
+             tend(k,j,i) = d(k,j,i)
           ENDDO
        ENDDO
+    ENDDO
+    !$acc end parallel
 
 !
-!--    Bottom boundary:
-!--    This condition is only required for internal output. The pressure
-!--    gradient (dp(nzb+1)-dp(nzb))/dz is not used anywhere else.
-       IF ( ibc_p_b == 1 )  THEN
+!-- Bottom boundary:
+!-- This condition is only required for internal output. The pressure
+!-- gradient (dp(nzb+1)-dp(nzb))/dz is not used anywhere else.
+    IF ( ibc_p_b == 1 )  THEN
 !
-!--       Neumann (dp/dz = 0). Using surfae data type, first for non-natural
-!--       surfaces, then for natural and urban surfaces
-!--       Upward facing
-          !$OMP PARALLEL DO PRIVATE( i, j, k )
-          DO  m = 1, bc_h(0)%ns
-             i = bc_h(0)%i(m)
-             j = bc_h(0)%j(m)
-             k = bc_h(0)%k(m)
-             tend(k-1,j,i) = tend(k,j,i)
-          ENDDO
+!--    Neumann (dp/dz = 0). Using surfae data type, first for non-natural
+!--    surfaces, then for natural and urban surfaces
+!--    Upward facing
+       !$OMP PARALLEL DO PRIVATE( i, j, k )
+       !$acc parallel loop present( tend, bc_h )
+       DO  m = 1, bc_h(0)%ns
+          i = bc_h(0)%i(m)
+          j = bc_h(0)%j(m)
+          k = bc_h(0)%k(m)
+          tend(k-1,j,i) = tend(k,j,i)
+       ENDDO
+       !$acc end parallel
 !
-!--       Downward facing
-          !$OMP PARALLEL DO PRIVATE( i, j, k )
-          DO  m = 1, bc_h(1)%ns
-             i = bc_h(1)%i(m)
-             j = bc_h(1)%j(m)
-             k = bc_h(1)%k(m)
-             tend(k+1,j,i) = tend(k,j,i)
-          ENDDO
+!--    Downward facing
+       !$OMP PARALLEL DO PRIVATE( i, j, k )
+       !$acc parallel loop present( tend, bc_h )
+       DO  m = 1, bc_h(1)%ns
+          i = bc_h(1)%i(m)
+          j = bc_h(1)%j(m)
+          k = bc_h(1)%k(m)
+          tend(k+1,j,i) = tend(k,j,i)
+       ENDDO
+       !$acc end parallel
 
-       ELSE
+    ELSE
 !
-!--       Dirichlet. Using surface data type, first for non-natural
-!--       surfaces, then for natural and urban surfaces
-!--       Upward facing
-          !$OMP PARALLEL DO PRIVATE( i, j, k )
-          DO  m = 1, bc_h(0)%ns
-             i = bc_h(0)%i(m)
-             j = bc_h(0)%j(m)
-             k = bc_h(0)%k(m)
-             tend(k-1,j,i) = 0.0_wp
-          ENDDO
+!--    Dirichlet. Using surface data type, first for non-natural
+!--    surfaces, then for natural and urban surfaces
+!--    Upward facing
+       !$OMP PARALLEL DO PRIVATE( i, j, k )
+       !$acc parallel loop present( tend, bc_h )
+       DO  m = 1, bc_h(0)%ns
+          i = bc_h(0)%i(m)
+          j = bc_h(0)%j(m)
+          k = bc_h(0)%k(m)
+          tend(k-1,j,i) = 0.0_wp
+       ENDDO
+       !$acc end parallel
 !
-!--       Downward facing
-          !$OMP PARALLEL DO PRIVATE( i, j, k )
-          DO  m = 1, bc_h(1)%ns
-             i = bc_h(1)%i(m)
-             j = bc_h(1)%j(m)
-             k = bc_h(1)%k(m)
-             tend(k+1,j,i) = 0.0_wp
-          ENDDO
+!--    Downward facing
+       !$OMP PARALLEL DO PRIVATE( i, j, k )
+       !$acc parallel loop present( tend, bc_h )
+       DO  m = 1, bc_h(1)%ns
+          i = bc_h(1)%i(m)
+          j = bc_h(1)%j(m)
+          k = bc_h(1)%k(m)
+          tend(k+1,j,i) = 0.0_wp
+       ENDDO
+       !$acc end parallel
 
-       ENDIF
+    ENDIF
 !
-!--    Top boundary
-       IF ( ibc_p_t == 1 )  THEN
+!-- Top boundary
+    IF ( ibc_p_t == 1 )  THEN
 !
-!--       Neumann
-          !$OMP PARALLEL DO PRIVATE (i,j,k)
-          DO  i = nxlg, nxrg
-             DO  j = nysg, nyng
-                tend(nzt+1,j,i) = tend(nzt,j,i)
-             ENDDO
+!--    Neumann
+       !$OMP PARALLEL DO PRIVATE (i,j,k)
+       !$acc parallel loop present( tend, bc_h )
+       DO  i = nxlg, nxrg
+          DO  j = nysg, nyng
+             tend(nzt+1,j,i) = tend(nzt,j,i)
           ENDDO
+       ENDDO
+       !$acc end parallel
 
-       ELSE
+    ELSE
 !
-!--       Dirichlet
-          !$OMP PARALLEL DO PRIVATE (i,j,k)
-          DO  i = nxlg, nxrg
-             DO  j = nysg, nyng
-                tend(nzt+1,j,i) = 0.0_wp
-             ENDDO
+!--    Dirichlet
+       !$OMP PARALLEL DO PRIVATE (i,j,k)
+       !$acc parallel loop present( tend, bc_h )
+       DO  i = nxlg, nxrg
+          DO  j = nysg, nyng
+             tend(nzt+1,j,i) = 0.0_wp
           ENDDO
+       ENDDO
+       !$acc end parallel
 
-       ENDIF
+    ENDIF
+    !$acc end data
 
 !
-!--    Exchange boundaries for p
-       CALL exchange_horiz( tend, nbgp )
+!-- Exchange boundaries for p
+    CALL exchange_horiz( tend, nbgp )
 
 !-- Store perturbation pressure on array p, used for pressure data output.
 !-- Ghost layers are added in the output routines (except sor-method: see below)
+    !$acc data copyin( tend, p ) &
+    !$acc present( u, v, w )
     IF ( intermediate_timestep_count <= 1 )  THEN
        !$OMP PARALLEL PRIVATE (i,j,k)
        !$OMP DO
+       !$acc parallel present( tend, p )
+       !$acc loop collapse(3)
        DO  i = nxl-1, nxr+1
           DO  j = nys-1, nyn+1
              DO  k = nzb, nzt+1
@@ -534,11 +557,14 @@
              ENDDO
           ENDDO
        ENDDO
+       !$acc end parallel
        !$OMP END PARALLEL
 
     ELSEIF ( intermediate_timestep_count > 1 )  THEN
        !$OMP PARALLEL PRIVATE (i,j,k)
        !$OMP DO
+       !$acc parallel present( tend, p )
+       !$acc loop collapse(3)
        DO  i = nxl-1, nxr+1
           DO  j = nys-1, nyn+1
              DO  k = nzb, nzt+1
@@ -547,15 +573,19 @@
              ENDDO
           ENDDO
        ENDDO
+       !$acc end parallel
        !$OMP END PARALLEL
 
     ENDIF
 
     !$OMP PARALLEL PRIVATE (i,j,k)
     !$OMP DO
+    !$acc parallel present( u, v, w, tend, ddzu, wall_flags_0 )
+    !$acc loop
     DO  i = nxl, nxr
+       !$acc loop
        DO  j = nys, nyn
-
+          !$acc loop
           DO  k = nzb+1, nzt
              w(k,j,i) = w(k,j,i) - dt_3d *                                     &
                            ( tend(k+1,j,i) - tend(k,j,i) ) * ddzu(k+1)         &
@@ -582,9 +612,11 @@
                                               BTEST( wall_flags_0(k,j,i), 2 )  &
                                             )
           ENDDO
-
        ENDDO
     ENDDO
+    !$acc end parallel
+    !$acc end data
+    !$acc update self( u, v, w )
     !$OMP END PARALLEL
 
 !-- Exchange of boundaries for the velocities
@@ -627,8 +659,13 @@
        ENDDO
 #else
        !$OMP DO SCHEDULE( STATIC )
+       !$acc data create( d )
+       !$acc parallel present( d, u, v, w, rho_air, rho_air_zw, ddzw, wall_flags_0 )
+       !$acc loop
        DO  i = nxl, nxr
+          !$acc loop
           DO  j = nys, nyn
+             !$acc loop
              DO  k = nzb+1, nzt
                 d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_air(k) * ddx +    &
                              ( v(k,j+1,i) - v(k,j,i) ) * rho_air(k) * ddy +    &
@@ -640,9 +677,12 @@
              ENDDO
           ENDDO
        ENDDO
+       !$acc end parallel
 !
 !--    Compute possible PE-sum of divergences for flow_statistics
        !$OMP DO SCHEDULE( STATIC )
+       !$acc parallel present( d )
+       !$acc loop collapse(3) reduction(+:threadsum)
        DO  i = nxl, nxr
           DO  j = nys, nyn
              DO  k = nzb+1, nzt
@@ -650,6 +690,8 @@
              ENDDO
           ENDDO
        ENDDO
+       !$acc end parallel
+       !$acc end data
 #endif
 
        localsum = localsum + threadsum

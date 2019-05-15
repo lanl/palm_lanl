@@ -401,7 +401,7 @@
 
     USE indices,                                                               &
         ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, nyn, nyng, nys, nysg, nzb, nzt, &
-               wall_flags_0, advc_flags_1, advc_flags_2
+               wall_flags_0, advc_flags_1, advc_flags_2, ngp_2dh_outer
 
     USE interfaces
 
@@ -462,6 +462,7 @@
 !$acc      copyin( l_wall ) &
 !$acc      copyin( surf_def_h ) &
 !!$acc      copyin( rmask ) &
+!$acc      copyin( ngp_2dh_outer ) &
 !$acc      copyin( wall_flags_0 ) &
 !$acc      copyin( advc_flags_1, advc_flags_2 ) &
 !$acc      copyin( dp_smooth_factor, dpdxy ) &
@@ -591,6 +592,7 @@ print *, simulated_time
 !
 !--       Reduce the velocity divergence via the equation for perturbation
 !--       pressure.
+          !$acc update device( u, v, w )
           CALL pres
 !
 !--       Compute the diffusion quantities

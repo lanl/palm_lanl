@@ -19,104 +19,104 @@
 !
 ! Current revisions:
 ! ------------------
-! 
+!
 ! 2018-11-15 cbegeman
 ! Modify call to init_pt_anomaly
-! 
+!
 ! Former revisions:
 ! -----------------
 ! $Id: init_3d_model.f90 3083 2018-06-19 14:03:12Z gronemeier $
-! Move initialization call for nudging and 1D/3D offline nesting. 
+! Move initialization call for nudging and 1D/3D offline nesting.
 ! Revise initialization with inifor data.
-! 
+!
 ! 3045 2018-05-28 07:55:41Z Giersch
 ! Error messages revised
-! 
+!
 ! 3045 2018-05-28 07:55:41Z Giersch
 ! Error messages revised
-! 
+!
 ! 3042 2018-05-25 10:44:37Z schwenkel
 ! Changed the name specific humidity to mixing ratio
-! 
+!
 ! 3040 2018-05-25 10:22:08Z schwenkel
 ! Add option to initialize warm air bubble close to surface
-! 
+!
 ! 3014 2018-05-09 08:42:38Z maronga
 ! Bugfix: initialization of ts_value missing
-! 
+!
 ! 3011 2018-05-07 14:38:42Z schwenkel
 ! removed redundant if statement
-! 
+!
 ! 3004 2018-04-27 12:33:25Z Giersch
 ! precipitation_rate removed
-! 
+!
 ! 2995 2018-04-19 12:13:16Z Giersch
-! CALL radiation_control is not necessary during initialization because 
-! calculation of radiative fluxes at model start is done in radiation_init 
-! in any case 
-! 
+! CALL radiation_control is not necessary during initialization because
+! calculation of radiative fluxes at model start is done in radiation_init
+! in any case
+!
 ! 2977 2018-04-17 10:27:57Z kanani
 ! Implement changes from branch radiation (r2948-2971) with minor modifications
 ! (moh.hefny):
 ! - set radiation_interactions according to the existence of urban/land vertical
 !   surfaces and trees to activiate RTM
 ! - set average_radiation to TRUE if RTM is activiated
-! 
+!
 ! 2938 2018-03-27 15:52:42Z suehring
 ! - Revise Inifor initialization for geostrophic wind components
-! - Initialize synthetic turbulence generator in case of Inifor initialization  
+! - Initialize synthetic turbulence generator in case of Inifor initialization
 !
 ! 2936 2018-03-27 14:49:27Z suehring
 ! Synchronize parent and child models after initialization.
 ! Remove obsolete masking of topography grid points for Runge-Kutta weighted
 ! tendency arrays.
-! 
+!
 ! 2920 2018-03-22 11:22:01Z kanani
 ! Add call for precalculating apparent solar positions (moh.hefny)
-! 
+!
 ! 2906 2018-03-19 08:56:40Z Giersch
 ! The variables read/write_svf_on_init have been removed. Instead ENVIRONMENT
-! variables read/write_svf have been introduced. Location_message has been 
+! variables read/write_svf have been introduced. Location_message has been
 ! added.
-! 
+!
 ! 2894 2018-03-15 09:17:58Z Giersch
 ! Renamed routines with respect to reading restart data, file 13 is closed in
 ! rrd_read_parts_of_global now
-! 
+!
 ! 2867 2018-03-09 09:40:23Z suehring
-! Further bugfix concerning call of user_init. 
-! 
+! Further bugfix concerning call of user_init.
+!
 ! 2864 2018-03-08 11:57:45Z suehring
-! Bugfix, move call of user_init in front of initialization of grid-point 
+! Bugfix, move call of user_init in front of initialization of grid-point
 ! arrays
-! 
+!
 ! 2817 2018-02-19 16:32:21Z knoop
 ! Preliminary gust module interface implemented
-! 
+!
 ! 2776 2018-01-31 10:44:42Z Giersch
 ! Variable use_synthetic_turbulence_generator has been abbreviated
-! 
+!
 ! 2766 2018-01-22 17:17:47Z kanani
 ! Removed preprocessor directive __chem
-! 
+!
 ! 2758 2018-01-17 12:55:21Z suehring
 ! In case of spinup of land- and urban-surface model, do not mask wind velocity
 ! at first computational grid level
-! 
+!
 ! 2746 2018-01-15 12:06:04Z suehring
 ! Move flag plant canopy to modules
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2705 2017-12-18 11:26:23Z maronga
 ! Bugfix for reading initial profiles from ls/nuding file
 !
 ! 2701 2017-12-15 15:40:50Z suehring
 ! Changes from last commit documented
-! 
+!
 ! 2700 2017-12-15 14:12:35Z suehring
-! Bugfix, missing initialization of surface attributes in case of 
+! Bugfix, missing initialization of surface attributes in case of
 ! inifor-initialization branch
 !
 ! 2698 2017-12-14 18:46:24Z suehring
@@ -128,93 +128,93 @@
 ! Moved initialisation of diss, e, kh, km to turbulence_closure_mod (TG)
 ! Added chemical emissions (FK)
 ! Initialize masking arrays and number-of-grid-points arrays before initialize
-! LSM, USM and radiation module 
+! LSM, USM and radiation module
 ! Initialization with inifor (MS)
-! 
+!
 ! 2618 2017-11-16 15:37:30Z suehring
 ! Reorder calls of init_surfaces.
-! 
+!
 ! 2564 2017-10-19 15:56:56Z Giersch
 ! Variable wind_turbine was added to control_parameters.
-! 
+!
 ! 2550 2017-10-16 17:12:01Z boeske
 ! Modifications to cyclic fill method and turbulence recycling method in case of
 ! complex terrain simulations
-! 
+!
 ! 2513 2017-10-04 09:24:39Z kanani
 ! Bugfix in storing initial scalar profile (wrong index)
-! 
+!
 ! 2350 2017-08-15 11:48:26Z kanani
 ! Bugfix in nopointer version
-! 
+!
 ! 2339 2017-08-07 13:55:26Z gronemeier
 ! corrected timestamp in header
-! 
+!
 ! 2338 2017-08-07 12:15:38Z gronemeier
 ! Modularize 1D model
-! 
+!
 ! 2329 2017-08-03 14:24:56Z knoop
 ! Removed temporary bugfix (r2327) as bug is properly resolved by this revision
-! 
+!
 ! 2327 2017-08-02 07:40:57Z maronga
 ! Temporary bugfix
-! 
+!
 ! 2320 2017-07-21 12:47:43Z suehring
 ! Modularize large-scale forcing and nudging
-! 
+!
 ! 2292 2017-06-20 09:51:42Z schwenkel
-! Implementation of new microphysic scheme: cloud_scheme = 'morrison' 
-! includes two more prognostic equations for cloud drop concentration (nc)  
-! and cloud water content (qc). 
-! 
+! Implementation of new microphysic scheme: cloud_scheme = 'morrison'
+! includes two more prognostic equations for cloud drop concentration (nc)
+! and cloud water content (qc).
+!
 ! 2277 2017-06-12 10:47:51Z kanani
 ! Removed unused variable sums_up_fraction_l
-! 
+!
 ! 2270 2017-06-09 12:18:47Z maronga
 ! dots_num must be increased when LSM and/or radiation is used
-! 
+!
 ! 2259 2017-06-08 09:09:11Z gronemeier
 ! Implemented synthetic turbulence generator
 !
 ! 2252 2017-06-07 09:35:37Z knoop
 ! rho_air now depending on surface_pressure even in Boussinesq mode
-! 
+!
 ! 2233 2017-05-30 18:08:54Z suehring
 !
 ! 2232 2017-05-30 17:47:52Z suehring
-! Adjustments to new topography and surface concept: 
+! Adjustments to new topography and surface concept:
 !   - Modify passed parameters for disturb_field
 !   - Topography representation via flags
-!   - Remove unused arrays. 
+!   - Remove unused arrays.
 !   - Move initialization of surface-related quantities to surface_mod
-! 
+!
 ! 2172 2017-03-08 15:55:25Z knoop
 ! Bugfix: moved parallel random generator initialization into its module
-! 
+!
 ! 2118 2017-01-17 16:38:49Z raasch
 ! OpenACC directives removed
-! 
+!
 ! 2037 2016-10-26 11:15:40Z knoop
 ! Anelastic approximation implemented
-! 
+!
 ! 2031 2016-10-21 15:11:58Z knoop
 ! renamed variable rho to rho_ocean
-! 
+!
 ! 2011 2016-09-19 17:29:57Z kanani
 ! Flag urban_surface is now defined in module control_parameters.
-! 
+!
 ! 2007 2016-08-24 15:47:17Z kanani
 ! Added support for urban surface model,
 ! adjusted location_message in case of plant_canopy
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1992 2016-08-12 15:14:59Z suehring
 ! Initializaton of scalarflux at model top
-! Bugfixes in initialization of surface and top salinity flux, top scalar and 
+! Bugfixes in initialization of surface and top salinity flux, top scalar and
 ! humidity fluxes
-! 
+!
 ! 1960 2016-07-12 16:34:24Z suehring
 ! Separate humidity and passive scalar
 ! Increase dimension for mean_inflow_profiles
@@ -224,8 +224,8 @@
 ! 1957 2016-07-07 10:43:48Z suehring
 ! flight module added
 !
-! 1920 2016-05-30 10:50:15Z suehring 
-! Initialize us with very small number to avoid segmentation fault during 
+! 1920 2016-05-30 10:50:15Z suehring
+! Initialize us with very small number to avoid segmentation fault during
 ! calculation of Obukhov length
 !
 ! 1918 2016-05-27 14:35:57Z raasch
@@ -257,10 +257,10 @@
 ! 1826 2016-04-07 12:01:39Z maronga
 ! Renamed radiation calls.
 ! Renamed canopy model calls.
-! 
+!
 ! 1822 2016-04-07 07:49:42Z hoffmann
 ! icloud_scheme replaced by microphysics_*
-! 
+!
 ! 1817 2016-04-06 15:44:20Z maronga
 ! Renamed lsm calls.
 !
@@ -269,7 +269,7 @@
 ! in r1762)
 !
 ! 1788 2016-03-10 11:01:04Z maronga
-! Added z0q. 
+! Added z0q.
 ! Syntax layout improved.
 !
 ! 1783 2016-03-06 18:36:17Z raasch
@@ -291,13 +291,13 @@
 ! 1707 2015-11-02 15:24:52Z maronga
 ! Bugfix: transfer of Richardson number from 1D model to Obukhov length caused
 ! devision by zero in neutral stratification
-! 
+!
 ! 1691 2015-10-26 16:17:44Z maronga
 ! Call to init_surface_layer added. rif is replaced by ol and zeta.
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
 ! Code annotations made doxygen readable
-! 
+!
 ! 1615 2015-07-08 18:49:19Z suehring
 ! Enable turbulent inflow for passive_scalar and humidity
 !
@@ -310,53 +310,53 @@
 ! 1551 2015-03-03 14:18:16Z maronga
 ! Allocation of land surface arrays is now done in the subroutine lsm_init_arrays,
 ! which is part of land_surface_model.
-! 
+!
 ! 1507 2014-12-10 12:14:18Z suehring
 ! Bugfix: set horizontal velocity components to zero inside topography
 !
 ! 1496 2014-12-02 17:25:50Z maronga
 ! Added initialization of the land surface and radiation schemes
-! 
+!
 ! 1484 2014-10-21 10:53:05Z kanani
 ! Changes due to new module structure of the plant canopy model:
-! canopy-related initialization (e.g. lad and canopy_heat_flux) moved to new 
+! canopy-related initialization (e.g. lad and canopy_heat_flux) moved to new
 ! subroutine init_plant_canopy within the module plant_canopy_model_mod,
 ! call of subroutine init_plant_canopy added.
-! 
+!
 ! 1431 2014-07-15 14:47:17Z suehring
 ! var_d added, in order to normalize spectra.
-! 
+!
 ! 1429 2014-07-15 12:53:45Z knoop
 ! Ensemble run capability added to parallel random number generator
-! 
+!
 ! 1411 2014-05-16 18:01:51Z suehring
-! Initial horizontal velocity profiles were not set to zero at the first vertical 
-! grid level in case of non-cyclic lateral boundary conditions. 
-! 
+! Initial horizontal velocity profiles were not set to zero at the first vertical
+! grid level in case of non-cyclic lateral boundary conditions.
+!
 ! 1406 2014-05-16 13:47:01Z raasch
 ! bugfix: setting of initial velocities at k=1 to zero not in case of a
 ! no-slip boundary condition for uv
-! 
+!
 ! 1402 2014-05-09 14:25:13Z raasch
 ! location messages modified
-! 
+!
 ! 1400 2014-05-09 14:03:54Z knoop
 ! Parallel random number generator added
-! 
+!
 ! 1384 2014-05-02 14:31:06Z raasch
 ! location messages added
-! 
+!
 ! 1361 2014-04-16 15:17:48Z hoffmann
 ! tend_* removed
 ! Bugfix: w_subs is not allocated anymore if it is already allocated
-! 
+!
 ! 1359 2014-04-11 17:15:14Z hoffmann
-! module lpm_init_mod added to use statements, because lpm_init has become a 
+! module lpm_init_mod added to use statements, because lpm_init has become a
 ! module
-! 
+!
 ! 1353 2014-04-08 15:21:23Z heinze
-! REAL constants provided with KIND-attribute 
-! 
+! REAL constants provided with KIND-attribute
+!
 ! 1340 2014-03-25 19:45:13Z kanani
 ! REAL constants defined as wp-kind
 !
@@ -366,12 +366,12 @@
 !
 ! 1320 2014-03-20 08:40:49Z raasch
 ! ONLY-attribute added to USE-statements,
-! kind-parameters added to all INTEGER and REAL declaration statements, 
-! kinds are defined in new module kinds, 
+! kind-parameters added to all INTEGER and REAL declaration statements,
+! kinds are defined in new module kinds,
 ! revision history before 2012 removed,
 ! comment fields (!:) to be used for variable explanations added to
-! all variable declaration statements 
-! 
+! all variable declaration statements
+!
 ! 1316 2014-03-17 07:44:59Z heinze
 ! Bugfix: allocation of w_subs
 !
@@ -423,9 +423,9 @@
 ! allocation of diss (dissipation rate) in case of turbulence = .TRUE. added
 !
 ! 1053 2012-11-13 17:11:03Z hoffmann
-! allocation and initialisation of necessary data arrays for the two-moment 
+! allocation and initialisation of necessary data arrays for the two-moment
 ! cloud physics scheme the two new prognostic equations (nr, qr):
-! +dr, lambda_r, mu_r, sed_*, xr, *s, *sws, *swst, *, *_p, t*_m, *_1, *_2, *_3, 
+! +dr, lambda_r, mu_r, sed_*, xr, *s, *sws, *swst, *, *_p, t*_m, *_1, *_2, *_3,
 ! +tend_*, prr
 !
 ! 1036 2012-10-22 13:43:42Z raasch
@@ -487,9 +487,9 @@
 
     USE constants,                                                             &
         ONLY:  pi
-    
+
     USE control_parameters
-    
+
     USE grid_variables,                                                        &
         ONLY:  dx, dy, ddx2_mg, ddy2_mg
 
@@ -502,17 +502,17 @@
 
     USE netcdf_data_input_mod,                                                 &
         ONLY:  init_3d, netcdf_data_input_interpolate, netcdf_data_input_init_3d
-    
+
     USE pegrid
-    
-    USE random_function_mod 
-    
+
+    USE random_function_mod
+
     USE random_generator_parallel,                                             &
         ONLY:  init_parallel_random_generator
 
     USE read_restart_data_mod,                                                 &
-        ONLY:  rrd_read_parts_of_global, rrd_local                                      
-    
+        ONLY:  rrd_read_parts_of_global, rrd_local
+
     USE statistics,                                                            &
         ONLY:  hom, hom_sum, mean_surface_level_height, pr_palm, rmask,        &
                statistic_regions, sums, sums_divnew_l, sums_divold_l, sums_l,  &
@@ -525,7 +525,7 @@
     USE surface_mod,                                                           &
         ONLY :  init_surface_arrays, init_surfaces, surf_def_h,     &
                 get_topography_top_index_ji, vertical_surfaces_exist
-   
+
     USE transpose_indices
 
     USE turbulence_closure_mod,                                                &
@@ -562,14 +562,14 @@
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  ngp_3d_inner_l    !<
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  ngp_3d_inner_tmp  !<
 
-    INTEGER(iwp) ::  nz_u_shift   !< 
+    INTEGER(iwp) ::  nz_u_shift   !<
     INTEGER(iwp) ::  nz_v_shift   !<
     INTEGER(iwp) ::  nz_w_shift   !<
     INTEGER(iwp) ::  nz_s_shift   !<
     INTEGER(iwp) ::  nz_u_shift_l !<
     INTEGER(iwp) ::  nz_v_shift_l !<
     INTEGER(iwp) ::  nz_w_shift_l !<
-    INTEGER(iwp) ::  nz_s_shift_l !< 
+    INTEGER(iwp) ::  nz_s_shift_l !<
 
     public init_3d_model, deallocate_3d_variables
     contains
@@ -578,7 +578,7 @@
 
     DEALLOCATE( mean_surface_level_height,         &
               ngp_2dh, ngp_3d, ngp_3d_inner,          &
-              ngp_3d_inner_tmp, sums_divold_l, sums_divnew_l) 
+              ngp_3d_inner_tmp, sums_divold_l, sums_divnew_l)
     DEALLOCATE( dp_smooth_factor, rdf, rdf_sc )
     DEALLOCATE( ngp_2dh_outer, ngp_2dh_s_inner,                 &
               rmask,sums, sums_wsts_bc_l,   &
@@ -792,7 +792,7 @@
 !-- Initialize surface arrays
     CALL init_surface_arrays
 !
-!-- Allocate arrays containing the RK coefficient for calculation of 
+!-- Allocate arrays containing the RK coefficient for calculation of
 !-- perturbation pressure and turbulent fluxes. At this point values are
 !-- set for pressure calculation during initialization (where no timestep
 !-- is done). Further below the values needed within the timestep scheme
@@ -802,7 +802,7 @@
     weight_substep = 1.0_wp
     weight_pres    = 1.0_wp
     intermediate_timestep_count = 0  ! needed when simulated_time = 0.0
-       
+
     CALL location_message( 'finished', .TRUE. )
 
 !
@@ -845,14 +845,14 @@
           u = MERGE( u, 0.0_wp, BTEST( wall_flags_0, 1 ) )
           v = MERGE( v, 0.0_wp, BTEST( wall_flags_0, 2 ) )
 !
-!--       Set initial horizontal velocities at the lowest computational grid 
-!--       levels to zero in order to avoid too small time steps caused by the 
+!--       Set initial horizontal velocities at the lowest computational grid
+!--       levels to zero in order to avoid too small time steps caused by the
 !--       diffusion limit in the initial phase of a run (at k=1, dz/2 occurs
-!--       in the limiting formula!). 
-!--       Please note, in case land- or urban-surface model is used and a 
-!--       spinup is applied, masking the lowest computational level is not 
-!--       possible as MOST as well as energy-balance parametrizations will not 
-!--       work with zero wind velocity. 
+!--       in the limiting formula!).
+!--       Please note, in case land- or urban-surface model is used and a
+!--       spinup is applied, masking the lowest computational level is not
+!--       possible as MOST as well as energy-balance parametrizations will not
+!--       work with zero wind velocity.
           IF ( ibc_uv_b /= 1  .AND.  .NOT.  spinup )  THEN
              DO  i = nxlg, nxrg
                 DO  j = nysg, nyng
@@ -875,8 +875,8 @@
 !--       of a sloping surface
           IF ( sloping_surface )  CALL init_slope
 !
-!--       Initialize surface variables, e.g. friction velocity, momentum 
-!--       fluxes, etc. 
+!--       Initialize surface variables, e.g. friction velocity, momentum
+!--       fluxes, etc.
           CALL init_surfaces
        ENDIF
 
@@ -898,10 +898,10 @@
        ENDIF
 
 !
-!--    Store initial profiles for output purposes etc.. Please note, in case of 
-!--    initialization of u, v, w, pt, and q via output data derived from larger 
-!--    scale models, data will not be horizontally homogeneous. Actually, a mean 
-!--    profile should be calculated before.   
+!--    Store initial profiles for output purposes etc.. Please note, in case of
+!--    initialization of u, v, w, pt, and q via output data derived from larger
+!--    scale models, data will not be horizontally homogeneous. Actually, a mean
+!--    profile should be calculated before.
        hom(:,1,5,:) = SPREAD( u(:,nys,nxl), 2, statistic_regions+1 )
        hom(:,1,6,:) = SPREAD( v(:,nys,nxl), 2, statistic_regions+1 )
        IF ( ibc_uv_b == 0 .OR. ibc_uv_b == 2)  THEN
@@ -918,7 +918,7 @@
 !
 !--    Initialize the random number generators (from numerical recipes)
        CALL random_function_ini
-       
+
        IF ( random_generator == 'random-parallel' )  THEN
           CALL init_parallel_random_generator(nx, ny, nys, nyn, nxl, nxr)
        ENDIF
@@ -950,7 +950,7 @@
        pt_p = pt; u_p = u; v_p = v; w_p = w
        tsa_m = 0.0_wp
        sa_p  = sa
-       
+
        CALL location_message( 'finished', .TRUE. )
 
     ELSEIF ( TRIM( initializing_actions ) == 'read_restart_data'  .OR.         &
@@ -960,11 +960,11 @@
        CALL location_message( 'initializing in case of restart / cyclic_fill', &
                               .FALSE. )
 !
-!--    Initialize surface elements and its attributes, e.g. heat- and 
-!--    momentumfluxes, roughness, scaling parameters. As number of surface 
-!--    elements might be different between runs, e.g. in case of cyclic fill, 
-!--    and not all surface elements are read, surface elements need to be 
-!--    initialized before.     
+!--    Initialize surface elements and its attributes, e.g. heat- and
+!--    momentumfluxes, roughness, scaling parameters. As number of surface
+!--    elements might be different between runs, e.g. in case of cyclic fill,
+!--    and not all surface elements are read, surface elements need to be
+!--    initialized before.
        CALL init_surfaces
 !
 !--    Read processor specific binary data from restart file
@@ -991,7 +991,7 @@
 !
 !--    Allthough tendency arrays are set in prognostic_equations, they have
 !--    have to be predefined here because they are used (but multiplied with 0)
-!--    there before they are set. 
+!--    there before they are set.
        tpt_m = 0.0_wp; tu_m = 0.0_wp; tv_m = 0.0_wp; tw_m = 0.0_wp
        tsa_m = 0.0_wp
 !
@@ -1008,7 +1008,7 @@
 !-- Initialize TKE, Kh and Km
     CALL tcm_init
 !
-!-- Before initializing further modules, compute total sum of active mask 
+!-- Before initializing further modules, compute total sum of active mask
 !-- grid points and the mean surface level height for each statistic region.
 !-- ngp_2dh: number of grid points of a horizontal cross section through the
 !--          total domain
@@ -1046,7 +1046,7 @@
 !
 !--             Determine mean surface-level height. In case of downward-
 !--             facing walls are present, more than one surface level exist.
-!--             In this case, use the lowest surface-level height. 
+!--             In this case, use the lowest surface-level height.
                 IF ( surf_def_h(0)%start_index(j,i) <=                         &
                      surf_def_h(0)%end_index(j,i) )  THEN
                    m = surf_def_h(0)%start_index(j,i)
@@ -1080,7 +1080,7 @@
 !-- Initialize arrays encompassing number of grid-points in inner and outer
 !-- domains, statistic regions, etc. Mainly used for horizontal averaging
 !-- of turbulence statistics. Please note, user_init must be called before
-!-- doing this.   
+!-- doing this.
     sr = statistic_regions + 1
 #if defined( __parallel )
     IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
@@ -1116,10 +1116,10 @@
 !-- Set a lower limit of 1 in order to avoid zero divisions in flow_statistics,
 !-- buoyancy, etc. A zero value will occur for cases where all grid points of
 !-- the respective subdomain lie below the surface topography
-    ngp_2dh_outer   = MAX( 1, ngp_2dh_outer(:,:)   ) 
+    ngp_2dh_outer   = MAX( 1, ngp_2dh_outer(:,:)   )
     ngp_3d_inner    = MAX( INT(1, KIND = SELECTED_INT_KIND( 18 )),             &
                            ngp_3d_inner(:) )
-    ngp_2dh_s_inner = MAX( 1, ngp_2dh_s_inner(:,:) ) 
+    ngp_2dh_s_inner = MAX( 1, ngp_2dh_s_inner(:,:) )
 
 !-- Initialize quantities for special advections schemes
     CALL init_advec
@@ -1138,7 +1138,9 @@
 
        CALL location_message( 'calling pressure solver', .FALSE. )
        n_sor = nsor_ini
+       !$acc data copyin( u, v, w, rho_air, rho_air_zw, ddzw, wall_flags_0, ngp_2dh_outer )
        CALL pres
+       !$acc end data
        n_sor = nsor
        CALL location_message( 'finished', .TRUE. )
 
@@ -1155,11 +1157,11 @@
        CALL location_message( 'finished', .TRUE. )
     ENDIF
 !
-!-- Initialize the ws-scheme.    
-    IF ( ws_scheme_sca .OR. ws_scheme_mom )  CALL ws_init        
+!-- Initialize the ws-scheme.
+    IF ( ws_scheme_sca .OR. ws_scheme_mom )  CALL ws_init
 
 !
-!-- Setting weighting factors for calculation of perturbation pressure 
+!-- Setting weighting factors for calculation of perturbation pressure
 !-- and turbulent quantities from the RK substeps
     IF ( TRIM(timestep_scheme) == 'runge-kutta-3' )  THEN      ! for RK3-method
 
@@ -1175,14 +1177,14 @@
 
        weight_substep(1) = 1._wp/2._wp
        weight_substep(2) = 1._wp/2._wp
-          
+
        weight_pres(1)    = 1._wp/2._wp
-       weight_pres(2)    = 1._wp/2._wp        
+       weight_pres(2)    = 1._wp/2._wp
 
     ELSE                                     ! for Euler-method
 
-       weight_substep(1) = 1.0_wp      
-       weight_pres(1)    = 1.0_wp                   
+       weight_substep(1) = 1.0_wp
+       weight_pres(1)    = 1.0_wp
 
     ENDIF
 
@@ -1214,7 +1216,7 @@
     IF ( scalar_rayleigh_damping )  rdf_sc = rdf
 
 !
-!-- Initialize the starting level and the vertical smoothing factor used for 
+!-- Initialize the starting level and the vertical smoothing factor used for
 !-- the external pressure gradient
     dp_smooth_factor = 1.0_wp
     IF ( dp_external )  THEN
@@ -1223,7 +1225,7 @@
 !--    (e.g. in init_grid).
        IF ( dp_level_ind_b == 0 )  THEN
           ind_array = MINLOC( ABS( dp_level_b - zu ) )
-          dp_level_ind_b = ind_array(1) - 1 + nzb 
+          dp_level_ind_b = ind_array(1) - 1 + nzb
                                         ! MINLOC uses lower array bound 1
        ENDIF
        IF ( dp_smooth )  THEN
@@ -1238,7 +1240,7 @@
 
 !
 !-- Initialize damping zone for the potential temperature in case of
-!-- non-cyclic lateral boundaries. The damping zone has the maximum value 
+!-- non-cyclic lateral boundaries. The damping zone has the maximum value
 !-- at the inflow boundary and decreases to zero at pt_damping_width.
     ptdf_x = 0.0_wp
     ptdf_y = 0.0_wp
@@ -1247,7 +1249,7 @@
           IF ( ( i * dx ) < pt_damping_width )  THEN
              ptdf_x(i) = pt_damping_factor * ( SIN( pi * 0.5_wp *              &
                             REAL( pt_damping_width - i * dx, KIND=wp ) / (     &
-                            REAL( pt_damping_width, KIND=wp ) ) ) )**2 
+                            REAL( pt_damping_width, KIND=wp ) ) ) )**2
           ENDIF
        ENDDO
     ELSEIF ( bc_lr_raddir )  THEN
@@ -1258,7 +1260,7 @@
                                  ( ( i - nx ) * dx + pt_damping_width ) /      &
                                  REAL( pt_damping_width, KIND=wp ) )**2
           ENDIF
-       ENDDO 
+       ENDDO
     ELSEIF ( bc_ns_dirrad )  THEN
        DO  j = nys, nyn
           IF ( ( j * dy ) > ( ny * dy - pt_damping_width ) )  THEN
@@ -1267,7 +1269,7 @@
                                  ( ( j - ny ) * dy + pt_damping_width ) /      &
                                  REAL( pt_damping_width, KIND=wp ) )**2
           ENDIF
-       ENDDO 
+       ENDDO
     ELSEIF ( bc_ns_raddir )  THEN
        DO  j = nys, nyn
           IF ( ( j * dy ) < pt_damping_width )  THEN
@@ -1284,7 +1286,7 @@
        WRITE( message_string, * ) 'number of time series quantities exceeds',  &
                                   ' its maximum of dots_max = ', dots_max,     &
                                   '&Please increase dots_max in modules.f90.'
-       CALL message( 'init_3d_model', 'PA0194', 1, 2, 0, 6, 0 )    
+       CALL message( 'init_3d_model', 'PA0194', 1, 2, 0, 6, 0 )
     ENDIF
 
 !
@@ -1292,11 +1294,11 @@
 !-- after call of user_init!
     CALL close_file( 13 )
 !
-!-- In case of nesting, put an barrier to assure that all parent and child 
-!-- domains finished initialization. 
+!-- In case of nesting, put an barrier to assure that all parent and child
+!-- domains finished initialization.
 
     Deallocate(mean_surface_level_height_l, ngp_2dh_l, ngp_3d_inner_l)
-    DEALLOCATE(ngp_2dh_outer_l, ngp_2dh_s_inner_l) 
+    DEALLOCATE(ngp_2dh_outer_l, ngp_2dh_s_inner_l)
     CALL location_message( 'leaving init_3d_model', .TRUE. )
 
  END SUBROUTINE init_3d_model

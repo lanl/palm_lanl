@@ -205,6 +205,9 @@
     REAL(wp)     ::  threadsum      !<
     REAL(wp)     ::  weight_pres_l  !<
     REAL(wp)     ::  weight_substep_l !<
+#ifdef __GPU
+    REAL(wp)     ::  tmp
+#endif
 
     REAL(wp), DIMENSION(1:3)   ::  volume_flow_l       !<
     REAL(wp), DIMENSION(1:3)   ::  volume_flow_offset  !<
@@ -239,10 +242,38 @@
 !-- nvn stands for non-vertical nesting.
 !-- This cannot be done before the first initial time step because ngp_2dh_outer
 !-- is not yet known then.
+
+    !$acc update device( w )
+    !$acc data create( w_l, w_l_l ) &
+    !$acc copyout( d )
     IF ( ibc_p_b == 1  .AND.  ibc_p_t == 1  .AND.                               &
          intermediate_timestep_count /= 0 )        &
     THEN
-       w_l = 0.0_wp;  w_l_l = 0.0_wp
+       !$acc parallel present( w_l, w_l_l )
+       !$acc loop
+       DO k = nzb+1, nzt
+          w_l(k) = 0.0_wp
+          w_l_l(k) = 0.0_wp
+       END DO
+       !$acc end parallel
+#ifdef __GPU
+       !$acc parallel present( w, wall_flags_0 )
+       !$acc loop
+       DO  k = nzb+1, nzt
+          tmp = 0.0_wp
+          !!$acc loop collapse(2) reduction(+:tmp)
+          DO  i = nxl, nxr
+             DO  j = nys, nyn
+                tmp = tmp + w(k,j,i)                                 &
+                                     * MERGE( 1.0_wp, 0.0_wp,                  &
+                                              BTEST( wall_flags_0(k,j,i), 3 )  &
+                                            )
+             ENDDO
+          ENDDO
+          w_l_l(k) = w_l_l(k) + tmp
+       ENDDO
+       !$acc end parallel
+#else
        DO  i = nxl, nxr
           DO  j = nys, nyn
              DO  k = nzb+1, nzt
@@ -253,18 +284,29 @@
              ENDDO
           ENDDO
        ENDDO
+#endif
 #if defined( __parallel )
        IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
        CALL MPI_ALLREDUCE( w_l_l(1), w_l(1), nzt, MPI_REAL, MPI_SUM, &
                            comm2d, ierr )
 #else
-       w_l = w_l_l
+       !$acc parallel present( w_l, w_l_l )
+       DO k = nzb+1, nzt
+          w_l(k) = w_l_l(k)
+       END DO
+       !$acc end parallel
 #endif
+       !$acc parallel present( w_l, ngp_2dh_outer )
+       !$acc loop
        DO  k = 1, nzt
           w_l(k) = w_l(k) / ngp_2dh_outer(k,0)
        ENDDO
+       !$acc end parallel
+       !$acc parallel present( w_l, w, wall_flags_0 )
+       !$acc loop collapse(2)
        DO  i = nxlg, nxrg
           DO  j = nysg, nyng
+             !$acc loop seq
              DO  k = nzb+1, nzt
                 w(k,j,i) = w(k,j,i) - w_l(k)                                   &
                                      * MERGE( 1.0_wp, 0.0_wp,                  &
@@ -273,18 +315,22 @@
              ENDDO
           ENDDO
        ENDDO
+       !$acc end parallel
     ENDIF
 !
 !-- Compute the divergence of the provisional velocity field.
     CALL cpu_log( log_point_s(1), 'divergence', 'start' )
-       !$OMP PARALLEL DO SCHEDULE( STATIC ) PRIVATE (i,j,k)
-       DO  i = nxl, nxr
-          DO  j = nys, nyn
-             DO  k = nzb+1, nzt
-                d(k,j,i) = 0.0_wp
-             ENDDO
+    !$OMP PARALLEL DO SCHEDULE( STATIC ) PRIVATE (i,j,k)
+    !$acc parallel present( d )
+    !$acc loop collapse(3)
+    DO  i = nxl, nxr
+       DO  j = nys, nyn
+          DO  k = nzb+1, nzt
+             d(k,j,i) = 0.0_wp
           ENDDO
        ENDDO
+    ENDDO
+    !$acc end parallel
 
     localsum  = 0.0_wp
     threadsum = 0.0_wp
@@ -325,8 +371,12 @@
 
     !$OMP PARALLEL PRIVATE (i,j,k)
     !$OMP DO SCHEDULE( STATIC )
+    !$acc parallel present( d, u, v, w, rho_air, rho_air_zw, ddzw, wall_flags_0 )
+    !$acc loop
     DO  i = nxl, nxr
+       !$acc loop
        DO  j = nys, nyn
+          !$acc loop
           DO  k = 1, nzt
              d(k,j,i) = ( ( u(k,j,i+1) - u(k,j,i) ) * rho_air(k) * ddx +       &
                           ( v(k,j+1,i) - v(k,j,i) ) * rho_air(k) * ddy +       &
@@ -339,6 +389,7 @@
           ENDDO
        ENDDO
     ENDDO
+    !$acc end parallel
     !$OMP END PARALLEL
 
     !
@@ -348,6 +399,8 @@
          intermediate_timestep_count == 0 )  THEN
        !$OMP PARALLEL PRIVATE (i,j,k) FIRSTPRIVATE(threadsum) REDUCTION(+:localsum)
        !$OMP DO SCHEDULE( STATIC )
+       !$acc parallel present( d )
+       !$acc loop collapse(3) reduction(+:threadsum)
        DO  i = nxl, nxr
           DO  j = nys, nyn
              DO  k = nzb+1, nzt
@@ -355,10 +408,13 @@
              ENDDO
           ENDDO
        ENDDO
+       !$acc end parallel
        localsum = localsum + threadsum * dt_3d * weight_pres_l
        !$OMP END PARALLEL
     ENDIF
 #endif
+    !$acc end data
+    !$acc update self(w)
 
 !
 !-- For completeness, set the divergence sum of all statistic regions to those
@@ -373,8 +429,8 @@
 !
 !-- Compute the pressure perturbation solving the Poisson equation
 !
-!--    Solve Poisson equation via FFT and solution of tridiagonal matrices
-       CALL poisfft( d )
+!-- Solve Poisson equation via FFT and solution of tridiagonal matrices
+    CALL poisfft( d )
 
 !
 !--    Store computed perturbation pressure and set boundary condition in

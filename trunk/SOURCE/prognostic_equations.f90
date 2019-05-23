@@ -314,7 +314,7 @@
                ocean, outflow_l, outflow_s, passive_scalar, plant_canopy,      &
                prho_reference, pt_reference, pt_reference, pt_reference,       &
                scalar_advec, scalar_advec, simulated_time, sloping_surface,    &
-               rho_reference, time_prog_terms, timestep_scheme, tsc,           &
+               rho_reference, timestep_scheme, tsc,           &
                use_single_reference_value, use_subsidence_tendencies,          &
                use_upstream_for_tke, wind_turbine, ws_scheme_mom,              &
                ws_scheme_sca, urban_surface, land_surface, wb_solar,           &

@@ -537,8 +537,10 @@
     !$acc end data
 
 !
-!-- Exchange boundaries for p
+!--    Exchange boundaries for p
+!   !$acc data copy( tend )
     CALL exchange_horiz( tend, nbgp )
+!   !$acc end data
 
 !-- Store perturbation pressure on array p, used for pressure data output.
 !-- Ghost layers are added in the output routines (except sor-method: see below)
@@ -620,9 +622,11 @@
     !$OMP END PARALLEL
 
 !-- Exchange of boundaries for the velocities
+!    !$acc data copy( u, v, w )
     CALL exchange_horiz( u, nbgp )
     CALL exchange_horiz( v, nbgp )
     CALL exchange_horiz( w, nbgp )
+!    !$acc end data
 
 !
 !-- Compute the divergence of the corrected velocity field,

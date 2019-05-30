@@ -553,6 +553,8 @@ print *, simulated_time
           CALL exchange_horiz( alpha_T, nbgp )
           CALL exchange_horiz( beta_S, nbgp )
           call exchange_horiz( solar3d, nbgp )
+!          !$acc update self( u_p, v_p, w_p, e_p, pt_p, sa_p ) &
+!          !$acc self( rho_ocean, prho, alpha_T, beta_S, solar3d )
           CALL cpu_log( log_point(26), 'exchange-horiz-progn', 'stop' )
 
 !

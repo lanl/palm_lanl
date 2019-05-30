@@ -230,8 +230,15 @@
 !
 !-- Bottom boundary
     IF ( ibc_uv_b == 1 )  THEN
-       u_p(nzb,:,:) = u_p(nzb+1,:,:)
-       v_p(nzb,:,:) = v_p(nzb+1,:,:)
+       !$acc parallel present( u_p, v_p )
+       !$acc loop collapse(2)
+       DO  i = nxlg, nxrg
+          DO  j = nysg, nyng
+             u_p(nzb,j,i) = u_p(nzb+1,j,i)
+             v_p(nzb,j,i) = v_p(nzb+1,j,i)
+          ENDDO
+       ENDDO
+       !$acc end parallel
     ENDIF
 !
 !-- Set zero vertical velocity at topography top (l=0), or bottom (l=1) in case
@@ -242,29 +249,53 @@
 !--    for downward-facing surfaces at topography bottom (k+1).
        kb = MERGE( -1, 1, l == 0 )
        !$OMP PARALLEL DO PRIVATE( i, j, k )
+       !$acc parallel present( w_p, bc_h )
+       !$acc loop
        DO  m = 1, bc_h(l)%ns
           i = bc_h(l)%i(m)
           j = bc_h(l)%j(m)
           k = bc_h(l)%k(m)
           w_p(k+kb,j,i) = 0.0_wp
        ENDDO
+       !$acc end parallel
     ENDDO
 
 !
 !-- Top boundary. A nested domain ( ibc_uv_t = 3 ) does not require settings.
     IF ( ibc_uv_t == 0 )  THEN
-        u_p(nzt+1,:,:) = u_init(nzt+1)
-        v_p(nzt+1,:,:) = v_init(nzt+1)
+       !$acc parallel present( u_p, v_p, u_init, v_init )
+       !$acc loop collapse(2)
+       DO  i = nxlg, nxrg
+          DO  j = nysg, nyng
+              u_p(nzt+1,j,i) = u_init(nzt+1)
+              v_p(nzt+1,j,i) = v_init(nzt+1)
+          ENDDO
+       ENDDO
+       !$acc end parallel
     ELSEIF ( ibc_uv_t == 1 )  THEN
-        u_p(nzt+1,:,:) = u_p(nzt,:,:)
-        v_p(nzt+1,:,:) = v_p(nzt,:,:)
+       !$acc parallel present( u_p, v_p )
+       !$acc loop collapse(2)
+       DO  i = nxlg, nxrg
+          DO  j = nysg, nyng
+              u_p(nzt+1,j,i) = u_p(nzt,j,i)
+              v_p(nzt+1,j,i) = v_p(nzt,j,i)
+          ENDDO
+       ENDDO
+       !$acc end parallel
     ENDIF
 
 !
 !-- Vertical nesting: Vertical velocity not zero at the top of the fine grid
     IF (  .NOT.  nest_domain  .AND.                                            &
                  TRIM(coupling_mode) /= 'vnested_fine' )  THEN
-       w_p(nzt:nzt+1,:,:) = 0.0_wp  !< nzt is not a prognostic level (but cf. pres)
+       !$acc parallel present( w_p )
+       !$acc loop collapse(2)
+       DO  i = nxlg, nxrg
+          DO  j = nysg, nyng
+             w_p(nzt:nzt+1,j,i) = 0.0_wp  !< nzt is not a prognostic level (but cf. pres)
+          ENDDO
+       ENDDO
+       !$acc end parallel
     ENDIF
 
 !
@@ -279,12 +310,15 @@
 !--       for downward-facing surfaces at topography bottom (k+1).
           kb = MERGE( -1, 1, l == 0 )
           !$OMP PARALLEL DO PRIVATE( i, j, k )
+          !$acc parallel present( pt_p, pt, bc_h )
+          !$acc loop
           DO  m = 1, bc_h(l)%ns
              i = bc_h(l)%i(m)
              j = bc_h(l)%j(m)
              k = bc_h(l)%k(m)
              pt_p(k+kb,j,i) = pt(k+kb,j,i)
           ENDDO
+          !$acc end parallel
        ENDDO
 !
 !-- Neumann, zero-gradient
@@ -295,29 +329,60 @@
 !--       for downward-facing surfaces at topography bottom (k+1).
           kb = MERGE( -1, 1, l == 0 )
           !$OMP PARALLEL DO PRIVATE( i, j, k )
+          !$acc parallel present( pt_p, bc_h )
+          !$acc loop
           DO  m = 1, bc_h(l)%ns
              i = bc_h(l)%i(m)
              j = bc_h(l)%j(m)
              k = bc_h(l)%k(m)
              pt_p(k+kb,j,i) = pt_p(k,j,i)
           ENDDO
+          !$acc end parallel
        ENDDO
     ENDIF
 
 !
 !-- Temperature at top boundary
     IF ( ibc_pt_t == 0 )  THEN
-        pt_p(nzt+1,:,:) = pt(nzt+1,:,:)
+       !$acc parallel present( pt_p, pt )
+       !$acc loop collapse(2)
+       DO  i = nxlg, nxrg
+          DO  j = nysg, nyng
+              pt_p(nzt+1,j,i) = pt(nzt+1,j,i)
+          ENDDO
+       ENDDO
+       !$acc end parallel
 !
-!--     In case of nudging adjust top boundary to pt which is
-!--     read in from NUDGING-DATA
-        IF ( nudging )  THEN
-           pt_p(nzt+1,:,:) = pt_init(nzt+1)
-        ENDIF
+!--    In case of nudging adjust top boundary to pt which is
+!--    read in from NUDGING-DATA
+       IF ( nudging )  THEN
+          !$acc parallel present( pt_p, pt_init )
+          !$acc loop collapse(2)
+          DO  i = nxlg, nxrg
+             DO  j = nysg, nyng
+                pt_p(nzt+1,:,:) = pt_init(nzt+1)
+             ENDDO
+          ENDDO
+          !$acc end parallel
+       ENDIF
     ELSEIF ( ibc_pt_t == 1 )  THEN
-        pt_p(nzt+1,:,:) = pt_p(nzt,:,:)
+       !$acc parallel present( pt_p )
+       !$acc loop collapse(2)
+       DO  i = nxlg, nxrg
+          DO  j = nysg, nyng
+              pt_p(nzt+1,j,i) = pt_p(nzt,j,i)
+          ENDDO
+       ENDDO
+       !$acc end parallel
     ELSEIF ( ibc_pt_t == 2 )  THEN
-        pt_p(nzt+1,:,:) = pt_p(nzt,:,:) + bc_pt_t_val * dzu(nzt+1)
+       !$acc parallel present( pt_p, dzu )
+       !$acc loop collapse(2)
+       DO  i = nxlg, nxrg
+          DO  j = nysg, nyng
+             pt_p(nzt+1,j,i) = pt_p(nzt,j,i) + bc_pt_t_val * dzu(nzt+1)
+          ENDDO
+       ENDDO
+       !$acc end parallel
     ENDIF
 
 !
@@ -330,15 +395,25 @@
 !--   for downward-facing surfaces at topography bottom (k+1).
        kb = MERGE( -1, 1, l == 0 )
        !$OMP PARALLEL DO PRIVATE( i, j, k )
+       !$acc parallel present( e_p, bc_h )
+       !$acc loop
        DO  m = 1, bc_h(l)%ns
           i = bc_h(l)%i(m)
           j = bc_h(l)%j(m)
           k = bc_h(l)%k(m)
           e_p(k+kb,j,i) = e_p(k,j,i)
        ENDDO
+       !$acc end parallel
     ENDDO
 
-    e_p(nzt+1,:,:) = e_p(nzt,:,:)
+    !$acc parallel present( e_p )
+    !$acc loop collapse(2)
+    DO  i = nxlg, nxrg
+       DO  j = nysg, nyng
+          e_p(nzt+1,j,i) = e_p(nzt,j,i)
+       ENDDO
+    ENDDO
+    !$acc end parallel
 !
 !-- Nesting case: if parent operates in RANS mode and child in LES mode,
 !-- no TKE is transfered. This case, set Neumann conditions at lateral and
@@ -355,12 +430,15 @@
 !--          for downward-facing surfaces at topography bottom (k+1).
              kb = MERGE( -1, 1, l == 0 )
              !$OMP PARALLEL DO PRIVATE( i, j, k )
+             !$acc parallel present( sa_p, sa, bc_h )
+             !$acc loop
              DO  m = 1, bc_h(l)%ns
                 i = bc_h(l)%i(m)
                 j = bc_h(l)%j(m)
                 k = bc_h(l)%k(m)
                 sa_p(k+kb,j,i) = sa(k+kb,j,i)
              ENDDO
+             !$acc end parallel
           ENDDO
 
 !
@@ -372,20 +450,37 @@
 !--          for downward-facing surfaces at topography bottom (k+1).
              kb = MERGE( -1, 1, l == 0 )
              !$OMP PARALLEL DO PRIVATE( i, j, k )
+             !$acc parallel present( sa_p, bc_h )
+             !$acc loop
              DO  m = 1, bc_h(l)%ns
                 i = bc_h(l)%i(m)
                 j = bc_h(l)%j(m)
                 k = bc_h(l)%k(m)
                 sa_p(k+kb,j,i) = sa_p(k,j,i)
              ENDDO
+             !$acc end parallel
           ENDDO
        ENDIF
 !
 !--    Top boundary: Dirichlet or Neumann
        IF ( ibc_sa_t == 0 )  THEN
-           sa_p(nzt+1,:,:) = sa(nzt+1,:,:)
+          !$acc parallel present( sa_p, sa )
+          !$acc loop collapse(2)
+          DO  i = nxlg, nxrg
+             DO  j = nysg, nyng
+                sa_p(nzt+1,j,i) = sa(nzt+1,j,i)
+             ENDDO
+          ENDDO
+          !$acc end parallel
        ELSEIF ( ibc_sa_t == 1 )  THEN
-           sa_p(nzt+1,:,:) = sa_p(nzt,:,:)
+          !$acc parallel present( sa_p )
+          !$acc loop collapse(2)
+          DO  i = nxlg, nxrg
+             DO  j = nysg, nyng
+                sa_p(nzt+1,j,i) = sa_p(nzt,j,i)
+             ENDDO
+          ENDDO
+          !$acc end parallel
        ENDIF
 
 

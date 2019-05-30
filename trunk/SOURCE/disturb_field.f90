@@ -19,54 +19,54 @@
 !
 ! Current revisions:
 ! ------------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: disturb_field.f90 2718 2018-01-02 08:49:38Z maronga $
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 !
 ! 2300 2017-06-29 13:31:14Z raasch
 ! NEC related code removed
-! 
+!
 ! 2233 2017-05-30 18:08:54Z suehring
 !
 ! 2232 2017-05-30 17:47:52Z suehring
 ! Modify referenced parameter for disturb_field, instead of nzb_uv_inner, pass
-! character to identify the respective grid (u- or v-grid). 
+! character to identify the respective grid (u- or v-grid).
 ! Set perturbations within topography to zero using flags.
-! 
+!
 ! 2172 2017-03-08 15:55:25Z knoop
 ! Bugfix removed id_random_array from USE list
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1425 2014-07-05 10:57:53Z knoop
 ! bugfix: Parallel random number generator loop: print-statement no needed
-! 
+!
 ! 1400 2014-05-09 14:03:54Z knoop
 ! Parallel random number generator added
-! 
+!
 ! 1353 2014-04-08 15:21:23Z heinze
-! REAL constants provided with KIND-attribute 
+! REAL constants provided with KIND-attribute
 !
 ! 1322 2014-03-20 16:38:49Z raasch
 ! REAL constants defined as wp-kind
 !
 ! 1320 2014-03-20 08:40:49Z raasch
 ! ONLY-attribute added to USE-statements,
-! kind-parameters added to all INTEGER and REAL declaration statements, 
-! kinds are defined in new module kinds, 
+! kind-parameters added to all INTEGER and REAL declaration statements,
+! kinds are defined in new module kinds,
 ! revision history before 2012 removed,
 ! comment fields (!:) to be used for variable explanations added to
-! all variable declaration statements 
+! all variable declaration statements
 !
 ! 1036 2012-10-22 13:43:42Z raasch
 ! code put under GPL (PALM 3.9)
@@ -84,26 +84,26 @@
 !> order in every case. The perturbation range is steered by dist_range.
 !------------------------------------------------------------------------------!
  SUBROUTINE disturb_field( var_char, dist1, field )
- 
+
 
     USE control_parameters,                                                    &
         ONLY:  dist_nxl, dist_nxr, dist_nyn, dist_nys, dist_range,             &
                disturbance_amplitude, disturbance_created,                     &
                disturbance_level_ind_b, disturbance_level_ind_t, iran,         &
                random_generator, topography
-                
+
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point
-        
+
     USE indices,                                                               &
         ONLY:  nbgp, nxl, nxlg, nxr, nxrg, nyn, nyng, nys, nysg, nzb, nzb_max, &
                nzt, wall_flags_0
-        
+
     USE kinds
-    
+
     USE random_function_mod,                                                   &
         ONLY: random_function
-        
+
     USE random_generator_parallel,                                             &
         ONLY:  random_number_parallel, random_seed_parallel, random_dummy,     &
                seq_random_array
@@ -112,17 +112,17 @@
 
     CHARACTER (LEN = *) ::  var_char !< flag to distinguish betwenn u- and v-component
 
-    INTEGER(iwp) ::  flag_nr !< number of respective flag for u- or v-grid 
+    INTEGER(iwp) ::  flag_nr !< number of respective flag for u- or v-grid
     INTEGER(iwp) ::  i       !< index variable
     INTEGER(iwp) ::  j       !< index variable
     INTEGER(iwp) ::  k       !< index variable
     INTEGER(iwp) ::  iskip, jskip, istop, jstop
 
     REAL(wp) ::  randomnumber  !<
-    
+
     REAL(wp) ::  dist1(nzb:nzt+1,nysg:nyng,nxlg:nxrg)  !<
     REAL(wp) ::  field(nzb:nzt+1,nysg:nyng,nxlg:nxrg)  !<
-    
+
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  dist2  !<
 
 
@@ -137,7 +137,7 @@
     dist1 = 0.0_wp
     dist2 = 0.0_wp
     disturbance_level_ind_b = nzt - 6
-    disturbance_level_ind_t = nzt 
+    disturbance_level_ind_t = nzt
 
 
 !
@@ -210,7 +210,9 @@
 !
 !-- Exchange of ghost points for the random perturbation
 
+    !$acc data copy(dist1)
     CALL exchange_horiz( dist1, nbgp )
+    !$acc end data
 
 !-- Applying the Shuman filter in order to smooth the perturbations.
 !-- Neighboured grid points in all three directions are used for the

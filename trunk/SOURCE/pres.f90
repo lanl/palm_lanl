@@ -243,7 +243,6 @@
 !-- This cannot be done before the first initial time step because ngp_2dh_outer
 !-- is not yet known then.
 
-    !$acc update device( w )
     !$acc data create( w_l, w_l_l ) &
     !$acc copyout( d )
     IF ( ibc_p_b == 1  .AND.  ibc_p_t == 1  .AND.                               &
@@ -414,7 +413,6 @@
     ENDIF
 #endif
     !$acc end data
-    !$acc update self( w )
 
 !
 !-- For completeness, set the divergence sum of all statistic regions to those
@@ -436,8 +434,8 @@
 !-- Store computed perturbation pressure and set boundary condition in
 !-- z-direction
     !$OMP PARALLEL DO PRIVATE (i,j,k)
-    !$acc data copyout( tend ) &
-    !$acc copyin( d )
+    !$acc data copyin( d ) &
+    !$acc create( tend, p )
 
     !$acc parallel present( tend, d )
     !$acc loop collapse(3)
@@ -534,18 +532,13 @@
        !$acc end parallel
 
     ENDIF
-    !$acc end data
 
 !
-!--    Exchange boundaries for p
-!   !$acc data copy( tend )
+!-- Exchange boundaries for p
     CALL exchange_horiz( tend, nbgp )
-!   !$acc end data
 
 !-- Store perturbation pressure on array p, used for pressure data output.
 !-- Ghost layers are added in the output routines (except sor-method: see below)
-    !$acc data copyin( tend, p ) &
-    !$acc present( u, v, w )
     IF ( intermediate_timestep_count <= 1 )  THEN
        !$OMP PARALLEL PRIVATE (i,j,k)
        !$OMP DO
@@ -617,16 +610,13 @@
        ENDDO
     ENDDO
     !$acc end parallel
-    !$acc end data
-    !$acc update self( u, v, w )
     !$OMP END PARALLEL
 
 !-- Exchange of boundaries for the velocities
-!    !$acc data copy( u, v, w )
     CALL exchange_horiz( u, nbgp )
     CALL exchange_horiz( v, nbgp )
     CALL exchange_horiz( w, nbgp )
-!    !$acc end data
+    !$acc end data
 
 !
 !-- Compute the divergence of the corrected velocity field,

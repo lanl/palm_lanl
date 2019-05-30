@@ -1171,9 +1171,9 @@
 
 !
 !-- Set lateral boundary conditions for l_wall
-!    !$acc data copy( l_wall )
+    !$acc data copy( l_wall )
     CALL exchange_horiz( l_wall, nbgp )
-!    !$acc end data
+    !$acc end data
 
     CONTAINS
 !------------------------------------------------------------------------------!

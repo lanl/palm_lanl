@@ -1138,9 +1138,12 @@
 
        CALL location_message( 'calling pressure solver', .FALSE. )
        n_sor = nsor_ini
-       !$acc data copyin( u, v, w, rho_air, rho_air_zw, ddzw, ddzu, wall_flags_0, ngp_2dh_outer, bc_h )
+
+       !$acc data copyin( rho_air, rho_air_zw, ddzw, ddzu, wall_flags_0, ngp_2dh_outer, bc_h ) &
+       !$acc copy( u, v, w )
        CALL pres
        !$acc end data
+
        n_sor = nsor
        CALL location_message( 'finished', .TRUE. )
 

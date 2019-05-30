@@ -535,9 +535,7 @@ print *, simulated_time
 !
           !$acc update device( u, v, w, e, pt, sa, rho_ocean, prho, alpha_T, beta_S, ref_state)
           CALL prognostic_equations_vector
-          !$acc update self( u_p, v_p, w_p, e_p, pt_p, sa_p, tu_m, tv_m, tw_m, tpt_m, tsa_m ) &
-          !$acc self( rho_ocean, prho, alpha_T, beta_S, solar3d )
-            !
+          !$acc update self( tu_m, tv_m, tw_m, tpt_m, tsa_m )
 !
 !--       Exchange of ghost points (lateral boundary conditions)
           CALL cpu_log( log_point(26), 'exchange-horiz-progn', 'start' )
@@ -553,8 +551,9 @@ print *, simulated_time
           CALL exchange_horiz( alpha_T, nbgp )
           CALL exchange_horiz( beta_S, nbgp )
           call exchange_horiz( solar3d, nbgp )
-!          !$acc update self( u_p, v_p, w_p, e_p, pt_p, sa_p ) &
-!          !$acc self( rho_ocean, prho, alpha_T, beta_S, solar3d )
+          !$acc update self( u_p, v_p, w_p, e_p, pt_p, sa_p ) &
+          !$acc self( rho_ocean, prho, alpha_T, beta_S, solar3d )
+
           CALL cpu_log( log_point(26), 'exchange-horiz-progn', 'stop' )
 
 !
@@ -596,6 +595,7 @@ print *, simulated_time
 !--       pressure.
           !$acc update device( u, v, w )
           CALL pres
+          !$acc update self( u, v, w )
 !
 !--       Compute the diffusion quantities
 

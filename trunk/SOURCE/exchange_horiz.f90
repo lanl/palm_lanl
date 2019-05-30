@@ -251,7 +251,6 @@
 !-- Case dependent, because in GPU mode still not all arrays are on device. This
 !-- workaround has to be removed later. Also, since PGI compiler 12.5 has problems
 !-- with array syntax, explicit loops are used.
-    !$acc data copy( ar )
     !$acc parallel present( ar )
     IF  ( bc_lr == 'cyclic' )  THEN
        ! ar(:,:,nxl-nbgp_local:nxl-1) = ar(:,:,nxr-nbgp_local+1:nxr)
@@ -285,7 +284,6 @@
        ENDDO
     ENDIF
     !$acc end parallel
-    !$acc end data
 
 #endif
     CALL cpu_log( log_point_s(2), 'exchange_horiz', 'stop' )

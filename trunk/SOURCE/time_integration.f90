@@ -533,9 +533,7 @@ print *, simulated_time
           IF ( ( ws_scheme_mom .OR. ws_scheme_sca )  .AND.  &
                intermediate_timestep_count == 1 )  CALL ws_statistics
 !
-          !$acc update device( u, v, w, e, pt, sa, rho_ocean, prho, alpha_T, beta_S, ref_state)
-          CALL prognostic_equations_vector
-          !$acc update self( tu_m, tv_m, tw_m, tpt_m, tsa_m )
+         CALL prognostic_equations_vector
 !
 !--       Exchange of ghost points (lateral boundary conditions)
           CALL cpu_log( log_point(26), 'exchange-horiz-progn', 'start' )
@@ -551,7 +549,7 @@ print *, simulated_time
           CALL exchange_horiz( alpha_T, nbgp )
           CALL exchange_horiz( beta_S, nbgp )
           call exchange_horiz( solar3d, nbgp )
-          !$acc update self( rho_ocean, prho, alpha_T, beta_S, solar3d )
+          !!$acc update self( rho_ocean, prho, alpha_T, beta_S, solar3d )
 
           CALL cpu_log( log_point(26), 'exchange-horiz-progn', 'stop' )
 
@@ -562,7 +560,8 @@ print *, simulated_time
 !
 !--       Swap the time levels in preparation for the next time step.
           CALL swap_timelevel
-          !$acc update self( u, v, w, e, pt, sa )
+
+#ifndef __GPU
 !
 !--       Temperature offset must be imposed at cyclic boundaries in x-direction
 !--       when a sloping surface is used
@@ -572,6 +571,7 @@ print *, simulated_time
              IF ( nxr == nx )  pt(:,:,nxr+1:nxrg) = pt(:,:,nxr+1:nxrg) + &
                                                     pt_slope_offset
           ENDIF
+#endif
 !
 !--       Impose a random perturbation on the horizontal velocity field
           IF ( create_disturbances  .AND.                                      &
@@ -582,23 +582,22 @@ print *, simulated_time
           THEN
              time_disturb = time_disturb + dt_3d
              IF ( time_disturb <= dt_disturb ) then
-                  !$acc update device( u, v, pt )
                   CALL disturb_field( 'u', tend, u )
                   CALL disturb_field( 'v', tend, v )
                   call disturb_field('pt', tend, pt )
-                  !$acc update self( u, v, pt )
           !        call disturb_field('sa', tend, sa )
             ENDIF
           ENDIF
+          !$acc update self( pt, sa )
 !
 !--       Reduce the velocity divergence via the equation for perturbation
 !--       pressure.
-          !$acc update device( u, v, w )
           CALL pres
           !$acc update self( u, v, w )
 !
 !--       Compute the diffusion quantities
 
+#ifndef __GPU
 !--       First the vertical (and horizontal) fluxes in the surface
 !--       (constant flux) layer are computed
           IF ( constant_flux_layer )  THEN
@@ -606,10 +605,10 @@ print *, simulated_time
              CALL surface_layer_fluxes
              CALL cpu_log( log_point(19), 'surface_layer_fluxes', 'stop' )
           ENDIF
+#endif
 
 !--       Compute the diffusion coefficients
           CALL cpu_log( log_point(17), 'diffusivities', 'start' )
-          !$acc update device(e, prho)
           CALL tcm_diffusivities
           !$acc update self(km, kh, e)
           CALL cpu_log( log_point(17), 'diffusivities', 'stop' )

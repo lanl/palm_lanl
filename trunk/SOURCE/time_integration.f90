@@ -582,9 +582,11 @@ print *, simulated_time
           THEN
              time_disturb = time_disturb + dt_3d
              IF ( time_disturb <= dt_disturb ) then
+                  !$acc update device( u, v, pt )
                   CALL disturb_field( 'u', tend, u )
                   CALL disturb_field( 'v', tend, v )
                   call disturb_field('pt', tend, pt )
+                  !$acc update self( u, v, pt )
           !        call disturb_field('sa', tend, sa )
             ENDIF
           ENDIF

@@ -212,7 +212,6 @@
 
     !$acc data copy(dist1)
     CALL exchange_horiz( dist1, nbgp )
-    !$acc end data
 
 !-- Applying the Shuman filter in order to smooth the perturbations.
 !-- Neighboured grid points in all three directions are used for the
@@ -258,6 +257,8 @@
 !-- in order to allow for larger timesteps at the beginning of the simulation
 !-- (diffusion criterion))
     IF ( TRIM( topography ) /= 'flat' )  THEN
+       !$acc parallel present( dist1, wall_flags_0 )
+       !$acc loop collapse(3)
        DO  i = nxlg, nxrg
           DO  j = nysg, nyng
              DO  k = nzb, nzb_max
@@ -267,10 +268,13 @@
              ENDDO
           ENDDO
        ENDDO
+       !$acc end parallel
     ENDIF
 
 !
 !-- Random perturbation is added to the array to be disturbed.
+    !$acc parallel present( field, dist1 )
+    !$acc loop collapse(3)
     DO  i = nxlg, nxrg
        DO  j = nysg, nyng
           DO  k = disturbance_level_ind_b, disturbance_level_ind_t
@@ -278,6 +282,8 @@
           ENDDO
        ENDDO
     ENDDO
+    !$acc end parallel
+    !$acc end data
 
 !
 !-- Deallocate the temporary array

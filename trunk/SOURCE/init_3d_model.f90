@@ -1132,8 +1132,10 @@
          TRIM( initializing_actions ) /= 'cyclic_fill' )  THEN
 
        CALL location_message( 'creating initial disturbances', .FALSE. )
+       !$acc data copy( u, v )
        CALL disturb_field( 'u', tend, u )
        CALL disturb_field( 'v', tend, v )
+       !$acc end data
        CALL location_message( 'finished', .TRUE. )
 
        CALL location_message( 'calling pressure solver', .FALSE. )

@@ -1008,6 +1008,10 @@
        DEALLOCATE ( surfaces%facing )
 !
 !--    Surface-parallel wind velocity
+       DEALLOCATE ( surfaces%usurf )
+       DEALLOCATE ( surfaces%vsurf )
+       DEALLOCATE ( surfaces%ufar )
+       DEALLOCATE ( surfaces%vfar )
        DEALLOCATE ( surfaces%uvw_abs )
 !
 !--    Roughness
@@ -1134,7 +1138,16 @@
 !--    Surface orientation
        ALLOCATE ( surfaces%facing(1:surfaces%ns) )
 !
-!--    Surface-parallel wind velocity
+!--    Surface-parallel velocity at surface
+       ALLOCATE ( surfaces%usurf(1:surfaces%ns) )
+       ALLOCATE ( surfaces%vsurf(1:surfaces%ns) )
+!
+!--    Surface-parallel velocity at level at which drag is defined
+       ALLOCATE ( surfaces%ufar(1:surfaces%ns) )
+       ALLOCATE ( surfaces%vfar(1:surfaces%ns) )
+!
+!--    Absolute difference between velocity vectors at surface and level at 
+!--    at which drag is defined
        ALLOCATE ( surfaces%uvw_abs(1:surfaces%ns) )
 !
 !--    Roughness

@@ -295,7 +295,7 @@
     REAL(wp)     ::  ri_crit = 0.2_wp            !< critical flux Richardson number
     REAL(wp)     ::  xi_N = 0.0052_wp            !< non-dimensional surface layer extent
 
-    TYPE(surf_type), POINTER ::  surf     !< surf-type array, used to generalize subroutines
+    TYPE(surf_type), POINTER ::  surf            !< surf-type array, used to generalize subroutines
 
 
     SAVE
@@ -325,9 +325,6 @@
 
        IMPLICIT NONE
 
-       !CB INTEGER(iwp) :: m
-       REAL(wp), DIMENSION(:), ALLOCATABLE :: shf_p
- 
        surf_vertical = .FALSE.
        downward      = .FALSE.
 
@@ -1030,7 +1027,9 @@
        INTEGER(iwp) ::  k             !< running index z direction
        INTEGER(iwp) ::  m             !< running index surface elements
 
-       ibit = MERGE( -1 * k_offset_mcphee, 0, TRIM(most_method) == 'mcphee' )
+!--    Surface layer (where log-law applies) always lies within the first 
+!--    grid cell for realistic velocities so use velocity in first grid cell 
+!--    to define friction velocity
 
        DO  m = 1, surf%ns
 
@@ -1038,27 +1037,23 @@
           j   = surf%j(m)
           k   = surf%k(m)
 !
-!--       Compute the absolute value of the horizontal velocity.
-!--       (relative to the surface in case the lower surface is the ocean).
+!--       Compute the absolute value of the horizontal velocity relative to the 
+!--       surface on the w-grid.
 !--       Please note, in new surface modelling concept the index values changed,
 !--       i.e. the reference grid point is not the surface-grid point itself but
 !--       the first grid point outside of the topography. 
 !--       Note, in case of coupled ocean-atmosphere simulations relative velocity
 !--       with respect to the ocean surface is used, hence, (k-1,j,i) values
 !--       are used to calculate the absolute velocity. 
-!--       However, this do not apply for downward-facing walls. To mask this, 
-!--       use ibit, which checks for upward/downward-facing surfaces.
-!--       Note: a previous version of the code computed the average relative 
-!--       velocity over two grid cells: i and i+1 for u and j and j+1 for v
-          IF ( TRIM(most_method) == 'mcphee' ) THEN
-             surf%uvw_abs(m) = SQRT( ( u(k-surf%koff,j,i) - u(k+ibit,j,i) ) **2 +&
-                                     ( v(k-surf%koff,j,i) - v(k+ibit,j,i) ) **2  &
-                                   ) 
-          ELSE
-             surf%uvw_abs(m) = SQRT( ( u(k,j,i) - u(k+ibit,j,i) ) **2 +        &
-                                     ( v(k,j,i) - v(k+ibit,j,i) ) **2          &
-                                   )
-          ENDIF
+
+          surf%usurf(m)  = ( u(k+surf%koff,j,i) + u(k+surf%koff,j,i+1) ) / 2
+          surf%vsurf(m)  = ( v(k+surf%koff,j,i) + v(k+surf%koff,j+1,i) ) / 2
+          
+          surf%ufar(m) = ( u(k,j,i) + u(k,j,i+1) ) / 2
+          surf%vfar(m) = ( v(k,j,i) + v(k,j+1,i) ) / 2
+          
+          surf%uvw_abs(m) = SQRT( ( surf%usurf(m) - surf%ufar(m) ) **2 +       &
+                                  ( surf%vsurf(m) - surf%vfar(m) ) **2   ) 
        ENDDO
 
     END SUBROUTINE calc_uvw_abs
@@ -2136,11 +2131,11 @@
                 k = surf%k(m)
 
 
-                surf%usws(m) = kappa * ( u(k,j,i) - u(k-1,j,i) )               &
+                surf%usws(m) = kappa * ( surf%ufar(m) - surf%usurf(m) )        &
                               / ( LOG( surf%z_mo(m) / surf%z0(m) )             &
                                   - psi_m( surf%z_mo(m) / surf%ol(m) )         &
                                   + psi_m( surf%z0(m) / surf%ol(m) ) )
-                surf%vsws(m) = kappa * ( v(k,j,i) - v(k-1,j,i) )               &
+                surf%vsws(m) = kappa * ( surf%vfar(m) - surf%vsurf(m) )        &
                            / ( LOG( surf%z_mo(m) / surf%z0(m) )                &
                                - psi_m( surf%z_mo(m) / surf%ol(m) )            &
                                + psi_m( surf%z0(m) / surf%ol(m) ) )
@@ -2169,10 +2164,10 @@
 
                 IF ( trim(most_method) == 'mcphee' ) THEN
 
-                   us_x = kappa * ( u(k,j,i) - u(k+1,j,i) )                    &
-                          / LOG( z_offset_mcphee / surf%z0(m) )
-                   us_y = kappa * ( v(k,j,i) - v(k+1,j,i) )                    &
-                          / LOG( z_offset_mcphee / surf%z0(m) )
+                   us_x = kappa * ( surf%ufar(m) - surf%usurf(m) )             &
+                          / LOG( z_offset / surf%z0(m) )
+                   us_y = kappa * ( surf%vfar(m) - surf%vsurf(m) )             &
+                          / LOG( z_offset / surf%z0(m) )
                    eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /               &
                               ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5
                    zeta = ABS(f) * -1.0_wp * z_offset_mcphee / ( eta_star * surf%us(m) )

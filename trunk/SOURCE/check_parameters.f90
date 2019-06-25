@@ -4609,11 +4609,8 @@
        message_string = 'k_offset_mcphee is less than 0. k_offset_mcphee must be >= 0'
        CALL message( 'check_parameters', 'PA0416', 1, 2, 0, 6, 0 )
     ENDIF
-    IF ( k_offset_mcphee == 9999 .AND. TRIM( most_method ) == 'mcphee' )  THEN
-       k_offset_mcphee = 0 ! set to default value
-    ENDIF
-    IF ( k_offset_mcphee /= 9999 .AND. TRIM( most_method ) == 'mcphee')  THEN
-       z_offset_mcphee = k_offset_mcphee * dz(1) + dz(1)/2.0_wp
+    IF ( TRIM( most_method ) == 'mcphee' )  THEN 
+       z_offset_mcphee = ABS(zu(nzt - k_offset_mcphee))
     ENDIF
 
 !

@@ -1077,6 +1077,12 @@
        ENDIF
        IF ( TRIM(constant_flux_layer) == 'top' )    top_constant_flux_layer = .TRUE.
        IF ( TRIM(constant_flux_layer) == 'bottom' ) bottom_constant_flux_layer = .TRUE.
+       IF ( top_constant_flux_layer .AND. bottom_constant_flux_layer) THEN
+          message_string = 'Constant flux layer cannot currently be ' //       &
+                           'implemented at both top and bottom boundaries ' // &
+                           'of the domain. Choose one.'
+          CALL message( 'check_parameters', 'PA0014', 1, 2, 0, 6, 0 )
+       ENDIF
        IF ( action /= ' ' )  THEN
           message_string = 'a non-flat topography does not allow ' //          &
                            TRIM( action )

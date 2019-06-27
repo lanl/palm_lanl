@@ -1307,6 +1307,7 @@
     LOGICAL ::  bc_ns_cyc = .TRUE.                               !< north-south boundary condition cyclic?
     LOGICAL ::  bc_ns_dirrad = .FALSE.                           !< north-south boundary condition dirichlet/radiation?
     LOGICAL ::  bc_ns_raddir = .FALSE.                           !< north-south boundary condition radiation/dirichlet?
+    LOGICAL ::  bottom_constant_flux_layer = .FALSE.             !< constant flux layer is at the bottom of the domain 
     LOGICAL ::  calc_soil_moisture_during_spinup = .FALSE.       !< namelist parameter
     LOGICAL ::  call_microphysics_at_all_substeps = .FALSE.      !< namelist parameter
     LOGICAL ::  call_psolver_at_all_substeps = .TRUE.            !< namelist parameter
@@ -1407,6 +1408,7 @@
     LOGICAL ::  synchronous_exchange = .FALSE.                   !< namelist parameter
     LOGICAL ::  syn_turb_gen = .FALSE.                           !< flag for synthetic turbulence generator module
     LOGICAL ::  terminate_run = .FALSE.                          !< terminate run (cpu-time limit, restarts)?
+    LOGICAL ::  top_constant_flux_layer = .FALSE.                !< constant flux layer is at the top of the domain 
     LOGICAL ::  topo_no_distinct = .FALSE.                       !< flag controlling classification of topography surfaces
     LOGICAL ::  transpose_compute_overlap = .FALSE.              !< namelist parameter
     LOGICAL ::  turbulent_inflow = .FALSE.                       !< namelist parameter

@@ -1676,6 +1676,7 @@
        INTEGER(iwp) ::  direction      !< Wall normal index: 1=k, 2=j, 3=i.
        INTEGER(iwp) ::  dum            !< dummy value for reduce operation
        INTEGER(iwp) ::  i              !<
+       INTEGER(iwp) ::  ibit           !< placeholder for index offset
        INTEGER(iwp) ::  icorr          !<
        INTEGER(iwp) ::  ierr           !< MPI status
        INTEGER(iwp) ::  inc            !< Wall outward-normal index increment -1
@@ -1685,6 +1686,7 @@
        INTEGER(iwp) ::  jcorr          !<
        INTEGER(iwp) ::  jw             !<
        INTEGER(iwp) ::  k              !<
+       INTEGER(iwp) ::  ksurf          !< placeholder for k-index
        INTEGER(iwp) ::  k_wall_u_ji    !< topography top index on u-grid
        INTEGER(iwp) ::  k_wall_u_ji_p  !< topography top index on u-grid
        INTEGER(iwp) ::  k_wall_u_ji_m  !< topography top index on u-grid
@@ -1707,23 +1709,17 @@
        REAL(wp)     ::  z0_topo      !<  roughness at vertical walls
        REAL(wp), ALLOCATABLE, DIMENSION(:) ::  lcr   !<
 
+       ibit = MERGE(1,-1,TRIM(constant_flux_layer)=='bottom')
+       ksurf = MERGE(nzb,nzt+1,TRIM(constant_flux_layer)=='bottom')
 !
 !--    First determine the maximum k-index needed for the near-wall corrections.
 !--    This maximum is individual for each boundary to minimize the storage
 !--    requirements and to minimize the corresponding loop k-range in the
 !--    interpolation routines.
-       IF ( TRIM(constant_flux_layer) == 'bottom') THEN
-          nzt_topo_nestbc_l = nzb
-          nzt_topo_nestbc_r = nzb
-          nzt_topo_nestbc_s = nzb
-          nzt_topo_nestbc_n = nzb
-       ENDIF
-       IF ( TRIM(constant_flux_layer) == 'top') THEN
-          nzt_topo_nestbc_l = nzt+1
-          nzt_topo_nestbc_r = nzt+1
-          nzt_topo_nestbc_s = nzt+1
-          nzt_topo_nestbc_n = nzt+1
-       ENDIF
+       nzt_topo_nestbc_l = ksurf
+       nzt_topo_nestbc_r = ksurf
+       nzt_topo_nestbc_s = ksurf
+       nzt_topo_nestbc_n = ksurf
 
        IF ( nest_bound_l )  THEN
           DO  i = nxl-1, nxl
@@ -1747,10 +1743,7 @@
                                     get_topography_top_index_ji( j, i, 'w' ) )
              ENDDO
           ENDDO
-          IF ( TRIM(constant_flux_layer) == 'bottom')                          &
-             nzt_topo_nestbc_l = nzt_topo_nestbc_l + 1
-          IF ( TRIM(constant_flux_layer) == 'top')                             &
-             nzt_topo_nestbc_l = nzt_topo_nestbc_l - 1
+          nzt_topo_nestbc_l = nzt_topo_nestbc_l + ibit
        ENDIF
       
        IF ( nest_bound_r )  THEN
@@ -1774,10 +1767,7 @@
                 nzt_topo_nestbc_r = MAX( nzt_topo_nestbc_r,                    &
                                     get_topography_top_index_ji( j, i, 'w' ) )
           ENDDO
-          IF ( TRIM(constant_flux_layer) == 'bottom')                          &
-             nzt_topo_nestbc_l = nzt_topo_nestbc_r + 1
-          IF ( TRIM(constant_flux_layer) == 'top')                             &
-             nzt_topo_nestbc_l = nzt_topo_nestbc_r - 1
+          nzt_topo_nestbc_l = nzt_topo_nestbc_r + ibit
        ENDIF
 
        IF ( nest_bound_s )  THEN
@@ -1802,10 +1792,7 @@
                                     get_topography_top_index_ji( j, i, 'w' ) )
              ENDDO
           ENDDO
-          IF ( TRIM(constant_flux_layer) == 'bottom')                          &
-             nzt_topo_nestbc_l = nzt_topo_nestbc_s + 1
-          IF ( TRIM(constant_flux_layer) == 'top')                             &
-             nzt_topo_nestbc_l = nzt_topo_nestbc_s - 1
+          nzt_topo_nestbc_l = nzt_topo_nestbc_s + ibit
        ENDIF
 
        IF ( nest_bound_n )  THEN
@@ -1829,35 +1816,25 @@
                 nzt_topo_nestbc_n = MAX( nzt_topo_nestbc_n,                    &
                                     get_topography_top_index_ji( j, i, 'w' ) )
           ENDDO
-          IF ( TRIM(constant_flux_layer) == 'bottom')                          &
-             nzt_topo_nestbc_n = nzt_topo_nestbc_s + 1
-          IF ( TRIM(constant_flux_layer) == 'top')                             &
-             nzt_topo_nestbc_n = nzt_topo_nestbc_s - 1
+          nzt_topo_nestbc_n = nzt_topo_nestbc_s + ibit
        ENDIF
 
 #if defined( __parallel )
 !
 !--       Determine global topography-top index along child boundary. 
-          IF ( TRIM(constant_flux_layer) == 'bottom') dum = nzb
-          IF ( TRIM(constant_flux_layer) == 'top') dum = nzt+1
+          dum = ksurf
           CALL MPI_ALLREDUCE( nzt_topo_nestbc_l, dum, 1, MPI_INTEGER,          &
                               MPI_MAX, comm1dy, ierr )
           nzt_topo_nestbc_l = dum
 
-          IF ( TRIM(constant_flux_layer) == 'bottom') dum = nzb
-          IF ( TRIM(constant_flux_layer) == 'top') dum = nzt+1
           CALL MPI_ALLREDUCE( nzt_topo_nestbc_r, dum, 1, MPI_INTEGER,          &
                               MPI_MAX, comm1dy, ierr )
           nzt_topo_nestbc_r = dum
 
-          IF ( TRIM(constant_flux_layer) == 'bottom') dum = nzb
-          IF ( TRIM(constant_flux_layer) == 'top') dum = nzt+1
           CALL MPI_ALLREDUCE( nzt_topo_nestbc_n, dum, 1, MPI_INTEGER,          &
                               MPI_MAX, comm1dx, ierr )
           nzt_topo_nestbc_n = dum
 
-          IF ( TRIM(constant_flux_layer) == 'bottom') dum = nzb
-          IF ( TRIM(constant_flux_layer) == 'top') dum = nzt+1
           CALL MPI_ALLREDUCE( nzt_topo_nestbc_s, dum, 1, MPI_INTEGER,          &
                               MPI_MAX, comm1dx, ierr )
           nzt_topo_nestbc_s = dum
@@ -1882,6 +1859,7 @@
        lcr = 1.0_wp
 
        z0_topo = roughness_length
+
 !
 !--    First horizontal walls. Note that also logc_w_? and logc_ratio_w_? and
 !--    logc_kbounds_* need to be allocated and initialized here.
@@ -1917,6 +1895,7 @@
           inc            = 1
 
           DO  j = nys, nyn
+             
 !
 !--          Left boundary for u
              i   = 0
@@ -1925,8 +1904,7 @@
 !--          is part of the surfacetypes now. Set default roughness instead. 
 !--          Determine topography top index on u-grid
              kb  = get_topography_top_index_ji( j, i, 'u' )
-             IF ( TRIM(constant_flux_layer) == 'bottom') k = kb + 1
-             IF ( TRIM(constant_flux_layer) == 'top')    k = kb - 1
+             k = kb + ibit
              wall_index = kb
 
              CALL pmci_define_loglaw_correction_parameters( lc, lcr, k,        &
@@ -1942,8 +1920,7 @@
 !
 !--          Determine topography top index on v-grid
              kb  = get_topography_top_index_ji( j, i, 'v' )
-             IF ( TRIM(constant_flux_layer) == 'bottom') k = kb + 1
-             IF ( TRIM(constant_flux_layer) == 'top')    k = kb - 1
+             k = kb + ibit
              wall_index = kb
 
              CALL pmci_define_loglaw_correction_parameters( lc, lcr, k,        &
@@ -1999,8 +1976,7 @@
 !--          to the present surface tpye. 
 !--          Determine topography top index on u-grid
              kb  = get_topography_top_index_ji( j, i, 'u' )
-             IF ( TRIM(constant_flux_layer) == 'bottom') k = kb + 1
-             IF ( TRIM(constant_flux_layer) == 'top')    k = kb - 1
+             k = kb + ibit
              wall_index = kb
 
              CALL pmci_define_loglaw_correction_parameters( lc, lcr, k,        &
@@ -2016,8 +1992,7 @@
 !
 !--          Determine topography top index on v-grid
              kb  = get_topography_top_index_ji( j, i, 'v' )
-             IF ( TRIM(constant_flux_layer) == 'bottom') k = kb + 1
-             IF ( TRIM(constant_flux_layer) == 'top')    k = kb - 1
+             k = kb + ibit
              wall_index = kb
 
              CALL pmci_define_loglaw_correction_parameters( lc, lcr, k,        &
@@ -2070,8 +2045,7 @@
 !
 !--          Determine topography top index on u-grid
              kb  = get_topography_top_index_ji( j, i, 'u' )
-             IF ( TRIM(constant_flux_layer) == 'bottom') k = kb + 1
-             IF ( TRIM(constant_flux_layer) == 'top')    k = kb - 1
+             k = kb + ibit
              wall_index = kb
 
              CALL pmci_define_loglaw_correction_parameters( lc, lcr, k,        &
@@ -2087,8 +2061,7 @@
 !
 !--          Determine topography top index on v-grid
              kb  = get_topography_top_index_ji( j, i, 'v' )
-             IF ( TRIM(constant_flux_layer) == 'bottom') k = kb + 1
-             IF ( TRIM(constant_flux_layer) == 'top')    k = kb - 1
+             k = kb + ibit
              wall_index = kb
 
              CALL pmci_define_loglaw_correction_parameters( lc, lcr, k,        &
@@ -2141,8 +2114,7 @@
 !
 !--          Determine topography top index on u-grid
              kb  = get_topography_top_index_ji( j, i, 'u' )
-             IF ( TRIM(constant_flux_layer) == 'bottom') k = kb + 1
-             IF ( TRIM(constant_flux_layer) == 'top')    k = kb - 1
+             k = kb + ibit
              wall_index = kb
 
              CALL pmci_define_loglaw_correction_parameters( lc, lcr, k,        &
@@ -2158,8 +2130,7 @@
 !
 !--          Determine topography top index on v-grid
              kb  = get_topography_top_index_ji( j, i, 'v' )
-             IF ( TRIM(constant_flux_layer) == 'bottom') k = kb + 1
-             IF ( TRIM(constant_flux_layer) == 'top')    k = kb - 1
+             k = kb + ibit
              wall_index = kb
 
              CALL pmci_define_loglaw_correction_parameters( lc, lcr, k,        &
@@ -2877,33 +2848,33 @@
        INTEGER(iwp), INTENT(IN)  ::  kb   !<
        INTEGER(iwp), INTENT(OUT) ::  lc   !<
 
+       INTEGER(iwp) ::  ibit             !< placeholder for k-index
        INTEGER(iwp) ::  kbc               !<
        INTEGER(iwp) ::  k1                !<
+       INTEGER(iwp) ::  ksurf             !< placeholder for k-index
 
        REAL(wp), INTENT(OUT) ::  logzc1   !<
        REAL(wp), INTENT(IN)  ::  z0_l     !<
 
        REAL(wp) ::  zuc1                  !<
 
+       ibit = MERGE(1,-1,TRIM(constant_flux_layer)=='bottom')
+       ksurf = MERGE(nzb,nzt+1,TRIM(constant_flux_layer)=='bottom')
 !
 !--    kbc is the first coarse-grid point above the surface
-       IF ( TRIM(constant_flux_layer) == 'bottom') kbc = nzb + 1
-       IF ( TRIM(constant_flux_layer) == 'top'   ) kbc = nzt
+       kbc = ksurf + ibit
        DO  WHILE ( cg%zu(kbc) < zu(kb) )
-          IF ( TRIM(constant_flux_layer) == 'bottom') kbc = kbc + 1
-          IF ( TRIM(constant_flux_layer) == 'top')    kbc = kbc - 1
+          kbc = kbc + ibit
        ENDDO
        zuc1  = cg%zu(kbc)
-       IF ( TRIM(constant_flux_layer) == 'bottom') THEN
-          k1    = kb + 1
+       k1    = kb + ibit
+       IF (TRIM(constant_flux_layer) == 'bottom') THEN
           DO  WHILE ( zu(k1) < zuc1 )  !  Important: must be <, not <=
-            k1 = k1 + 1
+            k1 = k1 + ibit
           ENDDO
-       ENDIF
-       IF ( TRIM(constant_flux_layer) == 'top') THEN
-          k1    = kb - 1
-          DO  WHILE ( zu(k1) > zuc1 )  !  Important: must be <, not <=
-            k1 = k1 - 1
+       ELSEIF (TRIM(constant_flux_layer) == 'top') THEN
+          DO  WHILE ( zu(k1) > zuc1 )  !  Important: must be >, not >=
+            k1 = k1 + ibit
           ENDDO
        ENDIF
        logzc1 = LOG( ABS( zu(k1) - zw(kb) ) / z0_l )

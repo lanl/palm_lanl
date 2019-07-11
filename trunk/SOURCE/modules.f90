@@ -1616,8 +1616,8 @@
     REAL(wp) ::  wall_adjustment_factor = 1.8_wp               !< adjustment factor for mixing length l
     REAL(wp) ::  wb_solar = 0.0_wp
     REAL(wp) ::  z_offset_mcphee = 9999999.9_wp                !< namelist parameter, vertical offset for most_method mcphee in meters
-    REAL(wp) ::  zeta_max = 20.0_wp                            !< namelist parameter
-    REAL(wp) ::  zeta_min = -20.0_wp                           !< namelist parameter
+    REAL(wp) ::  zeta_max = 20.0_wp                            !< namelist parameter, for mcphee ol_max = domain_height*zeta_max
+    REAL(wp) ::  zeta_min = -20.0_wp                           !< namelist parameter, for mcphee ol_min = ABS(dz/zeta_min)
     REAL(wp) ::  z0h_factor = 1.0_wp                           !< namelist parameter
 
     REAL(wp) ::  do2d_xy_last_time(0:1) = -1.0_wp                  !< time of previous xy output

@@ -230,11 +230,11 @@
     USE control_parameters,                                                    &
         ONLY:  air_chemistry, c1, c2, c3, cloud_droplets, cloud_physics,       &
                constant_flux_layer, constant_heatflux, constant_scalarflux,    &     
-               constant_waterflux, coupling_mode, drag_coeff, f, g, humidity,  &
-               ibc_e_b, ibc_e_t, ibc_pt_b, ibc_pt_t, initializing_actions,     &
-               intermediate_timestep_count, intermediate_timestep_count_max,   &
-               k_offset_mcphee, kappa, l_m, land_surface, large_scale_forcing, &
-               lsf_surf,                                                       &
+               constant_waterflux, coupling_mode, drag_coeff, dz, f, g,        &
+               humidity, ibc_e_b, ibc_e_t, ibc_pt_b, ibc_pt_t,                 &
+               initializing_actions, intermediate_timestep_count,              &
+               intermediate_timestep_count_max, k_offset_mcphee, kappa, l_m,   &
+               land_surface, large_scale_forcing, lsf_surf,                    &
                message_string, microphysics_morrison, microphysics_seifert,    &
                molecular_viscosity, most_method, neutral, ocean,               &
                passive_scalar, prandtl_number, pt_surface, q_surface,          &
@@ -1593,7 +1593,17 @@
              surf%ol(m) = rho_ocean(k,j,i) * surf%us(m)**3 /                   &
                           (g * kappa *                                         &
                             ( beta_S(k,j,i)*surf%sasws(m) -                    &
-                              alpha_T(k,j,i)*surf%shf(m)    ) + 1E-30_wp )
+                              alpha_T(k,j,i)*surf%shf(m)    ) )
+!
+!--          Limit the value range of the Obukhov length.
+!--          This is necessary for very small velocities (u,v --> 1), because
+!--          the absolute value of ol can then become very small, which in
+!--          consequence would result in very large shear stresses and very
+!--          small momentum fluxes (both are generally unrealistic).
+             IF ( surf%ol(m) < ABS(dz(nzt)/zeta_min) )                         &
+                surf%ol(m) = ABS(dz(nzt)/zeta_min)
+             IF ( surf%ol(m) > ABS(zu(0))*zeta_max )                           &
+                surf%ol(m) = ABS(zu(0))*zeta_max
 
           ENDDO
 
@@ -1613,15 +1623,31 @@
 
        INTEGER(iwp) ::  i,j,k   !< index variables 
        INTEGER(iwp) ::  m       !< loop variable over all horizontal surf elements 
-
+       REAL(wp)     ::  min_ol, max_ol
        i   = surf%i(m)            
        j   = surf%j(m)
        k   = surf%k(m)
 
-       surf%ol(m) = rho_ocean(k,j,i) * surf%us(m)**3 /                   &
-                    (g * kappa *                                         &
-                      ( beta_S(k,j,i)*surf%sasws(m) -                    &
-                        alpha_T(k,j,i)*surf%shf(m)    ) + 1E-30_wp )
+       !$OMP PARALLEL DO PRIVATE( i, j, k)
+       min_ol = ABS(dzu(nzt)/zeta_min)
+       max_ol = ABS(zu(0))*zeta_max
+       surf%ol(m) = MAX(min_ol,                                                &
+                        MIN(max_ol,                                            &
+                            rho_ocean(k,j,i) * surf%us(m)**3 /                 &
+                            ( g * kappa *                                      &
+                              ( beta_S(k,j,i)*surf%sasws(m) -                  &
+                                alpha_T(k,j,i)*surf%shf(m)    ) + 1E-30_wp )))
+
+!
+!--    Limit the value range of the Obukhov length.
+!--    This is necessary for very small velocities (u,v --> 1), because
+!--    the absolute value of ol can then become very small, which in
+!--    consequence would result in very large shear stresses and very
+!--    small momentum fluxes (both are generally unrealistic).
+       IF ( surf%ol(m) < ABS(dz(nzt)/zeta_min) )                               &
+          surf%ol(m) = ABS(dz(nzt)/zeta_min)
+       IF ( surf%ol(m) > ABS(zu(0))*zeta_max )                                 &
+          surf%ol(m) = ABS(zu(0))*zeta_max
 
     END SUBROUTINE calc_ol_m
 

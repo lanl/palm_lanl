@@ -1608,7 +1608,13 @@
     REAL(wp) ::  do2d_xy_last_time(0:1) = -1.0_wp                  !< time of previous xy output
     REAL(wp) ::  do2d_xz_last_time(0:1) = -1.0_wp                  !< time of previous xz output
     REAL(wp) ::  do2d_yz_last_time(0:1) = -1.0_wp                  !< time of previous yz output
-    REAL(wp) ::  dpdxy(1:2) = 0.0_wp                               !< namelist parameter
+    REAL(wp) ::  dpdxy(1:2) = 0.0_wp                               !< namelist parameter, constant pressure gradient
+    REAL(wp) ::  dpdx(100)  = 0.0_wp                               !< namelist parameter, pressure gradient amplitude
+    REAL(wp) ::  dpdy(100)  = 0.0_wp                               !< namelist parameter, pressure gradient amplitude
+    REAL(wp) ::  dpdx_phase(100)  = 0.0_wp                         !< namelist parameter, pressure gradient phase in radians
+    REAL(wp) ::  dpdy_phase(100)  = 0.0_wp                         !< namelist parameter, pressure gradient phase in radians
+    REAL(wp) ::  dpdx_freq(100)  = 0.0_wp                          !< namelist parameter, pressure gradient frequency in 1/s
+    REAL(wp) ::  dpdy_freq(100)  = 0.0_wp                          !< namelist parameter, pressure gradient frequency in 1/s
     REAL(wp) ::  dt_domask(max_masks) = 9999999.9_wp               !< namelist parameter
     REAL(wp) ::  dz(10) = -1.0_wp                                  !< namelist parameter
     REAL(wp) ::  dz_stretch_level_start(9) = -9999999.9_wp         !< namelist parameter

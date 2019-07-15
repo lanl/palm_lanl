@@ -669,6 +669,9 @@
        CALL wrd_write_string( 'slope_offset' ) 
        WRITE ( 14 )  slope_offset
 
+       CALL wrd_write_string( 'slope_parallel_gradients' ) 
+       WRITE ( 14 )  slope_parallel_gradients
+
        CALL wrd_write_string( 'simulated_time' ) 
        WRITE ( 14 )  simulated_time
 

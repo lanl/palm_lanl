@@ -81,7 +81,8 @@
         ONLY:  initializing_actions, ocean,                                    &
                alpha_surface, sin_alpha_surface, slope_offset,                 &
                pt_surface, pt_vertical_gradient, pt_slope_offset,              &
-               sa_surface, sa_vertical_gradient, sa_slope_offset
+               sa_surface, sa_vertical_gradient, sa_slope_offset,              &
+               slope_parallel_gradients
 
     USE eqn_state_seawater_mod,                                                &
         ONLY:  eqn_state_seawater, eqn_state_seawater_func
@@ -124,7 +125,7 @@
 
     DO  i = nxlg, nxrg
        DO  k = nzb, nzt+1
-          IF ( slope_offset ) THEN
+          IF ( .NOT. slope_parallel_gradients ) THEN
 !
 !--          Compute height of grid-point relative to lower left corner of
 !--          the total domain.

@@ -1271,7 +1271,10 @@
     INTEGER(iwp) ::  domask_time_count(max_masks,0:1)            !< number of output intervals for masked data
     INTEGER(iwp) ::  dz_stretch_level_end_index(9)               !< vertical grid level index until which the vertical grid spacing is stretched
     INTEGER(iwp) ::  dz_stretch_level_start_index(9)             !< vertical grid level index above which the vertical grid spacing is stretched
+    INTEGER(iwp) ::  ij_av_width_mcphee = 0                      !< number of vertical grid cells to average over for pt,sa input to McPhee melt parameterization
     INTEGER(iwp) ::  k_offset_mcphee = 1                         !< namelist parameter, offset for most_method mcphee in number of grid cells below the upper surface used to define "far-field" u,v,pt,sa
+    INTEGER(iwp) ::  koff_min_mcphee = 1                         !< minimum offset for most_method mcphee in number of grid cells below the upper surface used to define "far-field" u,v,pt,sa
+    INTEGER(iwp) ::  k_av_width_mcphee = 0                       !< number of vertical grid cells to average over for pt,sa input to McPhee melt parameterization
     INTEGER(iwp) ::  mask_size(max_masks,3) = -1                 !< size of mask array per mask and dimension (for netcdf output)
     INTEGER(iwp) ::  mask_size_l(max_masks,3) = -1               !< subdomain size of mask array per mask and dimension (for netcdf output)
     INTEGER(iwp) ::  mask_start_l(max_masks,3) = -1              !< subdomain start index of mask array (for netcdf output)
@@ -1358,6 +1361,7 @@
     LOGICAL ::  inflow_n = .FALSE.                               !< north domain boundary has non-cyclic inflow?
     LOGICAL ::  inflow_r = .FALSE.                               !< right domain boundary has non-cyclic inflow?
     LOGICAL ::  inflow_s = .FALSE.                               !< south domain boundary has non-cyclic inflow?
+    LOGICAL ::  koff_constant_mcphee = .FALSE.                   !< namelist parameter
     LOGICAL ::  large_scale_forcing = .FALSE.                    !< namelist parameter
     LOGICAL ::  large_scale_subsidence = .FALSE.                 !< namelist parameter
     LOGICAL ::  land_surface = .FALSE.                           !< use land surface model?
@@ -1366,6 +1370,7 @@
     LOGICAL ::  lsf_surf = .TRUE.                                !< use surface forcing (large scale forcing)?
     LOGICAL ::  lsf_vert = .TRUE.                                !< use atmospheric forcing (large scale forcing)?
     LOGICAL ::  masking_method = .FALSE.                         !< namelist parameter
+    LOGICAL ::  most_xy_av = .FALSE.                             !< namelist parameter
     LOGICAL ::  microphysics_sat_adjust = .FALSE.                !< use saturation adjust bulk scheme?
     LOGICAL ::  microphysics_kessler = .FALSE.                   !< use kessler bulk scheme?
     LOGICAL ::  microphysics_morrison = .FALSE.                  !< use 2-moment Morrison (add. prog. eq. for nc and qc)

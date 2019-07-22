@@ -380,7 +380,6 @@
     REAL(wp) ::  sums_ll(nzb:nzt+1,2)  !<
 
     CALL cpu_log( log_point(10), 'flow_statistics', 'start' )
-
 !
 !-- To be on the safe side, check whether flow_statistics has already been
 !-- called once after the current time step
@@ -655,7 +654,6 @@
        hom(:,1,2,sr) = sums(:,2)             ! v
        hom(:,1,4,sr) = sums(:,4)             ! pt
 
-
 !
 !--    Salinity
        IF ( ocean )  THEN
@@ -667,6 +665,10 @@
              ENDIF
           ENDDO
           hom(:,1,23,sr) = sums(:,23)             ! sa
+          IF ( TRIM(most_method) == 'mcphee') THEN
+             hom(nzb,1,112,sr) = sums(nzb,112)             ! ol
+             hom(nzb,1,pr_palm,sr) = sums(nzb,pr_palm)     ! us
+          ENDIF
        ENDIF
 
 !

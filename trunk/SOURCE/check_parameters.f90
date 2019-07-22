@@ -4613,6 +4613,12 @@
        z_offset_mcphee = ABS(zu(nzt - k_offset_mcphee))
     ENDIF
 
+!-- Namelist option k_offset_mcphee designates minimum k_offset for non-constant 
+!-- k_offset cases
+    IF ( .NOT. koff_constant_mcphee ) THEN
+       koff_min_mcphee = k_offset_mcphee
+    ENDIF
+   
 !
 !-- If drag_coefficient is specified, convert to roughness length
     IF ( TRIM(constant_flux_layer) == 'bottom' .AND. drag_coeff /= 9999999.9_wp )&

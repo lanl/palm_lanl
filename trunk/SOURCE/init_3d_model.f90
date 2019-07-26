@@ -607,6 +607,7 @@
     INTEGER(iwp) ::  ind_array(1)  !<
     INTEGER(iwp) ::  j             !<
     INTEGER(iwp) ::  k             !<
+    INTEGER(iwp) ::  l             !<
     INTEGER(iwp) ::  k_surf        !< surface level index
     INTEGER(iwp) ::  m             !< index of surface element in surface data type
     INTEGER(iwp) ::  sr            !< index of statistic region
@@ -620,7 +621,6 @@
 
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  p_hydrostatic !< hydrostatic pressure
 
-    INTEGER(iwp) ::  l       !< loop variable
     INTEGER(iwp) ::  nzt_l   !< index of top PE boundary for multigrid level
     REAL(wp) ::  dx_l !< grid spacing along x on different multigrid level
     REAL(wp) ::  dy_l !< grid spacing along y on different multigrid level
@@ -1241,12 +1241,13 @@
 !--             facing walls are present, more than one surface level exist.
 !--             In this case, use the lowest surface-level height. 
                 IF ( surf_def_h(0)%start_index(j,i) <=                         &
-                     surf_def_h(0)%end_index(j,i) )  THEN
+                        surf_def_h(0)%end_index(j,i) )  THEN
                    m = surf_def_h(0)%start_index(j,i)
                    k = surf_def_h(0)%k(m)
                    mean_surface_level_height_l(sr) =                           &
-                                       mean_surface_level_height_l(sr) + zw(k-1)
+                                        mean_surface_level_height_l(sr) + zw(k-1)
                 ENDIF
+                !ENDDO
                 IF ( surf_lsm_h%start_index(j,i) <=                            &
                      surf_lsm_h%end_index(j,i) )  THEN
                    m = surf_lsm_h%start_index(j,i)
@@ -1327,7 +1328,6 @@
     ngp_2dh_outer   = MAX( 1, ngp_2dh_outer(:,:)   ) 
     ngp_3d_inner    = MAX( INT(1, KIND = SELECTED_INT_KIND( 18 )),             &
                            ngp_3d_inner(:) )
-    ngp_2dh_s_inner = MAX( 1, ngp_2dh_s_inner(:,:) ) 
 
     DEALLOCATE( mean_surface_level_height_l, ngp_2dh_l, ngp_2dh_outer_l,       &
                 ngp_3d_inner_l, ngp_3d_inner_tmp )
@@ -2346,6 +2346,10 @@
           IF ( surf_lsm_h%ns    >= 1 )  CALL disturb_heatflux( surf_lsm_h    )
           IF ( surf_usm_h%ns    >= 1 )  CALL disturb_heatflux( surf_usm_h    )
        ENDIF
+       IF ( use_top_fluxes  .AND.  constant_top_heatflux  .AND.                &
+            random_heatflux )  THEN
+          IF ( surf_def_h(2)%ns >= 1 )  CALL disturb_heatflux( surf_def_h(2) )
+       ENDIF
     ENDIF
 
 !
@@ -2456,7 +2460,7 @@
 !
 !-- Initialize surface layer (done after LSM as roughness length are required
 !-- for initialization
-    IF ( constant_flux_layer )  THEN
+    IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
        CALL location_message( 'initializing surface layer', .FALSE. )
        CALL init_surface_layer_fluxes
        CALL location_message( 'finished', .TRUE. )

@@ -187,16 +187,17 @@
     USE arrays_3d,                                                             &
         ONLY:  dzw, e, heatflux_output_conversion, nc, nr, p, prr, pt,         &
                q, qc, ql, ql_c, ql_v, qr, rho_ocean, s, sa, u, v, vpt, w,      &
-               waterflux_output_conversion, alpha_T, beta_S, solar3d
+               waterflux_output_conversion, salinityflux_output_conversion,    &
+               alpha_T, beta_S, solar3d
 
     USE averaging,                                                             &
         ONLY:  diss_av, e_av, ghf_av, kh_av, km_av, lpt_av, lwp_av, nc_av,     &
                nr_av,                                                          &
                ol_av, p_av, pc_av, pr_av, prr_av, pt_av, q_av, qc_av, ql_av,   &
                ql_c_av, ql_v_av, ql_vp_av, qr_av, qsws_av, qv_av, r_a_av,      &
-               rho_ocean_av, s_av, sa_av, shf_av, ssws_av, ts_av, tsurf_av,    &
-               u_av, us_av, v_av, vpt_av, w_av, z0_av, z0h_av, z0q_av,         &
-               alpha_T_av, beta_S_av, shf_sol_av, solar3d_av
+               rho_ocean_av, s_av, sa_av, shf_av, sasws_av, ssws_av, ts_av,    &
+               tsurf_av, u_av, us_av, v_av, vpt_av, w_av, z0_av, z0h_av,       &
+               z0q_av, alpha_T_av, beta_S_av, shf_sol_av, solar3d_av
 
     USE chemistry_model_mod,                                                   &
         ONLY:  chem_3d_data_averaging, chem_integrate, chem_species, nspec                                   
@@ -205,7 +206,8 @@
         ONLY:  cp, l_d_cp, l_v, pt_d_t
 
     USE control_parameters,                                                    &
-        ONLY:  air_chemistry, average_count_3d, cloud_physics, doav, doav_n,   &
+        ONLY:  air_chemistry, average_count_3d, cloud_physics,                 &
+               constant_flux_layer, doav, doav_n,                              &
                land_surface, rho_surface, urban_surface, uv_exposure,          &
                varnamelength
 
@@ -460,6 +462,12 @@
                 ENDIF
                 shf_sol_av = 0.0_wp
                 
+             CASE ( 'sasws*' )
+                IF ( .NOT. ALLOCATED( sasws_av ) )  THEN
+                   ALLOCATE( sasws_av(nysg:nyng,nxlg:nxrg) )
+                ENDIF
+                sasws_av = 0.0_wp
+             
              CASE ( 'ssws*' )
                 IF ( .NOT. ALLOCATED( ssws_av ) )  THEN
                    ALLOCATE( ssws_av(nysg:nyng,nxlg:nxrg) )
@@ -996,23 +1004,33 @@
 !--          In case of land- and urban-surfaces, convert fluxes into
 !--          dynamic units.
              IF ( ALLOCATED( shf_av ) ) THEN 
-                DO  m = 1, surf_def_h(0)%ns
-                   i = surf_def_h(0)%i(m)
-                   j = surf_def_h(0)%j(m)
-                   k = surf_def_h(0)%k(m)
-                   shf_av(j,i) = shf_av(j,i) + surf_def_h(0)%shf(m)  *            &
-                                               heatflux_output_conversion(k)
-                ENDDO
-                DO  m = 1, surf_lsm_h%ns
-                   i = surf_lsm_h%i(m)
-                   j = surf_lsm_h%j(m)
-                   shf_av(j,i) = shf_av(j,i) + surf_lsm_h%shf(m) * cp
-                ENDDO
-                DO  m = 1, surf_usm_h%ns
-                   i = surf_usm_h%i(m)
-                   j = surf_usm_h%j(m)
-                   shf_av(j,i) = shf_av(j,i) + surf_usm_h%shf(m) * cp
-                ENDDO
+                IF ( TRIM(constant_flux_layer) == 'top') THEN
+                   DO  m = 1, surf_def_h(2)%ns
+                      i = surf_def_h(2)%i(m)
+                      j = surf_def_h(2)%j(m)
+                      k = surf_def_h(2)%k(m)
+                      shf_av(j,i) = shf_av(j,i) + surf_def_h(2)%shf(m)  *      &
+                                                  heatflux_output_conversion(k)
+                   ENDDO
+                ELSE
+                   DO  m = 1, surf_def_h(0)%ns
+                      i = surf_def_h(0)%i(m)
+                      j = surf_def_h(0)%j(m)
+                      k = surf_def_h(0)%k(m)
+                      shf_av(j,i) = shf_av(j,i) + surf_def_h(0)%shf(m)  *      &
+                                                  heatflux_output_conversion(k)
+                   ENDDO
+                   DO  m = 1, surf_lsm_h%ns
+                      i = surf_lsm_h%i(m)
+                      j = surf_lsm_h%j(m)
+                      shf_av(j,i) = shf_av(j,i) + surf_lsm_h%shf(m) * cp
+                   ENDDO
+                   DO  m = 1, surf_usm_h%ns
+                      i = surf_usm_h%i(m)
+                      j = surf_usm_h%j(m)
+                      shf_av(j,i) = shf_av(j,i) + surf_usm_h%shf(m) * cp
+                   ENDDO
+                ENDIF
              ENDIF
 
           CASE ( 'shf_sol*' )
@@ -1021,7 +1039,7 @@
                    i = surf_def_h(0)%i(m)
                    j = surf_def_h(0)%j(m)
                    k = surf_def_h(0)%k(m)
-                   shf_sol_av(j,i) = shf_sol_av(j,i) + surf_def_h(0)%shf_sol(m)  *            &
+                   shf_sol_av(j,i) = shf_sol_av(j,i) + surf_def_h(0)%shf_sol(m)  *  &
                                                heatflux_output_conversion(k)
                 ENDDO
                 DO  m = 1, surf_lsm_h%ns
@@ -1036,6 +1054,19 @@
                 ENDDO
              ENDIF
 
+          CASE ( 'sasws*' )
+             IF ( ALLOCATED( sasws_av ) ) THEN 
+                IF ( TRIM(constant_flux_layer) == 'top') THEN
+                   DO  m = 1, surf_def_h(2)%ns
+                      i = surf_def_h(2)%i(m)
+                      j = surf_def_h(2)%j(m)
+                      k = surf_def_h(2)%k(m)
+                      sasws_av(j,i) = sasws_av(j,i) + surf_def_h(2)%sasws(m) * &
+                                               salinityflux_output_conversion(k)
+                   ENDDO
+                ENDIF
+             ENDIF
+          
           CASE ( 'ssws*' )
              IF ( ALLOCATED( ssws_av ) ) THEN 
                 DO  m = 1, surf_def_h(0)%ns

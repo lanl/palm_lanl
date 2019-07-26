@@ -1233,6 +1233,9 @@
           ENDIF
           IF ( random_heatflux )  WRITE ( io, 307 )
        ENDIF
+       IF ( constant_bottom_salinityflux )  THEN
+          WRITE ( io, 309 )  bottom_salinityflux
+       ENDIF
        IF ( humidity  .AND.  constant_waterflux )  THEN
           IF ( large_scale_forcing .AND. lsf_surf )  THEN
              WRITE ( io, 311 ) surf_def_h(0)%qsws(1)
@@ -1248,10 +1251,9 @@
     IF ( use_top_fluxes )  THEN
        WRITE ( io, 304 )
        IF ( coupling_mode == 'uncoupled' )  THEN
-          WRITE ( io, 320 )  top_momentumflux_u, top_momentumflux_v
-          IF ( constant_top_heatflux )  THEN
-             WRITE ( io, 306 )  top_heatflux
-          ENDIF
+          IF ( constant_top_momentumflux )                                     &
+             WRITE ( io, 320 )  top_momentumflux_u, top_momentumflux_v
+          IF ( constant_top_heatflux ) WRITE ( io, 306 )  top_heatflux
        ELSEIF ( coupling_mode == 'ocean_to_atmosphere' )  THEN
           WRITE ( io, 316 )
        ENDIF
@@ -1262,18 +1264,27 @@
           WRITE ( io, 302 ) top_scalarflux
     ENDIF
 
-    IF ( constant_flux_layer )  THEN
+    IF ( TRIM(constant_flux_layer) == 'bottom' )  THEN
        WRITE ( io, 305 )  (zu(1)-zu(0)), roughness_length,                     &
                           z0h_factor*roughness_length, kappa,                  &
                           zeta_min, zeta_max
        IF ( .NOT. constant_heatflux )  WRITE ( io, 308 )
+       IF ( .NOT. constant_bottom_salinityflux )  WRITE ( io, 284 )
        IF ( humidity  .AND.  .NOT. constant_waterflux )  THEN
           WRITE ( io, 312 )
        ENDIF
        IF ( passive_scalar  .AND.  .NOT. constant_scalarflux )  THEN
           WRITE ( io, 314 )
        ENDIF
-    ELSE
+    ENDIF
+    IF ( TRIM(constant_flux_layer) == 'top' )  THEN
+       WRITE ( io, 283 )  (zu(nzt+1)-zu(nzt)), roughness_length,                     &
+                          z0h_factor*roughness_length, kappa,                  &
+                          zeta_min, zeta_max
+       IF ( .NOT. constant_top_heatflux )  WRITE ( io, 308 )
+       IF ( .NOT. constant_top_salinityflux )  WRITE ( io, 284 )
+    ENDIF
+    IF ( TRIM(constant_flux_layer) == 'none' )  THEN
        IF ( INDEX(initializing_actions, 'set_1d-model_profiles') /= 0 )  THEN
           WRITE ( io, 310 )  zeta_min, zeta_max
        ENDIF
@@ -2200,8 +2211,14 @@
 301 FORMAT (/'                     ',A// &
              ' B. bound.: ',A/ &
              ' T. bound.: ',A)
+284 FORMAT ('       Predefined surface salinity')
 303 FORMAT (/' Bottom surface fluxes are used in diffusion terms at k=1')
 304 FORMAT (/' Top surface fluxes are used in diffusion terms at k=nzt')
+283 FORMAT (//'    Constant flux layer between top surface and first ',     &
+              'computational u,v-level:'// &
+             '       z_mo = ',F6.2,' m   z0 =',F7.4,' m   z0h =',F8.5,&
+             ' m   kappa =',F5.2/ &
+             '       Rif value range:   ',F8.2,' <= rif <=',F6.2)
 305 FORMAT (//'    Constant flux layer between bottom surface and first ',     &
               'computational u,v-level:'// &
              '       z_mo = ',F6.2,' m   z0 =',F7.4,' m   z0h =',F8.5,&

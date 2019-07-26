@@ -343,7 +343,7 @@
 !
 !--          First the vertical (and horizontal) fluxes in the surface 
 !--          (constant flux) layer are computed
-             IF ( constant_flux_layer )  THEN
+             IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
                 CALL cpu_log( log_point(19), 'surface_layer_fluxes', 'start' )
                 CALL surface_layer_fluxes
                 CALL cpu_log( log_point(19), 'surface_layer_fluxes', 'stop' )

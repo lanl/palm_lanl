@@ -2320,9 +2320,9 @@
           CALL message( 'usm_check_parameters', 'PA0590', 1, 2, 0, 6, 0 )
        ENDIF
 
-       IF ( .NOT.  constant_flux_layer )  THEN
+       IF ( .NOT. TRIM(constant_flux_layer) == 'bottom' )  THEN
           message_string = 'urban surface model requires '//                   &
-                           'constant_flux_layer = .T.'
+                           'constant_flux_layer = bottom '
           CALL message( 'usm_check_parameters', 'PA0084', 1, 2, 0, 6, 0 )
        ENDIF
 

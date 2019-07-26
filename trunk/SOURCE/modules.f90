@@ -978,6 +978,7 @@
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  ol_av                  !< avg. Obukhov length
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  qsws_av                !< avg. surface moisture flux
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  r_a_av                 !< avg. resistance
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sasws_av               !< avg. surface salinity flux
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  ssws_av                !< avg. surface scalar flux
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  shf_av                 !< avg. surface heat flux
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  shf_sol_av             !< avg. surface solar flux
@@ -1103,6 +1104,7 @@
 
     CHARACTER (LEN=1)    ::  cycle_mg = 'w'                               !< namelist parameter (see documentation)
     CHARACTER (LEN=1)    ::  timestep_reason = ' '                        !< 'A'dvection or 'D'iffusion criterion, written to RUN_CONTROL file
+    CHARACTER (LEN=6)    ::  constant_flux_layer = 'none'                 !< namelist parameter
     CHARACTER (LEN=8)    ::  coupling_char = ''                           !< appended to filenames in coupled or nested runs ('_O': ocean PE,
                                                                           !< '_NV': vertically nested atmosphere PE, '_N##': PE of nested domain ##
     CHARACTER (LEN=8)    ::  most_method = 'newton'                       !< namelist parameter
@@ -1123,6 +1125,7 @@
     CHARACTER (LEN=40)   ::  flux_input_mode = 'approximation-specific'   !< type of flux input: dynamic or kinematic
     CHARACTER (LEN=40)   ::  flux_output_mode = 'approximation-specific'  !< type of flux output: dynamic or kinematic
     CHARACTER (LEN=20)   ::  bc_e_b = 'neumann'                           !< namelist parameter
+    CHARACTER (LEN=20)   ::  bc_e_t = 'neumann'                           !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_lr = 'cyclic'                             !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_ns = 'cyclic'                             !< namelist parameter
     CHARACTER (LEN=20)   ::  bc_p_b = 'neumann'                           !< namelist parameter
@@ -1198,6 +1201,7 @@
     INTEGER(iwp) ::  gathered_size                     !< number of total domain grid points of the grid level which is gathered on PE0 (multigrid solver)
     INTEGER(iwp) ::  grid_level                        !< current grid level handled in the multigrid solver
     INTEGER(iwp) ::  ibc_e_b                           !< integer flag for bc_e_b
+    INTEGER(iwp) ::  ibc_e_t                           !< integer flag for bc_e_t
     INTEGER(iwp) ::  ibc_p_b                           !< integer flag for bc_p_b
     INTEGER(iwp) ::  ibc_p_t                           !< integer flag for bc_p_t
     INTEGER(iwp) ::  ibc_pt_b                          !< integer flag for bc_pt_b
@@ -1303,6 +1307,7 @@
     LOGICAL ::  bc_ns_cyc = .TRUE.                               !< north-south boundary condition cyclic?
     LOGICAL ::  bc_ns_dirrad = .FALSE.                           !< north-south boundary condition dirichlet/radiation?
     LOGICAL ::  bc_ns_raddir = .FALSE.                           !< north-south boundary condition radiation/dirichlet?
+    LOGICAL ::  bottom_constant_flux_layer = .FALSE.             !< constant flux layer is at the bottom of the domain 
     LOGICAL ::  calc_soil_moisture_during_spinup = .FALSE.       !< namelist parameter
     LOGICAL ::  call_microphysics_at_all_substeps = .FALSE.      !< namelist parameter
     LOGICAL ::  call_psolver_at_all_substeps = .TRUE.            !< namelist parameter
@@ -1312,7 +1317,6 @@
     LOGICAL ::  complex_terrain = .FALSE.                        !< namelist parameter
     LOGICAL ::  conserve_volume_flow = .FALSE.                   !< namelist parameter
     LOGICAL ::  constant_diffusion = .FALSE.                     !< diffusion coefficient constant?
-    LOGICAL ::  constant_flux_layer = .TRUE.                     !< namelist parameter
     LOGICAL ::  constant_heatflux = .TRUE.                       !< heat flux at all surfaces constant?
     LOGICAL ::  constant_top_heatflux = .TRUE.                   !< heat flux at domain top constant?
     LOGICAL ::  constant_top_momentumflux = .FALSE.              !< momentum flux at domain topconstant?
@@ -1405,6 +1409,7 @@
     LOGICAL ::  synchronous_exchange = .FALSE.                   !< namelist parameter
     LOGICAL ::  syn_turb_gen = .FALSE.                           !< flag for synthetic turbulence generator module
     LOGICAL ::  terminate_run = .FALSE.                          !< terminate run (cpu-time limit, restarts)?
+    LOGICAL ::  top_constant_flux_layer = .FALSE.                !< constant flux layer is at the top of the domain 
     LOGICAL ::  topo_no_distinct = .FALSE.                       !< flag controlling classification of topography surfaces
     LOGICAL ::  transpose_compute_overlap = .FALSE.              !< namelist parameter
     LOGICAL ::  turbulent_inflow = .FALSE.                       !< namelist parameter
@@ -1445,7 +1450,7 @@
     REAL(wp) ::  bc_pt_t_val                                   !< vertical gradient of pt near domain top
     REAL(wp) ::  bc_q_t_val                                    !< vertical gradient of humidity near domain top
     REAL(wp) ::  bc_s_t_val                                    !< vertical gradient of passive scalar near domain top
-    REAL(wp) ::  bottom_salinityflux = 0.0_wp                  !< namelist parameter
+    REAL(wp) ::  bottom_salinityflux = 9999999.9_wp            !< namelist parameter
     REAL(wp) ::  bubble_center_x = 9999999.9_wp                !< namelist parameter
     REAL(wp) ::  bubble_center_y = 9999999.9_wp                !< namelist parameter
     REAL(wp) ::  bubble_center_z = 9999999.9_wp                !< namelist parameter
@@ -1850,6 +1855,7 @@
     INTEGER(iwp) ::  nz = 0         !< total number of grid points in z-direction
     INTEGER(iwp) ::  nzb            !< bottom grid index of computational domain
     INTEGER(iwp) ::  nzb_diff       !< will be removed
+    INTEGER(iwp) ::  nzt_diff       !< will be removed
     INTEGER(iwp) ::  nzb_max        !< vertical index of topography top
     INTEGER(iwp) ::  nzt            !< nzt+1 = top grid index of computational domain
     INTEGER(iwp) ::  topo_min_level !< minimum topography-top index (usually equal to nzb)
@@ -1868,8 +1874,6 @@
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  ngp_2dh_outer     !< number of horizontal grid points which are non-topography and non-surface-bounded
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  ngp_2dh_s_inner   !< number of horizontal grid points which are non-topography
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  mg_loc_ind        !< internal array to store index bounds of all PEs of that multigrid level where data is collected to PE0
-    INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  nzb_diff_s_inner  !< will be removed
-    INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  nzb_diff_s_outer  !< will be removed
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  nzb_inner         !< will be removed
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  nzb_outer         !< will be removed
     INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  nzb_s_inner       !< will be removed

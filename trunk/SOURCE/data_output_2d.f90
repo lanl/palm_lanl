@@ -229,7 +229,7 @@
         ONLY:  dzw, e, heatflux_output_conversion, nc, nr, p, pt,              &
                precipitation_amount, prr, q, qc, ql, ql_c, ql_v, ql_vp, qr,    &
                rho_ocean, s, sa, tend, u, v, vpt, w, zu, zw,                   &
-               waterflux_output_conversion
+               salinityflux_output_conversion, waterflux_output_conversion
         
     USE averaging
         
@@ -237,8 +237,8 @@
         ONLY:  cp, hyrho, l_d_cp, l_v, pt_d_t
                
     USE control_parameters,                                                    &
-        ONLY:  cloud_physics, data_output_2d_on_each_pe, data_output_xy,       &
-               data_output_xz, data_output_yz, do2d,                           &
+        ONLY:  cloud_physics, constant_flux_layer, data_output_2d_on_each_pe,  &
+               data_output_xy, data_output_xz, data_output_yz, do2d,           &
                do2d_xy_last_time, do2d_xy_time_count,                          &
                do2d_xz_last_time, do2d_xz_time_count,                          &
                do2d_yz_last_time, do2d_yz_time_count,                          &
@@ -634,32 +634,52 @@
                 level_z(nzb+1) = zu(nzb+1)
 
              CASE ( 'ol*_xy' )        ! 2d-array
-                IF ( av == 0 ) THEN
-                   DO  m = 1, surf_def_h(0)%ns
-                      i = surf_def_h(0)%i(m)
-                      j = surf_def_h(0)%j(m)
-                      local_pf(i,j,nzb+1) = surf_def_h(0)%ol(m)
-                   ENDDO
-                   DO  m = 1, surf_lsm_h%ns
-                      i = surf_lsm_h%i(m)
-                      j = surf_lsm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%ol(m)
-                   ENDDO
-                   DO  m = 1, surf_usm_h%ns
-                      i = surf_usm_h%i(m)
-                      j = surf_usm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%ol(m)
-                   ENDDO
-                ELSE
-                   IF ( .NOT. ALLOCATED( ol_av ) ) THEN
-                      ALLOCATE( ol_av(nysg:nyng,nxlg:nxrg) )
-                      ol_av = REAL( fill_value, KIND = wp )
-                   ENDIF
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                         local_pf(i,j,nzb+1) = ol_av(j,i)
+                IF ( TRIM(constant_flux_layer) == 'top') THEN
+                   IF ( av == 0 ) THEN
+                      DO  m = 1, surf_def_h(2)%ns
+                         i = surf_def_h(2)%i(m)
+                         j = surf_def_h(2)%j(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(2)%ol(m)
                       ENDDO
-                   ENDDO
+                   ELSE
+                      IF ( .NOT. ALLOCATED( ol_av ) ) THEN
+                         ALLOCATE( ol_av(nysg:nyng,nxlg:nxrg) )
+                         ol_av = REAL( fill_value, KIND = wp )
+                      ENDIF
+                      DO  i = nxl, nxr
+                         DO  j = nys, nyn
+                            local_pf(i,j,nzb+1) = ol_av(j,i)
+                         ENDDO
+                      ENDDO
+                   ENDIF
+                ELSE
+                   IF ( av == 0 ) THEN
+                      DO  m = 1, surf_def_h(0)%ns
+                         i = surf_def_h(0)%i(m)
+                         j = surf_def_h(0)%j(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(0)%ol(m)
+                      ENDDO
+                      DO  m = 1, surf_lsm_h%ns
+                         i = surf_lsm_h%i(m)
+                         j = surf_lsm_h%j(m)
+                         local_pf(i,j,nzb+1) = surf_lsm_h%ol(m)
+                      ENDDO
+                      DO  m = 1, surf_usm_h%ns
+                         i = surf_usm_h%i(m)
+                         j = surf_usm_h%j(m)
+                         local_pf(i,j,nzb+1) = surf_usm_h%ol(m)
+                      ENDDO
+                   ELSE
+                      IF ( .NOT. ALLOCATED( ol_av ) ) THEN
+                         ALLOCATE( ol_av(nysg:nyng,nxlg:nxrg) )
+                         ol_av = REAL( fill_value, KIND = wp )
+                      ENDIF
+                      DO  i = nxl, nxr
+                         DO  j = nys, nyn
+                            local_pf(i,j,nzb+1) = ol_av(j,i)
+                         ENDDO
+                      ENDDO
+                   ENDIF
                 ENDIF
                 resorted = .TRUE.
                 two_d = .TRUE.
@@ -1102,25 +1122,35 @@
 !--                In case of default surfaces, clean-up flux by density.
 !--                In case of land- and urban-surfaces, convert fluxes into
 !--                dynamic units.
-                   DO  m = 1, surf_def_h(0)%ns
-                      i = surf_def_h(0)%i(m)
-                      j = surf_def_h(0)%j(m)
-                      k = surf_def_h(0)%k(m)
-                      local_pf(i,j,nzb+1) = surf_def_h(0)%shf(m) *             &
-                                            heatflux_output_conversion(k)
-                   ENDDO
-                   DO  m = 1, surf_lsm_h%ns
-                      i = surf_lsm_h%i(m)
-                      j = surf_lsm_h%j(m)
-                      k = surf_lsm_h%k(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%shf(m) * cp
-                   ENDDO
-                   DO  m = 1, surf_usm_h%ns
-                      i = surf_usm_h%i(m)
-                      j = surf_usm_h%j(m)
-                      k = surf_usm_h%k(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%shf(m) * cp
-                   ENDDO
+                   IF ( ANY( section(:,1) == nz+1 ) ) THEN 
+                      DO  m = 1, surf_def_h(2)%ns
+                         i = surf_def_h(2)%i(m)
+                         j = surf_def_h(2)%j(m)
+                         k = surf_def_h(2)%k(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(2)%shf(m) *             &
+                                               heatflux_output_conversion(k)
+                      ENDDO
+                   ELSE
+                      DO  m = 1, surf_def_h(0)%ns
+                         i = surf_def_h(0)%i(m)
+                         j = surf_def_h(0)%j(m)
+                         k = surf_def_h(0)%k(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(0)%shf(m) *             &
+                                               heatflux_output_conversion(k)
+                      ENDDO
+                      DO  m = 1, surf_lsm_h%ns
+                         i = surf_lsm_h%i(m)
+                         j = surf_lsm_h%j(m)
+                         k = surf_lsm_h%k(m)
+                         local_pf(i,j,nzb+1) = surf_lsm_h%shf(m) * cp
+                      ENDDO
+                      DO  m = 1, surf_usm_h%ns
+                         i = surf_usm_h%i(m)
+                         j = surf_usm_h%j(m)
+                         k = surf_usm_h%k(m)
+                         local_pf(i,j,nzb+1) = surf_usm_h%shf(m) * cp
+                      ENDDO
+                   ENDIF
                 ELSE
                    IF ( .NOT. ALLOCATED( shf_av ) ) THEN
                       ALLOCATE( shf_av(nysg:nyng,nxlg:nxrg) )
@@ -1136,6 +1166,40 @@
                 two_d = .TRUE.
                 level_z(nzb+1) = zu(nzb+1)
                 
+             CASE ( 'sasws*_xy' )        ! 2d-array
+                IF ( av == 0 ) THEN
+                   IF ( ANY( section(:,1) == nz+1 ) ) THEN
+                      DO  m = 1, surf_def_h(2)%ns
+                         i = surf_def_h(2)%i(m)
+                         j = surf_def_h(2)%j(m)
+                         k = surf_def_h(2)%k(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(2)%sasws(m) *        &
+                                               salinityflux_output_conversion(k)
+                      ENDDO
+                   ELSE
+                      DO  m = 1, surf_def_h(0)%ns
+                         i = surf_def_h(0)%i(m)
+                         j = surf_def_h(0)%j(m)
+                         k = surf_def_h(0)%k(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(0)%sasws(m) *        &
+                                               salinityflux_output_conversion(k)
+                      ENDDO
+                   ENDIF
+                ELSE
+                   IF ( .NOT. ALLOCATED( sasws_av ) ) THEN
+                      ALLOCATE( sasws_av(nysg:nyng,nxlg:nxrg) )
+                      sasws_av = REAL( fill_value, KIND = wp )
+                   ENDIF
+                   DO  i = nxl, nxr
+                      DO  j = nys, nyn
+                         local_pf(i,j,nzb+1) =  sasws_av(j,i)
+                      ENDDO
+                   ENDDO
+                ENDIF
+                resorted = .TRUE.
+                two_d = .TRUE.
+                level_z(nzb+1) = zu(nzb+1)
+             
              CASE ( 'ssws*_xy' )        ! 2d-array
                 IF ( av == 0 ) THEN
                    DO  m = 1, surf_def_h(0)%ns
@@ -1201,35 +1265,56 @@
                 level_z(nzb+1) = zu(nzb+1)
 
              CASE ( 'tsurf*_xy' )        ! 2d-array
-                IF ( av == 0 )  THEN
-                   DO  m = 1, surf_def_h(0)%ns
-                      i                   = surf_def_h(0)%i(m)            
-                      j                   = surf_def_h(0)%j(m)
-                      local_pf(i,j,nzb+1) = surf_def_h(0)%pt_surface(m)
-                   ENDDO
-
-                   DO  m = 1, surf_lsm_h%ns
-                      i                   = surf_lsm_h%i(m)            
-                      j                   = surf_lsm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%pt_surface(m)
-                   ENDDO
-
-                   DO  m = 1, surf_usm_h%ns
-                      i   = surf_usm_h%i(m)            
-                      j   = surf_usm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%pt_surface(m)
-                   ENDDO
-
-                ELSE
-                   IF ( .NOT. ALLOCATED( tsurf_av ) ) THEN
-                      ALLOCATE( tsurf_av(nysg:nyng,nxlg:nxrg) )
-                      tsurf_av = REAL( fill_value, KIND = wp )
-                   ENDIF
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                         local_pf(i,j,nzb+1) = tsurf_av(j,i)
+                IF( TRIM(constant_flux_layer) == 'top') THEN
+                   IF ( av == 0 )  THEN
+                      DO  m = 1, surf_def_h(2)%ns
+                         i                   = surf_def_h(2)%i(m)            
+                         j                   = surf_def_h(2)%j(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(2)%pt_surface(m)
                       ENDDO
-                   ENDDO
+                
+                   ELSE
+                      IF ( .NOT. ALLOCATED( tsurf_av ) ) THEN
+                         ALLOCATE( tsurf_av(nysg:nyng,nxlg:nxrg) )
+                         tsurf_av = REAL( fill_value, KIND = wp )
+                      ENDIF
+                      DO  i = nxl, nxr
+                         DO  j = nys, nyn
+                            local_pf(i,j,nzb+1) = tsurf_av(j,i)
+                         ENDDO
+                      ENDDO
+                   ENDIF
+                ELSE
+                   IF ( av == 0 )  THEN
+                      DO  m = 1, surf_def_h(0)%ns
+                         i                   = surf_def_h(0)%i(m)            
+                         j                   = surf_def_h(0)%j(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(0)%pt_surface(m)
+                      ENDDO
+
+                      DO  m = 1, surf_lsm_h%ns
+                         i                   = surf_lsm_h%i(m)            
+                         j                   = surf_lsm_h%j(m)
+                         local_pf(i,j,nzb+1) = surf_lsm_h%pt_surface(m)
+                      ENDDO
+
+                      DO  m = 1, surf_usm_h%ns
+                         i   = surf_usm_h%i(m)            
+                         j   = surf_usm_h%j(m)
+                         local_pf(i,j,nzb+1) = surf_usm_h%pt_surface(m)
+                      ENDDO
+
+                   ELSE
+                      IF ( .NOT. ALLOCATED( tsurf_av ) ) THEN
+                         ALLOCATE( tsurf_av(nysg:nyng,nxlg:nxrg) )
+                         tsurf_av = REAL( fill_value, KIND = wp )
+                      ENDIF
+                      DO  i = nxl, nxr
+                         DO  j = nys, nyn
+                            local_pf(i,j,nzb+1) = tsurf_av(j,i)
+                         ENDDO
+                      ENDDO
+                   ENDIF
                 ENDIF
                 resorted       = .TRUE.
                 two_d          = .TRUE.
@@ -1255,32 +1340,52 @@
                 ENDIF
 
              CASE ( 'u*_xy' )        ! 2d-array
-                IF ( av == 0 )  THEN
-                   DO  m = 1, surf_def_h(0)%ns
-                      i = surf_def_h(0)%i(m)
-                      j = surf_def_h(0)%j(m)
-                      local_pf(i,j,nzb+1) = surf_def_h(0)%us(m)
-                   ENDDO
-                   DO  m = 1, surf_lsm_h%ns
-                      i = surf_lsm_h%i(m)
-                      j = surf_lsm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%us(m)
-                   ENDDO
-                   DO  m = 1, surf_usm_h%ns
-                      i = surf_usm_h%i(m)
-                      j = surf_usm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%us(m)
-                   ENDDO
-                ELSE
-                   IF ( .NOT. ALLOCATED( us_av ) ) THEN
-                      ALLOCATE( us_av(nysg:nyng,nxlg:nxrg) )
-                      us_av = REAL( fill_value, KIND = wp )
-                   ENDIF
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                         local_pf(i,j,nzb+1) = us_av(j,i)
+                IF ( TRIM(constant_flux_layer) == 'top') THEN
+                   IF ( av == 0 )  THEN
+                      DO  m = 1, surf_def_h(2)%ns
+                         i = surf_def_h(2)%i(m)
+                         j = surf_def_h(2)%j(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(2)%us(m)
                       ENDDO
-                   ENDDO
+                   ELSE
+                      IF ( .NOT. ALLOCATED( us_av ) ) THEN
+                         ALLOCATE( us_av(nysg:nyng,nxlg:nxrg) )
+                         us_av = REAL( fill_value, KIND = wp )
+                      ENDIF
+                      DO  i = nxl, nxr
+                         DO  j = nys, nyn
+                            local_pf(i,j,nzb+1) = us_av(j,i)
+                         ENDDO
+                      ENDDO
+                   ENDIF
+                ELSE
+                   IF ( av == 0 )  THEN
+                      DO  m = 1, surf_def_h(0)%ns
+                         i = surf_def_h(0)%i(m)
+                         j = surf_def_h(0)%j(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(0)%us(m)
+                      ENDDO
+                      DO  m = 1, surf_lsm_h%ns
+                         i = surf_lsm_h%i(m)
+                         j = surf_lsm_h%j(m)
+                         local_pf(i,j,nzb+1) = surf_lsm_h%us(m)
+                      ENDDO
+                      DO  m = 1, surf_usm_h%ns
+                         i = surf_usm_h%i(m)
+                         j = surf_usm_h%j(m)
+                         local_pf(i,j,nzb+1) = surf_usm_h%us(m)
+                      ENDDO
+                   ELSE
+                      IF ( .NOT. ALLOCATED( us_av ) ) THEN
+                         ALLOCATE( us_av(nysg:nyng,nxlg:nxrg) )
+                         us_av = REAL( fill_value, KIND = wp )
+                      ENDIF
+                      DO  i = nxl, nxr
+                         DO  j = nys, nyn
+                            local_pf(i,j,nzb+1) = us_av(j,i)
+                         ENDDO
+                      ENDDO
+                   ENDIF
                 ENDIF
                 resorted = .TRUE.
                 two_d = .TRUE.
@@ -1331,64 +1436,104 @@
                 IF ( mode == 'xy' )  level_z = zw
 
              CASE ( 'z0*_xy' )        ! 2d-array
-                IF ( av == 0 ) THEN
-                   DO  m = 1, surf_def_h(0)%ns
-                      i = surf_def_h(0)%i(m)
-                      j = surf_def_h(0)%j(m)
-                      local_pf(i,j,nzb+1) = surf_def_h(0)%z0(m)
-                   ENDDO
-                   DO  m = 1, surf_lsm_h%ns
-                      i = surf_lsm_h%i(m)
-                      j = surf_lsm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%z0(m)
-                   ENDDO
-                   DO  m = 1, surf_usm_h%ns
-                      i = surf_usm_h%i(m)
-                      j = surf_usm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%z0(m)
-                   ENDDO
-                ELSE
-                   IF ( .NOT. ALLOCATED( z0_av ) ) THEN
-                      ALLOCATE( z0_av(nysg:nyng,nxlg:nxrg) )
-                      z0_av = REAL( fill_value, KIND = wp )
-                   ENDIF
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                         local_pf(i,j,nzb+1) =  z0_av(j,i)
+                IF ( TRIM(constant_flux_layer) == 'top' ) THEN
+                   IF ( av == 0 ) THEN
+                      DO  m = 1, surf_def_h(2)%ns
+                         i = surf_def_h(2)%i(m)
+                         j = surf_def_h(2)%j(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(2)%z0(m)
                       ENDDO
-                   ENDDO
+                   ELSE
+                      IF ( .NOT. ALLOCATED( z0_av ) ) THEN
+                         ALLOCATE( z0_av(nysg:nyng,nxlg:nxrg) )
+                         z0_av = REAL( fill_value, KIND = wp )
+                      ENDIF
+                      DO  i = nxl, nxr
+                         DO  j = nys, nyn
+                            local_pf(i,j,nzb+1) =  z0_av(j,i)
+                         ENDDO
+                      ENDDO
+                   ENDIF
+                ELSE
+                   IF ( av == 0 ) THEN
+                      DO  m = 1, surf_def_h(0)%ns
+                         i = surf_def_h(0)%i(m)
+                         j = surf_def_h(0)%j(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(0)%z0(m)
+                      ENDDO
+                      DO  m = 1, surf_lsm_h%ns
+                         i = surf_lsm_h%i(m)
+                         j = surf_lsm_h%j(m)
+                         local_pf(i,j,nzb+1) = surf_lsm_h%z0(m)
+                      ENDDO
+                      DO  m = 1, surf_usm_h%ns
+                         i = surf_usm_h%i(m)
+                         j = surf_usm_h%j(m)
+                         local_pf(i,j,nzb+1) = surf_usm_h%z0(m)
+                      ENDDO
+                   ELSE
+                      IF ( .NOT. ALLOCATED( z0_av ) ) THEN
+                         ALLOCATE( z0_av(nysg:nyng,nxlg:nxrg) )
+                         z0_av = REAL( fill_value, KIND = wp )
+                      ENDIF
+                      DO  i = nxl, nxr
+                         DO  j = nys, nyn
+                            local_pf(i,j,nzb+1) =  z0_av(j,i)
+                         ENDDO
+                      ENDDO
+                   ENDIF
                 ENDIF
                 resorted = .TRUE.
                 two_d = .TRUE.
                 level_z(nzb+1) = zu(nzb+1)
 
              CASE ( 'z0h*_xy' )        ! 2d-array
-                IF ( av == 0 ) THEN
-                   DO  m = 1, surf_def_h(0)%ns
-                      i = surf_def_h(0)%i(m)
-                      j = surf_def_h(0)%j(m)
-                      local_pf(i,j,nzb+1) = surf_def_h(0)%z0h(m)
-                   ENDDO
-                   DO  m = 1, surf_lsm_h%ns
-                      i = surf_lsm_h%i(m)
-                      j = surf_lsm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_lsm_h%z0h(m)
-                   ENDDO
-                   DO  m = 1, surf_usm_h%ns
-                      i = surf_usm_h%i(m)
-                      j = surf_usm_h%j(m)
-                      local_pf(i,j,nzb+1) = surf_usm_h%z0h(m)
-                   ENDDO
-                ELSE
-                   IF ( .NOT. ALLOCATED( z0h_av ) ) THEN
-                      ALLOCATE( z0h_av(nysg:nyng,nxlg:nxrg) )
-                      z0h_av = REAL( fill_value, KIND = wp )
-                   ENDIF
-                   DO  i = nxl, nxr
-                      DO  j = nys, nyn
-                         local_pf(i,j,nzb+1) =  z0h_av(j,i)
+                IF ( TRIM(constant_flux_layer) == 'top' ) THEN
+                   IF ( av == 0 ) THEN
+                      DO  m = 1, surf_def_h(2)%ns
+                         i = surf_def_h(2)%i(m)
+                         j = surf_def_h(2)%j(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(2)%z0h(m)
                       ENDDO
-                   ENDDO
+                   ELSE
+                      IF ( .NOT. ALLOCATED( z0h_av ) ) THEN
+                         ALLOCATE( z0h_av(nysg:nyng,nxlg:nxrg) )
+                         z0h_av = REAL( fill_value, KIND = wp )
+                      ENDIF
+                      DO  i = nxl, nxr
+                         DO  j = nys, nyn
+                            local_pf(i,j,nzb+1) =  z0h_av(j,i)
+                         ENDDO
+                      ENDDO
+                   ENDIF
+                ELSE
+                   IF ( av == 0 ) THEN
+                      DO  m = 1, surf_def_h(0)%ns
+                         i = surf_def_h(0)%i(m)
+                         j = surf_def_h(0)%j(m)
+                         local_pf(i,j,nzb+1) = surf_def_h(0)%z0h(m)
+                      ENDDO
+                      DO  m = 1, surf_lsm_h%ns
+                         i = surf_lsm_h%i(m)
+                         j = surf_lsm_h%j(m)
+                         local_pf(i,j,nzb+1) = surf_lsm_h%z0h(m)
+                      ENDDO
+                      DO  m = 1, surf_usm_h%ns
+                         i = surf_usm_h%i(m)
+                         j = surf_usm_h%j(m)
+                         local_pf(i,j,nzb+1) = surf_usm_h%z0h(m)
+                      ENDDO
+                   ELSE
+                      IF ( .NOT. ALLOCATED( z0h_av ) ) THEN
+                         ALLOCATE( z0h_av(nysg:nyng,nxlg:nxrg) )
+                         z0h_av = REAL( fill_value, KIND = wp )
+                      ENDIF
+                      DO  i = nxl, nxr
+                         DO  j = nys, nyn
+                            local_pf(i,j,nzb+1) =  z0h_av(j,i)
+                         ENDDO
+                      ENDDO
+                   ENDIF
                 ENDIF
                 resorted = .TRUE.
                 two_d = .TRUE.

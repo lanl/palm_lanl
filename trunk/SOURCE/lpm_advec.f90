@@ -335,7 +335,8 @@
 !--       Determine vertical index of topography top
           k_wall = get_topography_top_index_ji( jp, ip, 's' )
 
-          IF ( constant_flux_layer  .AND.  zv(n) - zw(k_wall) < z_p )  THEN
+          IF ( TRIM(constant_flux_layer) == 'bottom'  .AND.                    &
+               zv(n) - zw(k_wall) < z_p )  THEN
 !
 !--          Resolved-scale horizontal particle velocity is zero below z0. 
              IF ( zv(n) - zw(k_wall) < z0_av_global )  THEN
@@ -430,7 +431,8 @@
 !--       Determine vertical index of topography top
           k_wall = get_topography_top_index_ji( jp,ip, 's' )
 
-          IF ( constant_flux_layer  .AND.  zv(n) - zw(k_wall) < z_p )  THEN
+          IF ( .NOT. TRIM(constant_flux_layer) == 'none'  .AND.                &
+               zv(n) - zw(k_wall) < z_p )  THEN
              IF ( zv(n) - zw(k_wall) < z0_av_global )  THEN
 !
 !--             Resolved-scale horizontal particle velocity is zero below z0. 

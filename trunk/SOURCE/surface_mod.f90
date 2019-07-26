@@ -919,7 +919,7 @@
        ENDDO
 !
 !--    Allocate required attributes for model top
-       CALL allocate_surface_attributes_h_top ( surf_def_h(2), nys, nyn, nxl, nxr )
+       CALL allocate_surface_attributes_h ( surf_def_h(2), nys, nyn, nxl, nxr )
 !
 !--    Allocate required attributes for horizontal surfaces - natural type. 
        CALL allocate_surface_attributes_h ( surf_lsm_h, nys, nyn, nxl, nxr )
@@ -1201,149 +1201,6 @@
        ENDIF
 
     END SUBROUTINE allocate_surface_attributes_h
-
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Deallocating memory for model-top fluxes  
-!------------------------------------------------------------------------------!
-    SUBROUTINE deallocate_surface_attributes_h_top( surfaces )
-
-       IMPLICIT NONE
-
-
-       TYPE(surf_type) ::  surfaces !< respective surface type
-
-       DEALLOCATE ( surfaces%start_index )
-       DEALLOCATE ( surfaces%end_index )
-!
-!--    Indices to locate surface (model-top) element
-       DEALLOCATE ( surfaces%i )
-       DEALLOCATE ( surfaces%j )
-       DEALLOCATE ( surfaces%k )
-
-       IF ( .NOT. constant_diffusion )  THEN    
-          DEALLOCATE ( surfaces%u_0 )  
-          DEALLOCATE ( surfaces%v_0 )
-       ENDIF 
-!
-!--    Vertical momentum fluxes of u and v
-       DEALLOCATE ( surfaces%usws )  
-       DEALLOCATE ( surfaces%vsws )  
-!
-!--    Sensible heat flux
-       DEALLOCATE ( surfaces%shf )    
-!
-!--    Latent heat flux
-       IF ( humidity .OR. coupling_mode == 'ocean_to_atmosphere')  THEN
-          DEALLOCATE ( surfaces%qsws )      
-       ENDIF 
-!
-!--    Scalar flux
-       IF ( passive_scalar )  THEN
-          DEALLOCATE ( surfaces%ssws ) 
-       ENDIF 
-!
-!--    Chemical species flux
-       IF ( air_chemistry )  THEN
-          DEALLOCATE ( surfaces%cssws ) 
-       ENDIF 
-!
-!--       
-       IF ( cloud_physics .AND. microphysics_morrison)  THEN
-          DEALLOCATE ( surfaces%qcsws )
-          DEALLOCATE ( surfaces%ncsws )
-       ENDIF
-!
-!--       
-       IF ( cloud_physics .AND. microphysics_seifert)  THEN
-          DEALLOCATE ( surfaces%qrsws )
-          DEALLOCATE ( surfaces%nrsws )
-       ENDIF
-!
-!--    Salinity flux
-       IF ( ocean )  THEN
-         DEALLOCATE ( surfaces%sasws )
-         DEALLOCATE ( surfaces%shf_sol )
-       ENDIF
-
-    END SUBROUTINE deallocate_surface_attributes_h_top
-
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Allocating memory for model-top fluxes  
-!------------------------------------------------------------------------------!
-    SUBROUTINE allocate_surface_attributes_h_top( surfaces,                    &
-                                                  nys_l, nyn_l, nxl_l, nxr_l )
-
-       IMPLICIT NONE
-
-       INTEGER(iwp) ::  nyn_l  !< north bound of local 2d array start/end_index, is equal to nyn, except for restart-array
-       INTEGER(iwp) ::  nys_l  !< south bound of local 2d array start/end_index, is equal to nyn, except for restart-array
-       INTEGER(iwp) ::  nxl_l  !< west bound of local 2d array start/end_index, is equal to nyn, except for restart-array
-       INTEGER(iwp) ::  nxr_l  !< east bound of local 2d array start/end_index, is equal to nyn, except for restart-array
-
-       TYPE(surf_type) ::  surfaces !< respective surface type
-
-       ALLOCATE ( surfaces%start_index(nys_l:nyn_l,nxl_l:nxr_l) )
-       ALLOCATE ( surfaces%end_index(nys_l:nyn_l,nxl_l:nxr_l)   )
-       surfaces%start_index = 0
-       surfaces%end_index   = -1
-!
-!--    Indices to locate surface (model-top) element
-       ALLOCATE ( surfaces%i(1:surfaces%ns)  )
-       ALLOCATE ( surfaces%j(1:surfaces%ns)  )
-       ALLOCATE ( surfaces%k(1:surfaces%ns)  )
-
-       IF ( .NOT. constant_diffusion )  THEN    
-          ALLOCATE ( surfaces%u_0(1:surfaces%ns) )  
-          ALLOCATE ( surfaces%v_0(1:surfaces%ns) )
-       ENDIF 
-!
-!--    Vertical momentum fluxes of u and v
-       ALLOCATE ( surfaces%usws(1:surfaces%ns) )  
-       ALLOCATE ( surfaces%vsws(1:surfaces%ns) )  
-!
-!--    Sensible heat flux
-       ALLOCATE ( surfaces%shf(1:surfaces%ns) )    
-!
-!--    Latent heat flux
-       IF ( humidity .OR. coupling_mode == 'ocean_to_atmosphere')  THEN
-          ALLOCATE ( surfaces%qsws(1:surfaces%ns) )      
-       ENDIF 
-!
-!--    Scalar flux
-       IF ( passive_scalar )  THEN
-          ALLOCATE ( surfaces%ssws(1:surfaces%ns) ) 
-       ENDIF 
-!
-!--    Chemical species flux
-       IF ( air_chemistry )  THEN
-          ALLOCATE ( surfaces%cssws(1:nvar,1:surfaces%ns) ) 
-       ENDIF 
-!
-!--       
-       IF ( cloud_physics .AND. microphysics_morrison)  THEN
-          ALLOCATE ( surfaces%qcsws(1:surfaces%ns) )
-          ALLOCATE ( surfaces%ncsws(1:surfaces%ns) )
-       ENDIF
-!
-!--       
-       IF ( cloud_physics .AND. microphysics_seifert)  THEN
-          ALLOCATE ( surfaces%qrsws(1:surfaces%ns) )
-          ALLOCATE ( surfaces%nrsws(1:surfaces%ns) )
-       ENDIF
-!
-!--    Salinity flux
-       IF ( ocean )  THEN
-         ALLOCATE ( surfaces%sasws(1:surfaces%ns) )
-         ALLOCATE ( surfaces%shf_sol(1:surfaces%ns) )
-       ENDIF
-
-    END SUBROUTINE allocate_surface_attributes_h_top
 
 
 !------------------------------------------------------------------------------!
@@ -1744,7 +1601,8 @@
                                                               surf_lsm_h,      &
                                                               num_lsm_h,       &
                                                               num_lsm_h_kji,   &
-                                                              .TRUE., .FALSE. )  
+                                                              .TRUE., .FALSE., &
+                                                              .FALSE.,.TRUE. )  
 !
 !--                   Urban surface tpye
                       ELSEIF ( urban_surface  .AND.  building )  THEN
@@ -1752,7 +1610,8 @@
                                                               surf_usm_h,      &
                                                               num_usm_h,       &
                                                               num_usm_h_kji,   &
-                                                              .TRUE., .FALSE. )  
+                                                              .TRUE., .FALSE., &
+                                                              .FALSE.,.TRUE. )  
 !
 !--                   Default surface type
                       ELSE
@@ -1760,16 +1619,23 @@
                                                               surf_def_h(0),   &
                                                               num_def_h(0),    &
                                                               num_def_h_kji(0),&
-                                                              .TRUE., .FALSE. )  
+                                                              .TRUE., .FALSE., &
+                                                              .FALSE.,         &
+                                      TRIM( constant_flux_layer ) == 'bottom' )  
                       ENDIF
                    ENDIF  
 !
 !--                downward-facing surface, first, model top. Please note, 
 !--                for the moment, downward-facing surfaces are always of 
 !--                default type
-                   IF ( k == nzt  .AND.  use_top_fluxes )  THEN
-                      CALL initialize_top( k, j, i, surf_def_h(2),             &
-                                           num_def_h(2), num_def_h_kji(2) )
+                   IF ( k == nzt .AND. use_top_fluxes )  THEN
+                      CALL initialize_horizontal_surfaces( k, j, i,            &
+                                                           surf_def_h(2),      &
+                                                           num_def_h(2),       &
+                                                           num_def_h_kji(2) ,  &
+                                                           .FALSE., .TRUE.,    &
+                                                           .TRUE.,             &
+                                         TRIM( constant_flux_layer ) == 'top' )  
 !
 !--                Check for any other downward-facing surface. So far only for 
 !--                default surface type.
@@ -1778,7 +1644,8 @@
                                                            surf_def_h(1),      &
                                                            num_def_h(1),       &
                                                            num_def_h_kji(1),   &
-                                                           .FALSE., .TRUE. )    
+                                                           .FALSE., .TRUE.,    &
+                                                           .TRUE., .TRUE. )    
                    ENDIF 
 !
 !--                Check for vertical walls and, if required, initialize it.
@@ -2012,12 +1879,13 @@
 ! Description:
 ! ------------
 !> Initialize horizontal surface elements, upward- and downward-facing. 
-!> Note, horizontal surface type alsw comprises model-top fluxes, which are,
+!> Note, horizontal surface type also comprises model-top fluxes, which are,
 !> initialized in a different routine. 
 !------------------------------------------------------------------------------!
           SUBROUTINE initialize_horizontal_surfaces( k, j, i, surf, num_h,     &
                                                      num_h_kji, upward_facing, &
-                                                     downward_facing )       
+                                                     downward_facing, is_top,  &
+                                                     flux_layer )       
 
              IMPLICIT NONE 
 
@@ -2031,9 +1899,11 @@
 
              LOGICAL       ::  upward_facing    !< flag indicating upward-facing surface
              LOGICAL       ::  downward_facing  !< flag indicating downward-facing surface
+             LOGICAL       ::  is_top           !< flag indicating whether surface is top
+             LOGICAL       :: flux_layer
 
              TYPE( surf_type ) :: surf          !< respective surface type
-!             REAL(WP)      ::  wb_sfc, tod,arg1      !< surface buoyancy forcing -- only matters for ocean
+             REAL(WP)      ::  wb_sfc, tod,arg1 !< surface buoyancy forcing -- only matters for ocean
 !
 !--          Store indices of respective surface element
              surf%i(num_h) = i
@@ -2042,27 +1912,36 @@
 !
 !--          Surface orientation, bit 0 is set to 1 for upward-facing surfaces, 
 !--          bit 1 is for downward-facing surfaces.
-             IF ( upward_facing   )  surf%facing(num_h) = IBSET( surf%facing(num_h), 0 )
-             IF ( downward_facing )  surf%facing(num_h) = IBSET( surf%facing(num_h), 1 )
+             IF ( .NOT. is_top ) THEN
+                IF ( upward_facing   )  surf%facing(num_h) = IBSET( surf%facing(num_h), 0 )
+                IF ( downward_facing )  surf%facing(num_h) = IBSET( surf%facing(num_h), 1 )
+             ENDIF
 !
 !--          Initialize surface-layer height
-             IF ( upward_facing )  THEN
-                surf%z_mo(num_h)  = zu(k) - zw(k-1)
-             ELSE
-                surf%z_mo(num_h)  = zw(k) - zu(k)
-             ENDIF
+             IF ( flux_layer ) THEN
+                IF ( upward_facing )  THEN
+                   surf%z_mo(num_h)  = zu(k) - zw(k-1)
+                ELSE
+                   surf%z_mo(num_h)  = zw(k) - zu(k)
+                ENDIF
  
-             surf%z0(num_h)    = roughness_length
-             surf%z0h(num_h)   = z0h_factor * roughness_length
-             surf%z0q(num_h)   = z0h_factor * roughness_length          
+                surf%z0(num_h)    = roughness_length
+                surf%z0h(num_h)   = z0h_factor * roughness_length
+                surf%z0q(num_h)   = z0h_factor * roughness_length          
+             ENDIF
 !
 !--          Initialization in case of 1D pre-cursor run
              IF ( INDEX( initializing_actions, 'set_1d-model_profiles' ) /= 0 )&
              THEN
                 IF ( .NOT. constant_diffusion )  THEN
-                   IF ( constant_flux_layer )  THEN
-                      surf%ol(num_h)   = surf%z_mo(num_h) /                    &
+                   IF ( flux_layer )  THEN
+                      IF ( is_top ) THEN
+                         surf%ol(num_h)   = surf%z_mo(num_h) /                    &
+                                            ( rif1d(nzt) + 1.0E-20_wp )
+                      ELSE
+                         surf%ol(num_h)   = surf%z_mo(num_h) /                    &
                                             ( rif1d(nzb+1) + 1.0E-20_wp )
+                      ENDIF
                       surf%us(num_h)   = us1d
                       surf%usws(num_h) = usws1d
                       surf%vsws(num_h) = vsws1d
@@ -2136,7 +2015,7 @@
 !
 !--          Inititalize surface fluxes of sensible and latent heat, as well as
 !--          passive scalar
-             IF ( use_surface_fluxes )  THEN
+             IF ( use_surface_fluxes .AND. (.NOT. is_top) )  THEN
 
                 IF ( upward_facing )  THEN
                    IF ( constant_heatflux )  THEN
@@ -2201,6 +2080,20 @@
                    ENDIF
                 ENDIF
 
+                IF ( ocean )  THEN
+                   IF ( upward_facing )  THEN 
+                      IF ( constant_bottom_salinityflux ) THEN
+                         surf%sasws(num_h) = bottom_salinityflux *                &
+                                             salinityflux_input_conversion(k-1)
+                      ELSE
+                         surf%sasws(num_h) = 0.0_wp
+                      ENDIF
+                   ELSE
+                      surf%sasws(num_h) = wall_salinityflux(5) *                  &
+                                         salinityflux_input_conversion(k) 
+                   ENDIF
+                ENDIF
+                
                 IF ( air_chemistry )  THEN
                    lsp_pr = 1
                    DO  WHILE ( TRIM( surface_csflux_name( lsp_pr ) ) /= 'novalue' )   !<'novalue' is the default
@@ -2228,15 +2121,68 @@
                       lsp_pr = lsp_pr + 1
                    ENDDO
                 ENDIF
+             ENDIF
 
-                IF ( ocean )  THEN
-                   IF ( upward_facing )  THEN 
-                      surf%sasws(num_h) = bottom_salinityflux *                &
-                                          salinityflux_input_conversion(k-1)
+             IF ( use_top_fluxes .AND. is_top .AND. downward_facing )  THEN
+!
+!--             Initialize top heat flux
+                IF ( constant_top_heatflux )                                &
+                   surf%shf(num_h) = top_heatflux *                         &
+                                     heatflux_input_conversion(nzt+1)
+
+!--             Initialization in case of a coupled model run
+                IF ( coupling_mode == 'ocean_to_atmosphere' )  THEN
+                   surf%shf(num_h) = 0.0_wp
+                   surf%qsws(num_h) = 0.0_wp
+                ENDIF
+
+!--             Prescribe latent heat flux at the top      
+                IF ( humidity )  THEN
+                   surf%qsws(num_h) = 0.0_wp
+                   IF ( cloud_physics  .AND.  microphysics_morrison ) THEN
+                      surf%ncsws(num_h) = 0.0_wp
+                      surf%qcsws(num_h) = 0.0_wp
+                   ENDIF
+                   IF ( cloud_physics  .AND.  microphysics_seifert ) THEN
+                      surf%nrsws(num_h) = 0.0_wp
+                      surf%qrsws(num_h) = 0.0_wp
+                   ENDIF
+                ENDIF
+
+!--             Prescribe top scalar flux
+                IF ( passive_scalar .AND. constant_top_scalarflux )            &
+                   surf%ssws(num_h) = top_scalarflux *                         &
+                                      scalarflux_input_conversion(nzt+1)
+
+!--             Prescribe top chemical species' flux
+                DO  lsp = 1, nvar
+                   IF ( air_chemistry  .AND.  constant_top_csflux(lsp) )  THEN 
+                      surf%cssws(lsp,num_h) = top_csflux(lsp) *                &
+                                              csflux_input_conversion(nzt+1)
+                   ENDIF
+                ENDDO
+
+                IF ( ocean ) THEN
+                   surf%shf_sol(num_h) = 0.0_wp
+
+!--                Prescribe top salinity flux
+                   IF ( constant_top_salinityflux ) THEN                       
+                      surf%sasws(num_h) = top_salinityflux *                   &
+                                          salinityflux_input_conversion(nzt+1)
                    ELSE
                       surf%sasws(num_h) = 0.0_wp
                    ENDIF
+
                 ENDIF
+
+!--             Top momentum fluxes
+                IF ( constant_top_momentumflux )  THEN
+                   surf%usws(num_h) = top_momentumflux_u *                     &
+                                      momentumflux_input_conversion(nzt+1)
+                   surf%vsws(num_h) = top_momentumflux_v *                     &
+                                      momentumflux_input_conversion(nzt+1)
+                ENDIF
+             
              ENDIF
 !
 !--          Increment surface indices
@@ -2246,94 +2192,6 @@
 
           END SUBROUTINE initialize_horizontal_surfaces
        
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Initialize model-top fluxes. Currently, only the heatflux and salinity flux 
-!> can be prescribed, latent flux is zero in this case!
-!------------------------------------------------------------------------------!
-          SUBROUTINE initialize_top( k, j, i, surf, num_h, num_h_kji )       
-
-             IMPLICIT NONE 
-
-             INTEGER(iwp)  ::  i                !< running index x-direction
-             INTEGER(iwp)  ::  j                !< running index y-direction
-             INTEGER(iwp)  ::  k                !< running index z-direction
-             INTEGER(iwp)  ::  num_h            !< current number of surface element
-             INTEGER(iwp)  ::  num_h_kji        !< dummy increment
-             INTEGER(iwp)  ::  lsp              !< running index for chemical species
-             REAL(WP)      ::  wb_sfc, tod,arg1      !< surface buoyancy forcing -- only matters for ocean
-
-             TYPE( surf_type ) :: surf          !< respective surface type
-!
-!--          Store indices of respective surface element
-             surf%i(num_h) = i
-             surf%j(num_h) = j
-             surf%k(num_h) = k
-!
-             IF ( ocean ) THEN
-                surf%shf(num_h) = 0.0_wp
-                surf%sasws(num_h) = 0.0_wp
-                surf%shf_sol(num_h) = 0.0_wp
-             ENDIF
-
-!--          Initialize top heat flux
-             IF ( constant_top_heatflux )                                       &
-                surf%shf(num_h) = top_heatflux * heatflux_input_conversion(nzt+1)
-!
-!--          Initialization in case of a coupled model run
-             IF ( coupling_mode == 'ocean_to_atmosphere' )  THEN
-                surf%shf(num_h) = 0.0_wp
-                surf%qsws(num_h) = 0.0_wp
-             ENDIF
-!
-!--          Prescribe latent heat flux at the top      
-             IF ( humidity )  THEN
-                surf%qsws(num_h) = 0.0_wp
-                IF ( cloud_physics  .AND.  microphysics_morrison ) THEN
-                   surf%ncsws(num_h) = 0.0_wp
-                   surf%qcsws(num_h) = 0.0_wp
-                ENDIF
-                IF ( cloud_physics  .AND.  microphysics_seifert ) THEN
-                   surf%nrsws(num_h) = 0.0_wp
-                   surf%qrsws(num_h) = 0.0_wp
-                ENDIF
-             ENDIF
-!
-!--          Prescribe top scalar flux
-             IF ( passive_scalar .AND. constant_top_scalarflux )               &
-                surf%ssws(num_h) = top_scalarflux *                            &
-                                   scalarflux_input_conversion(nzt+1)
-
-!--          Prescribe top chemical species' flux
-             DO  lsp = 1, nvar
-                IF ( air_chemistry  .AND.  constant_top_csflux(lsp) )  THEN 
-                   surf%cssws(lsp,num_h) = top_csflux(lsp) *                   &
-                                           csflux_input_conversion(nzt+1)
-                ENDIF
-             ENDDO
-!
-!--          Prescribe top salinity flux
-             IF ( ocean .AND. constant_top_salinityflux)                       &
-                surf%sasws(num_h) = top_salinityflux *                         &
-                                    salinityflux_input_conversion(nzt+1)
- 
-!--          Top momentum fluxes
-             IF ( constant_top_momentumflux )  THEN
-                surf%usws(num_h) = top_momentumflux_u *                        &
-                                   momentumflux_input_conversion(nzt+1)
-                surf%vsws(num_h) = top_momentumflux_v *                        &
-                                   momentumflux_input_conversion(nzt+1)
-             ENDIF
-!
-!--          Increment surface indices
-             num_h     = num_h + 1
-             num_h_kji = num_h_kji + 1      
-
-
-          END SUBROUTINE initialize_top
-
 
 !------------------------------------------------------------------------------!
 ! Description:
@@ -2598,7 +2456,7 @@
 !
 !--    Model top
        surf_h(2)%ns = ns_h_on_file(2)
-       CALL allocate_surface_attributes_h_top( surf_h(2), nys, nyn, nxl, nxr )
+       CALL allocate_surface_attributes_h( surf_h(2), nys, nyn, nxl, nxr )
 !
 !--    Vertical surfaces
        DO  l = 0, 3
@@ -3369,7 +3227,7 @@
                 IF ( ALLOCATED( surf_h(1)%start_index ) )                      &
                    CALL deallocate_surface_attributes_h( surf_h(1) )           
                 IF ( ALLOCATED( surf_h(2)%start_index ) )                      &
-                   CALL deallocate_surface_attributes_h_top( surf_h(2) )       
+                   CALL deallocate_surface_attributes_h( surf_h(2) )       
 
 !--             Allocate memory for number of surface elements on file. 
 !--             Please note, these number is not necessarily the same as 
@@ -3390,7 +3248,7 @@
 
 !--             Model top
                 surf_h(2)%ns = ns_h_on_file(2)
-                CALL allocate_surface_attributes_h_top( surf_h(2),             &
+                CALL allocate_surface_attributes_h( surf_h(2),             &
                                             nys_on_file, nyn_on_file,          &
                                             nxl_on_file, nxr_on_file )
 

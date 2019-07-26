@@ -169,14 +169,15 @@
     
     USE control_parameters,                                                    &
         ONLY:  constant_diffusion, constant_flux_layer, dissipation_1d, f, g,  &
-               humidity, ibc_e_b, intermediate_timestep_count,                 &
+               humidity, ibc_e_b, ibc_e_t, intermediate_timestep_count,        &
                intermediate_timestep_count_max, kappa, km_constant,            &
                message_string, mixing_length_1d, prandtl_number,               &
                roughness_length, run_description_header, simulated_time_chr,   &
-               timestep_scheme, tsc, z0h_factor
+               timestep_scheme, tsc, use_surface_fluxes, use_top_fluxes,       &
+               z0h_factor
 
     USE indices,                                                               &
-        ONLY:  nzb, nzb_diff, nzt
+        ONLY:  nzb, nzb_diff, nzt, nzt_diff
     
     USE kinds
 
@@ -298,6 +299,7 @@
 
     INTEGER(iwp) ::  k  !< loop index
 
+    CALL location_message('initializing 1d model',.TRUE.)
 !
 !-- Allocate required 1D-arrays
     ALLOCATE( diss1d(nzb:nzt+1), diss1d_p(nzb:nzt+1),                          &
@@ -372,13 +374,13 @@
 
 !
 !-- For u*, theta* and the momentum fluxes plausible values are set
-    IF ( constant_flux_layer )  THEN
-       us1d = 0.1_wp   ! without initial friction the flow would not change
+    IF ( TRIM( constant_flux_layer ) /= 'none' ) THEN 
+       us1d = 0.1_wp
     ELSE
        diss1d(nzb+1) = 0.001_wp
        e1d(nzb+1)  = 1.0_wp
        km1d(nzb+1) = 1.0_wp
-       us1d = 0.0_wp
+       us1d = 0.0_wp   ! without initial friction the flow would not change
     ENDIF
     ts1d = 0.0_wp
     usws1d = 0.0_wp
@@ -426,10 +428,12 @@
 
     CHARACTER (LEN=9) ::  time_to_string  !< function to transform time from real to character string
 
-    INTEGER(iwp) ::  k  !< loop index
+    INTEGER(iwp) ::  k        !< loop index
 
     REAL(wp) ::  a            !< auxiliary variable
     REAL(wp) ::  b            !< auxiliary variable
+    REAL(wp) ::  dpt          !< vertical temperature difference
+    REAL(wp) ::  dq           !< vertical humidity difference
     REAL(wp) ::  dpt_dz       !< vertical temperature gradient
     REAL(wp) ::  flux         !< vertical temperature gradient
     REAL(wp) ::  kmzm         !< Km(z-dz/2)
@@ -437,13 +441,25 @@
     REAL(wp) ::  l_stable     !< mixing length for stable case
     REAL(wp) ::  pt_0         !< reference temperature
     REAL(wp) ::  uv_total     !< horizontal wind speed
-
+    
+    CALL location_message('time integration for 1d model',.TRUE.)
 !
 !-- Determine the time step at the start of a 1D-simulation and
 !-- determine and printout quantities used for run control
     dt_1d = 0.01_wp
     CALL run_control_1d
 
+    IF ( use_surface_fluxes )  THEN
+       nzb_diff = nzb + 2
+    ELSE
+       nzb_diff = nzb + 1
+    ENDIF
+    
+    IF ( use_top_fluxes )  THEN
+       nzt_diff = nzt - 1
+    ELSE
+       nzt_diff = nzt
+    ENDIF
 !
 !-- Start of time loop
     DO  WHILE ( simulated_time_1d < end_time_1d  .AND.  .NOT. stop_dt_1d )
@@ -463,7 +479,7 @@
 !
 !--       Compute all tendency terms. If a constant-flux layer is simulated, 
 !--       k starts at nzb+2.
-          DO  k = nzb_diff, nzt
+          DO  k = nzb_diff, nzt_diff
 
              kmzm = 0.5_wp * ( km1d(k-1) + km1d(k) )
              kmzp = 0.5_wp * ( km1d(k) + km1d(k+1) )
@@ -481,7 +497,7 @@
                                                  ) * ddzw(k)
           ENDDO
           IF ( .NOT. constant_diffusion )  THEN
-             DO  k = nzb_diff, nzt
+             DO  k = nzb_diff, nzt_diff
 !
 !--             TKE and dissipation rate
                 kmzm = 0.5_wp * ( km1d(k-1) + km1d(k) )
@@ -551,9 +567,10 @@
 !--       Tendency terms at the top of the constant-flux layer.
 !--       Finite differences of the momentum fluxes are computed using half the 
 !--       normal grid length (2.0*ddzw(k)) for the sake of enhanced accuracy 
-          IF ( constant_flux_layer )  THEN
+          IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
 
-             k = nzb+1
+             IF ( TRIM(constant_flux_layer) == 'bottom' ) k = nzb+1
+             IF ( TRIM(constant_flux_layer) == 'top'    ) k = nzt
              kmzm = 0.5_wp * ( km1d(k-1) + km1d(k) )
              kmzp = 0.5_wp * ( km1d(k) + km1d(k+1) )
              IF ( .NOT. humidity )  THEN
@@ -709,24 +726,33 @@
 
 !
 !--          First compute the vertical fluxes in the constant-flux layer
-             IF ( constant_flux_layer )  THEN
+             IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
+                
+                IF ( TRIM(constant_flux_layer) == 'bottom'  )  THEN
+                   k = nzb+1
+                   dpt = pt_init(nzb+1) - pt_init(nzb)
+                ENDIF
+                IF ( TRIM(constant_flux_layer) == 'top'     )  THEN
+                   k = nzt
+                   dpt = pt_init(nzt+1) - pt_init(nzt)
+                ENDIF
 !
 !--             Compute theta* using Rif numbers of the previous time step
-                IF ( rif1d(nzb+1) >= 0.0_wp )  THEN
+                IF ( rif1d(k) >= 0.0_wp )  THEN
 !
 !--                Stable stratification
-                   ts1d = kappa * ( pt_init(nzb+1) - pt_init(nzb) ) /          &
-                          ( LOG( zu(nzb+1) / z0h1d ) + 5.0_wp * rif1d(nzb+1) * &
-                                          ( zu(nzb+1) - z0h1d ) / zu(nzb+1)    &
+                   ts1d = kappa * dpt /                                        &
+                          ( LOG( zu(k) / z0h1d ) + 5.0_wp * rif1d(k) *       &
+                                          ( zu(k) - z0h1d ) / zu(k)          &
                           )
                 ELSE
 !
 !--                Unstable stratification
-                   a = SQRT( 1.0_wp - 16.0_wp * rif1d(nzb+1) )
-                   b = SQRT( 1.0_wp - 16.0_wp * rif1d(nzb+1) /                 &
-                       zu(nzb+1) * z0h1d )
+                   a = SQRT( 1.0_wp - 16.0_wp * rif1d(k) )
+                   b = SQRT( 1.0_wp - 16.0_wp * rif1d(k) /                    &
+                       zu(k) * z0h1d )
 
-                   ts1d = kappa * ( pt_init(nzb+1) - pt_init(nzb) ) /          &
+                   ts1d = kappa * dpt /                                        &
                           LOG( (a-1.0_wp) / (a+1.0_wp) *                       &
                                (b+1.0_wp) / (b-1.0_wp) )
                 ENDIF
@@ -742,19 +768,21 @@
 !--          previous time step (+1E-30, if u* = 0), then in the remaining area.
 !--          There the rif-numbers of the previous time step are used.
 
-             IF ( constant_flux_layer )  THEN
+             IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
+                IF ( TRIM(constant_flux_layer) == 'bottom' ) k = nzb+1
+                IF ( TRIM(constant_flux_layer) == 'top'    ) k = nzt
                 IF ( .NOT. humidity )  THEN
-                   pt_0 = pt_init(nzb+1)
+                   pt_0 = pt_init(k)
                    flux = ts1d
                 ELSE
-                   pt_0 = pt_init(nzb+1) * ( 1.0_wp + 0.61_wp * q_init(nzb+1) )
+                   pt_0 = pt_init(k) * ( 1.0_wp + 0.61_wp * q_init(k) )
                    flux = ts1d + 0.61_wp * pt_init(k) * qs1d
                 ENDIF
-                rif1d(nzb+1) = zu(nzb+1) * kappa * g * flux / &
+                rif1d(k) = zu(k) * kappa * g * flux / &
                                ( pt_0 * ( us1d**2 + 1E-30_wp ) )
              ENDIF
 
-             DO  k = nzb_diff, nzt
+             DO  k = nzb_diff, nzt_diff
                 IF ( .NOT. humidity )  THEN
                    pt_0 = pt_init(k)
                    flux = ( pt_init(k+1) - pt_init(k-1) ) * dd2zu(k)
@@ -789,21 +817,23 @@
 
 !
 !--          Compute u* from the absolute velocity value
-             IF ( constant_flux_layer )  THEN
-                uv_total = SQRT( u1d(nzb+1)**2 + v1d(nzb+1)**2 )
+             IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
+                IF ( TRIM(constant_flux_layer) == 'bottom' ) k = nzb+1
+                IF ( TRIM(constant_flux_layer) == 'top'    ) k = nzt
+                uv_total = SQRT( u1d(k)**2 + v1d(k)**2 )
 
-                IF ( rif1d(nzb+1) >= 0.0_wp )  THEN
+                IF ( rif1d(k) >= 0.0_wp )  THEN
 !
 !--                Stable stratification
                    us1d = kappa * uv_total / (                                 &
-                             LOG( zu(nzb+1) / z01d ) + 5.0_wp * rif1d(nzb+1) * &
-                                              ( zu(nzb+1) - z01d ) / zu(nzb+1) &
+                             LOG( zu(k) / z01d ) + 5.0_wp * rif1d(k) * &
+                                              ( zu(k) - z01d ) / zu(k) &
                                              )
                 ELSE
 !
 !--                Unstable stratification
-                   a = 1.0_wp / SQRT( SQRT( 1.0_wp - 16.0_wp * rif1d(nzb+1) ) )
-                   b = 1.0_wp / SQRT( SQRT( 1.0_wp - 16.0_wp * rif1d(nzb+1) /  &
+                   a = 1.0_wp / SQRT( SQRT( 1.0_wp - 16.0_wp * rif1d(k) ) )
+                   b = 1.0_wp / SQRT( SQRT( 1.0_wp - 16.0_wp * rif1d(k) /  &
                                                      zu(nzb+1) * z01d ) )
                    us1d = kappa * uv_total / (                                 &
                               LOG( (1.0_wp+b) / (1.0_wp-b) * (1.0_wp-a) /      &
@@ -814,41 +844,55 @@
 
 !
 !--             Compute the momentum fluxes for the diffusion terms
-                usws1d  = - u1d(nzb+1) / uv_total * us1d**2
-                vsws1d  = - v1d(nzb+1) / uv_total * us1d**2
+                usws1d  = - u1d(k) / uv_total * us1d**2
+                vsws1d  = - v1d(k) / uv_total * us1d**2
 
 !
 !--             Boundary condition for the turbulent kinetic energy and 
 !--             dissipation rate at the top of the constant-flux layer.
 !--             Additional Neumann condition de/dz = 0 at nzb is set to ensure
 !--             compatibility with the 3D model.
-                IF ( ibc_e_b == 2 )  THEN
-                   e1d(nzb+1) = ( us1d / c_0 )**2
+                IF ( TRIM(constant_flux_layer) == 'bottom' .AND.               &
+                     ibc_e_b == 2                                )  THEN
+                   e1d(k) = ( us1d / c_0 )**2
+                ENDIF
+                IF ( TRIM(constant_flux_layer) == 'top' .AND.                  &
+                     ibc_e_t == 2                                )  THEN
+                   e1d(k) = ( us1d / c_0 )**2
                 ENDIF
                 IF ( dissipation_1d == 'prognostic' )  THEN
-                   e1d(nzb+1) = ( us1d / c_0 )**2
-                   diss1d(nzb+1) = us1d**3 / ( kappa * zu(nzb+1) )
-                   diss1d(nzb) = diss1d(nzb+1)
+                   e1d(k) = ( us1d / c_0 )**2
+                   diss1d(k) = us1d**3 / ( kappa * zu(k) )
+                   IF ( TRIM(constant_flux_layer) == 'bottom' ) diss1d(k-1) = diss1d(k)
+                   IF ( TRIM(constant_flux_layer) == 'top'    ) diss1d(k+1) = diss1d(k)
                 ENDIF
-                e1d(nzb) = e1d(nzb+1)
+                
+                IF ( TRIM(constant_flux_layer) == 'bottom' ) e1d(k-1) = e1d(k)
+                IF ( TRIM(constant_flux_layer) == 'top'    ) e1d(k+1) = e1d(k)
 
                 IF ( humidity ) THEN
+                   IF ( TRIM(constant_flux_layer) == 'bottom'  )  THEN
+                      dq = q_init(nzb+1) - q_init(nzb)
+                   ENDIF
+                   IF ( TRIM(constant_flux_layer) == 'top'     )  THEN
+                      dq = q_init(nzt+1) - q_init(nzt)
+                   ENDIF
 !
 !--                Compute q* 
-                   IF ( rif1d(nzb+1) >= 0.0_wp )  THEN
+                   IF ( rif1d(k) >= 0.0_wp )  THEN
 !
 !--                   Stable stratification
-                      qs1d = kappa * ( q_init(nzb+1) - q_init(nzb) ) /         &
-                          ( LOG( zu(nzb+1) / z0h1d ) + 5.0_wp * rif1d(nzb+1) * &
-                                          ( zu(nzb+1) - z0h1d ) / zu(nzb+1)    &
+                      qs1d = kappa * dq /                                      &
+                          ( LOG( zu(k) / z0h1d ) + 5.0_wp * rif1d(k) *         &
+                                          ( zu(k) - z0h1d ) / zu(k)            &
                           )
                    ELSE
 !
 !--                   Unstable stratification
-                      a = SQRT( 1.0_wp - 16.0_wp * rif1d(nzb+1) )
-                      b = SQRT( 1.0_wp - 16.0_wp * rif1d(nzb+1) /              &
-                                         zu(nzb+1) * z0h1d )
-                      qs1d = kappa * ( q_init(nzb+1) - q_init(nzb) ) /         &
+                      a = SQRT( 1.0_wp - 16.0_wp * rif1d(k) )
+                      b = SQRT( 1.0_wp - 16.0_wp * rif1d(k) /                  &
+                                         zu(k) * z0h1d )
+                      qs1d = kappa * dq /                                      &
                              LOG( (a-1.0_wp) / (a+1.0_wp) *                    &
                                   (b+1.0_wp) / (b-1.0_wp) )
                    ENDIF
@@ -899,22 +943,24 @@
 !--          Compute the diffusion coefficients for momentum via the
 !--          corresponding Prandtl-layer relationship and according to
 !--          Prandtl-Kolmogorov, respectively
-             IF ( constant_flux_layer )  THEN
-                IF ( rif1d(nzb+1) >= 0.0_wp )  THEN
-                   km1d(nzb+1) = us1d * kappa * zu(nzb+1) /                    &
-                                 ( 1.0_wp + 5.0_wp * rif1d(nzb+1) )
+             IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
+                IF ( TRIM(constant_flux_layer) == 'bottom' ) k = nzb+1
+                IF ( TRIM(constant_flux_layer) == 'top'    ) k = nzt
+                IF ( rif1d(k) >= 0.0_wp )  THEN
+                   km1d(k) = us1d * kappa * zu(k) /                            &
+                                 ( 1.0_wp + 5.0_wp * rif1d(k) )
                 ELSE
-                   km1d(nzb+1) = us1d * kappa * zu(nzb+1) *                    &
-                                 ( 1.0_wp - 16.0_wp * rif1d(nzb+1) )**0.25_wp
+                   km1d(k) = us1d * kappa * zu(k) *                            &
+                                 ( 1.0_wp - 16.0_wp * rif1d(k) )**0.25_wp
                 ENDIF
              ENDIF
 
              IF ( dissipation_1d == 'prognostic' )  THEN
-                DO  k = nzb_diff, nzt
+                DO  k = nzb_diff, nzt_diff
                    km1d(k) = c_mu * e1d(k)**2 / ( diss1d(k) + 1.0E-30_wp )
                 ENDDO
              ELSE
-                DO  k = nzb_diff, nzt
+                DO  k = nzb_diff, nzt_diff
                    km1d(k) = c_0 * SQRT( e1d(k) ) * l1d(k)
                 ENDDO
              ENDIF

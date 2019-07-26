@@ -423,7 +423,7 @@
 !-- several heights. Splitting into 20 sublayers turned out to be sufficient.
 !-- To obtain exact height levels of particles, linear interpolation is applied
 !-- (see lpm_advec.f90).
-    IF ( constant_flux_layer )  THEN
+    IF ( TRIM(constant_flux_layer) == 'bottom' )  THEN
 
        ALLOCATE ( log_z_z0(0:number_of_sublayers) )
        z_p = zu(nzb+1) - zw(nzb)

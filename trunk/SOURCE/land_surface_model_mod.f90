@@ -1302,9 +1302,9 @@
        CALL message( 'lsm_check_parameters', 'PA0399', 1, 2, 0, 6, 0 )
     ENDIF
 
-    IF (  .NOT.  constant_flux_layer )  THEN
+    IF ( .NOT. TRIM(constant_flux_layer) == 'bottom' )  THEN
        message_string = 'lsm requires '//                                      &
-                        'constant_flux_layer = .T.'
+                        'constant_flux_layer = bottom'
        CALL message( 'lsm_check_parameters', 'PA0400', 1, 2, 0, 6, 0 )
     ENDIF
     

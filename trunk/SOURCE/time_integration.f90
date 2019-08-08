@@ -441,8 +441,6 @@
     INTEGER(iwp)      ::  lsp
     INTEGER(iwp)      ::  n
 
-    #define MY_DEBUG print *,"DEBUG",__LINE__,__FILE__
-
     REAL(wp) ::  dt_3d_old  !< temporary storage of timestep to be used for
                             !< steering of run control output interval
     REAL(wp) ::  tsrp_org   !< original value of time_since_reference_point

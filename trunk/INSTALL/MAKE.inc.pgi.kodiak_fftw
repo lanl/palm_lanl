@@ -7,6 +7,6 @@ F90=pgf90
 F90_SER=pgf90
 NETCDF=/usr/projects/hpcsoft/toss3/common/netcdf/4.4.0_pgi-18.10
 FFTW=/usr/projects/climate/lvanroekel/fftw_3
-COPT= -Mpreprocess -r8 -D__netcdf -D__lc
+COPT= -Mpreprocess -r8 -D__netcdf -D__lc -D__nopointer
 F90FLAGS= -fast -I $(NETCDF)/include -I $(FFTW)/include
 LDFLAGS= -fast -L $(NETCDF)/lib -L $(FFTW)/lib -lnetcdff -lnetcdf -lhdf5 -lhdf5_hl -lm -lz -lfftw3

@@ -1370,6 +1370,8 @@
 
 !
 !--    Allocate temporary arrays sized as the arrays on the restart file
+       IF (ALLOCATED(tmp_2d)) DEALLOCATE(tmp_2d)
+       IF (ALLOCATED(tmp_3d)) DEALLOCATE(tmp_3d)
        ALLOCATE( tmp_2d(nys_on_file-nbgp:nyn_on_file+nbgp,                     &
                         nxl_on_file-nbgp:nxr_on_file+nbgp),                    &
                  tmp_3d(nzb:nzt+1,nys_on_file-nbgp:nyn_on_file+nbgp,           &

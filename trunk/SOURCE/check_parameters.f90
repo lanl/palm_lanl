@@ -1814,6 +1814,19 @@
     ENDIF
 
 !
+!-- In case of a given slope, compute the relevant quantities
+    IF ( alpha_surface /= 0.0_wp )  THEN
+       IF ( ABS( alpha_surface ) > 90.0_wp )  THEN
+          WRITE( message_string, * ) 'ABS( alpha_surface = ', alpha_surface,   &
+                                     ' ) must be < 90.0'
+          CALL message( 'check_parameters', 'PA0043', 1, 2, 0, 6, 0 )
+       ENDIF
+       sloping_surface = .TRUE.
+       cos_alpha_surface = COS( alpha_surface / 180.0_wp * pi )
+       sin_alpha_surface = SIN( alpha_surface / 180.0_wp * pi )
+    ENDIF
+
+!
 !-- Overwrite latitude if necessary and compute Coriolis parameter.
 !-- To do - move initialization of f and fs to coriolis_mod.
     IF ( input_pids_static )  THEN
@@ -1821,8 +1834,9 @@
        longitude = init_model%longitude
     ENDIF
 
-    f  = 2.0_wp * omega * SIN( latitude / 180.0_wp * pi )
-    fs = 2.0_wp * omega * COS( latitude / 180.0_wp * pi )
+    f  = 2.0_wp * omega * SIN( latitude / 180.0_wp * pi ) * cos_alpha_surface
+    fx = 2.0_wp * omega * SIN( latitude / 180.0_wp * pi ) * sin_alpha_surface
+    fy = 2.0_wp * omega * COS( latitude / 180.0_wp * pi )
 
 !
 !-- Check and set buoyancy related parameters and switches
@@ -1850,19 +1864,6 @@
        use_top_fluxes = .TRUE.
        message_string = 'use_top_fluxes is set to .TRUE. in ocean mode'
        CALL message( 'check_parameters', 'PA0042', 0, 0, 0, 6, 0 )
-    ENDIF
-
-!
-!-- In case of a given slope, compute the relevant quantities
-    IF ( alpha_surface /= 0.0_wp )  THEN
-       IF ( ABS( alpha_surface ) > 90.0_wp )  THEN
-          WRITE( message_string, * ) 'ABS( alpha_surface = ', alpha_surface,   &
-                                     ' ) must be < 90.0'
-          CALL message( 'check_parameters', 'PA0043', 1, 2, 0, 6, 0 )
-       ENDIF
-       sloping_surface = .TRUE.
-       cos_alpha_surface = COS( alpha_surface / 180.0_wp * pi )
-       sin_alpha_surface = SIN( alpha_surface / 180.0_wp * pi )
     ENDIF
 
 !

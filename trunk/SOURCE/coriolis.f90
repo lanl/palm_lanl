@@ -108,7 +108,7 @@
            ONLY:  tend, u, ug, v, vg, w 
            
        USE control_parameters,                                                 &
-           ONLY:  f, forcing, fs, message_string
+           ONLY:  f, forcing, fx, fy, message_string
            
        USE indices,                                                            &
            ONLY:  nxl, nxlu, nxr, nyn, nys, nysv, nzb, nzt, wall_flags_0
@@ -122,6 +122,7 @@
        INTEGER(iwp) ::  j          !< running index y direction 
        INTEGER(iwp) ::  k          !< running index z direction 
 
+       REAL(wp)     ::  u_av, v_av, w_av 
        REAL(wp)     ::  flag       !< flag to mask topography
        REAL(wp)     ::  flag_force !< flag to mask large-scale pressure gradient in case larger-scale forcing is applied
 
@@ -136,19 +137,18 @@
              DO  i = nxlu, nxr
                 DO  j = nys, nyn
                    DO  k = nzb+1, nzt
+                      v_av = 0.25_wp * ( v(k,j,i-1) + v(k,j,i) +               &
+                                         v(k,j+1,i-1) + v(k,j+1,i) )
+                      w_av = 0.25_wp * ( w(k-1,j,i-1) + w(k-1,j,i) +           &
+                                         w(k,j,i-1) + w(k,j,i)       )
 !
 !--                   Predetermine flag to mask topography
                       flag = MERGE( 1.0_wp, 0.0_wp,                            &
                                     BTEST( wall_flags_0(k,j,i), 1 ) )
 
-                      tend(k,j,i) = tend(k,j,i) + f  *    ( 0.25_wp *          &
-                                   ( v(k,j,i-1) + v(k,j,i) + v(k,j+1,i-1) +    &
-                                     v(k,j+1,i) ) - vg(k) * flag_force         &
-                                                          ) * flag           &
-                                                - fs *    ( 0.25_wp *          &
-                                   ( w(k-1,j,i-1) + w(k-1,j,i) + w(k,j,i-1) +  &
-                                     w(k,j,i)   )                              &
-                                                          ) * flag
+                      tend(k,j,i) = tend(k,j,i)                                &
+                                  + f * ( v_av - vg(k) * flag_force ) * flag   &
+                                  - fy * w_av * flag
                    ENDDO
                 ENDDO
              ENDDO
@@ -159,15 +159,18 @@
              DO  i = nxl, nxr
                 DO  j = nysv, nyn
                    DO  k = nzb+1, nzt
+                      w_av = 0.25_wp * ( w(k-1,j,i-1) + w(k-1,j,i) +           &
+                                         w(k,j,i-1) + w(k,j,i)       )
+                      u_av = 0.25_wp * ( u(k,j-1,i) + u(k,j,i) +               &
+                                         u(k,j-1,i+1) + u(k,j,i+1) )
 !
 !--                   Predetermine flag to mask topography
                       flag = MERGE( 1.0_wp, 0.0_wp,                            &
                                     BTEST( wall_flags_0(k,j,i), 2 ) )
 
-                      tend(k,j,i) = tend(k,j,i) - f *     ( 0.25_wp *          &
-                                   ( u(k,j-1,i) + u(k,j,i) + u(k,j-1,i+1) +    &
-                                     u(k,j,i+1) ) - ug(k) * flag_force         &
-                                                          ) * flag
+                      tend(k,j,i) = tend(k,j,i)                                &
+                                  - f * ( u_av - ug(k) * flag_force ) * flag   &
+                                  + fx * w_av * flag
                    ENDDO
                 ENDDO
              ENDDO
@@ -178,14 +181,18 @@
              DO  i = nxl, nxr
                 DO  j = nys, nyn
                    DO  k = nzb+1, nzt
+                      u_av = 0.25_wp * ( u(k,j,i) + u(k+1,j,i) +               &
+                                         u(k,j,i+1) + u(k+1,j,i+1) )
+                      v_av = 0.25_wp * ( v(k,j,i-1) + v(k,j,i) +               &
+                                         v(k,j+1,i-1) + v(k,j+1,i) )
 !
 !--                   Predetermine flag to mask topography
                       flag = MERGE( 1.0_wp, 0.0_wp,                            &
                                     BTEST( wall_flags_0(k,j,i), 3 ) )
 
-                      tend(k,j,i) = tend(k,j,i) + fs * 0.25_wp *               &
-                                   ( u(k,j,i) + u(k+1,j,i) + u(k,j,i+1) +      &
-                                     u(k+1,j,i+1) ) * flag
+                      tend(k,j,i) = tend(k,j,i)                                &
+                                  + fy * u_av * flag                           &
+                                  - fx * v_av * flag
                    ENDDO
                 ENDDO
              ENDDO
@@ -211,7 +218,7 @@
            ONLY:  tend, u, ug, v, vg, w 
            
        USE control_parameters,                                                 &
-           ONLY:  f, forcing, fs, message_string
+           ONLY:  f, forcing, fx, fy, message_string
            
        USE indices,                                                            &
            ONLY:  nzb, nzt, wall_flags_0
@@ -225,6 +232,7 @@
        INTEGER(iwp) ::  j          !< running index y direction 
        INTEGER(iwp) ::  k          !< running index z direction 
 
+       REAL(wp)     ::  u_av, v_av, w_av 
        REAL(wp)     ::  flag       !< flag to mask topography
        REAL(wp)     ::  flag_force !< flag to mask large-scale pressure gradient in case larger-scale forcing is applied
 
@@ -232,49 +240,49 @@
 !
 !--    Compute Coriolis terms for the three velocity components
        SELECT CASE ( component )
-
 !
 !--       u-component
           CASE ( 1 )
              DO  k = nzb+1, nzt
+                v_av = 0.25_wp * ( v(k,j,i-1) + v(k,j,i) + v(k,j+1,i-1) + v(k,j+1,i) )
+                w_av = 0.25_wp * ( w(k-1,j,i-1) + w(k-1,j,i) + w(k,j,i-1) + w(k,j,i) )
 !
 !--             Predetermine flag to mask topography
                 flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 1 ) )
 
-                tend(k,j,i) = tend(k,j,i) + f  *     ( 0.25_wp *               &
-                                ( v(k,j,i-1) + v(k,j,i) + v(k,j+1,i-1) +       &
-                                  v(k,j+1,i) ) - vg(k) * flag_force            &
-                                                     ) * flag                  &
-                                          - fs *     ( 0.25_wp *               &
-                                ( w(k-1,j,i-1) + w(k-1,j,i) + w(k,j,i-1) +     &
-                                  w(k,j,i)   )       ) * flag
+                tend(k,j,i) = tend(k,j,i) +                                    &
+                              f * ( v_av - vg(k) * flag_force ) * flag         &
+                            - fy * w_av * flag
              ENDDO
 
 !
 !--       v-component
           CASE ( 2 )
              DO  k = nzb+1, nzt
+                w_av = 0.25_wp * ( w(k-1,j,i-1) + w(k-1,j,i) + w(k,j,i-1) + w(k,j,i) )
+                u_av = 0.25_wp * ( u(k,j-1,i) + u(k,j,i) + u(k,j-1,i+1) + u(k,j,i+1) )
 !
 !--             Predetermine flag to mask topography
                 flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 2 ) )
 
-                tend(k,j,i) = tend(k,j,i) - f *        ( 0.25_wp *             &
-                                ( u(k,j-1,i) + u(k,j,i) + u(k,j-1,i+1) +       &
-                                  u(k,j,i+1) ) - ug(k)   * flag_force          &
-                                                       ) * flag
+                tend(k,j,i) = tend(k,j,i)                                      &
+                            - f * ( u_av - ug(k) * flag_force ) * flag         &
+                            + fx * ( w_av ) * flag
              ENDDO
 
 !
 !--       w-component
           CASE ( 3 )
              DO  k = nzb+1, nzt
+                u_av = 0.25_wp * ( u(k,j,i) + u(k+1,j,i) + u(k,j,i+1) + u(k+1,j,i+1) )
+                v_av = 0.25_wp * ( v(k,j,i-1) + v(k,j,i) + v(k,j+1,i-1) + v(k,j+1,i) )
 !
 !--             Predetermine flag to mask topography
                 flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 3 ) )
 
-                tend(k,j,i) = tend(k,j,i) + fs * 0.25_wp *                     &
-                                ( u(k,j,i) + u(k+1,j,i) + u(k,j,i+1) +         &
-                                  u(k+1,j,i+1) ) * flag
+                tend(k,j,i) = tend(k,j,i)                                      &
+                            + fy * u_av * flag                                 &
+                            - fx * v_av * flag
              ENDDO
 
           CASE DEFAULT

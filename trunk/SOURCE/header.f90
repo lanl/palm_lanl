@@ -1896,7 +1896,7 @@
 
 !
 !-- Geostrophic parameters
-    WRITE ( io, 410 )  latitude, longitude, omega, f, fs
+    WRITE ( io, 410 )  latitude, longitude, omega, f, fx, fy
 
  !
 !-- Geostrophic parameters
@@ -2342,7 +2342,8 @@
             '    Geograph. longitude :   longitude = ',F4.1,' degr'/   &
             '    Angular velocity    :   omega  =',E10.3,' rad/s'/  &
             '    Coriolis parameter  :   f      = ',F9.6,' 1/s'/    &
-            '                            f*     = ',F9.6,' 1/s')
+            '                            fx     = ',F9.6,' 1/s'/    &
+            '                            fy     = ',F9.6,' 1/s')
 411 FORMAT (/'    Gravity             :   g      = ',F4.1,' m/s**2')
 412 FORMAT (/'    Reference state used in buoyancy terms: ',A)
 413 FORMAT ('       Reference density in buoyancy terms: ',F8.3,' kg/m**3')

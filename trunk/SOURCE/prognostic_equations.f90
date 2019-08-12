@@ -553,7 +553,7 @@
     IF ( ANY( dpdx /= 0.0_wp ) .OR. ANY( dpdy /= 0.0_wp) ) THEN
        dpdxy(1) = 0.0_wp
        dpdxy(2) = 0.0_wp
-       DO i = 1, 100
+       DO i = 1, 30
           dpdxy(1) = dpdxy(1) + dpdx(i)*cos(2.0_wp*pi*dpdx_freq(i)*simulated_time - dpdx_phase(i))
           dpdxy(2) = dpdxy(2) + dpdy(i)*cos(2.0_wp*pi*dpdy_freq(i)*simulated_time - dpdy_phase(i))
        ENDDO

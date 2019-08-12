@@ -305,8 +305,9 @@
     USE control_parameters,                                                    &
         ONLY:  air_chemistry, call_microphysics_at_all_substeps,               &
                cloud_physics, cloud_top_radiation, constant_diffusion,         &
-               dp_external, dp_level_ind_b, dp_smooth_factor, dpdxy, dt_3d,    &
-               humidity, idealized_diurnal, g,                                 &
+               dp_external, dp_level_ind_b, dp_smooth_factor, dpdxy, dpdx,     &
+               dpdy, dpdx_freq, dpdy_freq, dpdx_phase, dpdy_phase , dt_3d,     &
+               humidity, idealized_diurnal, f, g,                              &
                inflow_l, intermediate_timestep_count,                          &
                intermediate_timestep_count_max, large_scale_forcing,           &
                large_scale_subsidence, message_string, microphysics_morrison,  &
@@ -548,6 +549,20 @@
     enddo
     !$OMP DO
 
+!-- For sinusoidally varying pressure gradient, solve for instantaneous pressure gradient
+    IF ( ANY( dpdx /= 0.0_wp ) .OR. ANY( dpdy /= 0.0_wp) ) THEN
+       dpdxy(1) = 0.0_wp
+       dpdxy(2) = 0.0_wp
+       DO i = 1, 30
+          dpdxy(1) = dpdxy(1) + dpdx(i)*cos(2.0_wp*pi*dpdx_freq(i)*simulated_time - dpdx_phase(i))
+          dpdxy(2) = dpdxy(2) + dpdy(i)*cos(2.0_wp*pi*dpdy_freq(i)*simulated_time - dpdy_phase(i))
+       ENDDO
+       
+!--    Update u_init and v_init used in rayleigh damping scheme
+       u_init(:) = -1.0_wp*dpdxy(2)*drho_ref_zu(nzb)/f
+       v_init(:) = dpdxy(1)*drho_ref_zu(nzb)/f
+    
+    ENDIF
 
     DO  i = nxl, nxr
 

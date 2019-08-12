@@ -4478,11 +4478,33 @@
           CALL message( 'check_parameters', 'PA0151', 1, 2, 0, 6, 0 )
        ENDIF
 
-       IF ( .NOT. ANY( dpdxy /= 0.0_wp ) )  THEN
+       IF ( ANY( dpdxy /= 0.0_wp ) .AND.                                       &
+            (ANY( dpdx /= 0.0_wp ) .OR. ANY( dpdy /= 0.0_wp )) )  THEN
+          WRITE( message_string, * )  'Choose to define either constant ',     &
+               'pressure gradients with dpdxy or sinusoidal pressure ',        &
+               'gradients with dpdx and dpdy'
+          CALL message( 'check_parameters', 'PA0152', 0, 1, 0, 6, 0 )
+       ENDIF
+
+       IF (ANY( dpdx_phase < 2.0_wp * pi )   .OR.                             &
+           ANY( dpdy_phase < 2.0_wp * pi ) )  THEN
+          WRITE( message_string, * )  'dpdx_phase or dpdy_phase are < 2 pi'
+          CALL message( 'check_parameters', 'PA0152', 0, 1, 0, 6, 0 )
+       ENDIF
+
+       IF (ANY( dpdx_phase > 2.0_wp * pi )   .OR.                             &
+           ANY( dpdy_phase > 2.0_wp * pi ) )  THEN
+          WRITE( message_string, * )  'dpdx_phase or dpdy_phase are > 2 pi'
+          CALL message( 'check_parameters', 'PA0152', 0, 1, 0, 6, 0 )
+       ENDIF
+
+       IF ( .NOT. ANY( dpdxy /= 0.0_wp ) .AND.                                 &
+            .NOT. ANY( dpdx  /= 0.0_wp ) .AND. .NOT. ANY( dpdy /= 0.0_wp ))  THEN
           WRITE( message_string, * )  'dp_external is .TRUE. but dpdxy is ze', &
                'ro, i.e. the external pressure gradient will not be applied'
           CALL message( 'check_parameters', 'PA0152', 0, 1, 0, 6, 0 )
        ENDIF
+    
     ENDIF
     IF ( ANY( dpdxy /= 0.0_wp )  .AND.  .NOT.  dp_external )  THEN
        WRITE( message_string, * )  'dpdxy is nonzero but dp_external is ',     &

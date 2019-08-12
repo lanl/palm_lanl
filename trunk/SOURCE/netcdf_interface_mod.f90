@@ -305,9 +305,10 @@
              'number ', 'm2     ', 'm2     ', 'm2     ', 'm2/s2  ', 'm2/s2  ', &
              'm2/s2  ', 'm2/s2  ', 'm2/s2  ', 'm2/s2  ', 'number2' /)
 
-    INTEGER(iwp) ::  dots_num  = 31  !< number of timeseries defined by default
+    INTEGER(iwp) ::  dots_num  = 35  !< number of timeseries defined by default
     INTEGER(iwp) ::  dots_soil = 26  !< starting index for soil-timeseries
-    INTEGER(iwp) ::  dots_rad  = 32  !< starting index for radiation-timeseries
+    INTEGER(iwp) ::  dots_rad  = 36  !< starting index for radiation-timeseries
+    INTEGER(iwp) ::  dots_melt = 33  !< starting index for melting-timeseries
 
     CHARACTER (LEN=13), DIMENSION(dots_max) :: dots_label =                    &
           (/ 'E            ', 'E*           ', 'dt           ',                &
@@ -320,12 +321,13 @@
              'ol           ', 'q*           ', 'w"s"         ',                &
              's*           ', 'ghf          ', 'qsws_liq     ',                &
              'qsws_soil    ', 'shf_sol      ', 'shf          ',                &
-             'FW_sfc       ', 'qsws_veg     ', 'r_a          ',                &
-             'r_s          ',                                                  &
+             'FW_sfc       ', 'qsws_veg     ', 'melt         ',                &
+             'dpdx         ', 'dpdy         ',                                 &
+             'r_a          ', 'r_s          ',                                 &
              'rad_net      ', 'rad_lw_in    ', 'rad_lw_out   ',                &
              'rad_sw_in    ', 'rad_sw_out   ', 'rrtm_aldif   ',                &
              'rrtm_aldir   ', 'rrtm_asdif   ', 'rrtm_asdir   ',                &                                               
-             ( 'unknown      ', i9 = 1, dots_max-43 ) /)
+             ( 'unknown      ', i9 = 1, dots_max-46 ) /)
 
     CHARACTER (LEN=13), DIMENSION(dots_max) :: dots_unit =                     &
           (/ 'm2/s2        ', 'm2/s2        ', 's            ',                &
@@ -338,12 +340,13 @@
              'm            ', 'kg/kg        ', 'kg m/(kg s)  ',                &
              'kg/kg        ', 'W/m2         ', 'W/m2         ',                &
              'W/m2         ', 'mK/s         ', 'mK / s       ',                &
-             'm PSU/s      ', 'W/m2         ', 's/m          ',                &
-             's/m          ',                                                  &
+             'm PSU/s      ', 'W/m2         ', 'm/s          ',                &
+             'Pa/m         ', 'Pa/m         ',                                 &
+             's/m          ', 's/m          ',                                 &
              'W/m2         ', 'W/m2         ', 'W/m2         ',                &
              'W/m2         ', 'W/m2         ', '             ',                &
              '             ', '             ', '             ',                &
-             ( 'unknown      ', i9 = 1, dots_max-43 ) /)
+             ( 'unknown      ', i9 = 1, dots_max-46 ) /)
 
     CHARACTER (LEN=16) :: heatflux_output_unit     !< unit for heatflux output
     CHARACTER (LEN=16) :: waterflux_output_unit    !< unit for waterflux output
@@ -458,7 +461,7 @@
     PUBLIC  dofl_dim_label_x, dofl_dim_label_y, dofl_dim_label_z, dofl_label,  &
             dofl_time_count, dofl_unit, domask_unit, dopr_unit, dopts_num,     &
             dots_label, dots_max, dots_num, dots_rad, dots_soil, dots_unit,    &
-            do2d_unit, do3d_unit, fill_value,                                  & 
+            dots_melt, do2d_unit, do3d_unit, fill_value,                       & 
             id_set_fl, id_set_mask, id_set_pr,                                 &
             id_set_prt, id_set_pts, id_set_sp, id_set_ts, id_set_xy, id_set_xz,&
             id_set_yz, id_set_3d, id_var_domask, id_var_dofl, id_var_dopr,     &

@@ -1822,9 +1822,9 @@
           CALL message( 'check_parameters', 'PA0043', 1, 2, 0, 6, 0 )
        ENDIF
        sloping_surface = .TRUE.
-       cos_alpha_surface = COS( alpha_surface / 180.0_wp * pi )
-       sin_alpha_surface = SIN( alpha_surface / 180.0_wp * pi )
     ENDIF
+    cos_alpha_surface = COS( alpha_surface / 180.0_wp * pi )
+    sin_alpha_surface = SIN( alpha_surface / 180.0_wp * pi )
 
 !
 !-- Overwrite latitude if necessary and compute Coriolis parameter.
@@ -4487,9 +4487,9 @@
           CALL message( 'check_parameters', 'PA0152', 0, 1, 0, 6, 0 )
        ENDIF
 
-       IF (ANY( dpdx_phase < 2.0_wp * pi )   .OR.                             &
-           ANY( dpdy_phase < 2.0_wp * pi ) )  THEN
-          WRITE( message_string, * )  'dpdx_phase or dpdy_phase are < 2 pi'
+       IF (ANY( dpdx_phase < -2.0_wp * pi )   .OR.                             &
+           ANY( dpdy_phase < -2.0_wp * pi ) )  THEN
+          WRITE( message_string, * )  'dpdx_phase or dpdy_phase are < -2 pi'
           CALL message( 'check_parameters', 'PA0152', 0, 1, 0, 6, 0 )
        ENDIF
 

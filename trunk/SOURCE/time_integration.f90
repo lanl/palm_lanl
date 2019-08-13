@@ -499,7 +499,6 @@
 !-- Start of the time loop
     DO  WHILE ( simulated_time < end_time  .AND.  .NOT. stop_dt  .AND. &
                 .NOT. terminate_run )
-print *, simulated_time
        CALL cpu_log( log_point_s(10), 'timesteps', 'start' )
 !
 !--    Start of intermediate step loop

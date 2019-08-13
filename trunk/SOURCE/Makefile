@@ -366,14 +366,11 @@ outflow_turbulence.o: \
 	modules.o
 palm.o: \
 	cpulog_mod.o \
+	init_3d_model.o \
 	mod_kinds.o \
 	modules.o \
 	netcdf_data_input_mod.o \
-	surface_layer_fluxes_mod.o \
-	write_restart_data_mod.o \
-	init_3d_model.o \
-	tridia_solver_mod.o \
-	turbulence_closure_mod.o
+	write_restart_data_mod.o
 parin.o: \
 	cpulog_mod.o \
 	date_and_time_mod.o \

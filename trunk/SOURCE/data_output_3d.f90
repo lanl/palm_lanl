@@ -19,91 +19,91 @@
 !
 ! Current revisions:
 ! ------------------
-! 
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: data_output_3d.f90 3049 2018-05-29 13:52:36Z Giersch $
 ! Error messages revised
-! 
+!
 ! 3045 2018-05-28 07:55:41Z Giersch
 ! Error message revised
-! 
+!
 ! 3014 2018-05-09 08:42:38Z maronga
 ! Added nzb_do and nzt_do for some modules for 3d output
-! 
+!
 ! 3004 2018-04-27 12:33:25Z Giersch
-! Allocation checks implemented (averaged data will be assigned to fill values 
-! if no allocation happened so far) 
-! 
+! Allocation checks implemented (averaged data will be assigned to fill values
+! if no allocation happened so far)
+!
 ! 2967 2018-04-13 11:22:08Z raasch
 ! bugfix: missing parallel cpp-directives added
-! 
+!
 ! 2817 2018-02-19 16:32:21Z knoop
 ! Preliminary gust module interface implemented
-! 
+!
 ! 2766 2018-01-22 17:17:47Z kanani
 ! Removed preprocessor directive __chem
-! 
+!
 ! 2756 2018-01-16 18:11:14Z suehring
 ! Fill values for 3D output of chemical species introduced.
-! 
+!
 ! 2746 2018-01-15 12:06:04Z suehring
 ! Move flag plant canopy to modules
-! 
+!
 ! 2718 2018-01-02 08:49:38Z maronga
 ! Corrected "Former revisions" section
-! 
+!
 ! 2696 2017-12-14 17:12:51Z kanani
 ! Change in file header (GPL part)
 ! Implementation of turbulence_closure_mod (TG)
 ! Implementation of chemistry module (FK)
 ! Set fill values at topography grid points or e.g. non-natural-type surface
 ! in case of LSM output (MS)
-! 
+!
 ! 2512 2017-10-04 08:26:59Z raasch
 ! upper bounds of 3d output changed from nx+1,ny+1 to nx,ny
 ! no output of ghost layer data
-! 
+!
 ! 2292 2017-06-20 09:51:42Z schwenkel
-! Implementation of new microphysic scheme: cloud_scheme = 'morrison' 
-! includes two more prognostic equations for cloud drop concentration (nc)  
-! and cloud water content (qc). 
-! 
+! Implementation of new microphysic scheme: cloud_scheme = 'morrison'
+! includes two more prognostic equations for cloud drop concentration (nc)
+! and cloud water content (qc).
+!
 ! 2233 2017-05-30 18:08:54Z suehring
 !
 ! 2232 2017-05-30 17:47:52Z suehring
 ! Adjustments to new topography concept
-! 
+!
 ! 2209 2017-04-19 09:34:46Z kanani
 ! Added plant canopy model output
-! 
+!
 ! 2031 2016-10-21 15:11:58Z knoop
 ! renamed variable rho to rho_ocean and rho_av to rho_ocean_av
-! 
+!
 ! 2011 2016-09-19 17:29:57Z kanani
 ! Flag urban_surface is now defined in module control_parameters,
 ! changed prefix for urban surface model output to "usm_",
 ! introduced control parameter varnamelength for LEN of trimvar.
-! 
+!
 ! 2007 2016-08-24 15:47:17Z kanani
-! Added support for new urban surface model (temporary modifications of 
+! Added support for new urban surface model (temporary modifications of
 ! SELECT CASE ( ) necessary, see variable trimvar)
-! 
+!
 ! 2000 2016-08-20 18:09:15Z knoop
 ! Forced header and separation lines into 80 columns
-! 
+!
 ! 1980 2016-07-29 15:51:57Z suehring
 ! Bugfix, in order to steer user-defined output, setting flag found explicitly
 ! to .F.
-! 
+!
 ! 1976 2016-07-27 13:28:04Z maronga
 ! Output of radiation quantities is now done directly in the respective module
-! 
+!
 ! 1972 2016-07-26 07:52:02Z maronga
 ! Output of land surface quantities is now done directly in the respective module.
 ! Unnecessary directive __parallel removed.
-! 
+!
 ! 1960 2016-07-12 16:34:24Z suehring
 ! Scalar surface flux added
 !
@@ -121,28 +121,28 @@
 !
 ! 1745 2016-02-05 13:06:51Z gronemeier
 ! Bugfix: test if time axis limit exceeds moved to point after call of check_open
-! 
+!
 ! 1691 2015-10-26 16:17:44Z maronga
 ! Added output of radiative heating rates for RRTMG
-! 
+!
 ! 1682 2015-10-07 23:56:08Z knoop
-! Code annotations made doxygen readable 
-! 
+! Code annotations made doxygen readable
+!
 ! 1585 2015-04-30 07:05:52Z maronga
 ! Added support for RRTMG
-! 
+!
 ! 1551 2015-03-03 14:18:16Z maronga
 ! Added suppport for land surface model and radiation model output. In the course
-! of this action, the limits for vertical loops have been changed (from nzb and 
+! of this action, the limits for vertical loops have been changed (from nzb and
 ! nzt+1 to nzb_do and nzt_do, respectively in order to allow soil model output).
 ! Moreover, a new vertical grid zs was introduced.
-! 
+!
 ! 1359 2014-04-11 17:15:14Z hoffmann
-! New particle structure integrated. 
-! 
+! New particle structure integrated.
+!
 ! 1353 2014-04-08 15:21:23Z heinze
 ! REAL constants provided with KIND-attribute
-! 
+!
 ! 1327 2014-03-21 11:00:16Z raasch
 ! parts concerning avs output removed,
 ! -netcdf output queries
@@ -198,30 +198,30 @@
 !> Output of the 3D-arrays in netCDF and/or AVS format.
 !------------------------------------------------------------------------------!
  SUBROUTINE data_output_3d( av )
- 
+
 
     USE arrays_3d,                                                             &
         ONLY:  e, nc, nr, p, pt, prr, q, qc, ql, ql_c, ql_v, qr, rho_ocean, s, &
                sa, tend, u, v, vpt, w, alpha_T, beta_S, solar3d
-        
+
     USE averaging
-        
+
     USE control_parameters,                                                    &
         ONLY:  air_chemistry, cloud_physics, do3d, do3d_no, do3d_time_count,   &
                io_blocks, io_group, land_surface, message_string,              &
                ntdim_3d, nz_do3d,  plant_canopy,                               &
                psolver, simulated_time, time_since_reference_point,            &
                urban_surface, varnamelength
-        
+
     USE cpulog,                                                                &
         ONLY:  log_point, cpu_log
 
     USE indices,                                                               &
         ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, ny, nyn, nyng, nys, nysg, nzb,  &
                nzt, wall_flags_0
-        
+
     USE kinds
-    
+
 #if defined( __netcdf )
     USE NETCDF
 #endif
@@ -229,33 +229,34 @@
     USE netcdf_interface,                                                      &
         ONLY:  fill_value, id_set_3d, id_var_do3d, id_var_time_3d, nc_stat,    &
                netcdf_data_format, netcdf_handle_error
-        
+
     USE pegrid
+
     USE turbulence_closure_mod,                                                &
         ONLY:  tcm_data_output_3d
 
     IMPLICIT NONE
 
-    INTEGER(iwp) ::  av        !< 
+    INTEGER(iwp) ::  av        !<
     INTEGER(iwp) ::  flag_nr   !< number of masking flag
-    INTEGER(iwp) ::  i         !< 
-    INTEGER(iwp) ::  if        !< 
-    INTEGER(iwp) ::  j         !< 
-    INTEGER(iwp) ::  k         !< 
-    INTEGER(iwp) ::  n         !< 
+    INTEGER(iwp) ::  i         !<
+    INTEGER(iwp) ::  if        !<
+    INTEGER(iwp) ::  j         !<
+    INTEGER(iwp) ::  k         !<
+    INTEGER(iwp) ::  n         !<
     INTEGER(iwp) ::  nzb_do    !< vertical lower limit for data output
     INTEGER(iwp) ::  nzt_do    !< vertical upper limit for data output
 
-    LOGICAL      ::  found     !< 
-    LOGICAL      ::  resorted  !< 
+    LOGICAL      ::  found     !<
+    LOGICAL      ::  resorted  !<
 
-    REAL(wp)     ::  mean_r    !< 
-    REAL(wp)     ::  s_r2      !< 
-    REAL(wp)     ::  s_r3      !< 
+    REAL(wp)     ::  mean_r    !<
+    REAL(wp)     ::  s_r2      !<
+    REAL(wp)     ::  s_r3      !<
 
     REAL(sp), DIMENSION(:,:,:), ALLOCATABLE ::  local_pf  !<
 
-    REAL(wp), DIMENSION(:,:,:), POINTER ::  to_be_resorted  !< 
+    REAL(wp), DIMENSION(:,:,:), POINTER ::  to_be_resorted  !<
 
     CHARACTER (LEN=varnamelength) ::  trimvar  !< TRIM of output-variable string
 
@@ -282,12 +283,12 @@
 
 !
 !-- For parallel netcdf output the time axis must be limited. Return, if this
-!-- limit is exceeded. This could be the case, if the simulated time exceeds 
+!-- limit is exceeded. This could be the case, if the simulated time exceeds
 !-- the given end time by the length of the given output interval.
     IF ( netcdf_data_format > 4 )  THEN
        IF ( do3d_time_count(av) + 1 > ntdim_3d(av) )  THEN
           WRITE ( message_string, * ) 'Output of 3d data is not given at t=',  &
-                                      simulated_time, '&because the maximum ', & 
+                                      simulated_time, '&because the maximum ', &
                                       'number of output time levels is ',      &
                                       'exceeded.'
           CALL message( 'data_output_3d', 'PA0387', 0, 1, 0, 6, 0 )
@@ -318,7 +319,7 @@
     DO  WHILE ( do3d(av,if)(1:1) /= ' ' )
 
 !
-!--    Temporary solution to account for data output within the new urban 
+!--    Temporary solution to account for data output within the new urban
 !--    surface model (urban_surface_mod.f90), see also SELECT CASE ( trimvar ).
 !--    Store the array chosen on the temporary array.
        trimvar = TRIM( do3d(av,if) )
@@ -712,7 +713,7 @@
 #else
 #if defined( __netcdf )
        nc_stat = NF90_PUT_VAR( id_set_3d(av), id_var_do3d(av,if),        &
-                         local_pf(nxl:nxr+1,nys:nyn+1,nzb_do:nzt_do),        &
+                         local_pf(nxl:nxr,nys:nyn,nzb_do:nzt_do),        &
                          start = (/ 1, 1, 1, do3d_time_count(av) /),     &
                          count = (/ nx+1, ny+1, nzt_do-nzb_do+1, 1 /) )
        CALL netcdf_handle_error( 'data_output_3d', 446 )

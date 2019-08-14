@@ -397,6 +397,8 @@
                 READ ( 13 )  dp_smooth
              CASE ( 'dpdxy' )
                 READ ( 13 )  dpdxy
+             CASE ( 'drag_coeff' )
+                READ ( 13 ) drag_coeff 
              CASE ( 'dt_3d' )
                 READ ( 13 )  dt_3d
              CASE ( 'dt_pr_1d' )
@@ -452,6 +454,8 @@
                 READ ( 13 )  inflow_disturbance_begin
              CASE ( 'inflow_disturbance_end' )
                 READ ( 13 )  inflow_disturbance_end
+             CASE ( 'k_offset_mcphee' )
+                READ ( 13 )  k_offset_mcphee
              CASE ( 'km_constant' )
                 READ ( 13 )  km_constant
              CASE ( 'large_scale_forcing' )
@@ -1366,6 +1370,8 @@
 
 !
 !--    Allocate temporary arrays sized as the arrays on the restart file
+       IF (ALLOCATED(tmp_2d)) DEALLOCATE(tmp_2d)
+       IF (ALLOCATED(tmp_3d)) DEALLOCATE(tmp_3d)
        ALLOCATE( tmp_2d(nys_on_file-nbgp:nyn_on_file+nbgp,                     &
                         nxl_on_file-nbgp:nxr_on_file+nbgp),                    &
                  tmp_3d(nzb:nzt+1,nys_on_file-nbgp:nyn_on_file+nbgp,           &

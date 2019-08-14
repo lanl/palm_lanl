@@ -21,6 +21,8 @@
 ! Current revisions:
 ! ------------------
 ! 
+! 2018-11-21 cbegeman
+! Add k_offset conditions for mcphee MOST method.
 ! 
 ! Former revisions:
 ! -----------------
@@ -181,7 +183,7 @@
         ONLY:  alpha_T, beta_S, csflux_input_conversion,                       &
                heatflux_input_conversion, momentumflux_input_conversion,       &
                scalarflux_input_conversion, salinityflux_input_conversion,     &
-               waterflux_input_conversion, zu, zw
+               waterflux_input_conversion, sa_init, zu, zw
 
     USE chem_modules
 
@@ -237,6 +239,10 @@
        INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE :: end_index   !< End index within surface data type for given (j,i)  
 
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  z_mo      !< surface-layer height 
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  usurf     !< u velocity at surface on scalar grid
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  vsurf     !< v velocity at surface on scalar grid
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  ufar      !< u velocity at depth where drag is defined
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  vfar      !< v velocity at depth where drag is defined
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  uvw_abs   !< absolute surface-parallel velocity
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  us        !< friction velocity
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  ts        !< scaling parameter temerature
@@ -247,6 +253,9 @@
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  qrs       !< scaling parameter qr
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  nrs       !< scaling parameter nr
 
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  gamma_T   !< heat exchange velocity (m/s)
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  gamma_S   !< salt exchange velocity (m/s)
+
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  ol        !< Obukhov length
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  rib       !< Richardson bulk number
 
@@ -255,6 +264,10 @@
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  z0q       !< roughness length for humidity
 
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt1       !< Potential temperature at first grid level
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  sa1       !< Salinity at first grid level
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt_io     !< Potential temperature at ice-ocean interface
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  sa_io     !< Salinity at ice-ocean interface
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  melt      !< Melt rate in m/s
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  qv1       !< mixing ratio at first grid level
        REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  css     !< scaling parameter chemical species
 !
@@ -995,6 +1008,10 @@
        DEALLOCATE ( surfaces%facing )
 !
 !--    Surface-parallel wind velocity
+       DEALLOCATE ( surfaces%usurf )
+       DEALLOCATE ( surfaces%vsurf )
+       DEALLOCATE ( surfaces%ufar )
+       DEALLOCATE ( surfaces%vfar )
        DEALLOCATE ( surfaces%uvw_abs )
 !
 !--    Roughness
@@ -1121,7 +1138,16 @@
 !--    Surface orientation
        ALLOCATE ( surfaces%facing(1:surfaces%ns) )
 !
-!--    Surface-parallel wind velocity
+!--    Surface-parallel velocity at surface
+       ALLOCATE ( surfaces%usurf(1:surfaces%ns) )
+       ALLOCATE ( surfaces%vsurf(1:surfaces%ns) )
+!
+!--    Surface-parallel velocity at level at which drag is defined
+       ALLOCATE ( surfaces%ufar(1:surfaces%ns) )
+       ALLOCATE ( surfaces%vfar(1:surfaces%ns) )
+!
+!--    Absolute difference between velocity vectors at surface and level at 
+!--    at which drag is defined
        ALLOCATE ( surfaces%uvw_abs(1:surfaces%ns) )
 !
 !--    Roughness
@@ -1198,6 +1224,17 @@
        IF ( ocean )  THEN
          ALLOCATE ( surfaces%sasws(1:surfaces%ns) )
          ALLOCATE ( surfaces%shf_sol(1:surfaces%ns) )
+         ALLOCATE ( surfaces%sa1(1:surfaces%ns) )
+       ENDIF
+
+!
+!--
+       IF ( most_method == 'mcphee' ) THEN
+          ALLOCATE ( surfaces%gamma_T(1:surfaces%ns) )
+          ALLOCATE ( surfaces%gamma_S(1:surfaces%ns) )
+          ALLOCATE ( surfaces%sa_io(1:surfaces%ns) )
+          ALLOCATE ( surfaces%pt_io(1:surfaces%ns) )
+          ALLOCATE ( surfaces%melt(1:surfaces%ns) )
        ENDIF
 
     END SUBROUTINE allocate_surface_attributes_h
@@ -1511,7 +1548,8 @@
        surf_usm_h%koff      = -1
 !
 !--    Downward facing vertical offset
-       surf_def_h(1:2)%koff = 1
+       surf_def_h(1)%koff   = 1
+       surf_def_h(2)%koff   = 1
 !
 !--    Vertical surfaces - no vertical offset
        surf_def_v(0:3)%koff = 0
@@ -1898,7 +1936,7 @@
              INTEGER(iwp)  ::  lsp_pr           !< running index chemical species??
 
              LOGICAL       ::  upward_facing    !< flag indicating upward-facing surface
-             LOGICAL       ::  downward_facing  !< flag indicating downward-facing surface
+             LOGICAL       ::  downward_facing  !< flag indicating downward-facing surfaceD -> dyn_melting) Add surface buoyancy production of TKE
              LOGICAL       ::  is_top           !< flag indicating whether surface is top
              LOGICAL       :: flux_layer
 
@@ -1919,10 +1957,14 @@
 !
 !--          Initialize surface-layer height
              IF ( flux_layer ) THEN
-                IF ( upward_facing )  THEN
-                   surf%z_mo(num_h)  = zu(k) - zw(k-1)
+                IF ( is_top ) THEN
+                   surf%z_mo(num_h) = zw(k+1) - zu(k)
                 ELSE
-                   surf%z_mo(num_h)  = zw(k) - zu(k)
+                   IF ( upward_facing )  THEN
+                      surf%z_mo(num_h)  = zu(k) - zw(k-1)
+                   ELSE
+                      surf%z_mo(num_h)  = zw(k) - zu(k)
+                   ENDIF
                 ENDIF
  
                 surf%z0(num_h)    = roughness_length
@@ -2171,6 +2213,16 @@
                                           salinityflux_input_conversion(nzt+1)
                    ELSE
                       surf%sasws(num_h) = 0.0_wp
+                   ENDIF
+               
+                   IF ( TRIM(most_method) == 'mcphee' ) THEN
+                      surf%gamma_T(num_h) = 0.0_wp
+                      surf%gamma_S(num_h) = 0.0_wp
+                      surf%shf(num_h) = 0.0_wp
+                      surf%melt(num_h) = 0.0_wp
+                      surf%sasws(num_h) = 0.0_wp
+                      surf%sa_io(num_h) = sa_init(nzt)
+                      surf%pt_io(num_h) = 0.0_wp
                    ENDIF
 
                 ENDIF

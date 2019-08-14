@@ -371,6 +371,9 @@
        CALL wrd_write_string( 'dpdxy' ) 
        WRITE ( 14 )  dpdxy
 
+       CALL wrd_write_string( 'drag_coeff' ) 
+       WRITE ( 14 )  drag_coeff
+
        CALL wrd_write_string( 'dt_3d' ) 
        WRITE ( 14 )  dt_3d
 
@@ -450,6 +453,9 @@
 
        CALL wrd_write_string( 'inflow_disturbance_end' ) 
        WRITE ( 14 )  inflow_disturbance_end
+
+       CALL wrd_write_string( 'k_offset_mcphee' ) 
+       WRITE ( 14 )  k_offset_mcphee
 
        CALL wrd_write_string( 'km_constant' ) 
        WRITE ( 14 )  km_constant

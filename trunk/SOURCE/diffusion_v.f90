@@ -269,6 +269,9 @@
 !--          Vertical diffusion at the first grid point above the surface,
 !--          if the momentum flux at the bottom is given by the Prandtl law
 !--          or if it is prescribed by the user.
+!--          To be exact, usws should to be interpolated from the w-grid
+!--          to the u-grid. However, tests show that this interpolation is not 
+!--          important.
 !--          Difference quotient of the momentum flux is not formed over
 !--          half of the grid spacing (2.0*ddzw(k)) any more, since the
 !--          comparison with other (LES) models showed that the values of

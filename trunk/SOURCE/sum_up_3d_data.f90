@@ -191,12 +191,15 @@
                alpha_T, beta_S, solar3d
 
     USE averaging,                                                             &
-        ONLY:  diss_av, e_av, ghf_av, kh_av, km_av, lpt_av, lwp_av, nc_av,     &
-               nr_av,                                                          &
-               ol_av, p_av, pc_av, pr_av, prr_av, pt_av, q_av, qc_av, ql_av,   &
+        ONLY:  diss_av, e_av, ghf_av, kh_av, km_av, lpt_av, lwp_av, melt_av,   &
+               nc_av, nr_av,                                                   &
+               ol_av, p_av, pc_av, pr_av, prr_av,                              &
+               pt1_av, pt_io_av, pt_av, q_av, qc_av, ql_av,                    &
                ql_c_av, ql_v_av, ql_vp_av, qr_av, qsws_av, qv_av, r_a_av,      &
-               rho_ocean_av, s_av, sa_av, shf_av, sasws_av, ssws_av, ts_av,    &
-               tsurf_av, u_av, us_av, v_av, vpt_av, w_av, z0_av, z0h_av,       &
+               rho_ocean_av, s_av, sa_av, sa1_av, sa_io_av,                    &
+               shf_av, sasws_av, ssws_av, ts_av,                               &
+               tsurf_av, u_av, us_av, usws_av, v_av, vsws_av,                  &
+               vpt_av, w_av, z0_av, z0h_av,                                    &
                z0q_av, alpha_T_av, beta_S_av, shf_sol_av, solar3d_av
 
     USE chemistry_model_mod,                                                   &
@@ -251,6 +254,7 @@
     INTEGER(iwp) ::  ii  !< running index
     INTEGER(iwp) ::  j   !< grid index y direction
     INTEGER(iwp) ::  k   !< grid index x direction
+    INTEGER(iwp) ::  l   !< surface array
     INTEGER(iwp) ::  m   !< running index surface type
     INTEGER(iwp) ::  n   !< 
 
@@ -353,6 +357,18 @@
                 ENDIF
                 pt_av = 0.0_wp
 
+             CASE ( 'pt1*' )
+                IF ( .NOT. ALLOCATED( pt1_av ) )  THEN
+                   ALLOCATE( pt1_av(nysg:nyng,nxlg:nxrg) )
+                ENDIF
+                pt1_av = 0.0_wp
+             
+             CASE ( 'pt_io*' )
+                IF ( .NOT. ALLOCATED( pt_io_av ) )  THEN
+                   ALLOCATE( pt_io_av(nysg:nyng,nxlg:nxrg) )
+                ENDIF
+                pt_io_av = 0.0_wp
+             
              CASE ( 'q' )
                 IF ( .NOT. ALLOCATED( q_av ) )  THEN
                    ALLOCATE( q_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
@@ -437,7 +453,12 @@
                 ENDIF
                 beta_S_av = 0.0_wp
 
-
+             CASE ( 'melt*' )
+                IF ( .NOT. ALLOCATED( melt_av ) )  THEN
+                   ALLOCATE( melt_av(nysg:nyng,nxlg:nxrg) )
+                ENDIF
+                melt_av = 0.0_wp
+             
              CASE ( 's' )
                 IF ( .NOT. ALLOCATED( s_av ) )  THEN
                    ALLOCATE( s_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
@@ -450,6 +471,18 @@
                 ENDIF
                 sa_av = 0.0_wp
 
+             CASE ( 'sa1*' )
+                IF ( .NOT. ALLOCATED( sa1_av ) )  THEN
+                   ALLOCATE( sa1_av(nysg:nyng,nxlg:nxrg) )
+                ENDIF
+                sa1_av = 0.0_wp
+             
+             CASE ( 'sa_io*' )
+                IF ( .NOT. ALLOCATED( sa_io_av ) )  THEN
+                   ALLOCATE( sa_io_av(nysg:nyng,nxlg:nxrg) )
+                ENDIF
+                sa_io_av = 0.0_wp
+             
              CASE ( 'shf*' )
                 IF ( .NOT. ALLOCATED( shf_av ) )  THEN
                    ALLOCATE( shf_av(nysg:nyng,nxlg:nxrg) )
@@ -498,12 +531,24 @@
                 ENDIF
                 us_av = 0.0_wp
 
+             CASE ( 'usws*' )
+                IF ( .NOT. ALLOCATED( usws_av ) )  THEN
+                   ALLOCATE( usws_av(nysg:nyng,nxlg:nxrg) )
+                ENDIF
+                usws_av = 0.0_wp
+             
              CASE ( 'v' )
                 IF ( .NOT. ALLOCATED( v_av ) )  THEN
                    ALLOCATE( v_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
                 ENDIF
                 v_av = 0.0_wp
 
+             CASE ( 'vsws*' )
+                IF ( .NOT. ALLOCATED( vsws_av ) )  THEN
+                   ALLOCATE( vsws_av(nysg:nyng,nxlg:nxrg) )
+                ENDIF
+                vsws_av = 0.0_wp
+             
              CASE ( 'vpt' )
                 IF ( .NOT. ALLOCATED( vpt_av ) )  THEN
                    ALLOCATE( vpt_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
@@ -654,6 +699,18 @@
                 ENDDO
              ENDIF
 
+          CASE ( 'melt*' )
+             IF ( ALLOCATED( melt_av ) ) THEN 
+                IF ( TRIM(constant_flux_layer) == 'top') THEN
+                   DO  m = 1, surf_def_h(2)%ns
+                      i = surf_def_h(2)%i(m)
+                      j = surf_def_h(2)%j(m)
+                      k = surf_def_h(2)%k(m)
+                      melt_av(j,i) = melt_av(j,i) + surf_def_h(2)%melt(m) 
+                   ENDDO
+                ENDIF
+             ENDIF
+          
           CASE ( 'nc' )
              IF ( ALLOCATED( nc_av ) ) THEN
                 DO  i = nxlg, nxrg
@@ -782,6 +839,29 @@
                 ENDIF
              ENDIF
 
+          CASE ( 'pt1*' )
+             IF ( ALLOCATED( pt1_av ) ) THEN 
+                IF ( TRIM(constant_flux_layer) == 'top') THEN
+                   DO  m = 1, surf_def_h(2)%ns
+                      i = surf_def_h(2)%i(m)
+                      j = surf_def_h(2)%j(m)
+                      k = surf_def_h(2)%k(m)
+                      pt1_av(j,i) = pt1_av(j,i) + surf_def_h(2)%pt1(m) 
+                   ENDDO
+                ENDIF
+             ENDIF
+          
+          CASE ( 'pt_io*' )
+             IF ( ALLOCATED( pt_io_av ) ) THEN 
+                IF ( TRIM(constant_flux_layer) == 'top') THEN
+                   DO  m = 1, surf_def_h(2)%ns
+                      i = surf_def_h(2)%i(m)
+                      j = surf_def_h(2)%j(m)
+                      k = surf_def_h(2)%k(m)
+                      pt_io_av(j,i) = pt_io_av(j,i) + surf_def_h(2)%pt_io(m) 
+                   ENDDO
+                ENDIF
+             ENDIF
           CASE ( 'q' )
              IF ( ALLOCATED( q_av ) ) THEN
                 DO  i = nxlg, nxrg
@@ -998,6 +1078,30 @@
                 ENDDO
              ENDIF
 
+          CASE ( 'sa1*' )
+             IF ( ALLOCATED( sa1_av ) ) THEN 
+                IF ( TRIM(constant_flux_layer) == 'top') THEN
+                   DO  m = 1, surf_def_h(2)%ns
+                      i = surf_def_h(2)%i(m)
+                      j = surf_def_h(2)%j(m)
+                      k = surf_def_h(2)%k(m)
+                      sa1_av(j,i) = sa1_av(j,i) + surf_def_h(2)%sa1(m) 
+                   ENDDO
+                ENDIF
+             ENDIF
+          
+          CASE ( 'sa_io*' )
+             IF ( ALLOCATED( sa_io_av ) ) THEN 
+                IF ( TRIM(constant_flux_layer) == 'top') THEN
+                   DO  m = 1, surf_def_h(2)%ns
+                      i = surf_def_h(2)%i(m)
+                      j = surf_def_h(2)%j(m)
+                      k = surf_def_h(2)%k(m)
+                      sa_io_av(j,i) = sa_io_av(j,i) + surf_def_h(2)%sa_io(m) 
+                   ENDDO
+                ENDIF
+             ENDIF
+          
           CASE ( 'shf*' )
 !
 !--          In case of default surfaces, clean-up flux by density.
@@ -1139,10 +1243,33 @@
 
           CASE ( 'u*' )
              IF ( ALLOCATED( us_av ) ) THEN   
-                DO  m = 1, surf_def_h(0)%ns
-                   i = surf_def_h(0)%i(m)
-                   j = surf_def_h(0)%j(m)
-                   us_av(j,i) = us_av(j,i) + surf_def_h(0)%us(m)
+                IF ( TRIM(constant_flux_layer) == 'top' ) l = 2   
+                IF ( TRIM(constant_flux_layer) == 'bottom' ) l = 0   
+                DO  m = 1, surf_def_h(l)%ns
+                   i = surf_def_h(l)%i(m)
+                   j = surf_def_h(l)%j(m)
+                   us_av(j,i) = us_av(j,i) + surf_def_h(l)%us(m)
+                ENDDO
+                DO  m = 1, surf_lsm_h%ns
+                   i = surf_lsm_h%i(m)
+                   j = surf_lsm_h%j(m)
+                   us_av(j,i) = us_av(j,i) + surf_lsm_h%us(m)
+                ENDDO
+                DO  m = 1, surf_usm_h%ns
+                   i = surf_usm_h%i(m)
+                   j = surf_usm_h%j(m)
+                   us_av(j,i) = us_av(j,i) + surf_usm_h%us(m)
+                ENDDO
+             ENDIF
+
+          CASE ( 'usws*' )
+             IF ( ALLOCATED( usws_av ) ) THEN   
+                IF ( TRIM(constant_flux_layer) == 'top' ) l = 2   
+                IF ( TRIM(constant_flux_layer) == 'bottom' ) l = 0   
+                DO  m = 1, surf_def_h(l)%ns
+                   i = surf_def_h(l)%i(m)
+                   j = surf_def_h(l)%j(m)
+                   usws_av(j,i) = usws_av(j,i) + surf_def_h(l)%usws(m)
                 ENDDO
                 DO  m = 1, surf_lsm_h%ns
                    i = surf_lsm_h%i(m)
@@ -1164,6 +1291,27 @@
                          v_av(k,j,i) = v_av(k,j,i) + v(k,j,i)
                       ENDDO
                    ENDDO
+                ENDDO
+             ENDIF
+
+          CASE ( 'vsws*' )
+             IF ( ALLOCATED( vsws_av ) ) THEN   
+                IF ( TRIM(constant_flux_layer) == 'top' ) l = 2   
+                IF ( TRIM(constant_flux_layer) == 'bottom' ) l = 0   
+                DO  m = 1, surf_def_h(l)%ns
+                   i = surf_def_h(l)%i(m)
+                   j = surf_def_h(l)%j(m)
+                   vsws_av(j,i) = vsws_av(j,i) + surf_def_h(l)%vsws(m)
+                ENDDO
+                DO  m = 1, surf_lsm_h%ns
+                   i = surf_lsm_h%i(m)
+                   j = surf_lsm_h%j(m)
+                   us_av(j,i) = us_av(j,i) + surf_lsm_h%us(m)
+                ENDDO
+                DO  m = 1, surf_usm_h%ns
+                   i = surf_usm_h%i(m)
+                   j = surf_usm_h%j(m)
+                   us_av(j,i) = us_av(j,i) + surf_usm_h%us(m)
                 ENDDO
              ENDIF
 

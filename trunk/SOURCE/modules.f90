@@ -1503,7 +1503,8 @@
     REAL(wp) ::  e_min = 0.0_wp                                !< namelist parameter
     REAL(wp) ::  end_time = 0.0_wp                             !< namelist parameter
     REAL(wp) ::  f = 0.0_wp                                    !< Coriolis parameter
-    REAL(wp) ::  fs = 0.0_wp                                   !< Coriolis parameter
+    REAL(wp) ::  fx = 0.0_wp                                   !< Coriolis parameter
+    REAL(wp) ::  fy = 0.0_wp                                   !< Coriolis parameter
     REAL(wp) ::  g = 9.81_wp                                   !< gravitational acceleration
     REAL(wp) ::  inflow_damping_height = 9999999.9_wp          !< namelist parameter
     REAL(wp) ::  inflow_damping_width = 9999999.9_wp           !< namelist parameter

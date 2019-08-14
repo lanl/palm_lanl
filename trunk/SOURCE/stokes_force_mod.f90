@@ -73,7 +73,7 @@
            ONLY:  tend, u, v, w, u_stk, v_stk, u_stk_zw, v_stk_zw, ddzu
 
        USE control_parameters,                                                 &
-           ONLY:  f, fs, message_string
+           ONLY:  f, fy, message_string
 
        USE grid_variables,                                                     &
            ONLY:  ddx, ddy
@@ -155,7 +155,7 @@
                                     BTEST( wall_flags_0(k,j,i), 3 ) )
 !
 !--                   Stokes-Coriolis force
-                      tend(k,j,i) = tend(k,j,i) + fs * u_stk_zw(k) * flag
+                      tend(k,j,i) = tend(k,j,i) + fy * u_stk_zw(k) * flag
 !
 !--                   Stokes-vortex force
                       tend(k,j,i) = tend(k,j,i) + ( u_stk_zw(k) * (            &
@@ -197,7 +197,7 @@
            ONLY:  tend, u, v, w, u_stk, v_stk, u_stk_zw, v_stk_zw, ddzu
 
        USE control_parameters,                                                 &
-           ONLY:  f, fs, message_string
+           ONLY:  f, fy, message_string
 
        USE grid_variables,                                                     &
            ONLY:  ddx, ddy
@@ -267,7 +267,7 @@
                 flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 3 ) )
 !
 !--             Stokes-Coriolis force
-                tend(k,j,i) = tend(k,j,i) + fs * u_stk_zw(k) * flag
+                tend(k,j,i) = tend(k,j,i) + fy * u_stk_zw(k) * flag
 !
 !--             Stokes-vortex force
                 tend(k,j,i) = tend(k,j,i) + ( u_stk_zw(k) * (                  &

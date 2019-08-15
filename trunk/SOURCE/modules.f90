@@ -1587,14 +1587,14 @@
     REAL(wp) ::  dz_stretch_level_end(9) = 9999999.9_wp            !< namelist parameter
     REAL(wp) ::  dz_stretch_factor_array(9) = 1.08_wp              !< namelist parameter
     REAL(wp) ::  mask_scale(3)                                     !< collective array for mask_scale_x/y/z
-    REAL(wp) ::  pt_vertical_gradient(10) = 1.0_wp                 !< namelist parameter
-    REAL(wp) ::  pt_vertical_gradient_level(10) = 0.0_wp   !< namelist parameter
+    REAL(wp) ::  pt_vertical_gradient(10) = 0.0_wp                 !< namelist parameter
+    REAL(wp) ::  pt_vertical_gradient_level(10) = -999999.9_wp     !< namelist parameter
     REAL(wp) ::  q_vertical_gradient(10) = 0.0_wp                  !< namelist parameter
-    REAL(wp) ::  q_vertical_gradient_level(10) = -999999.9_wp    !< namelist parameter
+    REAL(wp) ::  q_vertical_gradient_level(10) = -999999.9_wp      !< namelist parameter
     REAL(wp) ::  s_vertical_gradient(10) = 0.0_wp                  !< namelist parameter
-    REAL(wp) ::  s_vertical_gradient_level(10) = -999999.9_wp    !< namelist parameter
+    REAL(wp) ::  s_vertical_gradient_level(10) = -999999.9_wp      !< namelist parameter
     REAL(wp) ::  sa_vertical_gradient(10) = 0.0_wp                 !< namelist parameter
-    REAL(wp) ::  sa_vertical_gradient_level(10) = 0.0_wp   !< namelist parameter
+    REAL(wp) ::  sa_vertical_gradient_level(10) = -999999.9_wp     !< namelist parameter
     REAL(wp) ::  skip_time_domask(max_masks) = 9999999.9_wp        !< namelist parameter
     REAL(wp) ::  threshold(20) = 0.0_wp                            !< namelist parameter
     REAL(wp) ::  time_domask(max_masks) = 0.0_wp                   !< namelist parameter

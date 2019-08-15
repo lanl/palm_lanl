@@ -19,11 +19,8 @@
 !
 ! Current revisions:
 ! -----------------
-! 
-! 2018-11-21 cbegeman
-! Added functions for freezing point and derivative of freezing point with 
-! respect to salinity
-! 
+!
+!
 ! Former revisions:
 ! -----------------
 ! $Id: eqn_state_seawater.f90 2718 2018-01-02 08:49:38Z maronga $
@@ -92,8 +89,7 @@
     IMPLICIT NONE
 
     PRIVATE
-    PUBLIC eqn_state_seawater, eqn_state_seawater_func,                        &
-           pt_freezing, pt_freezing_SA, T_freezing, T_freezing_SA
+    PUBLIC eqn_state_seawater, eqn_state_seawater_func
 
     REAL(wp), DIMENSION(12), PARAMETER ::  nom =                               &
                           (/ 9.9984085444849347D2,   7.3471625860981584D0,     &
@@ -114,28 +110,6 @@
                             -9.1534417604289062D-18 /)
                           !<
 
-    REAL(wp), DIMENSION(11), PARAMETER ::  ptfrnom =                           &
-                          (/ 2.5180516744541290e-3, -5.8545863698926184e-2,    &
-                             2.2979985780124325e-3, -3.0086338218235500e-4,    &
-                            -7.0023530029351803e-4,  8.4149607219833806e-9,    &
-                             1.1845857563107403e-11, 1.                   ,    &
-                             1.3632481944285909e-6, -3.8493266309172074e-5,    &
-                             9.1686537446749641e-10 /)
-    
-    REAL(wp), DIMENSION(23), PARAMETER ::  tfrnom =                            &
-                          (/ 0.002519             , -5.946302841607319    ,    &
-                             4.136051661346983    , -1.115150523403847e1  ,    &
-                             1.476878746184548e1  , -1.088873263630961e1  ,    &
-                             2.961018839640730    , -7.433320943962606    ,    &
-                             -1.561578562479883   ,  4.073774363480365e-2 ,    &
-                             1.158414435887717e-2 , -4.122639292422863e-1 ,    &
-                             -1.123186915628260e-1,  5.715012685553502e-1 ,    &
-                             2.021682115652684e-1 ,  4.140574258089767e-2 ,    &
-                             -6.034228641903586e-1, -1.205825928146808e-2 ,    &
-                             -2.812172968619369e-1,  1.877244474023750e-2 ,    &
-                             -1.204395563789007e-1,  2.349147739749606e-1 ,    &
-                             2.748444541144219e-3  /)
-       
     INTERFACE eqn_state_seawater
        MODULE PROCEDURE eqn_state_seawater
        MODULE PROCEDURE eqn_state_seawater_ij
@@ -462,144 +436,5 @@
 
 
     END FUNCTION eqn_state_seawater_func
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Calculate derivative of in situ temperature freezing point with respect
-!> to absolute salinity at a given pressure and absolute salinity according to 
-!> TEOS10 polynomial function.
-!------------------------------------------------------------------------------!
-    REAL (wp) FUNCTION T_freezing_SA( p, SA )
-    
-       IMPLICIT NONE
-
-       REAL(wp) :: SA, p, p_r, SA_r, x
-
-       T_freezing_SA =                                                         &
-           (  tfrnom(2) + x * ( 1.5 * tfrnom(3) +                              &
-                                x * ( 2.0 * tfrnom(4) +                        &
-                                      x * ( 2.5 * tfrnom(5) +                  &
-                                            x * ( 3.0 * tfrnom(6) +            &
-                                                  3.5 * tfrnom(7) * x )        &
-                                          )                                    &
-                                    )                                          &
-                              )                                                &
-            + p_r * (  tfrnom(11) + x * ( 1.5 * tfrnom(12) +                   &
-                                          x * ( 2.0 * tfrnom(14) +             &
-                                                x * ( 2.5 * tfrnom(17) +       &
-                                                      x * ( 3.0 * tfrnom(20) + &
-                                                        3.5 * tfrnom(23) * x ) &
-                                                    )                          &
-                                              )                                &
-                                        )                                      &
-                      + p_r * ( tfrnom(13) + x * ( 1.5 * tfrnom(15) +          &
-                                                   x * ( 2.0 * tfrnom(18) +    &
-                                                         2.5 * tfrnom(21) * x )&
-                                                 )                             &
-                                + p_r * ( tfrnom(16) + x * ( 1.5 * tfrnom(19) +&
-                                                             2.0 * tfrnom(22) * x )&
-                                        )                                      &
-                              )                                                &
-                    )                                                          &
-           ) * 1e-2_wp
-
-    END FUNCTION T_freezing_SA
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Calculate potential temperature freezing point at a given pressure and 
-!> absolute salinity according to Jackett et al. (2006).
-!------------------------------------------------------------------------------!
-    REAL(wp) FUNCTION pt_freezing( p, SA )
-
-       IMPLICIT NONE
-
-       REAL(wp) ::  p       !< given in dbar
-       REAL(wp) ::  SA
-       
-       pt_freezing  = ( ( ptfrnom(1)        + ptfrnom(2)*SA   +                    &
-                          ptfrnom(3)*SA**1.5 +                                     &
-                          ptfrnom(4)*SA**2. + ptfrnom(5)*p    +                    & 
-                          ptfrnom(6)*p**2   + ptfrnom(7)*SA*p**2. ) /              &
-                        ( ptfrnom(8)        + ptfrnom(9)*SA**2.5 +                 &
-                          ptfrnom(10)*p + ptfrnom(11)*p**2.           )            &
-                      )
-
-       pt_freezing = pt_freezing + 273.15
-
-    END FUNCTION pt_freezing
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!> Calculate potential temperature freezing point at a given pressure and 
-!> absolute salinity according to Jackett et al. (2006).
-!------------------------------------------------------------------------------!
-    REAL(wp) FUNCTION pt_freezing_SA( p, SA )
-
-       IMPLICIT NONE
-
-       REAL(wp) ::  p       !< given in dbar
-       REAL(wp) ::  SA
-       REAL(wp) ::  ptnum,ptden,dnum_dSA,dden_dSA
-
-       ptnum = ( ptfrnom(1)        + ptfrnom(2)*SA + ptfrnom(3)*SA**1.5 +        &
-                 ptfrnom(4)*SA**2. + ptfrnom(5)*p +                              &
-                 ptfrnom(6)*p**2   + ptfrnom(7)*SA*p**2. )
-       ptden = ( ptfrnom(8)        + ptfrnom(9)*SA**2.5 +                        &
-                 ptfrnom(10)*p     + ptfrnom(11)*p**2.   )    
-       dnum_dSA = ptfrnom(2)     + 1.5*ptfrnom(3)*SA**0.5 +                    &
-                  ptfrnom(4)*SA  + ptfrnom(7)*p**2.
-       dden_dSA = 2.5*ptfrnom(9)*SA**1.5
-
-       pt_freezing_SA  = ( ( ptden*dnum_dSA - ptnum*dden_dSA ) / ptden**2. )
-
-    END FUNCTION pt_freezing_SA
-
-!------------------------------------------------------------------------------!
-! Description:
-! ------------
-!
-!  Calculates the in-situ temperature at which seawater freezes from a 
-!  computationally efficient polynomial following TEOS10.
-!
-!  SA  =  Absolute Salinity                                        [ g/kg ]
-!  p   =  sea pressure                                             [ dbar ]
-!         ( i.e. absolute pressure - 10.1325 dbar ) 
-!
-!  t_freezing = in-situ temperature at which seawater freezes.    [ deg C ]
-!               (ITS-90)                
-!------------------------------------------------------------------------------!
-    REAL(wp) FUNCTION T_freezing( p, SA )
-
-       IMPLICIT NONE
-
-       REAL(wp) :: SA, p, p_r, SA_r, x
-
-       SA_r = SA * 1e-2_wp
-       x = SQRT(SA_r)
-       p_r = p * 1e-4_wp
-
-       T_freezing = tfrnom(1) +                                                &
-                    SA_r * (   tfrnom(2) + x*(tfrnom(3) + x*(tfrnom(4) +       &
-                              x*(tfrnom(5) + x*(tfrnom(6) + tfrnom(7)*x))))) + &
-                    p_r  * (tfrnom(8) + p_r*(tfrnom(9) + tfrnom(10)*p_r))    + &
-                    SA_r * p_r * (tfrnom(11) +                                 &
-                                  p_r*(tfrnom(13) +                            &
-                                       p_r*(tfrnom(16) + tfrnom(22)*sa_r)) +   &
-                                  sa_r * (tfrnom(14) + tfrnom(18)*p_r +        &
-                                          tfrnom(20)*sa_r) +                   &
-                                  x    * (tfrnom(12) +                         &
-                                          p_r*(tfrnom(15) + tfrnom(19)*p_r) +  &
-                                          sa_r * (tfrnom(17) +                 &
-                                                  tfrnom(21)*p_r +             &
-                                                  tfrnom(23)*sa_r)             &
-                                         )                                     &
-                                 )
-       T_freezing = T_freezing + 273.15
-   
-   END FUNCTION T_freezing
 
  END MODULE eqn_state_seawater_mod

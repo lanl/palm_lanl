@@ -116,13 +116,13 @@
 
 #if defined( __nopointer )
     USE arrays_3d,                                                             &
-        ONLY:  alpha_T, beta_S, diss, diss_p, dzu, e, e_p, kh, km,             &
-               mean_inflow_profiles, prho, pt, tdiss_m, te_m, tend, u, v, vpt, w
+        ONLY:  diss, diss_p, dzu, e, e_p, kh, km, mean_inflow_profiles, prho,  &
+               pt, tdiss_m, te_m, tend, u, v, vpt, w
 #else
     USE arrays_3d,                                                             &
-        ONLY:  alpha_T, beta_S, diss, diss_1, diss_2, diss_3, diss_p, dzu, e,  &
-               e_1, e_2, e_3, e_p, kh, km, mean_inflow_profiles, prho, pt,     &
-               tdiss_m, te_m, tend, u, v, vpt, w
+        ONLY:  diss, diss_1, diss_2, diss_3, diss_p, dzu, e, e_1, e_2, e_3,    &
+               e_p, kh, km, mean_inflow_profiles, prho, pt, tdiss_m,           &
+               te_m, tend, u, v, vpt, w
 #endif
 
     USE control_parameters,                                                    &
@@ -3045,18 +3045,6 @@
                                            BTEST( wall_flags_0(k,j,i), 9 )     &
                                          )
                    ENDDO ! k
-
-!--                Add buoyancy flux from melting in the surface boundary layer
-                   IF (TRIM(constant_flux_layer) == 'top') THEN
-                      surf_s = surf_def_h(2)%start_index(j,i)
-                      surf_e = surf_def_h(2)%end_index(j,i)
-                      DO  m = surf_s, surf_e
-                         k = surf_def_h(2)%k(m)
-                         tend(k,j,i) = tend(k,j,i) +                           &
-                                       g*(alpha_T(k,j,i)*surf_def_h(2)%shf(m) +&
-                                          beta_S(k,j,i)*surf_def_h(2)%sasws(m))
-                      ENDDO
-                   ENDIF
                 ENDDO ! j
 
              ELSE ! not ocean
@@ -3568,18 +3556,6 @@
                                        BTEST( wall_flags_0(k,j,i), 9 )         &
                                      )
              ENDDO
-
-!--          Add buoyancy flux from melting in the surface boundary layer
-             IF (TRIM(constant_flux_layer) == 'top') THEN
-                surf_s = surf_def_h(2)%start_index(j,i)
-                surf_e = surf_def_h(2)%end_index(j,i)
-                DO  m = surf_s, surf_e
-                   k = surf_def_h(2)%k(m)
-                   tend(k,j,i) = tend(k,j,i) +                                 &
-                                 g*(alpha_T(k,j,i)*surf_def_h(2)%shf(m) +      &
-                                    beta_S(k,j,i)*surf_def_h(2)%sasws(m))
-                ENDDO
-             ENDIF
 
           ELSE ! atmosphere
 

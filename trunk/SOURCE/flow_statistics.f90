@@ -293,10 +293,10 @@
         ONLY:   average_count_pr, cloud_droplets, constant_flux_layer,         &
                 cloud_physics, do_sum, dpdxy,                                  &
                 dt_3d, g, humidity, initializing_actions, kappa, land_surface, &
-                large_scale_forcing, large_scale_subsidence, k_offset_mcphee,  &
-                max_pr_user, message_string, neutral, microphysics_morrison,   &
-                microphysics_seifert, most_method, ocean, passive_scalar,      &
-                simulated_time, simulated_time_at_begin, stokes_force,         &
+                large_scale_forcing, large_scale_subsidence, max_pr_user,      &
+                message_string, neutral, microphysics_morrison,                &
+                microphysics_seifert, ocean, passive_scalar, simulated_time,   &
+                simulated_time_at_begin, stokes_force,                         &
                 use_subsidence_tendencies,                                     &
                 use_surface_fluxes, use_top_fluxes, ws_scheme_mom,             &
                 ws_scheme_sca, idealized_diurnal
@@ -380,6 +380,7 @@
     REAL(wp) ::  sums_ll(nzb:nzt+1,2)  !<
 
     CALL cpu_log( log_point(10), 'flow_statistics', 'start' )
+
 !
 !-- To be on the safe side, check whether flow_statistics has already been
 !-- called once after the current time step
@@ -654,6 +655,7 @@
        hom(:,1,2,sr) = sums(:,2)             ! v
        hom(:,1,4,sr) = sums(:,4)             ! pt
 
+
 !
 !--    Salinity
        IF ( ocean )  THEN
@@ -665,10 +667,6 @@
              ENDIF
           ENDDO
           hom(:,1,23,sr) = sums(:,23)             ! sa
-          IF ( TRIM(most_method) == 'mcphee') THEN
-             hom(nzb,1,112,sr) = sums(nzb,112)             ! ol
-             hom(nzb,1,pr_palm,sr) = sums(nzb,pr_palm)     ! us
-          ENDIF
        ENDIF
 
 !
@@ -1256,9 +1254,6 @@
              IF ( .NOT. neutral ) THEN
                 IF ( TRIM(constant_flux_layer) == 'top' ) THEN
                    l = 2
-                   IF ( TRIM(most_method) == 'mcphee' )  THEN
-                      sums_l(nzb,113,tn)  = sums_l(nzb,113,tn) + surf_def_h(l)%melt(m)
-                   ENDIF
                 ELSE
                    l = 0
                 ENDIF
@@ -1396,7 +1391,7 @@
                                           0.0_wp * rmask(j,i,sr)                 ! v"pt"
 
                 IF ( ocean )  THEN
-                   sums_l(nzt:nzt+1,65,tn) = sums_l(nzt:nzt+1,65,tn) +          &
+                   sums_l(nzt,65,tn) = sums_l(nzt,65,tn) +                      &
                                        surf_def_h(2)%sasws(m) * rmask(j,i,sr) * &
                                        salinityflux_output_conversion(nzt)       ! w"sa"
                 ENDIF
@@ -1470,7 +1465,6 @@
                       pts = 0.5_wp * ( sa(k,j,i)   - hom(k,1,23,sr) +          &
                                        sa(k+1,j,i) - hom(k+1,1,23,sr) )
                       sums_l(k,66,tn) = sums_l(k,66,tn) + pts * w(k,j,i) *     &
-                                        salinityflux_output_conversion(k) *    &
                                         rmask(j,i,sr) * flag
                    ENDIF
                    sums_l(k,64,tn) = sums_l(k,64,tn) + rho_ocean(k,j,i) *      &
@@ -1571,7 +1565,7 @@
        ENDDO
        !$OMP END PARALLEL
 
-!
+       !
 !--    Treat land-surface quantities according to new wall model structure.
        IF ( land_surface )  THEN
           tn = 0
@@ -1963,7 +1957,7 @@
           sums(k,45:53)         = sums(k,45:53)         / ngp_2dh(sr)
           sums(k,55:63)         = sums(k,55:63)         / ngp_2dh(sr)
           sums(k,81:88)         = sums(k,81:88)         / ngp_2dh(sr)
-          sums(k,89:113)        = sums(k,89:113)        / ngp_2dh(sr)
+          sums(k,89:112)        = sums(k,89:112)        / ngp_2dh(sr)
           sums(k,114)           = sums(k,114)           / ngp_2dh(sr)
           sums(k,117)           = sums(k,117)           / ngp_2dh(sr)
           IF ( ngp_2dh_s_inner(k,sr) /= 0 )  THEN
@@ -2171,7 +2165,6 @@
        ENDIF
 
        hom(:,1,112,sr) = sums(:,112)            !: L
-       hom(:,1,113,sr) = sums(:,113)            !: melt
 
        IF ( passive_scalar )  THEN
           hom(:,1,117,sr) = sums(:,117)     ! w"s"
@@ -2353,12 +2346,9 @@
           ts_value(25,sr) = hom(nzb+13,1,pr_palm,sr)   ! s*
        ENDIF
 
-       IF ( TRIM(most_method) == 'mcphee' )  THEN
-          ts_value(dots_melt,sr) = hom(nzb,1,113,sr)          ! melt
-          ts_value(dots_melt+1,sr) = k_offset_mcphee 
-       ENDIF
-       ts_value(dots_melt+2,sr) = dpdxy(1)          ! dpdx
-       ts_value(dots_melt+3,sr) = dpdxy(2)          ! dpdy
+       ts_value(dots_melt,sr) = 0.0_wp              ! placeholder for melt rate
+       ts_value(dots_melt+1,sr) = dpdxy(1)          ! dpdx
+       ts_value(dots_melt+2,sr) = dpdxy(2)          ! dpdy
 !
 !--    Collect land surface model timeseries
        IF ( land_surface )  THEN

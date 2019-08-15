@@ -3764,10 +3764,9 @@
              IF ( TRIM( var ) == 'w'  )  unit = 'm/s'
              CONTINUE
 
-          CASE ( 'ghf*', 'lwp*', 'melt*', 'ol*', 'pra*', 'prr*', 'pt1*',       &
-                 'pt_io*', 'qsws*', 'r_a*', 'sa1*', 'sa_io*', 'shf_sol*',      &
-                 'shf*', 'sasws*', 'ssws*', 't*', 'tsurf*', 'u*', 'usws*',     &
-                 'vsws*', 'z0*', 'z0h*', 'z0q*' )
+          CASE ( 'ghf*', 'lwp*', 'ol*', 'pra*', 'prr*', 'qsws*', 'r_a*',       &
+                 'shf_sol*', 'shf*', 'sasws*', 'ssws*', 't*', 'tsurf*', 'u*',  &
+                 'z0*', 'z0h*', 'z0q*' )
              IF ( k == 0  .OR.  data_output(i)(ilen-2:ilen) /= '_xy' )  THEN
                 message_string = 'illegal value for data_output: "' //         &
                                  TRIM( var ) // '" & only 2d-horizontal ' //   &
@@ -4150,15 +4149,6 @@
              CALL message( 'check_parameters', 'PA0123', 1, 2, 0, 6, 0 )
           ENDIF
        ENDIF
-    ENDIF
-!
-!-- Check whether prandtl_number is appropriate
-    IF ( TRIM(most_method) == 'mcphee' ) THEN
-       prandtl_number = 13.8_wp
-    ELSEIF ( ocean .AND. prandtl_number == 1.0_wp ) THEN
-       message_string = 'prandtl_number is 1 for an ocean case, consider '     &
-                        // 'higher values'
-       CALL message( 'check_parameters', 'PA0656', 0, 1, 0, 6, 0 )
     ENDIF
 
 !
@@ -4595,38 +4585,10 @@
 !-- Check for valid setting of most_method
     IF ( TRIM( most_method ) /= 'circular'  .AND.                              &
          TRIM( most_method ) /= 'newton'    .AND.                              &
-         TRIM( most_method ) /= 'lookup'    .AND.                              &
-         TRIM( most_method ) /= 'mcphee'            )  THEN
+         TRIM( most_method ) /= 'lookup' )  THEN
        message_string = 'most_method = "' // TRIM( most_method ) //            &
                         '" is unknown'
        CALL message( 'check_parameters', 'PA0416', 1, 2, 0, 6, 0 )
-    ENDIF
-    IF ( TRIM( most_method ) == 'mcphee' .AND. .NOT. ( ocean ) )  THEN
-       message_string = 'most_method = mcphee is incompatible with atmosphere runs'
-       CALL message( 'check_parameters', 'PA0416', 1, 2, 0, 6, 0 )
-    ENDIF
-    IF ( k_offset_mcphee .LT. 0 )  THEN
-       message_string = 'k_offset_mcphee is less than 0. k_offset_mcphee must be >= 0'
-       CALL message( 'check_parameters', 'PA0416', 1, 2, 0, 6, 0 )
-    ENDIF
-    IF ( TRIM( most_method ) == 'mcphee' )  THEN 
-       z_offset_mcphee = ABS(zu(nzt - k_offset_mcphee))
-    ENDIF
-
-!-- Namelist option k_offset_mcphee designates minimum k_offset for non-constant 
-!-- k_offset cases
-    IF ( .NOT. koff_constant_mcphee ) THEN
-       koff_min_mcphee = k_offset_mcphee
-    ENDIF
-   
-!
-!-- If drag_coefficient is specified, convert to roughness length
-    IF ( TRIM(constant_flux_layer) == 'bottom' .AND. drag_coeff /= 9999999.9_wp )&
-       THEN
-       roughness_length = ABS(zw(0) - zu(1)) / EXP( kappa/SQRT(drag_coeff) )
-    ELSEIF ( TRIM(constant_flux_layer) == 'top' .AND. drag_coeff /= 9999999.9_wp )&
-       THEN
-       roughness_length = ABS(zw(nzt+1) - zu(nzt)) / EXP( kappa/SQRT(drag_coeff) )
     ENDIF
 
 !

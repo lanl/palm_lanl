@@ -1,3 +1,6 @@
-PALM_TEST.*
+PALM_*.*
 *.swp
 .nfs*
+run_script_*
+compile_*
+.gitignore

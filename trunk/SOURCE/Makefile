@@ -1439,6 +1439,7 @@ surface_coupler.o: \
 	surface_mod.o
 surface_layer_fluxes_mod.o: \
 	chem_modules.o \
+    eqn_state_seawater.o \
 	exchange_horiz_2d.o \
 	land_surface_model_mod.o \
 	mod_kinds.o \

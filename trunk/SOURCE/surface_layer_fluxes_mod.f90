@@ -1792,10 +1792,11 @@
           DO WHILE (ABS(zu(nzt-koff_max)) < MIN( 2.0_wp * z_TBL, (1.0_wp/3.0_wp)*ABS(zu(0)) ) )
              koff_max = koff_max + 1   
           ENDDO
-          IF (koff_max < koff_min) koff_max = koff_min
+          
+          IF (koff_max < k_prev + 1) koff_max = k_prev+1
 !--       ... or one offset from the previous k_offset_mcphee
           koff_max = MIN(k_prev + 1,koff_max)
-
+          
 !--       Look for minimum scalar slope within depth limits
           ALLOCATE( pt_z_av(1:koff_max) )
           ALLOCATE( sa_z_av(1:koff_max) )
@@ -1807,7 +1808,7 @@
           dsadz_av(1) = 9999
           
           !$OMP PARALLEL DO PRIVATE( k )
-          DO k = koff_min,koff_max
+          DO k = 1,koff_max
              pt_z_av(k) = hom(nzt-k,1,4,0)
              sa_z_av(k) = hom(nzt-k,1,23,0)
              IF (k > 1) THEN
@@ -1823,9 +1824,6 @@
 !--       Enforce depth limits on k_offset_mcphee
           IF (k_offset_mcphee < koff_min) k_offset_mcphee = koff_min
           IF (k_offset_mcphee > koff_max) k_offset_mcphee = koff_max
-
-          WRITE(message_string,*) 'k_offset_mcphee =',k_offset_mcphee
-          CALL location_message(message_string,.TRUE.)
 
 !--       Convert to depth units
           z_offset_mcphee = ABS(zu(nzt-k_offset_mcphee))

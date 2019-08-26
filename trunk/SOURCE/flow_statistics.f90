@@ -507,6 +507,16 @@
           ENDDO
        ENDIF
 
+       IF ( TRIM(constant_flux_layer) == 'top' ) THEN
+          !%OMP DO
+          DO m = 1,surf_def_h(2)%ns
+             i = surf_def_h(2)%i(m)
+             j = surf_def_h(2)%j(m)
+             sums_l(nzt+1, 4,tn)  = sums_l(nzt+1, 4,tn) + surf_def_h(2)%pt_io(m)
+             sums_l(nzt+1,23,tn)  = sums_l(nzt+1,23,tn) + surf_def_h(2)%sa_io(m)
+          ENDDO
+       ENDIF
+
 !
 !--    Horizontally averaged profiles of virtual potential temperature,
 !--    total water content, water vapor mixing ratio and liquid water potential
@@ -646,8 +656,15 @@
        DO k = nzb, nzt+1
           IF ( ngp_2dh_s_inner(k,sr) /= 0 )  THEN
              sums(k,4) = sums(k,4) / ngp_2dh_s_inner(k,sr)
-          ELSEIF ( k == nzt+1 ) THEN
+          ELSE
              sums(k,4) = sums(nzt,4)
+          ENDIF
+          IF ( k == nzt+1 .AND. TRIM(most_method) == 'mcphee' ) THEN
+             sums(k,4) = 0.0_wp 
+             DO m = 1,surf_def_h(2)%ns
+                sums(k,4) = sums(k,4) + surf_def_h(2)%pt_io(m) 
+             ENDDO
+             sums(k,4) = sums(k,4)/surf_def_h(2)%ns
           ENDIF
        ENDDO
        hom(:,1,1,sr) = sums(:,1)             ! u
@@ -660,8 +677,15 @@
           DO k = nzb, nzt+1
              IF ( ngp_2dh_s_inner(k,sr) /= 0 )  THEN
                 sums(k,23) = sums(k,23) / ngp_2dh_s_inner(k,sr)
-             ELSEIF ( k == nzt+1 ) THEN
+             ELSE
                 sums(k,23) = sums(nzt,23)
+             ENDIF
+             IF ( k == nzt+1 .AND. TRIM(most_method) == 'mcphee' ) THEN
+                sums(k,23) = 0.0_wp 
+                DO m = 1,surf_def_h(2)%ns
+                   sums(k,23) = sums(k,23) + surf_def_h(2)%sa_io(m) 
+                ENDDO
+                sums(k,23) = sums(k,23)/surf_def_h(2)%ns
              ENDIF
           ENDDO
           hom(:,1,23,sr) = sums(:,23)             ! sa
@@ -1032,6 +1056,7 @@
                    sums_l(k,65,tn) = sums_l(k,65,tn)                              &
                                             - 0.5_wp * ( kh(k,j,i) + kh(k+1,j,i) )&
                                               * ( sa(k+1,j,i) - sa(k,j,i) )       &
+                                              * rho_ref_zw(k)                     &
                                               * salinityflux_output_conversion(k) &
                                               * ddzu(k+1) * rmask(j,i,sr)         &
                                               * flag
@@ -1071,6 +1096,7 @@
                    sums_l(k,117,tn) = sums_l(k,117,tn)                         &
                                          - 0.5_wp * ( kh(k,j,i) + kh(k+1,j,i) )&
                                                   * ( s(k+1,j,i) - s(k,j,i) )  &
+                                             * rho_ref_zw(k)                   &
                                              * scalarflux_output_conversion(k) &
                                                   * ddzu(k+1) * rmask(j,i,sr)  &
                                                   * flag
@@ -1407,8 +1433,8 @@
                    sums_l(nzt,45,tn) = sums_l(nzt,45,tn) + (                   &
                                        ( 1.0_wp + 0.61_wp * q(nzt,j,i) ) *     &
                                        surf_def_h(2)%shf(m) +                  &
-                                       0.61_wp * pt(nzt,j,i) *    &
-                                       surf_def_h(2)%qsws(m) )      &
+                                       0.61_wp * pt(nzt,j,i) *                 &
+                                       surf_def_h(2)%qsws(m) )                 &
                                        * heatflux_output_conversion(nzt)
                    IF ( cloud_droplets )  THEN
                       sums_l(nzt,45,tn) = sums_l(nzt,45,tn) + (                &
@@ -1449,27 +1475,32 @@
                                  pt(k+1,j,i) - hom(k+1,1,4,sr) )
 
 !--             Higher moments
-                sums_l(k,35,tn) = sums_l(k,35,tn) + pts * w(k,j,i)**2 *        &
-                                                    rmask(j,i,sr) * flag
-                sums_l(k,36,tn) = sums_l(k,36,tn) + pts**2 * w(k,j,i) *        &
-                                                    rmask(j,i,sr) * flag
+                IF ( .NOT. ( TRIM(most_method) == 'mcphee' .AND. k == nzt ) ) THEN
+                   sums_l(k,35,tn) = sums_l(k,35,tn) + pts * w(k,j,i)**2 *        &
+                                                       rmask(j,i,sr) * flag
+                   sums_l(k,36,tn) = sums_l(k,36,tn) + pts**2 * w(k,j,i) *        &
+                                                       rmask(j,i,sr) * flag
 
-                IF ( ocean ) THEN
-                  pts = 0.5_wp * ( sa(k,j,i) - hom(k,1,23,sr) +                &
-                                   sa(k+1,j,i) - hom(k+1,1,23,sr) )
-                  sums_l(k,154,tn) = sums_l(k,154,tn) + pts * w(k,j,i)**2 *    &
-                                                    rmask(j,i,sr) * flag
-                  sums_l(k,155,tn) = sums_l(k,155,tn) + pts**2 * w(k,j,i) *    &
-                                                    rmask(j,i,sr) * flag
-                endif
+                   IF ( ocean ) THEN
+                     pts = 0.5_wp * ( sa(k,j,i) - hom(k,1,23,sr) +                &
+                                      sa(k+1,j,i) - hom(k+1,1,23,sr) )
+                     sums_l(k,154,tn) = sums_l(k,154,tn) + pts * w(k,j,i)**2 *    &
+                                                       rmask(j,i,sr) * flag
+                     sums_l(k,155,tn) = sums_l(k,155,tn) + pts**2 * w(k,j,i) *    &
+                                                       rmask(j,i,sr) * flag
+                   ENDIF
+                ENDIF
 !
 !--             Salinity flux and density (density does not belong to here,
 !--             but so far there is no other suitable place to calculate)
                 IF ( ocean )  THEN
-                   IF( .NOT. ws_scheme_sca .OR. sr /= 0 )  THEN
+                   IF ( ( .NOT. ws_scheme_sca .OR. sr /= 0 ) .AND.             &
+                        .NOT. ( TRIM(most_method) == 'mcphee' .AND. k == nzt ) &
+                      ) THEN
                       pts = 0.5_wp * ( sa(k,j,i)   - hom(k,1,23,sr) +          &
                                        sa(k+1,j,i) - hom(k+1,1,23,sr) )
                       sums_l(k,66,tn) = sums_l(k,66,tn) + pts * w(k,j,i) *     &
+                                        rho_ref_zw(k) *                        &
                                         salinityflux_output_conversion(k) *    &
                                         rmask(j,i,sr) * flag
                    ENDIF
@@ -1492,7 +1523,8 @@
                       pts = 0.5_wp * ( vpt(k,j,i)   - hom(k,1,44,sr) +         &
                                     vpt(k+1,j,i) - hom(k+1,1,44,sr) )
                       sums_l(k,46,tn) = sums_l(k,46,tn) + pts * w(k,j,i) *     &
-                                               heatflux_output_conversion(k) * &
+                                              rho_ref_zw(k) *                  &
+                                              heatflux_output_conversion(k) *  &
                                                           rmask(j,i,sr) * flag
                       sums_l(k,54,tn) = sums_l(k,54,tn) + ql(k,j,i) *          &
                                                           rmask(j,i,sr) * flag
@@ -1504,6 +1536,7 @@
                               ( q(k+1,j,i) - ql(k+1,j,i) ) -                   &
                               hom(k+1,1,42,sr) )
                          sums_l(k,52,tn) = sums_l(k,52,tn) + pts * w(k,j,i) *  &
+                                             rho_ref_zw(k) *                   &
                                              waterflux_output_conversion(k) *  &
                                                              rmask(j,i,sr)  *  &
                                                              flag
@@ -1533,6 +1566,7 @@
                          pts = 0.5_wp * ( vpt(k,j,i)   - hom(k,1,44,sr) +      &
                                           vpt(k+1,j,i) - hom(k+1,1,44,sr) )
                          sums_l(k,46,tn) = sums_l(k,46,tn) + pts * w(k,j,i) *  &
+                                              rho_ref_zw(k) *                  &
                                               heatflux_output_conversion(k) *  &
                                                              rmask(j,i,sr)  *  &
                                                              flag
@@ -1543,6 +1577,7 @@
                                              0.61_wp * hom(k,1,4,sr) *         &
                                              sums_l(k,49,tn)                   &
                                            ) * heatflux_output_conversion(k) * &
+                                               rho_ref_zw(k) *                 &
                                                flag
                       ENDIF
                    ENDIF
@@ -1554,6 +1589,7 @@
                    pts = 0.5_wp * ( s(k,j,i)   - hom(k,1,115,sr) +             &
                                     s(k+1,j,i) - hom(k+1,1,115,sr) )
                    sums_l(k,114,tn) = sums_l(k,114,tn) + pts * w(k,j,i) *      &
+                                             rho_ref_zw(k) *                   &
                                              scalarflux_output_conversion(k) * &
                                                          rmask(j,i,sr) * flag
                 ENDIF
@@ -1673,11 +1709,14 @@
                                  BTEST( wall_flags_0(k,j,i), 9  ) )
 !
 !--                Vertical heat flux
-                   sums_l(k,17,tn) = sums_l(k,17,tn) + 0.5_wp *                &
-                           ( pt(k,j,i)   - hom(k,1,4,sr) +                     &
-                             pt(k+1,j,i) - hom(k+1,1,4,sr) )                   &
-                           * heatflux_output_conversion(k)                     &
-                           * w(k,j,i) * rmask(j,i,sr) * flag
+                   IF ( .NOT. (TRIM(most_method) == 'mcphee' .AND. k == nzt )  &
+                      ) THEN
+                      sums_l(k,17,tn) = sums_l(k,17,tn) + 0.5_wp *             &
+                              ( pt(k,j,i)   - hom(k,1,4,sr) +                  &
+                                pt(k+1,j,i) - hom(k+1,1,4,sr) )                &
+                              * heatflux_output_conversion(k)                  &
+                              * w(k,j,i) * rmask(j,i,sr) * flag
+                   ENDIF
                    IF ( humidity )  THEN
                       pts = 0.5_wp * ( q(k,j,i)   - hom(k,1,41,sr) +           &
                                       q(k+1,j,i) - hom(k+1,1,41,sr) )

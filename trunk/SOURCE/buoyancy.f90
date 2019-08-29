@@ -194,9 +194,9 @@
                       DO  k = nzb+1, nzt-1
                          tend(k,j,i) = tend(k,j,i) + g * sin_alpha_surface *     &
                               0.5_wp * ( ( var(k,j,i)   - rho_slope_ref(k,i)   ) &
-                                           / rho_slope_ref(k,i) +                &
+                                           / ref_state(k) +                &
                                          ( var(k+1,j,i) - rho_slope_ref(k+1,i) ) &
-                                           / rho_slope_ref(nzt+1,i) )            &
+                                           / ref_state(k+1) )            &
                                      * MERGE( 1.0_wp, 0.0_wp,                    &
                                               BTEST( wall_flags_0(k,j,i), 0 ) )
                       ENDDO
@@ -229,9 +229,9 @@
                       DO  k = nzb+1, nzt-1
                          tend(k,j,i) = tend(k,j,i) + g * cos_alpha_surface *     &
                               0.5_wp * ( ( var(k,j,i)   - rho_slope_ref(k,i)   ) &
-                                           / rho_slope_ref(k,i) +                &
+                                           / ref_state(k) +                &
                                          ( var(k+1,j,i) - rho_slope_ref(k+1,i) ) &
-                                           / rho_slope_ref(nzt+1,i) )            &
+                                           / ref_state(k+1) )            &
                                      * MERGE( 1.0_wp, 0.0_wp,                    &
                                               BTEST( wall_flags_0(k,j,i), 0 ) )
                       ENDDO
@@ -333,9 +333,9 @@
                 DO  k = nzb+1, nzt-1
                    tend(k,j,i) = tend(k,j,i) + g * sin_alpha_surface *     &
                         0.5_wp * ( ( var(k,j,i)   - rho_slope_ref(k,i)   ) &
-                                     / rho_slope_ref(k,i) +                &
+                                     / ref_state(k) +                &
                                    ( var(k+1,j,i) - rho_slope_ref(k+1,i) ) &
-                                     / rho_slope_ref(nzt+1,i) )            &
+                                     / ref_state(k+1) )            &
                                * MERGE( 1.0_wp, 0.0_wp,                    &
                                         BTEST( wall_flags_0(k,j,i), 0 ) )
                 ENDDO
@@ -360,9 +360,9 @@
                 DO  k = nzb+1, nzt-1
                    tend(k,j,i) = tend(k,j,i) + g * cos_alpha_surface *     &
                         0.5_wp * ( ( var(k,j,i)   - rho_slope_ref(k,i)   ) &
-                                     / rho_slope_ref(k,i) +                &
+                                     / ref_state(k) +                &
                                    ( var(k+1,j,i) - rho_slope_ref(k+1,i) ) &
-                                     / rho_slope_ref(nzt+1,i) )            &
+                                     / ref_state(k+1) )            &
                                * MERGE( 1.0_wp, 0.0_wp,                    &
                                         BTEST( wall_flags_0(k,j,i), 0 ) )
                 ENDDO

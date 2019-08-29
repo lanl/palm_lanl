@@ -868,6 +868,7 @@
 !
 !-- Allocation of anelastic and Boussinesq approximation specific arrays
     ALLOCATE( p_hydrostatic(nzb:nzt+1) )
+    IF ( ambient_density_for_buoyancy ) ALLOCATE( rho_ambient(nzb:nzt+1) )
     ALLOCATE( rho_ref_zu(nzb:nzt+1) )
     ALLOCATE( rho_ref_zw(nzb:nzt+1) )
     ALLOCATE( drho_ref_zu(nzb:nzt+1) )

@@ -1819,13 +1819,19 @@
        IF ( ABS( alpha_surface ) > 90.0_wp )  THEN
           WRITE( message_string, * ) 'ABS( alpha_surface = ', alpha_surface,   &
                                      ' ) must be < 90.0'
-          CALL message( 'check_parameters', 'PA0043', 1, 2, 0, 6, 0 )
+          CALL message( 'check_parameters', 'PA0043', 0, 1, 0, 6, 0 )
        ENDIF
        sloping_surface = .TRUE.
     ENDIF
     cos_alpha_surface = COS( alpha_surface / 180.0_wp * pi )
     sin_alpha_surface = SIN( alpha_surface / 180.0_wp * pi )
 
+    IF ( alpha_surface == 0.0_wp .AND. ambient_density_for_buoyancy )  THEN
+       WRITE( message_string, * ) 'ambient density for buoyancy will not be    & 
+                                  used because there is no slope, i.e.,        &
+                                  alpha_surface ==0 '
+       CALL message( 'check_parameters', 'PA0043', 1, 2, 0, 6, 0 )
+    ENDIF
 !
 !-- Overwrite latitude if necessary and compute Coriolis parameter.
 !-- To do - move initialization of f and fs to coriolis_mod.

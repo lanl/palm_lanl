@@ -580,7 +580,7 @@
              y_shift, zeta_max, zeta_min, z0h_factor
 
     NAMELIST /initialization_parameters/  aerosol_bulk, alpha_surface,         &
-             approximation, bc_e_b, bc_e_t,                                    &
+             ambient_density_for_buoyancy, approximation, bc_e_b, bc_e_t,      &
              bc_lr, bc_ns, bc_p_b, bc_p_t, bc_pt_b, bc_pt_t, bc_q_b,           &
              bc_q_t,bc_s_b, bc_s_t, bc_sa_b, bc_sa_t, bc_uv_b, bc_uv_t,        &
              bottom_salinityflux, bubble_center_x, bubble_center_y,            &

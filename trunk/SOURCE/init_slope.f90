@@ -71,18 +71,18 @@
  
 
     USE arrays_3d,                                                             &
-        ONLY:  hyp, pt, pt_init, pt_slope_ref, rho_slope_ref, zu,              &
+        ONLY:  hyp, pt, pt_init, pt_slope_ref, rho_ambient, rho_slope_ref, zu, &
                sa, sa_init, sa_slope_ref
         
     USE constants,                                                             &
         ONLY:  pi
                     
     USE control_parameters,                                                    &
-        ONLY:  initializing_actions, ocean,                                    &
-               alpha_surface, sin_alpha_surface, slope_offset,                 &
+        ONLY:  alpha_surface, ambient_density_for_buoyancy,                    &
+               initializing_actions, ocean,                                    &
                pt_surface, pt_vertical_gradient, pt_slope_offset,              &
                sa_surface, sa_vertical_gradient, sa_slope_offset,              &
-               slope_parallel_gradients
+               sin_alpha_surface, slope_offset, slope_parallel_gradients
 
     USE eqn_state_seawater_mod,                                                &
         ONLY:  eqn_state_seawater, eqn_state_seawater_func
@@ -113,19 +113,16 @@
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt_init_local !<
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  sa_init_local !<
 
-    CHARACTER(LEN=200)  :: message_string
-
     CALL location_message('Initialize slope',.TRUE.)
 !
 !-- Calculate reference temperature field needed for computing buoyancy
     ALLOCATE( pt_slope_ref(nzb:nzt+1,nxlg:nxrg) )
-    ALLOCATE( rho_slope_ref(nzb:nzt+1,nxlg:nxrg) )
-
     IF ( ocean ) ALLOCATE( sa_slope_ref(nzb:nzt+1,nxlg:nxrg) )
+    IF ( ocean ) ALLOCATE( rho_slope_ref(nzb:nzt+1,nxlg:nxrg) )
 
-    DO  i = nxlg, nxrg
-       DO  k = nzb, nzt+1
-          IF ( .NOT. slope_parallel_gradients ) THEN
+    IF ( .NOT. slope_parallel_gradients .AND. .NOT. ambient_density_for_buoyancy ) THEN
+       DO  i = nxlg, nxrg
+          DO  k = nzb, nzt+1
 !
 !--          Compute height of grid-point relative to lower left corner of
 !--          the total domain.
@@ -148,25 +145,48 @@
 !
 !--          Compute temperatures in the rotated coordinate system
              alpha    = alpha + alpha_surface / 180.0_wp * pi
-             pt_value = pt_surface + radius * SIN( alpha ) * &
+             pt_value = pt_surface + radius * SIN( alpha ) *                   &
                                   pt_vertical_gradient(1) / 100.0_wp
              pt_slope_ref(k,i) = pt_value
           
              IF ( ocean ) THEN
-                sa_value = sa_surface + radius * SIN( alpha ) * &
+                sa_value = sa_surface + radius * SIN( alpha ) *                &
                                        sa_vertical_gradient(1) / 100.0_wp
                 sa_slope_ref(k,i) = sa_value
+                rho_slope_ref(k,i) = eqn_state_seawater_func(                  &
+                                  hyp(k),pt_slope_ref(k,i),sa_slope_ref(k,i))
+
              ENDIF
+             
+          ENDDO                
+       ENDDO
 
-          ELSE
-             pt_slope_ref(k,i) = pt_init(k)
-             IF ( ocean ) sa_slope_ref(k,i) = sa_init(k)   
-          ENDIF
-
-          rho_slope_ref(k,i) = eqn_state_seawater_func(hyp(k),pt_slope_ref(k,i),sa_slope_ref(k,i))
+    ELSEIF ( ocean .AND. ambient_density_for_buoyancy ) THEN
+!--    Use the far-field conditions at the bottom of the domain for buoyancy
+!--    rho_ambient is calculated in init_ocean as
+!--    eqn_state_seawater_func(hyp(k),pt_init(0),sa_init(0))
+       DO  i = nxlg, nxrg
+          DO  k = nzb, nzt+1
+             pt_slope_ref(k,i) = pt_init(0)
+             sa_slope_ref(k,i) = sa_init(0)   
+             rho_slope_ref(k,i) = rho_ambient(k)
+          ENDDO                
+       ENDDO
     
-       ENDDO                
-    ENDDO
+    ELSE
+       DO  i = nxlg, nxrg
+          DO  k = nzb, nzt+1
+             pt_slope_ref(k,i) = pt_init(k)
+             IF ( ocean ) THEN
+                sa_slope_ref(k,i) = sa_init(k)   
+                rho_slope_ref(k,i) = eqn_state_seawater_func(                  &
+                                     hyp(k),pt_slope_ref(k,i),sa_slope_ref(k,i))
+             ENDIF
+          ENDDO                
+       ENDDO
+    ENDIF
+
+    
 
 
 !-- Temperature and salinity difference between left and right boundary of the total domain,

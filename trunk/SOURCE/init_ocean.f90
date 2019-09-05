@@ -84,8 +84,8 @@
 
 
     USE arrays_3d,                                                             &
-        ONLY:  dzu, dzw, hyp, pt_init, ref_state, rho_ref_zu, rho_ref_zw,      &
-               sa_init, zu, zw
+        ONLY:  dzu, dzw, hyp, pt_init, ref_state, rho_ambient, rho_ref_zu,     &
+               rho_ref_zw, sa_init, zu, zw
 
     USE cloud_parameters,                                                      &
         ONLY:  cp
@@ -94,7 +94,8 @@
         ONLY:  cpw
 
     USE control_parameters,                                                    &
-        ONLY:  g, molecular_viscosity, prandtl_number, prho_reference,         &
+        ONLY:  ambient_density_for_buoyancy, cos_alpha_surface, g,             &
+               molecular_viscosity, prandtl_number, prho_reference,            &
                rho_reference, rho_surface, surface_pressure,                   &
                use_single_reference_value, stokes_force
 
@@ -147,9 +148,9 @@
     hyp(nzt)      = hyp(nzt+1) + rho_surface * g * 0.5_wp * dzu(nzt+1)
 
     DO  k = nzt-1, nzb+1, -1
-       hyp(k) = hyp(k+1) + rho_surface * g * dzu(k)
+       hyp(k) = hyp(k+1) + rho_surface * g * cos_alpha_surface * dzu(k)
     ENDDO
-    hyp(nzb) = hyp(nzb+1) + rho_surface * g * dzu(nzb+1)
+    hyp(nzb) = hyp(nzb+1) + rho_surface * g * cos_alpha_surface * dzu(nzb+1)
 
 !
 !-- Second step: Iteratively calculate in situ density (based on presssure)
@@ -168,8 +169,8 @@
        ENDDO
 
        DO  k = nzt, nzb, -1
-          hyp(k) = hyp(k+1) + g * 0.5_wp * ( rho_ref_zw(k)                     &
-                                           + rho_ref_zw(k+1) ) * dzw(k+1)
+          hyp(k) = hyp(k+1) + g * cos_alpha_surface *                          &
+                         0.5_wp * ( rho_ref_zw(k) + rho_ref_zw(k+1) ) * dzw(k+1)
        ENDDO
 
     ENDDO
@@ -187,6 +188,16 @@
     ENDDO
     rho_reference = rho_reference / ( zu(nzt+1) - zu(nzb) )
 
+!
+!-- Define ambient density profile on zw grid
+!-- This ensures that buoyancy is computed relative to the far-field (bottom of 
+!-- the domain), hydrostatic, initial density
+    IF ( ambient_density_for_buoyancy ) THEN
+       DO  k = nzt, nzb, -1
+          rho_ambient(k) = eqn_state_seawater_func( 0.5_wp * ( hyp(k) + hyp(k+1) ),&
+                                                   pt_init(0), sa_init(0) )
+       ENDDO   
+    ENDIF
 !
 !-- Calculate the reference potential density on the zw grid
     prho_reference = 0.0_wp

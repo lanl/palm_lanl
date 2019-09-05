@@ -190,6 +190,8 @@
 
 !
 !-- Define ambient density profile on zw grid
+!-- This ensures that buoyancy is computed relative to the far-field (bottom of 
+!-- the domain), hydrostatic, initial density
     IF ( ambient_density_for_buoyancy ) THEN
        DO  k = nzt, nzb, -1
           rho_ambient(k) = eqn_state_seawater_func( 0.5_wp * ( hyp(k) + hyp(k+1) ),&

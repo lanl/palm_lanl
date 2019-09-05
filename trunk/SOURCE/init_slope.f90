@@ -117,11 +117,10 @@
 !
 !-- Calculate reference temperature field needed for computing buoyancy
     ALLOCATE( pt_slope_ref(nzb:nzt+1,nxlg:nxrg) )
-    ALLOCATE( rho_slope_ref(nzb:nzt+1,nxlg:nxrg) )
-
     IF ( ocean ) ALLOCATE( sa_slope_ref(nzb:nzt+1,nxlg:nxrg) )
+    IF ( ocean ) ALLOCATE( rho_slope_ref(nzb:nzt+1,nxlg:nxrg) )
 
-    IF ( .NOT. slope_parallel_gradients ) THEN
+    IF ( .NOT. slope_parallel_gradients .AND. .NOT. ambient_density_for_buoyancy ) THEN
        DO  i = nxlg, nxrg
           DO  k = nzb, nzt+1
 !
@@ -146,32 +145,43 @@
 !
 !--          Compute temperatures in the rotated coordinate system
              alpha    = alpha + alpha_surface / 180.0_wp * pi
-             pt_value = pt_surface + radius * SIN( alpha ) * &
+             pt_value = pt_surface + radius * SIN( alpha ) *                   &
                                   pt_vertical_gradient(1) / 100.0_wp
              pt_slope_ref(k,i) = pt_value
           
              IF ( ocean ) THEN
-                sa_value = sa_surface + radius * SIN( alpha ) * &
+                sa_value = sa_surface + radius * SIN( alpha ) *                &
                                        sa_vertical_gradient(1) / 100.0_wp
                 sa_slope_ref(k,i) = sa_value
-             ENDIF
+                rho_slope_ref(k,i) = eqn_state_seawater_func(                  &
+                                  hyp(k),pt_slope_ref(k,i),sa_slope_ref(k,i))
 
+             ENDIF
+             
           ENDDO                
        ENDDO
-    ELSEIF ( ambient_density_for_buoyancy ) THEN
+
+    ELSEIF ( ocean .AND. ambient_density_for_buoyancy ) THEN
+!--    Use the far-field conditions at the bottom of the domain for buoyancy
+!--    rho_ambient is calculated in init_ocean as
+!--    eqn_state_seawater_func(hyp(k),pt_init(0),sa_init(0))
        DO  i = nxlg, nxrg
           DO  k = nzb, nzt+1
              pt_slope_ref(k,i) = pt_init(0)
-             IF ( ocean ) sa_slope_ref(k,i) = sa_init(0)   
+             sa_slope_ref(k,i) = sa_init(0)   
              rho_slope_ref(k,i) = rho_ambient(k)
           ENDDO                
        ENDDO
+    
     ELSE
        DO  i = nxlg, nxrg
           DO  k = nzb, nzt+1
              pt_slope_ref(k,i) = pt_init(k)
-             IF ( ocean ) sa_slope_ref(k,i) = sa_init(k)   
-             rho_slope_ref(k,i) = eqn_state_seawater_func(hyp(k),pt_slope_ref(k,i),sa_slope_ref(k,i))
+             IF ( ocean ) THEN
+                sa_slope_ref(k,i) = sa_init(k)   
+                rho_slope_ref(k,i) = eqn_state_seawater_func(                  &
+                                     hyp(k),pt_slope_ref(k,i),sa_slope_ref(k,i))
+             ENDIF
           ENDDO                
        ENDDO
     ENDIF

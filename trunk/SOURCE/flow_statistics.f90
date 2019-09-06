@@ -291,7 +291,7 @@
         
     USE control_parameters,                                                    &
         ONLY:   average_count_pr, cloud_droplets, constant_flux_layer,         &
-                cloud_physics, do_sum, dpdxy,                                  &
+                cloud_physics, do_sum, dpdxy_loc,                              &
                 dt_3d, g, humidity, initializing_actions, kappa, land_surface, &
                 large_scale_forcing, large_scale_subsidence, k_offset_mcphee,  &
                 max_pr_user, message_string, neutral, microphysics_morrison,   &
@@ -2396,8 +2396,8 @@
           ts_value(dots_melt,sr) = hom(nzb,1,113,sr)          ! melt
           ts_value(dots_melt+1,sr) = k_offset_mcphee 
        ENDIF
-       ts_value(dots_melt+2,sr) = dpdxy(1)          ! dpdx
-       ts_value(dots_melt+3,sr) = dpdxy(2)          ! dpdy
+       ts_value(dots_melt+2,sr) = dpdxy_loc(1)          ! dpdx
+       ts_value(dots_melt+3,sr) = dpdxy_loc(2)          ! dpdy
 !
 !--    Collect land surface model timeseries
        IF ( land_surface )  THEN

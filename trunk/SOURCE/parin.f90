@@ -529,8 +529,8 @@
              galilei_transformation, humidity,                                 &
              inflow_damping_height, inflow_damping_width,                      &
              inflow_disturbance_begin, inflow_disturbance_end,                 &
-             initializing_actions, km_constant, koff_constant_mcphee,          &
-             k_offset_mcphee,                                                  &
+             initialize_to_geostrophic, initializing_actions, km_constant,     &
+             koff_constant_mcphee, k_offset_mcphee,                            &
              large_scale_forcing, large_scale_subsidence, latitude,            &
              limiter_sedimentation, longitude,                                 &
              loop_optimization, lsf_exception, masking_method, mg_cycles,      &
@@ -549,7 +549,7 @@
              random_generator, random_heatflux, rans_const_c, rans_const_sigma,&
              rans_mode,                                                        &
              rayleigh_damping_factor, rayleigh_damping_height,                 &
-             recycling_width, recycling_yshift,                                &
+             rayleigh_damping_geostrophic, recycling_width, recycling_yshift,  &
              reference_state, residual_limit,                                  &
              roughness_length, sa_surface,                                     &
              sa_vertical_gradient, sa_vertical_gradient_level, scalar_advec,   &
@@ -612,8 +612,8 @@
              galilei_transformation, humidity, ij_av_width_mcphee,             &
              inflow_damping_height, inflow_damping_width,                      &
              inflow_disturbance_begin, inflow_disturbance_end,                 &
-             initializing_actions, km_constant, koff_constant_mcphee,          &
-             k_offset_mcphee, k_av_width_mcphee,                               &
+             initialize_to_geostrophic, initializing_actions, km_constant,     &
+             koff_constant_mcphee, k_offset_mcphee, k_av_width_mcphee,         &
              large_scale_forcing, large_scale_subsidence, latitude,            &
              limiter_sedimentation, longitude,                                 &
              loop_optimization, lsf_exception, masking_method, mg_cycles,      &
@@ -633,7 +633,7 @@
              random_generator, random_heatflux, rans_const_c, rans_const_sigma,&
              rans_mode,                                                        &
              rayleigh_damping_factor, rayleigh_damping_height,                 &
-             recycling_width, recycling_yshift,                                &
+             rayleigh_damping_geostrophic, recycling_width, recycling_yshift,  &
              reference_state, residual_limit,                                  &
              roughness_length, sa_surface,                                     &
              sa_vertical_gradient, sa_vertical_gradient_level, scalar_advec,   &

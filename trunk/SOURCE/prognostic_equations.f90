@@ -305,18 +305,18 @@
     USE control_parameters,                                                    &
         ONLY:  air_chemistry, call_microphysics_at_all_substeps,               &
                cloud_physics, cloud_top_radiation, constant_diffusion,         &
-               dp_external, dp_level_ind_b, dp_smooth_factor, dpdxy, dpdx,     &
-               dpdy, dpdx_freq, dpdy_freq, dpdx_phase, dpdy_phase , dt_3d,     &
-               humidity, idealized_diurnal, f, g,                              &
-               inflow_l, intermediate_timestep_count,                          &
+               dp_external, dp_level_ind_b, dp_smooth_factor,                  &
+               dpdxy, dpdxy_loc, dpdx, dpdy, dpdx_freq, dpdy_freq, dpdx_phase, &
+               dpdy_phase, dt_3d, f, g, humidity, idealized_diurnal,           &
+               inflow_l, initialize_to_geostrophic,intermediate_timestep_count,&
                intermediate_timestep_count_max, large_scale_forcing,           &
                large_scale_subsidence, message_string, microphysics_morrison,  &
                microphysics_seifert, microphysics_sat_adjust, neutral, nudging,&
                ocean, outflow_l, outflow_s, passive_scalar, plant_canopy,      &
                prho_reference, pt_reference, pt_reference, pt_reference,       &
                scalar_advec, scalar_advec, simulated_time, sloping_surface,    &
-               rho_reference, timestep_scheme, tsc,           &
-               use_single_reference_value, use_subsidence_tendencies,          &
+               rayleigh_damping_geostrophic, rho_reference, timestep_scheme,   &
+               tsc, use_single_reference_value, use_subsidence_tendencies,     &
                use_upstream_for_tke, wind_turbine, ws_scheme_mom,              &
                ws_scheme_sca, urban_surface, land_surface, wb_solar,           &
                stokes_force
@@ -550,18 +550,20 @@
     !$OMP DO
 
 !-- For sinusoidally varying pressure gradient, solve for instantaneous pressure gradient
+    dpdxy_loc = dpdxy
     IF ( ANY( dpdx /= 0.0_wp ) .OR. ANY( dpdy /= 0.0_wp) ) THEN
-       dpdxy(1) = 0.0_wp
-       dpdxy(2) = 0.0_wp
        DO i = 1, 30
-          dpdxy(1) = dpdxy(1) + dpdx(i)*cos(2.0_wp*pi*dpdx_freq(i)*simulated_time - dpdx_phase(i))
-          dpdxy(2) = dpdxy(2) + dpdy(i)*cos(2.0_wp*pi*dpdy_freq(i)*simulated_time - dpdy_phase(i))
+          dpdxy_loc(1) = dpdxy_loc(1) +                                     &
+                         dpdx(i)*cos(2.0_wp*pi*dpdx_freq(i)*simulated_time - dpdx_phase(i))
+          dpdxy_loc(2) = dpdxy_loc(2) +                                     &
+                         dpdy(i)*cos(2.0_wp*pi*dpdy_freq(i)*simulated_time - dpdy_phase(i))
        ENDDO
+    ENDIF
        
-!--    Update u_init and v_init used in rayleigh damping scheme
-       u_init(:) = -1.0_wp*dpdxy(2)*drho_ref_zu(nzb)/f
-       v_init(:) = dpdxy(1)*drho_ref_zu(nzb)/f
-    
+!-- Update u_init and v_init used in rayleigh damping scheme
+    IF (rayleigh_damping_geostrophic) THEN
+       u_init(:) = -1.0_wp*dpdxy_loc(2)*drho_ref_zu(nzb)/f
+       v_init(:) =         dpdxy_loc(1)*drho_ref_zu(nzb)/f
     ENDIF
 
     DO  i = nxl, nxr
@@ -629,7 +631,7 @@
 !--          External pressure gradient
              IF ( dp_external )  THEN
                 DO  k = dp_level_ind_b+1, nzt
-                   tend(k,j,i) = tend(k,j,i) - dpdxy(1) * dp_smooth_factor(k)   &
+                   tend(k,j,i) = tend(k,j,i) - dpdxy_loc(1) * dp_smooth_factor(k)   &
                                  * MERGE( 1.0_wp/rho_reference, drho_ref_zu(k), &
                                           use_single_reference_value )
                 ENDDO
@@ -722,7 +724,7 @@
 !--          External pressure gradient
              IF ( dp_external )  THEN
                 DO  k = dp_level_ind_b+1, nzt
-                   tend(k,j,i) = tend(k,j,i) - dpdxy(2) * dp_smooth_factor(k)   &
+                   tend(k,j,i) = tend(k,j,i) - dpdxy_loc(2) * dp_smooth_factor(k)   &
                                  * MERGE( 1.0_wp/rho_reference, drho_ref_zu(k), &
                                           use_single_reference_value )
                 ENDDO

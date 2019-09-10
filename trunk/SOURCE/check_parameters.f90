@@ -4623,7 +4623,7 @@
 !-- Namelist option k_offset_mcphee designates minimum k_offset for non-constant 
 !-- k_offset cases
     IF ( .NOT. koff_constant_mcphee ) THEN
-       koff_min_mcphee = k_offset_mcphee
+       koff_min_mcphee = 3
     ENDIF
    
 !

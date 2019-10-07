@@ -192,12 +192,13 @@
                 DO  i = nxl, nxr
                    DO  j = nys, nyn
                       DO  k = nzb+1, nzt-1
-                         tend(k,j,i) = tend(k,j,i) + g * sin_alpha_surface *     &
-                              0.5_wp * ( ( var(k,j,i)   - rho_slope_ref(k,i)   ) &
-                                           / ref_state(k) +                &
-                                         ( var(k+1,j,i) - rho_slope_ref(k+1,i) ) &
-                                           / ref_state(k+1) )            &
-                                     * MERGE( 1.0_wp, 0.0_wp,                    &
+                         tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g *    &
+                                       sin_alpha_surface * 0.5_wp *            & 
+                                     ( ( var(k,j,i)   - rho_slope_ref(k,i)   ) &
+                                               / ref_state(k) +                &
+                                       ( var(k+1,j,i) - rho_slope_ref(k+1,i) ) &
+                                               / ref_state(k+1) )              &
+                                     * MERGE( 1.0_wp, 0.0_wp,                  &
                                               BTEST( wall_flags_0(k,j,i), 0 ) )
                       ENDDO
                    ENDDO
@@ -208,12 +209,13 @@
                 DO  i = nxlu, nxr
                    DO  j = nys, nyn
                       DO  k = nzb+1, nzt-1
-                         tend(k,j,i) = tend(k,j,i) + g * sin_alpha_surface *         &
-                              0.5_wp * ( ( pt(k,j,i-1)         + pt(k,j,i)         ) &
-                                       - ( pt_slope_ref(k,i-1) + pt_slope_ref(k,i) ) &
-                                       ) / pt_surface                                &
-                                         * MERGE( 1.0_wp, 0.0_wp,                    &
-                                                  BTEST( wall_flags_0(k,j,i), 0 ) )
+                         tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g *    &
+                                       sin_alpha_surface * 0.5_wp *            &
+                                  ( ( pt(k,j,i-1)         + pt(k,j,i)         )&
+                                 - ( pt_slope_ref(k,i-1) + pt_slope_ref(k,i) ) &
+                                 ) / pt_surface                                &
+                                   * MERGE( 1.0_wp, 0.0_wp,                    &
+                                              BTEST( wall_flags_0(k,j,i), 0 ) )
                       ENDDO
                    ENDDO
                 ENDDO
@@ -227,11 +229,12 @@
                 DO  i = nxl, nxr
                    DO  j = nys, nyn
                       DO  k = nzb+1, nzt-1
-                         tend(k,j,i) = tend(k,j,i) + g * cos_alpha_surface *     &
-                              0.5_wp * ( ( var(k,j,i)   - rho_slope_ref(k,i)   ) &
-                                           / ref_state(k) +                &
+                         tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g *      &
+                                       cos_alpha_surface * 0.5_wp *              &
+                                       ( ( var(k,j,i)   - rho_slope_ref(k,i)   ) &
+                                           / ref_state(k) +                      &
                                          ( var(k+1,j,i) - rho_slope_ref(k+1,i) ) &
-                                           / ref_state(k+1) )            &
+                                           / ref_state(k+1) )                    &
                                      * MERGE( 1.0_wp, 0.0_wp,                    &
                                               BTEST( wall_flags_0(k,j,i), 0 ) )
                       ENDDO
@@ -243,8 +246,9 @@
                 DO  i = nxl, nxr
                    DO  j = nys, nyn
                       DO  k = nzb+1, nzt-1
-                         tend(k,j,i) = tend(k,j,i) + g * cos_alpha_surface *         &
-                              0.5_wp * ( ( pt(k,j,i)         + pt(k+1,j,i)         ) &
+                         tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g *          &
+                                       cos_alpha_surface * 0.5_wp *                  &
+                                       ( ( pt(k,j,i)         + pt(k+1,j,i)         ) &
                                        - ( pt_slope_ref(k,i) + pt_slope_ref(k+1,i) ) &
                                        ) / pt_surface                                &
                                          * MERGE( 1.0_wp, 0.0_wp,                    &
@@ -331,24 +335,26 @@
              IF ( ocean ) THEN
 
                 DO  k = nzb+1, nzt-1
-                   tend(k,j,i) = tend(k,j,i) + g * sin_alpha_surface *     &
-                        0.5_wp * ( ( var(k,j,i)   - rho_slope_ref(k,i)   ) &
-                                     / ref_state(k) +                &
-                                   ( var(k+1,j,i) - rho_slope_ref(k+1,i) ) &
-                                     / ref_state(k+1) )            &
-                               * MERGE( 1.0_wp, 0.0_wp,                    &
+                   tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g *          &
+                                 sin_alpha_surface * 0.5_wp *                  &
+                                 ( ( var(k,j,i)   - rho_slope_ref(k,i)   )     &
+                                     / ref_state(k) +                          &
+                                   ( var(k+1,j,i) - rho_slope_ref(k+1,i) )     &
+                                     / ref_state(k+1) )                        &
+                               * MERGE( 1.0_wp, 0.0_wp,                        &
                                         BTEST( wall_flags_0(k,j,i), 0 ) )
                 ENDDO
 
              ELSE
 
                 DO  k = nzb+1, nzt-1
-                   tend(k,j,i) = tend(k,j,i) + g * sin_alpha_surface *               &
-                                 0.5_wp * ( ( pt(k,j,i-1)         + pt(k,j,i)         ) &
-                                          - ( pt_slope_ref(k,i-1) + pt_slope_ref(k,i) ) &
-                                          ) / pt_surface                                &
-                                          * MERGE( 1.0_wp, 0.0_wp,                    &
-                                                   BTEST( wall_flags_0(k,j,i), 0 ) )
+                   tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g *          &
+                                 sin_alpha_surface * 0.5_wp *                  &
+                                 ( ( pt(k,j,i-1)         + pt(k,j,i)         ) &
+                                 - ( pt_slope_ref(k,i-1) + pt_slope_ref(k,i) ) &
+                                 ) / pt_surface                                &
+                                 * MERGE( 1.0_wp, 0.0_wp,                      &
+                                          BTEST( wall_flags_0(k,j,i), 0 ) )
                 ENDDO
 
              ENDIF
@@ -358,24 +364,26 @@
              IF ( ocean ) THEN
 
                 DO  k = nzb+1, nzt-1
-                   tend(k,j,i) = tend(k,j,i) + g * cos_alpha_surface *     &
-                        0.5_wp * ( ( var(k,j,i)   - rho_slope_ref(k,i)   ) &
-                                     / ref_state(k) +                &
-                                   ( var(k+1,j,i) - rho_slope_ref(k+1,i) ) &
-                                     / ref_state(k+1) )            &
-                               * MERGE( 1.0_wp, 0.0_wp,                    &
+                   tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g *          &
+                                 cos_alpha_surface * 0.5_wp *                  &
+                                 ( ( var(k,j,i)   - rho_slope_ref(k,i)   )     &
+                                     / ref_state(k) +                          &
+                                   ( var(k+1,j,i) - rho_slope_ref(k+1,i) )     &
+                                     / ref_state(k+1) )                        &
+                               * MERGE( 1.0_wp, 0.0_wp,                        &
                                         BTEST( wall_flags_0(k,j,i), 0 ) )
                 ENDDO
 
              ELSE
 
                 DO  k = nzb+1, nzt-1
-                   tend(k,j,i) = tend(k,j,i) + g * cos_alpha_surface *               &
-                                 0.5_wp * ( ( pt(k,j,i)         + pt(k+1,j,i)         ) &
-                                          - ( pt_slope_ref(k,i) + pt_slope_ref(k+1,i) ) &
-                                          ) / pt_surface                                &
-                                            * MERGE( 1.0_wp, 0.0_wp,                    &
-                                                     BTEST( wall_flags_0(k,j,i), 0 ) )
+                   tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g *          &
+                                 cos_alpha_surface * 0.5_wp *                  &
+                                 ( ( pt(k,j,i)         + pt(k+1,j,i)         ) &
+                                 - ( pt_slope_ref(k,i) + pt_slope_ref(k+1,i) ) &
+                                 ) / pt_surface                                &
+                                   * MERGE( 1.0_wp, 0.0_wp,                    &
+                                            BTEST( wall_flags_0(k,j,i), 0 ) )
                 ENDDO
 
              ENDIF

@@ -3047,14 +3047,19 @@
                    ENDDO ! k
 
 !--                Add buoyancy flux from melting in the surface boundary layer
+!--                Stabilizing buoyancy flux reduces TKE
+!--                Doesn't account for horizontal upslope (downslope) buoyancy 
+!--                fluxes that produce (reduce) TKE
+!--                This could be a reasonable assumption because the presence of
+!--                of a boundary reduces horizontal fluxes
                    IF (TRIM(constant_flux_layer) == 'top') THEN
                       surf_s = surf_def_h(2)%start_index(j,i)
                       surf_e = surf_def_h(2)%end_index(j,i)
                       DO  m = surf_s, surf_e
                          k = surf_def_h(2)%k(m)
-                         tend(k,j,i) = tend(k,j,i) +                           &
-                                       g*(alpha_T(k,j,i)*surf_def_h(2)%shf(m) +&
-                                          beta_S(k,j,i)*surf_def_h(2)%sasws(m))
+                         tend(k,j,i) = tend(k,j,i) + g *                          &
+                                       (alpha_T(k,j,i) * surf_def_h(2)%shf(m)   - &
+                                        beta_S(k,j,i)  * surf_def_h(2)%sasws(m))
                       ENDDO
                    ENDIF
                 ENDDO ! j
@@ -3575,9 +3580,9 @@
                 surf_e = surf_def_h(2)%end_index(j,i)
                 DO  m = surf_s, surf_e
                    k = surf_def_h(2)%k(m)
-                   tend(k,j,i) = tend(k,j,i) +                                 &
-                                 g*(alpha_T(k,j,i)*surf_def_h(2)%shf(m) +      &
-                                    beta_S(k,j,i)*surf_def_h(2)%sasws(m))
+                   tend(k,j,i) = tend(k,j,i) + g *                             &
+                                 (alpha_T(k,j,i) * surf_def_h(2)%shf(m)   -    &
+                                  beta_S(k,j,i)  * surf_def_h(2)%sasws(m))
                 ENDDO
              ENDIF
 

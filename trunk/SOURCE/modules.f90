@@ -674,6 +674,7 @@
                                                                    !< (or total water content with active cloud physics)
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  rdf                    !< rayleigh damping factor for velocity components
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  rdf_sc                 !< rayleigh damping factor for scalar quantities
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  rdf_uv                 !< rayleigh damping factor for scalar quantities
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  ref_state              !< reference state of potential temperature
                                                                    !< (and density in case of ocean simulation)
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  s_init                 !< initial profile of passive scalar concentration
@@ -1390,6 +1391,7 @@
     LOGICAL ::  ocean = .FALSE.                                  !< namelist parameter
     LOGICAL ::  linear_eqnOfState = .FALSE.                      !< namelist parmaeter for linear equation of state in ocean
     LOGICAL ::  fixed_alpha = .TRUE.                             !< use fixed thermal and haline expansion coefficients
+    LOGICAL ::  horizontal_rayleigh_damping = .FALSE.            !< namelist parameter
     LOGICAL ::  idealized_diurnal = .FALSE.                      !< flag for diurnal cycle
     LOGICAL ::  outflow_l = .FALSE.                              !< left domain boundary has non-cyclic outflow?
     LOGICAL ::  outflow_n = .FALSE.                              !< north domain boundary has non-cyclic outflow?

@@ -284,7 +284,8 @@
                flux_s_qc, flux_s_qr, flux_s_s, flux_s_sa, flux_l_e, flux_l_nc, &
                flux_l_nr, flux_l_pt, flux_l_q, flux_l_qc, flux_l_qr, flux_l_s, &
                flux_l_sa, nc, nc_p, nr, nr_p, pt, ptdf_x, ptdf_y, pt_init,     &
-               pt_p, prho, q, q_init, q_p, qc, qc_p, qr, qr_p, rdf, rdf_sc,    &
+               pt_p, prho, q, q_init, q_p, qc, qc_p, qr, qr_p,                 &
+               rdf, rdf_uv, rdf_sc,                                            &
                ref_state, rho_ocean, s,  s_init, s_p, sa, sa_init, sa_p, tend, &
                te_m, tnc_m,  tnr_m, tpt_m, tq_m, tqc_m, tqr_m, ts_m, tsa_m,    &
                tu_m, tv_m, tw_m, u, ug, u_init, u_p, v, vg, vpt, v_init, v_p,  &
@@ -655,7 +656,7 @@
                 u_p(k,j,i) = u(k,j,i) + ( dt_3d *                               &
                                             ( tsc(2) * tend(k,j,i) +            &
                                               tsc(3) * tu_m(k,j,i) )            &
-                                            - tsc(5) * rdf(k)                   &
+                                            - tsc(5) * rdf_uv(k)                &
                                                      * ( u(k,j,i) - u_init(k) ) &
                                         ) * MERGE( 1.0_wp, 0.0_wp,              &
                                                  BTEST( wall_flags_0(k,j,i), 1 )&
@@ -746,7 +747,7 @@
                 v_p(k,j,i) = v(k,j,i) + ( dt_3d *                              &
                                             ( tsc(2) * tend(k,j,i) +           &
                                               tsc(3) * tv_m(k,j,i) )           &
-                                            - tsc(5) * rdf(k)                  &
+                                            - tsc(5) * rdf_uv(k)               &
                                                      * ( v(k,j,i) - v_init(k) )&
                                         ) * MERGE( 1.0_wp, 0.0_wp,             &
                                                    BTEST( wall_flags_0(k,j,i), 2 )&

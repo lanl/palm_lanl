@@ -1525,6 +1525,38 @@
     IF ( large_scale_forcing  .OR.  nudging )  CALL lsf_nudging_check_parameters
 
 !
+!-- In case of a given slope, compute the relevant quantities
+    IF ( alpha_surface /= 0.0_wp )  THEN
+       IF ( ABS( alpha_surface ) > 90.0_wp )  THEN
+          WRITE( message_string, * ) 'ABS( alpha_surface = ', alpha_surface,   &
+                                     ' ) must be < 90.0'
+          CALL message( 'check_parameters', 'PA0043', 0, 1, 0, 6, 0 )
+       ENDIF
+       sloping_surface = .TRUE.
+    ENDIF
+    cos_alpha_surface = COS( alpha_surface / 180.0_wp * pi )
+    sin_alpha_surface = SIN( alpha_surface / 180.0_wp * pi )
+
+    IF ( alpha_surface == 0.0_wp .AND. ambient_density_for_buoyancy )  THEN
+       WRITE( message_string, * ) 'ambient density for buoyancy will not be    & 
+                                  used because there is no slope, i.e.,        &
+                                  alpha_surface ==0 '
+       CALL message( 'check_parameters', 'PA0043', 1, 2, 0, 6, 0 )
+    ENDIF
+
+!
+!-- Overwrite latitude if necessary and compute Coriolis parameter.
+!-- To do - move initialization of f and fs to coriolis_mod.
+    IF ( input_pids_static )  THEN
+       latitude  = init_model%latitude
+       longitude = init_model%longitude
+    ENDIF
+
+    f  = 2.0_wp * omega * SIN( latitude / 180.0_wp * pi ) * cos_alpha_surface
+    fx = 2.0_wp * omega * SIN( latitude / 180.0_wp * pi ) * sin_alpha_surface
+    fy = 2.0_wp * omega * COS( latitude / 180.0_wp * pi )
+
+!
 !-- In case of no model continuation run, check initialising parameters and
 !-- deduce further quantities
     IF ( TRIM( initializing_actions ) /= 'read_restart_data' )  THEN
@@ -1812,37 +1844,6 @@
           CALL message( 'check_parameters', 'PA0381', 1, 2, 0, 6, 0 )
         ENDIF
     ENDIF
-
-!
-!-- In case of a given slope, compute the relevant quantities
-    IF ( alpha_surface /= 0.0_wp )  THEN
-       IF ( ABS( alpha_surface ) > 90.0_wp )  THEN
-          WRITE( message_string, * ) 'ABS( alpha_surface = ', alpha_surface,   &
-                                     ' ) must be < 90.0'
-          CALL message( 'check_parameters', 'PA0043', 0, 1, 0, 6, 0 )
-       ENDIF
-       sloping_surface = .TRUE.
-    ENDIF
-    cos_alpha_surface = COS( alpha_surface / 180.0_wp * pi )
-    sin_alpha_surface = SIN( alpha_surface / 180.0_wp * pi )
-
-    IF ( alpha_surface == 0.0_wp .AND. ambient_density_for_buoyancy )  THEN
-       WRITE( message_string, * ) 'ambient density for buoyancy will not be    & 
-                                  used because there is no slope, i.e.,        &
-                                  alpha_surface ==0 '
-       CALL message( 'check_parameters', 'PA0043', 1, 2, 0, 6, 0 )
-    ENDIF
-!
-!-- Overwrite latitude if necessary and compute Coriolis parameter.
-!-- To do - move initialization of f and fs to coriolis_mod.
-    IF ( input_pids_static )  THEN
-       latitude  = init_model%latitude
-       longitude = init_model%longitude
-    ENDIF
-
-    f  = 2.0_wp * omega * SIN( latitude / 180.0_wp * pi ) * cos_alpha_surface
-    fx = 2.0_wp * omega * SIN( latitude / 180.0_wp * pi ) * sin_alpha_surface
-    fy = 2.0_wp * omega * COS( latitude / 180.0_wp * pi )
 
 !
 !-- Check and set buoyancy related parameters and switches
@@ -4622,7 +4623,7 @@
 !-- Namelist option k_offset_mcphee designates minimum k_offset for non-constant 
 !-- k_offset cases
     IF ( .NOT. koff_constant_mcphee ) THEN
-       koff_min_mcphee = k_offset_mcphee
+       koff_min_mcphee = 3
     ENDIF
    
 !

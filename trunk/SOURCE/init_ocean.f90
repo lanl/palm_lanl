@@ -85,7 +85,7 @@
 
     USE arrays_3d,                                                             &
         ONLY:  dzu, dzw, hyp, pt_init, ref_state, rho_ambient, rho_ref_zu,     &
-               rho_ref_zw, sa_init, zu, zw
+               rho_ref_zw, sa_init, u_init, v_init, zu, zw
 
     USE cloud_parameters,                                                      &
         ONLY:  cp
@@ -94,9 +94,11 @@
         ONLY:  cpw
 
     USE control_parameters,                                                    &
-        ONLY:  ambient_density_for_buoyancy, cos_alpha_surface, g,             &
-               molecular_viscosity, prandtl_number, prho_reference,            &
-               rho_reference, rho_surface, surface_pressure,                   &
+        ONLY:  ambient_density_for_buoyancy, cos_alpha_surface,                &
+               dpdxy, dpdxy_loc, dpdx, dpdy, dpdx_phase, dpdy_phase,           &
+               f, g, initialize_to_geostrophic,                                &
+               message_string, molecular_viscosity, prandtl_number,            &
+               prho_reference, rho_reference, rho_surface, surface_pressure,   &
                use_single_reference_value, stokes_force
 
     USE eqn_state_seawater_mod,                                                &
@@ -222,6 +224,23 @@
        ref_state(:) = rho_ref_zw(:)
     ENDIF
 
+    IF (initialize_to_geostrophic) THEN
+       !-- For sinusoidally varying pressure gradient, solve for 
+       !-- instantaneous pressure gradient
+       dpdxy_loc = dpdxy
+       IF ( ANY( dpdx /= 0.0_wp ) .OR. ANY( dpdy /= 0.0_wp) ) THEN
+          DO k = 1, 30
+             dpdxy_loc(1) = dpdxy_loc(1) + dpdx(k)*cos(-1.0_wp*dpdx_phase(k))
+             dpdxy_loc(2) = dpdxy_loc(2) + dpdy(k)*cos(-1.0_wp*dpdy_phase(k))
+          ENDDO
+       ENDIF
+          
+       !-- Update u_init and v_init used in rayleigh damping scheme
+       u_init(:) = -1.0_wp*dpdxy_loc(2)/(rho_reference*f)
+       v_init(:) =         dpdxy_loc(1)/(rho_reference*f)
+          
+    ENDIF
+    
 !
 !-- Initialize Stokes drift, if required
     IF ( stokes_force ) THEN

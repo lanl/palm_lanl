@@ -1364,6 +1364,7 @@
     LOGICAL ::  inflow_n = .FALSE.                               !< north domain boundary has non-cyclic inflow?
     LOGICAL ::  inflow_r = .FALSE.                               !< right domain boundary has non-cyclic inflow?
     LOGICAL ::  inflow_s = .FALSE.                               !< south domain boundary has non-cyclic inflow?
+    LOGICAL ::  initialize_to_geostrophic = .TRUE.               !< namelist parameter, damp to the geostrophic velocity 
     LOGICAL ::  koff_constant_mcphee = .FALSE.                   !< namelist parameter
     LOGICAL ::  large_scale_forcing = .FALSE.                    !< namelist parameter
     LOGICAL ::  large_scale_subsidence = .FALSE.                 !< namelist parameter
@@ -1401,6 +1402,7 @@
     LOGICAL ::  rans_mode = .FALSE.                              !< switch between RANS and LES mode
     LOGICAL ::  rans_tke_e = .FALSE.                             !< use TKE-e turbulence closure for RANS mode
     LOGICAL ::  rans_tke_l = .FALSE.                             !< use TKE-l turbulence closure for RANS mode
+    LOGICAL ::  rayleigh_damping_geostrophic = .TRUE.            !< namelist parameter, damp to the geostrophic velocity 
     LOGICAL ::  read_svf = .FALSE.                               !< ENVPAR namelist parameter to steer input of svf (ENVPAR is created by palmrun)
     LOGICAL ::  recycling_yshift = .FALSE.                       !< namelist parameter
     LOGICAL ::  run_control_header = .FALSE.                     !< onetime output of RUN_CONTROL header
@@ -1632,6 +1634,7 @@
     REAL(wp) ::  do2d_xz_last_time(0:1) = -1.0_wp                  !< time of previous xz output
     REAL(wp) ::  do2d_yz_last_time(0:1) = -1.0_wp                  !< time of previous yz output
     REAL(wp) ::  dpdxy(1:2) = 0.0_wp                               !< namelist parameter, constant pressure gradient
+    REAL(wp) ::  dpdxy_loc(1:2) = 0.0_wp                           !< local parameter, constant pressure gradient
     REAL(wp) ::  dpdx(30)  = 0.0_wp                                !< namelist parameter, pressure gradient amplitude
     REAL(wp) ::  dpdy(30)  = 0.0_wp                                !< namelist parameter, pressure gradient amplitude
     REAL(wp) ::  dpdx_phase(30)  = 0.0_wp                          !< namelist parameter, pressure gradient phase in radians

@@ -167,8 +167,8 @@
 !--    eqn_state_seawater_func(hyp(k),pt_init(0),sa_init(0))
        DO  i = nxlg, nxrg
           DO  k = nzb, nzt+1
-             pt_slope_ref(k,i) = pt_init(0)
-             sa_slope_ref(k,i) = sa_init(0)   
+             pt_slope_ref(k,i) = pt_init(k)
+             sa_slope_ref(k,i) = sa_init(k)   
              rho_slope_ref(k,i) = rho_ambient(k)
           ENDDO                
        ENDDO

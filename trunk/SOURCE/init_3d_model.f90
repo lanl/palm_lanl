@@ -654,7 +654,8 @@
               ngp_3d_inner_tmp(0:statistic_regions),                           &
               sums_divnew_l(0:statistic_regions),                              &
               sums_divold_l(0:statistic_regions) )
-    ALLOCATE( dp_smooth_factor(nzb:nzt), rdf(nzb+1:nzt), rdf_sc(nzb+1:nzt) )
+    ALLOCATE( dp_smooth_factor(nzb:nzt),                                       &
+              rdf(nzb+1:nzt), rdf_uv(nzb+1:nzt), rdf_sc(nzb+1:nzt) )
     ALLOCATE( ngp_2dh_outer(nzb:nzt+1,0:statistic_regions),                    &
               ngp_2dh_outer_l(nzb:nzt+1,0:statistic_regions),                  &
               ngp_2dh_s_inner(nzb:nzt+1,0:statistic_regions),                  &
@@ -2607,6 +2608,7 @@
 !
 !-- Initialize Rayleigh damping factors
     rdf    = 0.0_wp
+    rdf_uv = 0.0_wp
     rdf_sc = 0.0_wp
     IF ( rayleigh_damping_factor /= 0.0_wp )  THEN
        IF (  .NOT.  ocean )  THEN
@@ -2630,6 +2632,7 @@
        ENDIF
     ENDIF
     IF ( scalar_rayleigh_damping )  rdf_sc = rdf
+    IF ( horizontal_rayleigh_damping )  rdf_uv = rdf
 
 !
 !-- Initialize the starting level and the vertical smoothing factor used for 

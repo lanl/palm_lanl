@@ -786,6 +786,7 @@
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  km          !< eddy diffusivity for momentum
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  ks          !< eddy diffusivity for salt
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  prr         !< rain rate
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  sgs_diss
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  p_loc       !< local array in multigrid/sor solver containing the pressure which is iteratively advanced in each iteration step
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  tend        !< tendency field (time integration)
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  tric        !< coefficients of the tridiagonal matrix for solution of the Poisson equation in Fourier space

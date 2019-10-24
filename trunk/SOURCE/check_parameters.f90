@@ -3525,9 +3525,38 @@
                 dopr_unit(i)  = 'kg2/m6'
                 hom(:,2,116,:) = SPREAD( zu, 2, statistic_regions+1 )
              ENDIF
-
-
-
+          CASE ( 'eps')
+             dopr_index(i) = 165
+             dopr_unit(i)  = 'm3/s3'
+             hom(:,2,165,:) = SPREAD( zw, 2, statistic_regions+1 ) 
+          CASE ( 'u*dp*dz' )
+             dopr_index(i) = 166
+             dopr_unit(i) = 'm2/s3'
+             hom(:,2,166,:) = SPREAD( zw, 2, statistic_regions+1 )
+          CASE ( 'v*dp*dz' )
+             dopr_index(i) = 167
+             dopr_unit(i) = 'm2/s3'
+             hom(:,2,167,:) = SPREAD( zw, 2, statistic_regions+1 )
+          CASE ( 'pt*dp*dz' )
+             dopr_index(i) = 168
+             dopr_unit(i) = 'mK/s2'
+             hom(:,2,168,:) = SPREAD( zw, 2, statistic_regions+1 )
+          CASE ( 'sa*dp*dz' )
+             dopr_index(i) = 169
+             dopr_unit(i) = 'm PSU/s2'
+             hom(:,2,169,:) = SPREAD( zw, 2, statistic_regions+1 )
+          CASE ( 'w*2T*' )
+             dopr_index(i) = 170
+             dopr_unit(i) = 'm2 K/s2'
+             hom(:,2,170,:) = SPREAD( zw, 2, statistic_regions+1 )
+          CASE ( 'w*2S*' )
+             dopr_index(i) = 171
+             dopr_unit(i) = 'm2 PSU/s2'
+             hom(:,2,171,:) = SPREAD( zw, 2, statistic_regions+1 )
+          CASE ( 'pt*sa*' )
+             dopr_index(i) = 172
+             dopr_unit(i) = 'K PSU'
+             hom(:,2,172,:) = SPREAD( zu, 2, statistic_regions+1 )
           CASE DEFAULT
 
              CALL lsm_check_data_output_pr( data_output_pr(i), i, unit,        &

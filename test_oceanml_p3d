@@ -36,7 +36,7 @@
         bc_sa_t = 'neumann', /
 
 &runtime_parameters
-        end_time = 3600.0,
+        end_time = 10800.0,
         create_disturbances = .T.,
 !        disturbance_level_b = -4.,
         dt_disturb = 150.,
@@ -51,6 +51,8 @@
         data_output_pr = 'e','e*', '#pt', '#sa', 'p', 'hyp', 'km', 'kh', 'l',
               '#u','#v','w','prho','w"u"','w*u*','w"v"','w*v*','w"pt"','w*pt*',
               'w"sa"','w*sa*','w*e*','u*2','v*2','w*2','pt*2','w*3','Sw',
-              'w*2pt*','w*pt*2','w*u*u*:dz','w*p*:dz','rho_ocean','alpha_T', /
+              'w*2pt*','w*pt*2','w*u*u*:dz','w*p*:dz','rho_ocean','alpha_T', 
+	      'u*dp*dz','v*dp*dz','pt*dp*dz','sa*dp*dz','w*2T*','w*2sa*',
+              'sa*2','eps', 'w*2T*', 'w*2S*', 'pt*sa*', 'beta_S', /
 
 

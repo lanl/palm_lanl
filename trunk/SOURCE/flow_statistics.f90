@@ -284,7 +284,8 @@
                u_stk, v_stk, u_stk_zw, v_stk_zw,                               &
                csflux_output_conversion, heatflux_output_conversion,           &
                momentumflux_output_conversion, scalarflux_output_conversion,   &
-               salinityflux_output_conversion, waterflux_output_conversion
+               salinityflux_output_conversion, waterflux_output_conversion,    &
+               sgs_diss
         
     USE cloud_parameters,                                                      &
         ONLY:   cp, l_v, l_d_cp, pt_d_t
@@ -376,7 +377,8 @@
     REAL(wp) ::  vst2             !<
     REAL(wp) ::  v2               !<
     REAL(wp) ::  w2               !<
-
+    REAL(wp) ::  pfl
+    
     REAL(wp) ::  dptdz(nzb+1:nzt+1)    !<
     REAL(wp) ::  sums_ll(nzb:nzt+1,2)  !<
 
@@ -488,6 +490,12 @@
                                                               * flag
                 sums_l(k,4,tn)  = sums_l(k,4,tn)  + pt(k,j,i) * rmask(j,i,sr)  &
                                                               * flag
+                sums_l(k,165,tn) = sums_l(k,165,tn) + sgs_diss(k,j,i) *        &
+                                                         rmask(j,i,sr) * flag
+                sums_l(k,3,tn) = sums_l(k,3,tn) + w(k,j,i) * rmask(j,i,sr)     &
+                                                        * flag
+                sums_l(k,40,tn) = sums_l(k,40,tn) + p(k,j,i) * rmask(j,i,sr)   &
+                                                        * flag       
              ENDDO
           ENDDO
        ENDDO
@@ -606,6 +614,9 @@
              IF ( ocean )  THEN
                 sums_l(:,23,0) = sums_l(:,23,0) + sums_l(:,23,i)
              ENDIF
+             sums_l(:,165,0) = sums_l(:,165,0) + sums_l(:,165,i)
+             sums_l(:,3,0) = sums_l(:,3,0) + sums_l(:,3,i)
+             sums_l(:,40,0)= sums_l(:,40,0) + sums_l(:,40,i)
              IF ( humidity )  THEN
                 sums_l(:,41,0) = sums_l(:,41,0) + sums_l(:,41,i)
                 sums_l(:,44,0) = sums_l(:,44,0) + sums_l(:,44,i)
@@ -631,6 +642,15 @@
                            MPI_SUM, comm2d, ierr )
        IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
        CALL MPI_ALLREDUCE( sums_l(nzb,4,0), sums(nzb,4), nzt+2-nzb, MPI_REAL,  &
+                           MPI_SUM, comm2d, ierr )
+       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
+       CALL MPI_ALLREDUCE( sums_l(nzb,165,0), sums(nzb,165), nzt+2-nzb, MPI_REAL,  &
+                           MPI_SUM, comm2d, ierr )
+       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
+       CALL MPI_ALLREDUCE( sums_l(nzb,3,0), sums(nzb,3), nzt+2-nzb, MPI_REAL,  &
+                           MPI_SUM, comm2d, ierr )
+       IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
+       CALL MPI_ALLREDUCE( sums_l(nzb,40,0), sums(nzb,40), nzt+2-nzb, MPI_REAL,  &
                            MPI_SUM, comm2d, ierr )
        IF ( ocean )  THEN
           IF ( collective_wait )  CALL MPI_BARRIER( comm2d, ierr )
@@ -664,6 +684,9 @@
        sums(:,2) = sums_l(:,2,0)
        sums(:,4) = sums_l(:,4,0)
        IF ( ocean )  sums(:,23) = sums_l(:,23,0)
+       sums(:,3) = sums_l(:,3,0)
+       sums(:,40) = sums_l(:,40,0)
+       sums(:,165) = sums_l(:,165,0)
        IF ( humidity ) THEN
           sums(:,44) = sums_l(:,44,0)
           sums(:,41) = sums_l(:,41,0)
@@ -689,10 +712,15 @@
        ENDDO
        IF ( TRIM(constant_flux_layer) == 'top') sums(nzt+1,4) = sum_pt/surf_def_h(2)%ns
        IF ( TRIM(constant_flux_layer) == 'bottom') sums(nzb,4) = sum_pt/surf_def_h(0)%ns
+       sums(:,165) = sums(:,165) / ngp_2dh(sr)
+       sums(:,3) = sums(:,3) / ngp_2dh(sr)
+       sums(:,40) = sums(:,40) / ngp_2dh(sr)
        hom(:,1,1,sr) = sums(:,1)             ! u
        hom(:,1,2,sr) = sums(:,2)             ! v
        hom(:,1,4,sr) = sums(:,4)             ! pt
-
+       hom(:,1,165,sr) = sums(:,165)
+       hom(:,1,3,sr) = sums(:,3)
+       hom(:,1,40,sr) = sums(:,40)
 !
 !--    Salinity
        IF ( ocean )  THEN
@@ -777,17 +805,17 @@
                 flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 22 ) )
 !
 !--             Prognostic and diagnostic variables
-                sums_l(k,3,tn)  = sums_l(k,3,tn)  + w(k,j,i)  * rmask(j,i,sr)  &
-                                                              * flag
+!                sums_l(k,3,tn)  = sums_l(k,3,tn)  + w(k,j,i)  * rmask(j,i,sr)  &
+!                                                              * flag
                 sums_l(k,8,tn)  = sums_l(k,8,tn)  + e(k,j,i)  * rmask(j,i,sr)  &
                                                               * flag
                 sums_l(k,9,tn)  = sums_l(k,9,tn)  + km(k,j,i) * rmask(j,i,sr)  &
                                                               * flag
                 sums_l(k,10,tn) = sums_l(k,10,tn) + kh(k,j,i) * rmask(j,i,sr)  &
                                                               * flag
-                sums_l(k,40,tn) = sums_l(k,40,tn) + p(k,j,i)                   &
-                                           * momentumflux_output_conversion(k) &
-                                                              * flag
+!                sums_l(k,40,tn) = sums_l(k,40,tn) + p(k,j,i)                   &
+!                                           * momentumflux_output_conversion(k) &
+!                                                              * flag
                 sums_l(k,33,tn) = sums_l(k,33,tn) + &
                                   ( pt(k,j,i) - hom(k,1,4,sr) )**2             &
                                   * rmask(j,i,sr) * flag
@@ -1093,6 +1121,37 @@
                                                   * ddzu(k+1) * rmask(j,i,sr)  &
                                                   * flag
                 ENDIF
+
+                pfl = ( (p(k,j,i) - 2.0/3.0*e(k,j,i) - 0.5*(u(k,j,i)**2.0 + &
+                         v(k,j,i)**2.0 + w(k,j,i)**2)) - (p(k+1,j,i) -    &
+                         2.0/3.0*e(k+1,j,i) - 0.5*(u(k+1,j,i)**2 + v(k+1,j,i)**2 + &
+                         w(k+1,j,i)**2.0)) ) * ddzu(k)
+
+                ust = 0.5_wp * ( u(k,j,i) - hom(k,1,1,sr) + u(k+1,j,i) - hom(k+1,1,1,sr) )
+                sums_l(k,166,tn) =  sums_l(k,166,tn) + pfl*ust
+ 
+                ust = 0.5_wp * ( v(k,j,i) - hom(k,1,2,sr) + v(k+1,j,i) - hom(k+1,1,2,sr) )
+                sums_l(k,167,tn) =  sums_l(k,167,tn) + pfl*ust
+
+                ust = 0.5_wp * ( pt(k,j,i) - hom(k,1,4,sr) + pt(k+1,j,i) - hom(k+1,1,4,sr) )
+                sums_l(k,168,tn) =  sums_l(k,168,tn) + pfl*ust
+
+                ust = 0.5_wp * ( sa(k,j,i) - hom(k,1,23,sr) + sa(k+1,j,i) - hom(k+1,1,23,sr) )
+                sums_l(k,169,tn) =  sums_l(k,169,tn) + pfl*ust
+
+                ! w'w'T'
+                ust = 0.5_wp * ( pt(k,j,i) - hom(k,1,4,sr) + pt(k+1,j,i) - hom(k+1,1,4,sr) )
+                pfl = (w(k,j,i) - hom(k,1,3,sr))**2.0_wp
+                sums_l(k,170,tn) = sums_l(k,170,tn) + ust*pfl
+
+                ! w'w'S'
+                ust = 0.5_wp * ( sa(k,j,i) - hom(k,1,23,sr) + pt(k+1,j,i) - hom(k+1,1,23,sr ))
+                pfl = (w(k,j,i) - hom(k,1,3,sr))**2.0_wp
+                sums_l(k,171,tn) = sums_l(k,171,tn) + ust*pfl
+
+                ! pt*sa*
+                sums_l(k,172,tn) = sums_l(k,172,tn) + (sa(k,j,i) - hom(k,1,23,sr)) *    &
+                                        (pt(k,j,i) - hom(k,1,4,sr))
 
              ENDDO
 
@@ -2151,6 +2210,12 @@
           hom(:,1,163,sr) = u_stk_zw
           hom(:,1,164,sr) = v_stk_zw
        ENDIF
+
+       hom(:,1,165,sr) = sums(:,165)
+       hom(:,1,166,sr) = sums(:,166)
+       hom(:,1,167,sr) = sums(:,167)
+       hom(:,1,168,sr) = sums(:,168)
+       hom(:,1,169,sr) = sums(:,169)
 
        IF ( large_scale_forcing )  THEN
           hom(:,1,81,sr) = sums_ls_l(:,0)          ! td_lsa_lpt

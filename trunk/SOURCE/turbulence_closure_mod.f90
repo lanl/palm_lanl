@@ -119,7 +119,8 @@
         ONLY:  alpha_T, beta_S, diss, diss_p, dbdx, dbdy, dbdz,                &
                dptdx, dptdy, dptdz, dsadx, dsady, dsadz, dudx, dudy, dudz,     &
                dvdx, dvdy, dvdz, dwdx, dwdy, dwdz, dzu, e, e_p, kh, km, ks,    &
-               mean_inflow_profiles, prho, pt, tdiss_m, te_m, tend, u, v, vpt, w
+               mean_inflow_profiles, prho, pt, tdiss_m, sgs_diss, te_m, tend,  &
+               u, v, vpt, w
 #else
     USE arrays_3d,                                                             &
         ONLY:  alpha_T, beta_S, diss, diss_1, diss_2, diss_3, diss_p,          &
@@ -127,7 +128,7 @@
                dsadx, dsady, dsadz, dudx, dudy, dudz, dvdx, dvdy, dvdz,        &
                dwdx, dwdy, dwdz, dzu, e,                                       &
                e_1, e_2, e_3, e_p, kh, km, ks, mean_inflow_profiles, prho, pt, &
-               tdiss_m, te_m, tend, u, v, vpt, w
+               sgs_diss, tdiss_m, te_m, tend, u, v, vpt, w
 #endif
 
     USE control_parameters,                                                    &
@@ -1062,6 +1063,7 @@
     ALLOCATE( kh(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
     ALLOCATE( ks(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
     ALLOCATE( km(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
+    ALLOCATE( sgs_diss(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
 
     ALLOCATE( dummy1(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )                           !> @todo remove later
     ALLOCATE( dummy2(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
@@ -2709,6 +2711,7 @@
                                         * MERGE( 1.0_wp, 0.0_wp,               &
                                                 BTEST( wall_flags_0(k,j,i), 0 )&
                                                )
+          sgs_diss(k,j,i) = diss_p(k,j,i)
        ENDDO
 
 !
@@ -2720,6 +2723,7 @@
              DO  m = surf_s, surf_e
                 k = surf_def_h(l)%k(m)
                 diss_p(k,j,i) = surf_def_h(l)%us(m)**3 / ( kappa * ddzu(k) )
+                sgs_diss(k,j,i) = diss_p(k,j,i)
              ENDDO
           ENDDO
 
@@ -2729,6 +2733,7 @@
              DO  m = surf_s, surf_e
                 k = surf_def_v(l)%k(m)
                 diss_p(k,j,i) = surf_def_v(l)%us(m)**3 / ( kappa * 0.5_wp * dy )
+                sgs_diss(k,j,i) = diss_p(k,j,i)
              ENDDO
           ENDDO
 
@@ -2738,6 +2743,7 @@
              DO  m = surf_s, surf_e
                 k = surf_def_v(l)%k(m)
                 diss_p(k,j,i) = surf_def_v(l)%us(m)**3 / ( kappa * 0.5_wp * dx )
+                sgs_diss(k,j,i) = diss_p(k,j,i)
              ENDDO
           ENDDO
        ENDIF
@@ -2748,6 +2754,7 @@
           DO  m = surf_s, surf_e
              k = surf_def_h(l)%k(m)
              diss_p(k,j,i) = surf_def_h(l)%us(m)**3 / ( kappa * ddzu(k) )
+             sgs_diss(k,j,i) = diss_p(k,j,i)
           ENDDO
        ENDIF
 !
@@ -2773,6 +2780,7 @@
                                     0.1_wp * diss(k,j,i),  &
                                     0.0001_wp ),           &
                                2.0_wp * diss(k,j,i) )
+          sgs_diss(k,j,i) = diss_p(k,j,i)
        ENDDO
 
        IF ( intermediate_timestep_count == 1 )  dummy1(:,j,i) = diss_p(:,j,i)   !> @todo remove later
@@ -3800,6 +3808,7 @@
 
                 dissipation(k,j) = ( 0.19_wp + 0.74_wp * l / ll )              &
                                    * e(k,j,i) * SQRT( e(k,j,i) ) / l
+                sgs_diss(k,j,i) = dissipation(k,j)
 
              ELSEIF ( rans_tke_l )  THEN
 
@@ -3938,6 +3947,7 @@
           dissipation(k) = ( 0.19_wp + 0.74_wp * l / ll )                      &
                            * e(k,j,i) * SQRT( e(k,j,i) ) / l
 
+          sgs_diss(k,j,i) = dissipation(k)
 !
 !--    ...in case of RANS
        ELSEIF ( rans_tke_l )  THEN

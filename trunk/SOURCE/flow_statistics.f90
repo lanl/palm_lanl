@@ -377,7 +377,8 @@
     REAL(wp) ::  vst2             !<
     REAL(wp) ::  v2               !<
     REAL(wp) ::  w2               !<
-    REAL(wp) ::  pfl
+    REAL(wp) ::  pfl, pfl_x, pfl_y, pfl_z
+    REAL(wp) ::  ufluc, vfluc, wfluc
     
     REAL(wp) ::  dptdz(nzb+1:nzt+1)    !<
     REAL(wp) ::  sums_ll(nzb:nzt+1,2)  !<
@@ -454,6 +455,8 @@
                               ( sums_us2_ws_l(:,i) + sums_vs2_ws_l(:,i) +      &
                                 sums_ws2_ws_l(:,i) )                           &
                               * momentumflux_output_conversion ! e*
+             sums_l(:,173,i) = sums_vsus_ws_l(:,i)                             &
+                              * momentumflux_output_conversion ! v*u*
           ENDDO
 
        ENDIF
@@ -1122,22 +1125,24 @@
                                                   * flag
                 ENDIF
 
-                pfl = ( (p(k,j,i) - 2.0/3.0*e(k,j,i) - 0.5*(u(k,j,i)**2.0 + &
-                         v(k,j,i)**2.0 + w(k,j,i)**2)) - (p(k+1,j,i) -    &
-                         2.0/3.0*e(k+1,j,i) - 0.5*(u(k+1,j,i)**2 + v(k+1,j,i)**2 + &
-                         w(k+1,j,i)**2.0)) ) * ddzu(k)
-
-                ust = 0.5_wp * ( u(k,j,i) - hom(k,1,1,sr) + u(k+1,j,i) - hom(k+1,1,1,sr) )
-                sums_l(k,166,tn) =  sums_l(k,166,tn) + pfl*ust
+                !x,y pressure fluctuations will live at cell centers
+                pfl_x = (p(k,j,i) - p(k,j,i-1)) * ddx
  
-                ust = 0.5_wp * ( v(k,j,i) - hom(k,1,2,sr) + v(k+1,j,i) - hom(k+1,1,2,sr) )
-                sums_l(k,167,tn) =  sums_l(k,167,tn) + pfl*ust
+                pfl_y = (p(k,j,i) - p(k,j-1,i)) * ddy 
+
+                pfl_z = (p(k,j,i) - hom(k,1,40,sr) - (p(k+1,j,i) - hom(k,1,40,sr))) / ddzu(k) 
+
+                ufluc = 0.5_wp * ( u(k,j,i) - hom(k,1,1,sr) + u(k+1,j,i) - hom(k+1,1,1,sr) )
+                vfluc = 0.5_wp * ( v(k,j,i) - hom(k,1,2,sr) + v(k+1,j,i) - hom(k+1,1,2,sr) )
+                sums_l(k,166,tn) =  sums_l(k,166,tn) + pfl_z*ufluc
+ 
+                sums_l(k,167,tn) =  sums_l(k,167,tn) + pfl_z*vfluc
 
                 ust = 0.5_wp * ( pt(k,j,i) - hom(k,1,4,sr) + pt(k+1,j,i) - hom(k+1,1,4,sr) )
-                sums_l(k,168,tn) =  sums_l(k,168,tn) + pfl*ust
+                sums_l(k,168,tn) =  sums_l(k,168,tn) + pfl_z*ust
 
                 ust = 0.5_wp * ( sa(k,j,i) - hom(k,1,23,sr) + sa(k+1,j,i) - hom(k+1,1,23,sr) )
-                sums_l(k,169,tn) =  sums_l(k,169,tn) + pfl*ust
+                sums_l(k,169,tn) =  sums_l(k,169,tn) + pfl_z*ust
 
                 ! w'w'T'
                 ust = 0.5_wp * ( pt(k,j,i) - hom(k,1,4,sr) + pt(k+1,j,i) - hom(k+1,1,4,sr) )
@@ -1153,6 +1158,35 @@
                 sums_l(k,172,tn) = sums_l(k,172,tn) + (sa(k,j,i) - hom(k,1,23,sr)) *    &
                                         (pt(k,j,i) - hom(k,1,4,sr))
 
+                ufluc = 0.5_wp*(u(k,j,i)+u(k,j,i-1)) - hom(k,1,1,sr)
+                ! u*dp*dx
+                sums_l(k,174,tn) = sums_l(k,174,tn) + ufluc*pfl_x
+
+                ufluc = 0.5_wp*(u(k,j,i)+u(k,j-1,i)) - hom(k,1,1,sr)
+                ! u*dp*dy
+                sums_l(k,175,tn) = sums_l(k,175,tn) + ufluc*pfl_y
+
+                vfluc = 0.5_wp*(v(k,j,i)+v(k,j,i-1)) - hom(k,1,2,sr)
+                ! v*dp*dx
+                sums_l(k,176,tn) = sums_l(k,176,tn) + vfluc*pfl_x
+
+                vfluc = 0.5_wp*(v(k,j,i)+v(k,j,i-1)) - hom(k,1,2,sr)
+                ! v*dp*dy
+                sums_l(k,177,tn) = sums_l(k,177,tn) + vfluc*pfl_y
+
+                wfluc = 0.5_wp*(0.5_wp*(w(k,j,i)+w(k,j,i-1)) - hom(k,1,3,sr) + &
+                               0.5_wp*(w(k+1,j,i)+w(k+1,j,i-1)) - hom(k+1,1,3,sr))
+                ! w*dp*dx
+                sums_l(k,178,tn) = sums_l(k,178,tn) + wfluc*pfl_x
+
+                wfluc = 0.5_wp*(0.5_wp*(w(k,j,i)+w(k,j-1,i)) - hom(k,1,3,sr) + &
+                               0.5_wp*(w(k+1,j,i)+w(k+1,j-1,i)) - hom(k+1,1,3,sr))
+                ! w*dp*dy
+                sums_l(k,179,tn) = sums_l(k,179,tn) + wfluc*pfl_y
+
+                wfluc = w(k,j,i) - hom(k,1,3,sr)
+                ! w*dp*dz
+                sums_l(k,180,tn) = sums_l(k,180,tn) + wfluc*pfl_z
              ENDDO
 
 !

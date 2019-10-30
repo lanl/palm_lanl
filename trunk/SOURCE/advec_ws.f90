@@ -294,7 +294,7 @@
                   sums_wsnrs_ws_l,sums_wspts_ws_l, sums_wsqcs_ws_l,            &
                   sums_wsqrs_ws_l, sums_wsqs_ws_l, sums_wsss_ws_l,             &
                   sums_wssas_ws_l,  sums_wsss_ws_l, sums_wsus_ws_l,            &
-                  sums_wsvs_ws_l
+                  sums_wsvs_ws_l, sums_vsus_ws_l
   
 
 !
@@ -313,14 +313,15 @@
                     sums_wsvs_ws_l(nzb:nzt+1,0:threads_per_task-1),            &
                     sums_us2_ws_l(nzb:nzt+1,0:threads_per_task-1),             &
                     sums_vs2_ws_l(nzb:nzt+1,0:threads_per_task-1),             &
-                    sums_ws2_ws_l(nzb:nzt+1,0:threads_per_task-1) )
+                    sums_ws2_ws_l(nzb:nzt+1,0:threads_per_task-1),             &
+                    sums_vsus_ws_l(nzb:nzt+1,0:threads_per_task-1) )
 
           sums_wsus_ws_l = 0.0_wp
           sums_wsvs_ws_l = 0.0_wp
           sums_us2_ws_l  = 0.0_wp
           sums_vs2_ws_l  = 0.0_wp
           sums_ws2_ws_l  = 0.0_wp
-
+          sums_vsus_ws_l = 0.0_wp
        ENDIF
 
        IF ( ws_scheme_sca )  THEN
@@ -1114,7 +1115,8 @@
            ONLY:  sums_us2_ws_l, sums_vs2_ws_l, sums_ws2_ws_l, sums_wsncs_ws_l,&
                   sums_wsnrs_ws_l, sums_wspts_ws_l, sums_wsqcs_ws_l,           &
                   sums_wsqrs_ws_l, sums_wsqs_ws_l, sums_wsss_ws_l,             &
-                  sums_wssas_ws_l, sums_wsus_ws_l, sums_wsvs_ws_l      
+                  sums_wssas_ws_l, sums_wsus_ws_l, sums_wsvs_ws_l,             &
+                  sums_vsus_ws_l      
                    
 
        IMPLICIT NONE
@@ -1128,6 +1130,7 @@
           sums_us2_ws_l  = 0.0_wp
           sums_vs2_ws_l  = 0.0_wp
           sums_ws2_ws_l  = 0.0_wp
+          sums_vsus_ws_l = 0.0_wp
        ENDIF
 
        IF ( ws_scheme_sca )  THEN
@@ -1743,7 +1746,8 @@
        USE kinds
 
        USE statistics,                                                        &
-           ONLY:  hom, sums_us2_ws_l, sums_wsus_ws_l, weight_substep
+           ONLY:  hom, sums_us2_ws_l, sums_wsus_ws_l, weight_substep,         &
+                        sums_vsus_ws_l
 
        IMPLICIT NONE
 
@@ -2087,7 +2091,14 @@
                     *   ABS( w_comp(k) - 2.0_wp * hom(k,1,3,0)           )     &
                     / ( ABS( w_comp(k) ) + 1.0E-20_wp                    )     &
                   ) * weight_substep(intermediate_timestep_count)
-       ENDDO
+ 
+           sums_vsus_ws_l(k,tn) = sums_vsus_ws_l(k,tn)                    &
+                + ( flux_r(k) * ( v_comp(k) - 2.0_wp * hom(k,1,2,0) )          &
+                / ( v_comp(k) - gv + SIGN( 1.0E-20_wp, v_comp(k) - gv ) )      &
+                + diss_r(k) * ABS( u_comp(k) - 2.0_wp * hom(k,1,1,0) )        &
+                / ( ABS(u_comp(k) - gu) + 1.0E-20 ) ) * rho_ref_zw(k)          &
+                * weight_substep(intermediate_timestep_count)
+      ENDDO
 
        DO  k = nzb_max+1, nzt
 
@@ -2204,6 +2215,13 @@
                     *   ABS( w_comp(k) - 2.0_wp * hom(k,1,3,0)              )  &
                     / ( ABS( w_comp(k) ) + 1.0E-20_wp                       )  &
                   ) *   weight_substep(intermediate_timestep_count)
+ 
+           sums_vsus_ws_l(k,tn) = sums_vsus_ws_l(k,tn)                    &
+                + ( flux_r(k) * ( v_comp(k) - 2.0_wp * hom(k,1,2,0) )          &
+                / ( v_comp(k) - gv + SIGN( 1.0E-20_wp, v_comp(k) - gv ) )      &
+                + diss_r(k) * ABS( u_comp(k) - 2.0_wp * hom(k,1,1,0) )        &
+                / ( ABS(u_comp(k) - gu) + 1.0E-20 ) ) * rho_ref_zw(k)          &
+                * weight_substep(intermediate_timestep_count)
        ENDDO
 
        sums_us2_ws_l(nzb,tn) = sums_us2_ws_l(nzb+1,tn)
@@ -3778,7 +3796,8 @@
        USE kinds
        
        USE statistics,                                                         &
-           ONLY:  hom, sums_us2_ws_l, sums_wsus_ws_l, weight_substep
+           ONLY:  hom, sums_us2_ws_l, sums_wsus_ws_l, weight_substep,          &
+                 sums_vsus_ws_l
 
        IMPLICIT NONE
 
@@ -4130,6 +4149,12 @@
                     / ( ABS( w_comp ) + 1.0E-20_wp                       )     &
                   ) * weight_substep(intermediate_timestep_count)
 
+                sums_vsus_ws_l(k,tn) = sums_vsus_ws_l(k,tn)                    &
+                + ( flux_r(k) * ( v_comp - 2.0_wp * hom(k,1,2,0) )          &
+                / ( v_comp - gv + SIGN( 1.0E-20_wp, v_comp - gv ) )      &
+                + diss_r(k) * ABS( u_comp(k) - 2.0_wp * hom(k,1,1,0) )        &
+                / ( ABS(u_comp(k) - gu) + 1.0E-20 ) ) * rho_ref_zw(k)          &
+                * weight_substep(intermediate_timestep_count)
              ENDDO
 
              DO  k = nzb_max+1, nzt
@@ -4240,7 +4265,14 @@
                     *   ABS( w_comp - 2.0_wp * hom(k,1,3,0)              )     &
                     / ( ABS( w_comp ) + 1.0E-20_wp                       )     &
                   ) * weight_substep(intermediate_timestep_count)
-             ENDDO
+ 
+                sums_vsus_ws_l(k,tn) = sums_vsus_ws_l(k,tn)                    &
+                + ( flux_r(k) * ( v_comp - 2.0_wp * hom(k,1,2,0) )          &
+                / ( v_comp - gv + SIGN( 1.0E-20_wp, v_comp - gv ) )      &
+                + diss_r(k) * ABS( u_comp(k) - 2.0_wp * hom(k,1,1,0) )        &
+                / ( ABS(u_comp(k) - gu) + 1.0E-20 ) ) * rho_ref_zw(k)          &
+                * weight_substep(intermediate_timestep_count)
+            ENDDO
           ENDDO
        ENDDO
        sums_us2_ws_l(nzb,tn) = sums_us2_ws_l(nzb+1,tn)

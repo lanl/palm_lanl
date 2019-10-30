@@ -3557,6 +3557,38 @@
              dopr_index(i) = 172
              dopr_unit(i) = 'K PSU'
              hom(:,2,172,:) = SPREAD( zu, 2, statistic_regions+1 )
+          CASE ( 'v*u*' )
+             dopr_index(i) = 173
+             dopr_unit(i) = 'm2/s2'
+             hom(:,2,173,:) = SPREAD( zu, 2, statistic_regions+1 )
+          CASE ( 'u*dp*dx' )
+             dopr_index(i) = 174
+             dopr_unit(i) = 'm2/s3'
+             hom(:,2,174,:) = SPREAD( zu, 2, statistic_regions+1 )
+          CASE ( 'u*dp*dy' )
+             dopr_index(i) = 175
+             dopr_unit(i) = 'm2/s3'
+             hom(:,2,175,:) = SPREAD( zu, 2, statistic_regions+1 )
+          CASE ( 'v*dp*dx' )
+             dopr_index(i) = 176
+             dopr_unit(i) = 'm2/s3'
+             hom(:,2,176,:) = SPREAD( zu, 2, statistic_regions+1 )
+          CASE ( 'v*dp*dy' )
+             dopr_index(i) = 177
+             dopr_unit(i) = 'm2/s3'
+             hom(:,2,177,:) = SPREAD( zu, 2, statistic_regions+1 )
+          CASE ( 'w*dp*dx' )
+             dopr_index(i) = 178
+             dopr_unit(i) = 'm2/s3'
+             hom(:,2,178,:) = SPREAD( zu, 2, statistic_regions+1 )
+          CASE ( 'w*dp*dy' )
+             dopr_index(i) = 179
+             dopr_unit(i) = 'm2/s3'
+             hom(:,2,179,:) = SPREAD( zu, 2, statistic_regions+1 )
+          CASE ( 'w*dp*dz' )
+             dopr_index(i) = 180
+             dopr_unit(i) = 'm2/s3'
+             hom(:,2,180,:) = SPREAD( zw, 2, statistic_regions+1 )
           CASE DEFAULT
 
              CALL lsm_check_data_output_pr( data_output_pr(i), i, unit,        &

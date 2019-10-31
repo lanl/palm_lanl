@@ -1150,7 +1150,7 @@
                 sums_l(k,170,tn) = sums_l(k,170,tn) + ust*pfl
 
                 ! w'w'S'
-                ust = 0.5_wp * ( sa(k,j,i) - hom(k,1,23,sr) + pt(k+1,j,i) - hom(k+1,1,23,sr ))
+                ust = 0.5_wp * ( sa(k,j,i) - hom(k,1,23,sr) + sa(k+1,j,i) - hom(k+1,1,23,sr ))
                 pfl = (w(k,j,i) - hom(k,1,3,sr))**2.0_wp
                 sums_l(k,171,tn) = sums_l(k,171,tn) + ust*pfl
 

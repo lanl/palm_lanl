@@ -2711,7 +2711,6 @@
                                         * MERGE( 1.0_wp, 0.0_wp,               &
                                                 BTEST( wall_flags_0(k,j,i), 0 )&
                                                )
-          sgs_diss(k,j,i) = diss_p(k,j,i)
        ENDDO
 
 !
@@ -2723,7 +2722,6 @@
              DO  m = surf_s, surf_e
                 k = surf_def_h(l)%k(m)
                 diss_p(k,j,i) = surf_def_h(l)%us(m)**3 / ( kappa * ddzu(k) )
-                sgs_diss(k,j,i) = diss_p(k,j,i)
              ENDDO
           ENDDO
 
@@ -2733,7 +2731,6 @@
              DO  m = surf_s, surf_e
                 k = surf_def_v(l)%k(m)
                 diss_p(k,j,i) = surf_def_v(l)%us(m)**3 / ( kappa * 0.5_wp * dy )
-                sgs_diss(k,j,i) = diss_p(k,j,i)
              ENDDO
           ENDDO
 
@@ -2743,7 +2740,6 @@
              DO  m = surf_s, surf_e
                 k = surf_def_v(l)%k(m)
                 diss_p(k,j,i) = surf_def_v(l)%us(m)**3 / ( kappa * 0.5_wp * dx )
-                sgs_diss(k,j,i) = diss_p(k,j,i)
              ENDDO
           ENDDO
        ENDIF
@@ -2754,7 +2750,6 @@
           DO  m = surf_s, surf_e
              k = surf_def_h(l)%k(m)
              diss_p(k,j,i) = surf_def_h(l)%us(m)**3 / ( kappa * ddzu(k) )
-             sgs_diss(k,j,i) = diss_p(k,j,i)
           ENDDO
        ENDIF
 !
@@ -2780,7 +2775,6 @@
                                     0.1_wp * diss(k,j,i),  &
                                     0.0001_wp ),           &
                                2.0_wp * diss(k,j,i) )
-          sgs_diss(k,j,i) = diss_p(k,j,i)
        ENDDO
 
        IF ( intermediate_timestep_count == 1 )  dummy1(:,j,i) = diss_p(:,j,i)   !> @todo remove later
@@ -3808,7 +3802,6 @@
 
                 dissipation(k,j) = ( 0.19_wp + 0.74_wp * l / ll )              &
                                    * e(k,j,i) * SQRT( e(k,j,i) ) / l
-                sgs_diss(k,j,i) = dissipation(k,j)
 
              ELSEIF ( rans_tke_l )  THEN
 
@@ -3823,6 +3816,8 @@
                 dissipation(k,j) = diss(k,j,i)
 
              ENDIF
+
+             sgs_diss(k,j,i) = dissipation(k,j)
 
              tend(k,j,i) = tend(k,j,i) + (                                     &
                                            (                                   &
@@ -3947,7 +3942,6 @@
           dissipation(k) = ( 0.19_wp + 0.74_wp * l / ll )                      &
                            * e(k,j,i) * SQRT( e(k,j,i) ) / l
 
-          sgs_diss(k,j,i) = dissipation(k)
 !
 !--    ...in case of RANS
        ELSEIF ( rans_tke_l )  THEN
@@ -3964,6 +3958,7 @@
 
        ENDIF
 
+       sgs_diss(k,j,i) = dissipation(k)
 !
 !--    Calculate the tendency term
        tend(k,j,i) = tend(k,j,i) + (                                           &

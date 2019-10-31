@@ -2,7 +2,7 @@
 
 use_hdf5="True"
 repo_path=$PWD
-build_path="/lustre/scratch4/turquoise/lvanroekel/palm/jobs/test5/"
+build_path="/path/to/build/directory/"
 compile_debug="False"
 build_flags=""
 

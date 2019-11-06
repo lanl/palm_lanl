@@ -84,28 +84,36 @@
 
 
     USE arrays_3d,                                                             &
-        ONLY:  dzu, dzw, hyp, pt_init, ref_state, rho_ambient, rho_ref_zu,     &
-               rho_ref_zw, sa_init, u_init, v_init, zu, zw
+        ONLY:  dzu, dzw, hyp, pt_init, pt_slope_ref,                           &
+               rho_ref_zu, rho_ref_zw, ref_state, ref_ambient,                 &
+               sa_init, sa_slope_ref, u_init, v_init, zu, zw
 
     USE cloud_parameters,                                                      &
         ONLY:  cp
 
     USE constants,                                                             &
-        ONLY:  cpw
+        ONLY:  cpw, pi
 
     USE control_parameters,                                                    &
-        ONLY:  ambient_density_for_buoyancy, cos_alpha_surface,                &
+        ONLY:  alpha_surface, ambient_density_for_buoyancy, cos_alpha_surface, &
                dpdxy, dpdxy_loc, dpdx, dpdy, dpdx_phase, dpdy_phase,           &
                f, g, initialize_to_geostrophic,                                &
-               message_string, molecular_viscosity, prandtl_number,            &
-               prho_reference, rho_reference, rho_surface, surface_pressure,   &
-               use_single_reference_value, stokes_force
+               message_string, molecular_viscosity, ocean, prandtl_number,     &
+               prho_reference,                                                 &
+               pt_surface, pt_vertical_gradient, pt_slope_offset,              &
+               rho_reference, rho_surface,                                     &
+               sa_surface, sa_vertical_gradient, sa_slope_offset,              &
+               slope_offset, slope_parallel_gradients, stokes_force,           &
+               surface_pressure, use_single_reference_value 
 
     USE eqn_state_seawater_mod,                                                &
         ONLY:  eqn_state_seawater, eqn_state_seawater_func
 
+    USE grid_variables,                                                        &
+        ONLY:  dx
+        
     USE indices,                                                               &
-        ONLY:  nzb, nzt
+        ONLY:  ngp_2dh, nx, nxl, nxlg, nxr, nxrg, nyn, nyng, nys, nysg, nzb, nzt
 
     USE kinds
 
@@ -119,11 +127,17 @@
 
     IMPLICIT NONE
 
+    INTEGER(iwp) ::  i !<
     INTEGER(iwp) ::  k !<
     INTEGER(iwp) ::  n !<
 
+    REAL(wp)     ::  alpha    !<
+    REAL(wp)     ::  height   !<
     REAL(wp)     ::  pt_l !<
     REAL(wp)     ::  sa_l !<
+    REAL(wp)     ::  pt_value !<
+    REAL(wp)     ::  sa_value !<
+    REAL(wp)     ::  radius   !<
 
     ALLOCATE( hyp(nzb:nzt+1) )
 
@@ -191,16 +205,6 @@
     rho_reference = rho_reference / ( zu(nzt+1) - zu(nzb) )
 
 !
-!-- Define ambient density profile on zw grid
-!-- This ensures that buoyancy is computed relative to the far-field (bottom of 
-!-- the domain), hydrostatic, initial density
-    IF ( ambient_density_for_buoyancy ) THEN
-       DO  k = nzt, nzb, -1
-          rho_ambient(k) = eqn_state_seawater_func( 0.5_wp * ( hyp(k) + hyp(k+1) ),&
-                                                   pt_init(0), sa_init(0) )
-       ENDDO   
-    ENDIF
-!
 !-- Calculate the reference potential density on the zw grid
     prho_reference = 0.0_wp
     DO  k = nzt, nzb, -1
@@ -213,20 +217,103 @@
     prho_reference = prho_reference / ( zu(nzt+1) - zu(nzb) )
 
 !
-!-- Store initial density profile
-    hom(:,1,77,:)  = SPREAD( rho_ref_zw(:), 2, statistic_regions+1 )
-
-!
 !-- Set the reference state to be used in the buoyancy terms
     IF ( use_single_reference_value )  THEN
-       ref_state(:) = rho_reference
+       ref_state(:) = prho_reference
     ELSE
        ref_state(:) = rho_ref_zw(:)
     ENDIF
 
+!
+!-- Store initial density profile
+    hom(:,1,77,:)  = SPREAD( rho_ref_zw(:), 2, statistic_regions+1 )
+
+    IF ( .NOT. alpha_surface == 0.0_wp ) THEN
+!
+!--    Calculate ambient field needed for computing buoyancy
+       ALLOCATE( pt_slope_ref(nzb:nzt+1,nxlg:nxrg) )
+       IF ( ocean ) ALLOCATE( sa_slope_ref(nzb:nzt+1,nxlg:nxrg) )
+
+!--    Compute pt,sa fields for case where gradients are parallel to gravity
+       IF ( .NOT. slope_parallel_gradients .AND. .NOT. ambient_density_for_buoyancy ) THEN
+!--          Compute horizontal- and depth-dependent reference potential density
+             DO  i = nxlg, nxrg
+             DO  k = nzb, nzt+1
+!
+!--             Compute height of grid-point relative to lower left corner of
+!--             the total domain.
+!--             First compute the distance between the actual grid point and the
+!--             lower left corner as well as the angle between the line connecting
+!--             these points and the bottom of the model.
+                IF ( k /= nzb )  THEN
+                   radius = SQRT( ( i * dx )**2 + zu(k)**2 )
+                   height = zu(k)
+                ELSE
+                   radius = SQRT( ( i * dx )**2 )
+                   height = 0.0_wp
+                ENDIF
+                IF ( radius /= 0.0_wp )  THEN
+                   alpha = ASIN( height / radius )
+                ELSE
+                   alpha = 0.0_wp
+                ENDIF
+
+!
+!--             Compute temperatures in the rotated coordinate system
+                alpha    = alpha + alpha_surface / 180.0_wp * pi
+                pt_value = pt_surface + radius * SIN( alpha ) *                   &
+                                     pt_vertical_gradient(1) / 100.0_wp
+                pt_slope_ref(k,i) = pt_value
+             
+                IF ( ocean ) THEN
+                   
+                   sa_value = sa_surface + radius * SIN( alpha ) *                &
+                                          sa_vertical_gradient(1) / 100.0_wp
+                   sa_slope_ref(k,i) = sa_value
+
+                ENDIF
+                
+             ENDDO                
+          ENDDO
+       ELSE
+          DO  i = nxlg, nxrg
+             DO  k = nzb, nzt+1
+                pt_slope_ref(k,i) = pt_init(k)
+                IF ( ocean ) THEN
+                   sa_slope_ref(k,i) = sa_init(k)   
+                ENDIF
+             ENDDO                
+          ENDDO
+       ENDIF
+
+       IF ( ocean .AND. ambient_density_for_buoyancy ) THEN
+!--       Compute depth-independent reference potential density
+!--       Use the far-field conditions at the bottom of the domain for buoyancy
+          DO  k = nzt, nzb, -1
+             ref_ambient(k,:) = eqn_state_seawater_func(hyp(nzt+1),&
+                                                        pt_init(0), sa_init(0) )
+          ENDDO   
+       
+       ELSE ! slope-perpendicular gradients or horizontal gradients
+          DO  i = nxlg, nxrg
+             DO  k = nzb, nzt+1
+                IF ( ocean ) THEN
+                   ref_ambient(k,i)  = eqn_state_seawater_func(hyp(nzt+1),&
+                                                               pt_slope_ref(k,i), &
+                                                               sa_slope_ref(k,i))
+                ENDIF
+             ENDDO                
+          ENDDO
+       ENDIF
+    ELSE ! no slope
+       DO  i = nxlg, nxrg
+          ref_ambient(i,:) = ref_state(:)
+       ENDDO
+    ENDIF
+
+!-- For sinusoidally varying pressure gradient, solve for 
+!-- instantaneous pressure gradient
     IF (initialize_to_geostrophic) THEN
-       !-- For sinusoidally varying pressure gradient, solve for 
-       !-- instantaneous pressure gradient
        dpdxy_loc = dpdxy
        IF ( ANY( dpdx /= 0.0_wp ) .OR. ANY( dpdy /= 0.0_wp) ) THEN
           DO k = 1, 30
@@ -236,9 +323,10 @@
        ENDIF
           
        !-- Update u_init and v_init used in rayleigh damping scheme
-       u_init(:) = -1.0_wp*dpdxy_loc(2)/(rho_reference*f)
-       v_init(:) =         dpdxy_loc(1)/(rho_reference*f)
-          
+       DO  k = nzt, nzb, -1
+          u_init(k) = -1.0_wp*dpdxy_loc(2)/(ref_state(k)*f)
+          v_init(k) =         dpdxy_loc(1)/(ref_state(k)*f)
+       ENDDO 
     ENDIF
     
 !

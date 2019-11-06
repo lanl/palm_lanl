@@ -212,7 +212,7 @@
        pt_l = 0.5_wp * ( pt_init(k) + pt_init(k+1) )
 
        prho_reference = prho_reference + dzu(k+1) * &
-                        eqn_state_seawater_func( 0.0_wp, pt_l, sa_l )
+                        eqn_state_seawater_func( hyp(nzt+1), pt_l, sa_l )
     ENDDO
     prho_reference = prho_reference / ( zu(nzt+1) - zu(nzb) )
 

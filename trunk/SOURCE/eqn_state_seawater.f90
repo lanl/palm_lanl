@@ -165,7 +165,7 @@
 
        USE control_parameters,                                                 &
           ONLY :  linear_eqnOfState, alpha_const, beta_const, fixed_alpha,     &
-              rho_ref, pt_ref, sa_ref
+                  message_string,surface_pressure, rho_ref, pt_ref, sa_ref
 
        IMPLICIT NONE
 
@@ -178,7 +178,9 @@
        INTEGER(iwp) ::  surf_s  !< Start index of surface elements at (j,i)-gridpoint
 
        REAL(wp) ::  pden   !<
+       REAL(wp) ::  pden_surface = 0.0_wp   !<
        REAL(wp) ::  pnom   !<
+       REAL(wp) ::  pnom_surface = 0.0_wp   !<
        REAL(wp) ::  dpdendT1 !<
        REAL(wp) ::  dpdendS1 !<
        REAL(wp) ::  dpnomdT1 !<
@@ -190,6 +192,9 @@
        REAL(wp) ::  p1     !<
        REAL(wp) ::  p2     !<
        REAL(wp) ::  p3     !<
+       REAL(wp) ::  p1_surface     !<
+       REAL(wp) ::  p2_surface     !<
+       REAL(wp) ::  p3_surface     !<
        REAL(wp) ::  pt1    !<
        REAL(wp) ::  pt2    !<
        REAL(wp) ::  pt3    !<
@@ -199,16 +204,21 @@
        REAL(wp) ::  sa2    !<
 
 
+       IF ( surface_pressure > 1014.0_wp ) THEN
+          p1_surface = surface_pressure * 1E-2_wp
+          p2_surface = p1_surface * p1_surface
+          p3_surface = p2_surface * p1_surface
+       ENDIF
 
-       DO  i = nxl, nxr
-          DO  j = nys, nyn
-             DO  k = nzb+1, nzt
+       DO  k = nzb+1, nzt
 !
-!--             Pressure is needed in dbar
-                p1 = hyp(k) * 1E-4_wp
-                p2 = p1 * p1
-                p3 = p2 * p1
+!--       Pressure is needed in dbar
+          p1 = hyp(k) * 1E-4_wp
+          p2 = p1 * p1
+          p3 = p2 * p1
 
+          DO  j = nys, nyn
+             DO  i = nxl, nxr
 !
 !--             Temperature needed in degree Celsius
                 pt1 = pt_p(k,j,i) - 273.15_wp
@@ -239,8 +249,21 @@
                 dpdendS1 = den(6) + den(7)*pt1 + den(8)*pt3 + 1.5*den(9)*sqrt(sa1) + &
                        1.5*den(10)*pt2*sqrt(sa1)
 
-!--             Potential density (without pressure terms)
-                prho(k,j,i) = pnom / pden
+                IF ( surface_pressure > 1014.0_wp ) THEN
+                   pnom_surface =                     nom(8)*p1_surface      + &
+                              nom(9)*p1_surface*pt2 + nom(10)*p1_surface*sa1 + &
+                              nom(11)*p2_surface    + nom(12)*p2_surface*pt2
+
+                   pden_surface =                  den(11)*p1_surface      +   &
+                          den(12)*p2_surface*pt3 + den(13)*p3_surface*pt1
+                   IF (i == 10 .and. j == 10) THEN
+                      write(message_string,*) 'pnom_surface',pnom_surface
+                      write(message_string,*) 'pden_surface',pden_surface
+                   ENDIF
+                ENDIF
+
+!--             Potential density referenced to surface_pressure
+                prho(k,j,i) = (pnom + pnom_surface) / (pden + pden_surface)
 
                 pnom = pnom +             nom(8)*p1      + nom(9)*p1*pt2  +    &
                        nom(10)*p1*sa1   + nom(11)*p2     + nom(12)*p2*pt2
@@ -273,11 +296,14 @@
                   ENDIF
                 ENDIF
              ENDDO
+          ENDDO
+       ENDDO
 !
-!--          Neumann conditions are assumed at top boundary
+!--    Neumann conditions are assumed at top boundary
+       DO  j = nys, nyn
+          DO  i = nxl, nxr
              prho(nzt+1,j,i)      = prho(nzt,j,i)
              rho_ocean(nzt+1,j,i) = rho_ocean(nzt,j,i)
-
           ENDDO
        ENDDO
 !
@@ -314,6 +340,9 @@
        USE arrays_3d,                                                          &
            ONLY:  hyp, prho, pt_p, rho_ocean, sa_p
 
+       USE control_parameters,                                                 &
+          ONLY :  message_string,surface_pressure
+       
        USE indices,                                                            &
            ONLY:  nzb, nzt
 
@@ -331,10 +360,15 @@
        INTEGER(iwp) ::  surf_s  !< Start index of surface elements at (j,i)-gridpoint
 
        REAL(wp) ::  pden   !<
+       REAL(wp) ::  pden_surface = 0.0_wp   !<
        REAL(wp) ::  pnom   !<
+       REAL(wp) ::  pnom_surface = 0.0_wp   !<
        REAL(wp) ::  p1     !<
        REAL(wp) ::  p2     !<
        REAL(wp) ::  p3     !<
+       REAL(wp) ::  p1_surface     !<
+       REAL(wp) ::  p2_surface     !<
+       REAL(wp) ::  p3_surface     !<
        REAL(wp) ::  pt1    !<
        REAL(wp) ::  pt2    !<
        REAL(wp) ::  pt3    !<
@@ -342,6 +376,12 @@
        REAL(wp) ::  sa1    !<
        REAL(wp) ::  sa15   !<
        REAL(wp) ::  sa2    !<
+
+       IF ( surface_pressure > 1014.0_wp ) THEN
+          p1_surface = surface_pressure * 1E-2_wp
+          p2_surface = p1_surface * p1_surface
+          p3_surface = p2_surface * p1_surface
+       ENDIF
 
        DO  k = nzb+1, nzt
 !
@@ -369,9 +409,22 @@
                  den(4)*pt3       + den(5)*pt4     + den(6)*sa1     +          &
                  den(7)*sa1*pt1   + den(8)*sa1*pt3 + den(9)*sa15    +          &
                  den(10)*sa15*pt2
-!
-!--       Potential density (without pressure terms)
-          prho(k,j,i) = pnom / pden
+          
+          IF ( surface_pressure > 1014.0_wp ) THEN
+             pnom_surface =                     nom(8)*p1_surface      + &
+                        nom(9)*p1_surface*pt2 + nom(10)*p1_surface*sa1 + &
+                        nom(11)*p2_surface    + nom(12)*p2_surface*pt2
+
+             pden_surface =                  den(11)*p1_surface      +   &
+                    den(12)*p2_surface*pt3 + den(13)*p3_surface*pt1
+             IF (i == 10 .and. j == 10) THEN
+                write(message_string,*) 'pnom_surface',pnom_surface
+                write(message_string,*) 'pden_surface',pden_surface
+             ENDIF
+          ENDIF
+
+!--       Potential density referenced to surface_pressure
+          prho(k,j,i) = (pnom + pnom_surface) / (pden + pden_surface)
 
           pnom = pnom +             nom(8)*p1      + nom(9)*p1*pt2  +          &
                  nom(10)*p1*sa1   + nom(11)*p2     + nom(12)*p2*pt2

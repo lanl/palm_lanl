@@ -323,6 +323,7 @@
        ENDIF
           
        !-- Update u_init and v_init used in rayleigh damping scheme
+       !-- Technically, ref_state should be the far-field density?
        DO  k = nzt, nzb, -1
           u_init(k) = -1.0_wp*dpdxy_loc(2)/(ref_state(k)*f)
           v_init(k) =         dpdxy_loc(1)/(ref_state(k)*f)

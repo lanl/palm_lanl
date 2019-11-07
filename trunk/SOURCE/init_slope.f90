@@ -82,7 +82,7 @@
                initializing_actions, ocean,                                    &
                pt_surface, pt_vertical_gradient, pt_slope_offset,              &
                sa_surface, sa_vertical_gradient, sa_slope_offset,              &
-               sin_alpha_surface, slope_offset, slope_parallel_gradients
+               sin_alpha_surface, slope_offset 
 
     USE eqn_state_seawater_mod,                                                &
         ONLY:  eqn_state_seawater, eqn_state_seawater_func

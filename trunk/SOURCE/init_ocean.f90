@@ -103,7 +103,7 @@
                pt_surface, pt_vertical_gradient, pt_slope_offset,              &
                rho_reference, rho_surface,                                     &
                sa_surface, sa_vertical_gradient, sa_slope_offset,              &
-               slope_offset, slope_parallel_gradients, stokes_force,           &
+               slope_offset, slope_normal_gradients, stokes_force,           &
                surface_pressure, use_single_reference_value 
 
     USE eqn_state_seawater_mod,                                                &
@@ -235,7 +235,7 @@
        IF ( ocean ) ALLOCATE( sa_slope_ref(nzb:nzt+1,nxlg:nxrg) )
 
 !--    Compute pt,sa fields for case where gradients are parallel to gravity
-       IF ( .NOT. slope_parallel_gradients .AND. .NOT. ambient_density_for_buoyancy ) THEN
+       IF ( .NOT. slope_normal_gradients .AND. .NOT. ambient_density_for_buoyancy ) THEN
 !--          Compute horizontal- and depth-dependent reference potential density
              DO  i = nxlg, nxrg
              DO  k = nzb, nzt+1

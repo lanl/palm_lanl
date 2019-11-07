@@ -1412,7 +1412,7 @@
     LOGICAL ::  scalar_rayleigh_damping = .TRUE.                 !< namelist parameter
     LOGICAL ::  sloping_surface = .FALSE.                        !< use sloped surface? (namelist parameter alpha_surface)
     LOGICAL ::  slope_offset = .FALSE.                           !< default slope conditions are slope_parallel, when TRUE use horizontal isopynals with slope offset
-    LOGICAL ::  slope_parallel_gradients = .TRUE.                           !< default slope conditions are slope_parallel, when TRUE use horizontal isopynals with slope offset
+    LOGICAL ::  slope_normal_gradients = .TRUE.                  !< default slope conditions are slope_perpendicular, when False use horizontal isopycnals
     LOGICAL ::  spinup = .FALSE.                                 !< perform model spinup without atmosphere code?
     LOGICAL ::  stokes_force = .FALSE.                           !< switch for use of Stokes forces
     LOGICAL ::  stop_dt = .FALSE.                                !< internal switch to stop the time stepping

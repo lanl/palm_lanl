@@ -3022,6 +3022,9 @@
 
 !
 !--    If required, calculate TKE production by buoyancy
+!--    To be exact, the gradient in prho should be calculated in the direction 
+!--    perpendicular to g, which may be rotated in the sloped cases. 
+!--    In practice, should add g*sin_alpha_surface*dpdx + g*cos_alpha_surface*dpdy
        IF ( .NOT. neutral )  THEN
 
           IF ( .NOT. humidity )  THEN
@@ -3046,12 +3049,9 @@
                                          )
                    ENDDO ! k
 
-!--                Add buoyancy flux from melting in the surface boundary layer
 !--                Stabilizing buoyancy flux reduces TKE
-!--                Doesn't account for horizontal upslope (downslope) buoyancy 
-!--                fluxes that produce (reduce) TKE
-!--                This could be a reasonable assumption because the presence of
-!--                of a boundary reduces horizontal fluxes
+!--                To be exact in sloped ocean cases, 
+!--                g*sin_alpha_surface*u'b' - g*cos_alpha_surface*w'b'
                    IF (TRIM(constant_flux_layer) == 'top') THEN
                       surf_s = surf_def_h(2)%start_index(j,i)
                       surf_e = surf_def_h(2)%end_index(j,i)
@@ -3059,7 +3059,8 @@
                          k = surf_def_h(2)%k(m)
                          tend(k,j,i) = tend(k,j,i) + g *                          &
                                        (alpha_T(k,j,i) * surf_def_h(2)%shf(m)   - &
-                                        beta_S(k,j,i)  * surf_def_h(2)%sasws(m))
+                                        beta_S(k,j,i)  * surf_def_h(2)%sasws(m))/ &
+                                        rho_ocean(k,j,i)
                       ENDDO
                    ENDIF
                 ENDDO ! j
@@ -3582,10 +3583,10 @@
                    k = surf_def_h(2)%k(m)
                    tend(k,j,i) = tend(k,j,i) + g *                             &
                                  (alpha_T(k,j,i) * surf_def_h(2)%shf(m)   -    &
-                                  beta_S(k,j,i)  * surf_def_h(2)%sasws(m))
+                                  beta_S(k,j,i)  * surf_def_h(2)%sasws(m)) /   &
+                                  rho_ocean(k,j,i)
                 ENDDO
              ENDIF
-
           ELSE ! atmosphere
 
              DO  k = nzb+1, nzt

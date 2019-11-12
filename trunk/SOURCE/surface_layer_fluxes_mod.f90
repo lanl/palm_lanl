@@ -1821,6 +1821,12 @@
           k_samin         = MINLOC(ABS(dsadz_av),DIM=1)
           k_offset_mcphee = MAX(k_ptmin,k_samin)
           
+          DEALLOCATE( pt_z_av )
+          DEALLOCATE( sa_z_av )
+          DEALLOCATE( dptdz_av)
+          DEALLOCATE( dsadz_av)
+          DEALLOCATE( dz_off  )
+          
 !--       Enforce depth limits on k_offset_mcphee
           IF (k_offset_mcphee < koff_min) k_offset_mcphee = koff_min
           IF (k_offset_mcphee > koff_max) k_offset_mcphee = koff_max

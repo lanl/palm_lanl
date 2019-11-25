@@ -1116,6 +1116,11 @@
     CHARACTER (LEN=8)    ::  coupling_char = ''                           !< appended to filenames in coupled or nested runs ('_O': ocean PE,
                                                                           !< '_NV': vertically nested atmosphere PE, '_N##': PE of nested domain ##
     CHARACTER (LEN=8)    ::  most_method = 'newton'                       !< namelist parameter
+    CHARACTER (LEN=9)    ::  drag_law = 'quadratic'                       !< namelist parameter. Choose from following options:
+                                                                          !< 'quadratic' uses log law-of-the-wall without considering stability in ocean cases
+                                                                          !<             and with stability in atmospheric cases
+                                                                          !< 'businger' uses log law-of-the-wall with linear stability function
+                                                                          !< 'rotation' uses MOST with stability and rotation
     CHARACTER (LEN=8)    ::  run_date                                     !< date of simulation run, printed to HEADER file
     CHARACTER (LEN=8)    ::  run_time                                     !< time of simulation run, printed to HEADER file
     CHARACTER (LEN=9)    ::  simulated_time_chr                           !< simulated time, printed to RUN_CONTROL file

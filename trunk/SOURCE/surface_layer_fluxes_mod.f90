@@ -230,8 +230,8 @@
     USE control_parameters,                                                    &
         ONLY:  air_chemistry, c1, c2, c3, cloud_droplets, cloud_physics,       &
                constant_flux_layer, constant_heatflux, constant_scalarflux,    &     
-               constant_waterflux, coupling_mode, drag_coeff, f, g,            &
-               humidity, gamma_constant, Gamma_T_const, Gamma_S_const,         &
+               constant_waterflux, coupling_mode, drag_law, drag_coeff, f, g,  &
+               gamma_constant, Gamma_T_const, Gamma_S_const, humidity,         &
                ibc_e_b, ibc_e_t, ibc_pt_b, ibc_pt_t,                           &
                initializing_actions, intermediate_timestep_count,              &
                intermediate_timestep_count_max, ij_av_width_mcphee,            &
@@ -1663,51 +1663,26 @@
        IMPLICIT NONE
 
        INTEGER(iwp) ::  m       !< loop variable over all horizontal surf elements 
+       LOGICAL      ::  stability = .FALSE. !< Use stability function 
+      
+!--
+       IF ( TRIM(drag_law) == 'businger' ) stability = .TRUE.
+       IF ( .NOT. ocean )                  stability = .TRUE. 
+       IF ( surf_vertical )                stability = .FALSE.
 
-!
 !--    Compute u* at horizontal surfaces at the scalars' grid points
-       IF ( .NOT. surf_vertical )  THEN
-!
-!--       Compute u* at upward-facing surfaces
-          IF ( .NOT. downward )  THEN
-             !$OMP PARALLEL  DO PRIVATE( z_mo )
-             DO  m = 1, surf%ns
+       !$OMP PARALLEL  DO PRIVATE( z_mo )
+       DO  m = 1, surf%ns
 
-                z_mo = surf%z_mo(m)
+          z_mo = surf%z_mo(m)
 !
-!--             Compute u* at the scalars' grid points
-                surf%us(m) = kappa * surf%uvw_abs(m) /                         &
-                            ( LOG( z_mo / surf%z0(m) )                         &
-                           - psi_m( z_mo / surf%ol(m) )                        &
-                           + psi_m( surf%z0(m) / surf%ol(m) ) )
+!--       Compute u* at the scalars' grid points
+          surf%us(m) = kappa * surf%uvw_abs(m) /                               &
+                      ( LOG( z_mo / surf%z0(m) )                               &
+                     - MERGE(psi_m( z_mo       / surf%ol(m) ),0.0_wp,stability)&
+                     + MERGE(psi_m( surf%z0(m) / surf%ol(m) ),0.0_wp,stability))
    
-             ENDDO
-!
-!--       Compute u* at downward-facing surfaces. This case, do not consider
-!--       any stability. 
-          ELSE
-             !$OMP PARALLEL  DO PRIVATE( z_mo )
-             DO  m = 1, surf%ns
-
-                z_mo = surf%z_mo(m)
-!
-!--             Compute u* at the scalars' grid points
-                surf%us(m) = kappa * surf%uvw_abs(m) / LOG( z_mo / surf%z0(m) )
-          
-             ENDDO
-          ENDIF
-!
-!--    Compute u* at vertical surfaces at the u/v/v grid, respectively. 
-!--    No stability is considered in this case.
-       ELSE
-          !$OMP PARALLEL DO PRIVATE( z_mo )
-          DO  m = 1, surf%ns
-             z_mo = surf%z_mo(m)
-
-             surf%us(m) = kappa * surf%uvw_abs(m) / LOG( z_mo / surf%z0(m) )
-
-          ENDDO
-       ENDIF
+       ENDDO
 
     END SUBROUTINE calc_us
 
@@ -2235,7 +2210,8 @@
        INTEGER(iwp)  ::  ibit    !< flag to mask computation of relative velocity in case of downward-facing surfaces
        INTEGER(iwp)  ::  m       !< loop variable over all horizontal surf elements
        INTEGER(iwp)  ::  lsp     !< running index for chemical species
-
+       LOGICAL       :: stability = .FALSE.
+       REAL(wp)                            ::  p_mo=0.0_wp,p_0=0.0_wp    !< dummy to precalculate logarithm
        REAL(wp)                            ::  dum         !< dummy to precalculate logarithm
        REAL(wp)                            ::  eta_star    !< stability factor
        REAL(wp)                            ::  flag_u      !< flag indicating u-grid, used for calculation of horizontal momentum fluxes at vertical surfaces
@@ -2246,6 +2222,9 @@
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  u_i         !< u-component interpolated onto scalar grid point, required for momentum fluxes at vertical surfaces 
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  v_i         !< v-component interpolated onto scalar grid point, required for momentum fluxes at vertical surfaces 
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  w_i         !< w-component interpolated onto scalar grid point, required for momentum fluxes at vertical surfaces 
+
+       IF ( TRIM(drag_law) == 'businger' ) stability = .TRUE.
+       IF ( .NOT. ocean )                  stability = .TRUE. 
 
 !
 !--    Reference velocity is at k+1 for downward-facing surfaces, 
@@ -2433,41 +2412,69 @@
 !--       At downward-facing surfaces
           ELSE
 
-             IF ( trim(most_method) == 'mcphee' ) THEN
-
-                !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
-                DO  m = 1, surf%ns  
-   
-                   k = surf%k(m)
-!
-!--                Compute friction velocity components
-                   us_x = kappa * ( surf%ufar(m) - surf%usurf(m) )             &
-                          / LOG( surf%z_mo(m) / surf%z0(m) )
-                   us_y = kappa * ( surf%vfar(m) - surf%vsurf(m) )             &
-                          / LOG( surf%z_mo(m) / surf%z0(m) )
+             IF ( trim(most_method) == 'mcphee') THEN
+             
+                IF (trim(drag_law) == 'rotation') THEN
                    
-!--                Use the neutral eta_star limit for destabilizing cases
-                   IF ( surf%melt(m) <= 0.0_wp ) THEN                          
-                      eta_star = 1.0_wp
-                   ELSE
-                      eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /            &
-                              ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5
-                   ENDIF
-!                   
-!--                Compute nondimensional depth zeta
-                   zeta = MAX(-1.0_wp * ABS( zu(nzt) / zeta_min ),                 &
-                              ABS(f) * -1.0_wp * ABS( surf%z_mo(m) ) /           &
-                              ( eta_star * surf%us(m) + 1E-30_wp ) )
+                   !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
+                   DO  m = 1, surf%ns  
+   
+                      k = surf%k(m)
 !
-!--                Compute complex surface stress
-                   tau = EXP( SQRT( im / ( kappa * xi_N ) ) * zeta )
+!--                   Compute friction velocity components
+                      us_x = kappa * ( surf%ufar(m) - surf%usurf(m) )             &
+                             / LOG( surf%z_mo(m) / surf%z0(m) )
+                      us_y = kappa * ( surf%vfar(m) - surf%vsurf(m) )             &
+                             / LOG( surf%z_mo(m) / surf%z0(m) )
+                      
+!--                   Use the neutral eta_star limit for destabilizing cases
+                      IF ( surf%melt(m) <= 0.0_wp ) THEN                          
+                         eta_star = 1.0_wp
+                      ELSE
+                         eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /            &
+                                 ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5
+                      ENDIF
+!                      
+!--                   Compute nondimensional depth zeta
+                      zeta = MAX(-1.0_wp * ABS( zu(nzt) / zeta_min ),                 &
+                                 ABS(f) * -1.0_wp * ABS( surf%z_mo(m) ) /           &
+                                 ( eta_star * surf%us(m) + 1E-30_wp ) )
 !
-!--                Compute momentum flux components
-                   surf%usws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
-                                  ( us_x * REAL(tau) - us_y * IMAG(tau) )
-                   surf%vsws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
-                                  ( us_x * IMAG(tau) + us_y * REAL(tau) )
-                ENDDO     
+!--                   Compute complex surface stress
+                      tau = EXP( SQRT( im / ( kappa * xi_N ) ) * zeta )
+!
+!--                   Compute momentum flux components
+                      surf%usws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
+                                     ( us_x * REAL(tau) - us_y * IMAG(tau) )
+                      surf%vsws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
+                                     ( us_x * IMAG(tau) + us_y * REAL(tau) )
+                   ENDDO     
+             
+                ELSE
+                   !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
+                   DO  m = 1, surf%ns  
+   
+                      k = surf%k(m)
+                      
+!
+!--                   Compute friction velocity components
+                      surf%usws(m) = kappa * ( surf%ufar(m) - surf%usurf(m) )             &
+                             / ( LOG( surf%z_mo(m) / surf%z0(m) )                         &
+                         - MERGE( psi_m( surf%z_mo(m) / surf%ol(m)),0.0_wp,stability )    &
+                         + MERGE( psi_m( surf%z0(m)  / surf%ol(m)),0.0_wp,stability ) )
+                      
+                      surf%vsws(m) = kappa * ( surf%vfar(m) - surf%vsurf(m) )             &
+                             / ( LOG( surf%z_mo(m) / surf%z0(m) )                         &
+                         - MERGE( psi_m( surf%z_mo(m) / surf%ol(m)),0.0_wp,stability )    &
+                         + MERGE( psi_m( surf%z0(m)  / surf%ol(m)),0.0_wp,stability ) )
+                      
+!
+!--                   Compute momentum flux components
+                      surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k+1)
+                      surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k+1)
+                   
+                   ENDDO     
+                ENDIF 
              ELSE
 
                 !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
@@ -2782,12 +2789,15 @@
                   * ( 1.0_wp + x**2 ) * 0.125_wp )
        ELSE
 
-          psi_m = - b * ( zeta - c_d_d ) * EXP( -d * zeta ) - a * zeta         &
-                   - bc_d_d
+          IF (trim(drag_law) == 'businger') THEN
 !
 !--       Old version for stable conditions (only valid for z/L < 0.5)
-!--       psi_m = - 5.0_wp * zeta
+             psi_m = - 4.8_wp * zeta
 
+          ELSE
+             psi_m = - b * ( zeta - c_d_d ) * EXP( -d * zeta ) - a * zeta         &
+                     - bc_d_d
+          ENDIF
        ENDIF
 
     END FUNCTION psi_m

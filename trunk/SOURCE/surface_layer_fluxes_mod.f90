@@ -231,7 +231,8 @@
         ONLY:  air_chemistry, c1, c2, c3, cloud_droplets, cloud_physics,       &
                constant_flux_layer, constant_heatflux, constant_scalarflux,    &     
                constant_waterflux, coupling_mode, drag_law, drag_coeff, f, g,  &
-               gamma_constant, Gamma_T_const, Gamma_S_const, humidity,         &
+               gamma_constant, Gamma_T_const, Gamma_S_const,                   &
+               gamma_z_dependent, humidity,                                    &
                ibc_e_b, ibc_e_t, ibc_pt_b, ibc_pt_t,                           &
                initializing_actions, intermediate_timestep_count,              &
                intermediate_timestep_count_max, ij_av_width_mcphee,            &
@@ -2628,9 +2629,12 @@
        INTEGER(iwp)  ::  n                   !< iteration counter
        INTEGER(iwp)  ::  nn = 0              !< iteration counter
        INTEGER(iwp)  ::  max_iter = 10       !< maximum number of iterations
+       
        LOGICAL       :: destabilizing = .FALSE.
+       LOGICAL       :: stability = .FALSE.
 
        REAL(wp) ::  a, b, c                  !< coefficients of quadratic equation
+       REAL(wp) ::  d                        !< factor in molecular transfer coefficient
        REAL(wp) ::  eta_star                 !< stability parameter
        REAL(wp) ::  dptf_dsa                 !< derivative of conservative temperature 
                                              !< at freezing point with respect to salinity
@@ -2643,6 +2647,8 @@
        REAL(wp) ::  Gamma_turb               !< turbulent contribution to exchange velocity
        REAL(wp) ::  Gamma_mol_T, Gamma_mol_S !< molecular contribution to exchange velocity
 
+       IF ( TRIM(drag_law) == 'businger' ) stability = .TRUE.
+       
        DO m = 1, surf%ns
 
           !$OMP PARALLEL DO PRIVATE( i, j, k )
@@ -2689,25 +2695,43 @@
                    surf%gamma_S(m) = ( surf%us(m) + 1E-30_wp ) * Gamma_S_const 
                 
                 ELSE
-!--                viscous sublayer thickness, Tennekes and Lumley (1972) p. 160
-                   h_nu = 5.0_wp * molecular_viscosity / ( surf%us(m) + 1E-30_wp )
-                   
-!--                Scaling factor for stability of stratification
-                   eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /               &
-                              ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5_wp
-                   
-                   Gamma_turb = ( 1.0_wp / kappa ) *                           &
-                                  LOG( ( surf%us(m) * xi_N * eta_star**2.0_wp ) / &
-                                       ( ABS(f) * h_nu ) )                     &
-                                + ( 1.0_wp / ( 2.0_wp * xi_N * eta_star ) )    &
-                                - ( 1.0_wp / kappa )
-                   
-                   Gamma_mol_T = 12.5_wp * prandtl_number**(0.67_wp) - 6.0_wp
-                   Gamma_mol_S = 12.5_wp * schmidt_number**(0.67_wp) - 6.0_wp
 
+!--                Depth-dependent formulation. Coefficient value for stability function
+!--                from Zhou et al. (2017)
+                   IF ( gamma_z_dependent ) THEN
+
+                      Gamma_turb = (1.0_wp/kappa) * (LOG(ABS(zu(nzt-surf%koff)) / &
+                                                         surf%z0(m) )             & 
+                        - MERGE(-5.6_wp*( ABS(zu(nzt-surf%koff))/surf%ol(m) ),    &
+                                0.0_wp,stability)                                 &
+                        + MERGE(-5.6_wp*(surf%z0(m)/surf%ol(m)),0.0_wp,stability) )
+                      
+                      Gamma_mol_T = 12.5_wp * prandtl_number**(0.67_wp) - 6.0_wp
+                      Gamma_mol_S = 12.5_wp * schmidt_number**(0.67_wp) - 6.0_wp
+
+                   ELSE
+
+!--                   viscous sublayer thickness, Tennekes and Lumley (1972) p. 160
+                      h_nu = 5.0_wp * molecular_viscosity / ( surf%us(m) + 1E-30_wp )
+                      
+!--                   Scaling factor for stability of stratification
+                      eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /               &
+                                 ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5_wp
+                      
+                      Gamma_turb = ( 1.0_wp / kappa ) *                           &
+                                     LOG( ( surf%us(m) * xi_N * eta_star**2.0_wp ) / &
+                                          ( ABS(f) * h_nu ) )                     &
+                                   + ( 1.0_wp / ( 2.0_wp * xi_N * eta_star ) )    &
+                                   - ( 1.0_wp / kappa )
+                      
+                      Gamma_mol_T = 12.5_wp * prandtl_number**(0.67_wp) - 6.0_wp
+                      Gamma_mol_S = 12.5_wp * schmidt_number**(0.67_wp) - 6.0_wp
+
+                   ENDIF 
+                
                    surf%gamma_T(m) = ( surf%us(m) + 1E-30_wp ) / (Gamma_turb + Gamma_mol_T)
                    surf%gamma_S(m) = ( surf%us(m) + 1E-30_wp ) / (Gamma_turb + Gamma_mol_S)
-                
+                   
                 ENDIF 
              
              ENDIF
@@ -2791,7 +2815,8 @@
 
           IF (trim(drag_law) == 'businger') THEN
 !
-!--       Old version for stable conditions (only valid for z/L < 0.5)
+!--          Old version for stable conditions (only valid for z/L < 0.5)
+!--          Coefficient choice following Wyngaard (2010)
              psi_m = - 4.8_wp * zeta
 
           ELSE

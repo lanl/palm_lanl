@@ -1115,7 +1115,11 @@
     CHARACTER (LEN=6)    ::  constant_flux_layer = 'none'                 !< namelist parameter
     CHARACTER (LEN=8)    ::  coupling_char = ''                           !< appended to filenames in coupled or nested runs ('_O': ocean PE,
                                                                           !< '_NV': vertically nested atmosphere PE, '_N##': PE of nested domain ##
-    CHARACTER (LEN=8)    ::  most_method = 'newton'                       !< namelist parameter
+    CHARACTER (LEN=8)    ::  most_method = 'newton'                       !< namelist parameter. Characterizes method for solving surface fluxes
+                                                                          !< Choose from following options:
+                                                                          !< 'newton'
+                                                                          !< 'circular'
+                                                                          !< 'mcphee' turns evolving melt rates on, solves 3 equation parameterization
     CHARACTER (LEN=9)    ::  drag_law = 'quadratic'                       !< namelist parameter. Choose from following options:
                                                                           !< 'quadratic' uses log law-of-the-wall without considering stability in ocean cases
                                                                           !<             and with stability in atmospheric cases
@@ -1365,6 +1369,8 @@
     LOGICAL ::  forcing = .FALSE.                                !< flag controlling forcing from large-scale model
     LOGICAL ::  galilei_transformation = .FALSE.                 !< namelist parameter
     LOGICAL ::  gamma_constant = .FALSE.                         !< namelist parameter, chooses between depth-dependent and depth-independent forms
+    LOGICAL ::  gamma_z_dependent = .FALSE.                      !< namelist parameter, chooses between depth-dependent and depth-independent forms
+                                                                 !< of scalar transfer coefficients for MOST method McPhee (1987)
     LOGICAL ::  humidity = .FALSE.                               !< namelist parameter
     LOGICAL ::  humidity_remote = .FALSE.                        !< switch for receiving near-surface humidity flux (atmosphere-ocean coupling)
     LOGICAL ::  inflow_l = .FALSE.                               !< left domain boundary has non-cyclic inflow?

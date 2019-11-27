@@ -134,11 +134,11 @@
     SUBROUTINE buoyancy( var, wind_component )
 
        USE arrays_3d,                                                          &
-           ONLY:  pt, pt_slope_ref, ref_state, rho_slope_ref, tend
+           ONLY:  buoy, tend, ref_ambient, ref_state
 
        USE control_parameters,                                                 &
            ONLY:  atmos_ocean_sign, cos_alpha_surface, g, message_string,      &
-                  pt_surface, sin_alpha_surface, sloping_surface, ocean
+                  sin_alpha_surface, sloping_surface, ocean
 
        USE indices,                                                            &
            ONLY:  nxl, nxlg, nxlu, nxr, nxrg, nyn, nyng, nys, nysg, nzb,       &
@@ -156,118 +156,55 @@
        INTEGER(iwp) ::  k              !<
        INTEGER(iwp) ::  wind_component !<
        
+       REAL(wp) :: slope_factor = 1.0_wp 
 #if defined( __nopointer )
        REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  var !<
 #else
        REAL(wp), DIMENSION(:,:,:), POINTER ::  var
 #endif
 
-       IF ( .NOT. sloping_surface )  THEN
-!
-!--       Normal case: horizontal surface
-          DO  i = nxl, nxr
-             DO  j = nys, nyn
-                DO  k = nzb+1, nzt-1
-                   tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g * 0.5_wp *  &
-                          (                                                     &
-                             ( var(k,j,i)   - ref_state(k) )   / ref_state(k) + &
-                             ( var(k+1,j,i) - ref_state(k+1) ) / ref_state(k+1) &
-                          ) * MERGE( 1.0_wp, 0.0_wp,                            &
-                                     BTEST( wall_flags_0(k,j,i), 0 ) )
-                ENDDO
+       ! TODO define ref_ambient and ref_state for atmosphere cases
+       IF ( wind_component == 1 )  THEN
+
+          IF ( sloping_surface )  THEN
+             slope_factor = sin_alpha_surface
+          ELSE
+             slope_factor = 0.0_wp
+          ENDIF
+       
+       ELSEIF ( wind_component == 2 )  THEN
+
+          slope_factor = 0.0_wp
+       
+       ELSEIF ( wind_component == 3 )  THEN
+
+          IF ( sloping_surface )  THEN
+             slope_factor = cos_alpha_surface
+          ENDIF
+       
+       ELSE
+          WRITE( message_string, * ) 'no term for component "',             &
+                                    wind_component,'"'
+          CALL message( 'buoyancy', 'PA0159', 1, 2, 0, 6, 0 )
+       
+       ENDIF
+       
+       DO  i = nxl, nxr
+          DO  j = nys, nyn
+             DO  k = nzb+1, nzt-1
+                
+                buoy(k,j,i) = slope_factor * atmos_ocean_sign * g * 0.5_wp *   &
+                       (                                                       &
+                        ( var(k,j,i)   - ref_ambient(k,i)   ) / ref_state(k) + &
+                        ( var(k+1,j,i) - ref_ambient(k+1,i) ) / ref_state(k+1) &
+                       ) * MERGE( 1.0_wp, 0.0_wp,                              &
+                                  BTEST( wall_flags_0(k,j,i), 0 ) )
+          
+                tend(k,j,i) = tend(k,j,i) + buoy(k,j,i) 
+             
              ENDDO
           ENDDO
-
-       ELSE
-!
-!--       Buoyancy term for a surface with a slope in x-direction. The equations
-!--       for both the u and w velocity-component contain proportionate terms.
-!--       Temperature field at time t=0 serves as environmental temperature.
-!--       Reference temperature (pt_surface) is the one at the lower left corner
-!--       of the total domain.
-          IF ( wind_component == 1 )  THEN
-
-             IF ( ocean ) THEN
-
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb+1, nzt-1
-                         tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g *    &
-                                       sin_alpha_surface * 0.5_wp *            & 
-                                     ( ( var(k,j,i)   - rho_slope_ref(k,i)   ) &
-                                               / ref_state(k) +                &
-                                       ( var(k+1,j,i) - rho_slope_ref(k+1,i) ) &
-                                               / ref_state(k+1) )              &
-                                     * MERGE( 1.0_wp, 0.0_wp,                  &
-                                              BTEST( wall_flags_0(k,j,i), 0 ) )
-                      ENDDO
-                   ENDDO
-                ENDDO
-
-             ELSE
-
-                DO  i = nxlu, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb+1, nzt-1
-                         tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g *    &
-                                       sin_alpha_surface * 0.5_wp *            &
-                                  ( ( pt(k,j,i-1)         + pt(k,j,i)         )&
-                                 - ( pt_slope_ref(k,i-1) + pt_slope_ref(k,i) ) &
-                                 ) / pt_surface                                &
-                                   * MERGE( 1.0_wp, 0.0_wp,                    &
-                                              BTEST( wall_flags_0(k,j,i), 0 ) )
-                      ENDDO
-                   ENDDO
-                ENDDO
-
-             ENDIF
-
-          ELSEIF ( wind_component == 3 )  THEN
-
-             IF ( ocean ) THEN
-
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb+1, nzt-1
-                         tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g *      &
-                                       cos_alpha_surface * 0.5_wp *              &
-                                       ( ( var(k,j,i)   - rho_slope_ref(k,i)   ) &
-                                           / ref_state(k) +                      &
-                                         ( var(k+1,j,i) - rho_slope_ref(k+1,i) ) &
-                                           / ref_state(k+1) )                    &
-                                     * MERGE( 1.0_wp, 0.0_wp,                    &
-                                              BTEST( wall_flags_0(k,j,i), 0 ) )
-                      ENDDO
-                   ENDDO
-                ENDDO
-
-             ELSE
-
-                DO  i = nxl, nxr
-                   DO  j = nys, nyn
-                      DO  k = nzb+1, nzt-1
-                         tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g *          &
-                                       cos_alpha_surface * 0.5_wp *                  &
-                                       ( ( pt(k,j,i)         + pt(k+1,j,i)         ) &
-                                       - ( pt_slope_ref(k,i) + pt_slope_ref(k+1,i) ) &
-                                       ) / pt_surface                                &
-                                         * MERGE( 1.0_wp, 0.0_wp,                    &
-                                                  BTEST( wall_flags_0(k,j,i), 0 ) )
-                      ENDDO
-                   ENDDO
-                ENDDO
-
-             ENDIF
-
-          ELSE
-             
-             WRITE( message_string, * ) 'no term for component "',             &
-                                       wind_component,'"'
-             CALL message( 'buoyancy', 'PA0159', 1, 2, 0, 6, 0 )
-
-          ENDIF
-
-       ENDIF
+       ENDDO
 
     END SUBROUTINE buoyancy
 
@@ -283,11 +220,11 @@
     SUBROUTINE buoyancy_ij( i, j, var, wind_component )
 
        USE arrays_3d,                                                          &
-           ONLY:  pt, pt_slope_ref, ref_state, rho_slope_ref, tend
+           ONLY:  buoy, tend, ref_ambient, ref_state
 
        USE control_parameters,                                                 &
            ONLY:  atmos_ocean_sign, cos_alpha_surface, g, message_string,      &
-                  pt_surface, sin_alpha_surface, sloping_surface, ocean
+                  sin_alpha_surface, sloping_surface, ocean
 
        USE indices,                                                            &
            ONLY:  nxlg, nxrg, nyng, nysg, nzb, nzt, wall_flags_0
@@ -302,102 +239,53 @@
        INTEGER(iwp) ::  i              !<
        INTEGER(iwp) ::  j              !<
        INTEGER(iwp) ::  k              !<
-       INTEGER(iwp) ::  pr             !<
        INTEGER(iwp) ::  wind_component !<
        
+       REAL(wp) :: slope_factor = 1.0_wp 
 #if defined( __nopointer )
        REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  var !<
 #else
        REAL(wp), DIMENSION(:,:,:), POINTER ::  var
 #endif
 
-       IF ( .NOT. sloping_surface )  THEN
+       IF ( wind_component == 1 )  THEN
 
-!--       Normal case: horizontal surface
-          DO  k = nzb+1, nzt-1
-              tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g * 0.5_wp * (    &
-                        ( var(k,j,i)   - ref_state(k)   ) / ref_state(k)   +   &
-                        ( var(k+1,j,i) - ref_state(k+1) ) / ref_state(k+1)     &
-                                                                          )    &
-                                      * MERGE( 1.0_wp, 0.0_wp,                 &
-                                               BTEST( wall_flags_0(k,j,i), 0 ) )
-          ENDDO
-
-       ELSE
-!
-!--       Buoyancy term for a surface with a slope in x-direction. The equations
-!--       for both the u and w velocity-component contain proportionate terms.
-!--       Temperature field at time t=0 serves as environmental temperature.
-!--       Reference temperature (pt_surface) is the one at the lower left corner
-!--       of the total domain.
-          IF ( wind_component == 1 )  THEN
-
-             IF ( ocean ) THEN
-
-                DO  k = nzb+1, nzt-1
-                   tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g *          &
-                                 sin_alpha_surface * 0.5_wp *                  &
-                                 ( ( var(k,j,i)   - rho_slope_ref(k,i)   )     &
-                                     / ref_state(k) +                          &
-                                   ( var(k+1,j,i) - rho_slope_ref(k+1,i) )     &
-                                     / ref_state(k+1) )                        &
-                               * MERGE( 1.0_wp, 0.0_wp,                        &
-                                        BTEST( wall_flags_0(k,j,i), 0 ) )
-                ENDDO
-
-             ELSE
-
-                DO  k = nzb+1, nzt-1
-                   tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g *          &
-                                 sin_alpha_surface * 0.5_wp *                  &
-                                 ( ( pt(k,j,i-1)         + pt(k,j,i)         ) &
-                                 - ( pt_slope_ref(k,i-1) + pt_slope_ref(k,i) ) &
-                                 ) / pt_surface                                &
-                                 * MERGE( 1.0_wp, 0.0_wp,                      &
-                                          BTEST( wall_flags_0(k,j,i), 0 ) )
-                ENDDO
-
-             ENDIF
-
-          ELSEIF ( wind_component == 3 )  THEN
-
-             IF ( ocean ) THEN
-
-                DO  k = nzb+1, nzt-1
-                   tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g *          &
-                                 cos_alpha_surface * 0.5_wp *                  &
-                                 ( ( var(k,j,i)   - rho_slope_ref(k,i)   )     &
-                                     / ref_state(k) +                          &
-                                   ( var(k+1,j,i) - rho_slope_ref(k+1,i) )     &
-                                     / ref_state(k+1) )                        &
-                               * MERGE( 1.0_wp, 0.0_wp,                        &
-                                        BTEST( wall_flags_0(k,j,i), 0 ) )
-                ENDDO
-
-             ELSE
-
-                DO  k = nzb+1, nzt-1
-                   tend(k,j,i) = tend(k,j,i) + atmos_ocean_sign * g *          &
-                                 cos_alpha_surface * 0.5_wp *                  &
-                                 ( ( pt(k,j,i)         + pt(k+1,j,i)         ) &
-                                 - ( pt_slope_ref(k,i) + pt_slope_ref(k+1,i) ) &
-                                 ) / pt_surface                                &
-                                   * MERGE( 1.0_wp, 0.0_wp,                    &
-                                            BTEST( wall_flags_0(k,j,i), 0 ) )
-                ENDDO
-
-             ENDIF
-
+          IF ( sloping_surface )  THEN
+             slope_factor = sin_alpha_surface
           ELSE
-
-             WRITE( message_string, * ) 'no term for component "',             &
-                                       wind_component,'"'
-             CALL message( 'buoyancy', 'PA0159', 1, 2, 0, 6, 0 )
-
+             slope_factor = 0.0_wp
           ENDIF
+       
+       ELSEIF ( wind_component == 2 )  THEN
 
+          slope_factor = 0.0_wp
+       
+       ELSEIF ( wind_component == 3 )  THEN
+
+          IF ( sloping_surface )  THEN
+             slope_factor = cos_alpha_surface
+          ENDIF
+       
+       ELSE
+          WRITE( message_string, * ) 'no term for component "',             &
+                                    wind_component,'"'
+          CALL message( 'buoyancy', 'PA0159', 1, 2, 0, 6, 0 )
+       
        ENDIF
-
+       
+       DO  k = nzb+1, nzt-1
+          
+          buoy(k,j,i) = slope_factor * atmos_ocean_sign * g * 0.5_wp *         &
+                 (                                                             &
+                    ( var(k,j,i)   - ref_ambient(k,i)   )  / ref_state(k) +      &
+                    ( var(k+1,j,i) - ref_ambient(k+1,i) )  / ref_state(k+1)      &
+                 ) * MERGE( 1.0_wp, 0.0_wp,                                    &
+                            BTEST( wall_flags_0(k,j,i), 0 ) )
+          
+          tend(k,j,i) = tend(k,j,i) + buoy(k,j,i) 
+       
+       ENDDO
+       
     END SUBROUTINE buoyancy_ij
 
  END MODULE buoyancy_mod

@@ -606,11 +606,10 @@
              CALL cpu_log( log_point(45), 'uvw-coriolis', 'start' )
              CALL coriolis( i, j, 1 )
              CALL cpu_log( log_point(45), 'uvw-coriolis', 'stop' )
-             
              IF ( sloping_surface  .AND.  .NOT. neutral )  THEN
                 CALL cpu_log( log_point(46), 'uvw-buoyancy', 'start' )
                 IF ( ocean ) THEN
-                   CALL buoyancy( i, j, rho_ocean, 1 )
+                   CALL buoyancy( i, j, prho, 1 )
                 ELSE
                    CALL buoyancy( i, j, pt, 1 )
                 ENDIF
@@ -633,7 +632,7 @@
              IF ( dp_external )  THEN
                 DO  k = dp_level_ind_b+1, nzt
                    tend(k,j,i) = tend(k,j,i) - dpdxy_loc(1) * dp_smooth_factor(k)   &
-                                 * MERGE( 1.0_wp/rho_reference, drho_ref_zu(k), &
+                                 * MERGE( 1.0_wp/prho_reference, drho_ref_zu(k), &
                                           use_single_reference_value )
                 ENDDO
              ENDIF
@@ -726,7 +725,7 @@
              IF ( dp_external )  THEN
                 DO  k = dp_level_ind_b+1, nzt
                    tend(k,j,i) = tend(k,j,i) - dpdxy_loc(2) * dp_smooth_factor(k)   &
-                                 * MERGE( 1.0_wp/rho_reference, drho_ref_zu(k), &
+                                 * MERGE( 1.0_wp/prho_reference, drho_ref_zu(k), &
                                           use_single_reference_value )
                 ENDDO
              ENDIF
@@ -801,7 +800,7 @@
           IF ( .NOT. neutral )  THEN
              CALL cpu_log( log_point(46), 'uvw-buoyancy', 'start' )
              IF ( ocean )  THEN
-                CALL buoyancy( i, j, rho_ocean, 3 )
+                CALL buoyancy( i, j, prho, 3 )
              ELSE
                 IF ( .NOT. humidity )  THEN
                    CALL buoyancy( i, j, pt, 3 )
@@ -1579,7 +1578,7 @@
     CALL coriolis( 1 )
     IF ( sloping_surface  .AND.  .NOT. neutral )  THEN
        IF ( ocean ) THEN
-          CALL buoyancy( rho_ocean, 1 )
+          CALL buoyancy( prho, 1 )
        ELSE
           CALL buoyancy( pt, 1 )
        ENDIF
@@ -1602,7 +1601,7 @@
           DO  j = nys, nyn
              DO  k = dp_level_ind_b+1, nzt
                 tend(k,j,i) = tend(k,j,i) - dpdxy(1) * dp_smooth_factor(k)   &
-                              * MERGE( 1.0_wp/rho_reference, drho_ref_zu(k), &
+                              * MERGE( 1.0_wp/prho_reference, drho_ref_zu(k), &
                                        use_single_reference_value )
              ENDDO
           ENDDO
@@ -1695,7 +1694,7 @@
           DO  j = nysv, nyn
              DO  k = dp_level_ind_b+1, nzt
                 tend(k,j,i) = tend(k,j,i) - dpdxy(2) * dp_smooth_factor(k)   &
-                              * MERGE( 1.0_wp/rho_reference, drho_ref_zu(k), &
+                              * MERGE( 1.0_wp/prho_reference, drho_ref_zu(k), &
                                        use_single_reference_value )
              ENDDO
           ENDDO
@@ -1773,7 +1772,7 @@
 
     IF ( .NOT. neutral )  THEN
        IF ( ocean )  THEN
-          CALL buoyancy( rho_ocean, 3 )
+          CALL buoyancy( prho, 3 )
        ELSE
           IF ( .NOT. humidity )  THEN
              CALL buoyancy( pt, 3 )

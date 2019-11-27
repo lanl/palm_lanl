@@ -670,6 +670,8 @@
 
     ALLOCATE( d(nzb+1:nzt,nys:nyn,nxl:nxr),                                    &
               p(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                                &
+              ref_ambient(nzb:nzt+1,nxlg:nxrg),                                & 
+              buoy(nzb:nzt+1,nysg:nyng,nxlg:nxrg),                             & 
               tend(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
 
 #if defined( __nopointer )
@@ -869,7 +871,6 @@
 !
 !-- Allocation of anelastic and Boussinesq approximation specific arrays
     ALLOCATE( p_hydrostatic(nzb:nzt+1) )
-    IF ( ambient_density_for_buoyancy ) ALLOCATE( rho_ambient(nzb:nzt+1) )
     ALLOCATE( rho_ref_zu(nzb:nzt+1) )
     ALLOCATE( rho_ref_zw(nzb:nzt+1) )
     ALLOCATE( drho_ref_zu(nzb:nzt+1) )
@@ -1764,6 +1765,9 @@
                 ref_state(:) = vpt(:,nys,nxl)
              ENDIF
           ENDIF
+          DO  i = nxlg, nxrg
+             ref_ambient(:,i) = ref_state(:)
+          ENDDO
        ENDIF
 
 !
@@ -2408,7 +2412,6 @@
     IF ( dt_dvrp /= 9999999.9_wp )  CALL init_dvrp
 
     IF ( ocean ) THEN
-
 !--    Calculate the 3-d array of initial in-situ and potential density
 !--    based on the initial temperature and salinity profiles.
        CALL eqn_state_seawater

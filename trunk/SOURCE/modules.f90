@@ -728,11 +728,12 @@
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  mean_inflow_profiles  !< used for turbulent inflow (non-cyclic boundary conditions)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  precipitation_amount  !< precipitation amount due to gravitational settling (bulk microphysics)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  pt_slope_ref          !< potential temperature in rotated coordinate system (in case of sloped surface)
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  rho_slope_ref         !< density in rotated coordinate system (in case of sloped surface)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sa_slope_ref          !< salinity in rotated coordinate system (in case of sloped surface) 
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  ref_ambient           !< reference state for buoyancy calculation
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  total_2d_a            !< horizontal array to store the total domain data, used for atmosphere-ocean coupling (atmosphere data)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  total_2d_o            !< horizontal array to store the total domain data, used for atmosphere-ocean coupling (ocean data)
 
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  buoy        !< buoyancy
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  d           !< divergence
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  de_dx       !< gradient of sgs tke in x-direction (lpm)
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  de_dy       !< gradient of sgs tke in y-direction (lpm)
@@ -939,7 +940,6 @@
 
     REAL(wp), DIMENSION(:,:,:,:), ALLOCATABLE ::  tri    !<  array to hold the tridiagonal matrix for solution of the Poisson equation in Fourier space (4th dimension for threads)
 
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  rho_ambient      !< ambient density profile on the w grid
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  rho_ref_zu       !< air density profile on the uv grid
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  rho_ref_zw       !< air density profile on the w grid
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  drho_ref_zu      !< inverse air density profile on the uv grid
@@ -1412,7 +1412,7 @@
     LOGICAL ::  scalar_rayleigh_damping = .TRUE.                 !< namelist parameter
     LOGICAL ::  sloping_surface = .FALSE.                        !< use sloped surface? (namelist parameter alpha_surface)
     LOGICAL ::  slope_offset = .FALSE.                           !< default slope conditions are slope_parallel, when TRUE use horizontal isopynals with slope offset
-    LOGICAL ::  slope_parallel_gradients = .TRUE.                           !< default slope conditions are slope_parallel, when TRUE use horizontal isopynals with slope offset
+    LOGICAL ::  slope_normal_gradients = .TRUE.                  !< default slope conditions are slope_perpendicular, when False use horizontal isopycnals
     LOGICAL ::  spinup = .FALSE.                                 !< perform model spinup without atmosphere code?
     LOGICAL ::  stokes_force = .FALSE.                           !< switch for use of Stokes forces
     LOGICAL ::  stop_dt = .FALSE.                                !< internal switch to stop the time stepping

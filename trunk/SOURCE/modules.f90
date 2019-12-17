@@ -1461,7 +1461,7 @@
     REAL(wp) ::  bc_pt_t_val                                   !< vertical gradient of pt near domain top
     REAL(wp) ::  bc_q_t_val                                    !< vertical gradient of humidity near domain top
     REAL(wp) ::  bc_s_t_val                                    !< vertical gradient of passive scalar near domain top
-    REAL(wp) ::  beta_const = 8.0E-4                           !< fixed beta_S value !CB is this needed?
+    REAL(wp) ::  beta_const = 8.0E-4                           !< fixed beta_S value
     REAL(wp) ::  bottom_salinityflux = 9999999.9_wp            !< namelist parameter
     REAL(wp) ::  bubble_center_x = 9999999.9_wp                !< namelist parameter
     REAL(wp) ::  bubble_center_y = 9999999.9_wp                !< namelist parameter
@@ -1491,6 +1491,7 @@
     REAL(wp) ::  disturbance_level_t = -9999999.9_wp           !< namelist parameter
     REAL(wp) ::  dp_level_b = 0.0_wp                           !< namelist parameter
     REAL(wp) ::  drag_coeff = 9999999.9_wp                     !< namelist parameter
+    REAL(wp) ::  drho_dp_const = 4.66e-6                       !< namelist parameter, drho/dp / rho [dbar^-1]
     REAL(wp) ::  dt = -1.0_wp                                  !< namelist parameter
     REAL(wp) ::  dt_averaging_input = 0.0_wp                   !< namelist parameter
     REAL(wp) ::  dt_averaging_input_pr = 9999999.9_wp          !< namelist parameter

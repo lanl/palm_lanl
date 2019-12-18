@@ -602,9 +602,10 @@
              data_output_during_spinup,                                        &
              day_of_year_init,                                                 &
              dissipation_1d,                                                   &
-             dp_external, dp_level_b, dp_smooth, dpdxy, drag_coeff,            &
+             dp_external, dp_level_b, dp_smooth, dpdxy,                        &
              dpdx, dpdx_phase, dpdx_freq, dpdy, dpdy_phase, dpdy_freq,         &
-             dry_aerosol_radius, dt, dt_pr_1d, dt_run_control_1d, dt_spinup,   &
+             drag_coeff, drho_dp_const, dry_aerosol_radius,                    &
+             dt, dt_pr_1d, dt_run_control_1d, dt_spinup,                       &
              dx, dy, dz, dz_max, dz_stretch_factor, dz_stretch_level,          &
              dz_stretch_level_start, dz_stretch_level_end, d_stk,              &
              end_time_1d, ensemble_member_nr, e_init,                          &

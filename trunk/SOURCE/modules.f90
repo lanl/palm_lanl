@@ -1359,6 +1359,7 @@
     LOGICAL ::  force_bound_s = .FALSE.                          !< flag indicating domain boundary on south side to set forcing boundary conditions
     LOGICAL ::  forcing = .FALSE.                                !< flag controlling forcing from large-scale model
     LOGICAL ::  galilei_transformation = .FALSE.                 !< namelist parameter
+    LOGICAL ::  gamma_constant = .FALSE.                         !< namelist parameter, chooses between depth-dependent and depth-independent forms
     LOGICAL ::  humidity = .FALSE.                               !< namelist parameter
     LOGICAL ::  humidity_remote = .FALSE.                        !< switch for receiving near-surface humidity flux (atmosphere-ocean coupling)
     LOGICAL ::  inflow_l = .FALSE.                               !< left domain boundary has non-cyclic inflow?
@@ -1523,6 +1524,8 @@
     REAL(wp) ::  fx = 0.0_wp                                   !< Coriolis parameter
     REAL(wp) ::  fy = 0.0_wp                                   !< Coriolis parameter
     REAL(wp) ::  g = 9.81_wp                                   !< gravitational acceleration
+    REAL(wp) ::  Gamma_T_const = 0.011_wp                      !< namelist parameter, thermal exchange coefficient
+    REAL(wp) ::  Gamma_S_const = 3.1E-4_wp                     !< namelist parameter, haline exchange coefficient
     REAL(wp) ::  ideal_solar_division = 0.67_wp                !< value for breakdown of double exponential
     REAL(wp) ::  ideal_solar_efolding1 = 1.0_wp/1.0_wp         !< efolding depth for IR in solar (m^-1)
     REAL(wp) ::  ideal_solar_efolding2 = 1.0_wp/17.0_wp        !< efolding depth for blue in solar (m^-1)

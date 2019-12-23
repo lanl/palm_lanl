@@ -231,7 +231,8 @@
         ONLY:  air_chemistry, c1, c2, c3, cloud_droplets, cloud_physics,       &
                constant_flux_layer, constant_heatflux, constant_scalarflux,    &     
                constant_waterflux, coupling_mode, drag_coeff, f, g,            &
-               humidity, ibc_e_b, ibc_e_t, ibc_pt_b, ibc_pt_t,                 &
+               humidity, gamma_constant, Gamma_T_const, Gamma_S_const,         &
+               ibc_e_b, ibc_e_t, ibc_pt_b, ibc_pt_t,                           &
                initializing_actions, intermediate_timestep_count,              &
                intermediate_timestep_count_max, ij_av_width_mcphee,            &
                k_offset_mcphee,                                                &
@@ -2676,25 +2677,33 @@
 !--          parameterization
              ELSE
 
-!--             viscous sublayer thickness, Tennekes and Lumley (1972) p. 160
-                h_nu = 5.0_wp * molecular_viscosity / ( surf%us(m) + 1E-30_wp )
+                IF ( gamma_constant ) THEN
+                   
+                   surf%gamma_T(m) = ( surf%us(m) + 1E-30_wp ) * Gamma_T_const 
+                   surf%gamma_S(m) = ( surf%us(m) + 1E-30_wp ) * Gamma_S_const 
                 
-!--             Scaling factor for stability of stratification
-                eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /                  &
-                           ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5
-                
-                Gamma_turb = ( 1 / kappa ) *                                   &
-                                    LOG( ( surf%us(m) * xi_N * eta_star**2 ) / &
-                                         ( ABS(f) * h_nu ) )                   &
-                             + ( 1 / ( 2 * xi_N * eta_star ) )                 &
-                             - ( 1 / kappa )
-                
-                Gamma_mol_T = 12.5_wp * prandtl_number**(2/3) - 6
-                Gamma_mol_S = 12.5_wp * schmidt_number**(2/3) - 6
+                ELSE
+!--                viscous sublayer thickness, Tennekes and Lumley (1972) p. 160
+                   h_nu = 5.0_wp * molecular_viscosity / ( surf%us(m) + 1E-30_wp )
+                   
+!--                Scaling factor for stability of stratification
+                   eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /                  &
+                              ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5
+                   
+                   Gamma_turb = ( 1 / kappa ) *                                   &
+                                       LOG( ( surf%us(m) * xi_N * eta_star**2 ) / &
+                                            ( ABS(f) * h_nu ) )                   &
+                                + ( 1 / ( 2 * xi_N * eta_star ) )                 &
+                                - ( 1 / kappa )
+                   
+                   Gamma_mol_T = 12.5_wp * prandtl_number**(2/3) - 6
+                   Gamma_mol_S = 12.5_wp * schmidt_number**(2/3) - 6
 
-                surf%gamma_T(m) = ( surf%us(m) + 1E-30_wp ) / (Gamma_turb + Gamma_mol_T)
-                surf%gamma_S(m) = ( surf%us(m) + 1E-30_wp ) / (Gamma_turb + Gamma_mol_S)
+                   surf%gamma_T(m) = ( surf%us(m) + 1E-30_wp ) / (Gamma_turb + Gamma_mol_T)
+                   surf%gamma_S(m) = ( surf%us(m) + 1E-30_wp ) / (Gamma_turb + Gamma_mol_S)
                 
+                ENDIF 
+             
              ENDIF
 
 !

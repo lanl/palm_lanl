@@ -490,9 +490,14 @@
 !------------------------------------------------------------------------------!
 ! Description:
 ! ------------
-!> Equation of state as a function
+!> Equation of state as a function returning in situ density
+!> To return potential density, set p=0
 !------------------------------------------------------------------------------!
     REAL(wp) FUNCTION eqn_state_seawater_func( p, pt, sa )
+       
+       USE control_parameters,                                                 &
+          ONLY :  alpha_const, beta_const, drho_dp_const, fixed_alpha,         &
+                  linear_eqnOfState, rho_ref, pt_ref, sa_ref
 
        IMPLICIT NONE
 
@@ -509,34 +514,40 @@
        REAL(wp) ::  sa15   !<
        REAL(wp) ::  sa2    !<
 
+       IF (linear_eqnOfState .AND. fixed_alpha) THEN
+          eqn_state_seawater_func = rho_ref*(1.0 -                             &
+                                       alpha_const*(pt - pt_ref) +             &
+                                       beta_const*(sa - sa_ref) +              & 
+                                       drho_dp_const * p * 1E-4_wp     )
+       ELSE
 !
-!--    Pressure is needed in dbar
-       p1 = p  * 1E-4_wp
-       p2 = p1 * p1
-       p3 = p2 * p1
+!--       Pressure is needed in dbar
+          p1 = p  * 1E-4_wp
+          p2 = p1 * p1
+          p3 = p2 * p1
 
 !
-!--    Temperature needed in degree Celsius
-       pt1 = pt - 273.15_wp
-       pt2 = pt1 * pt1
-       pt3 = pt1 * pt2
-       pt4 = pt2 * pt2
+!--       Temperature needed in degree Celsius
+          pt1 = pt - 273.15_wp
+          pt2 = pt1 * pt1
+          pt3 = pt1 * pt2
+          pt4 = pt2 * pt2
 
-       sa15 = sa * SQRT( sa )
-       sa2  = sa * sa
+          sa15 = sa * SQRT( sa )
+          sa2  = sa * sa
 
 
-       eqn_state_seawater_func =                                               &
-         ( nom(1)        + nom(2)*pt1       + nom(3)*pt2    + nom(4)*pt3     + &
-           nom(5)*sa     + nom(6)*sa*pt1    + nom(7)*sa2    + nom(8)*p1      + &
-           nom(9)*p1*pt2 + nom(10)*p1*sa    + nom(11)*p2    + nom(12)*p2*pt2   &
-         ) /                                                                   &
-         ( den(1)        + den(2)*pt1       + den(3)*pt2    + den(4)*pt3     + &
-           den(5)*pt4    + den(6)*sa        + den(7)*sa*pt1 + den(8)*sa*pt3  + &
-           den(9)*sa15   + den(10)*sa15*pt2 + den(11)*p1    + den(12)*p2*pt3 + &
-           den(13)*p3*pt1                                                      &
-         )
-
+          eqn_state_seawater_func =                                               &
+            ( nom(1)        + nom(2)*pt1       + nom(3)*pt2    + nom(4)*pt3     + &
+              nom(5)*sa     + nom(6)*sa*pt1    + nom(7)*sa2    + nom(8)*p1      + &
+              nom(9)*p1*pt2 + nom(10)*p1*sa    + nom(11)*p2    + nom(12)*p2*pt2   &
+            ) /                                                                   &
+            ( den(1)        + den(2)*pt1       + den(3)*pt2    + den(4)*pt3     + &
+              den(5)*pt4    + den(6)*sa        + den(7)*sa*pt1 + den(8)*sa*pt3  + &
+              den(9)*sa15   + den(10)*sa15*pt2 + den(11)*p1    + den(12)*p2*pt3 + &
+              den(13)*p3*pt1                                                      &
+            )
+       ENDIF
 
     END FUNCTION eqn_state_seawater_func
 

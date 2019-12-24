@@ -1163,6 +1163,7 @@
     CHARACTER (LEN=20)   ::  coupling_mode_remote = 'uncoupled'           !< coupling mode of the remote process in case of coupled atmosphere-ocean runs
     CHARACTER (LEN=20)   ::  dissipation_1d = 'detering'                  !< namelist parameter
     CHARACTER (LEN=20)   ::  fft_method = 'temperton-algorithm'           !< namelist parameter
+    CHARACTER (LEN=20)   ::  gamma_mcphee = 'BL-integrated'               !< namelist parameter
     CHARACTER (LEN=20)   ::  mixing_length_1d = 'blackadar'               !< namelist parameter
     CHARACTER (LEN=20)   ::  random_generator = 'random-parallel'         !< namelist parameter
     CHARACTER (LEN=20)   ::  reference_state = 'initial_profile'          !< namelist parameter
@@ -1368,8 +1369,6 @@
     LOGICAL ::  force_bound_s = .FALSE.                          !< flag indicating domain boundary on south side to set forcing boundary conditions
     LOGICAL ::  forcing = .FALSE.                                !< flag controlling forcing from large-scale model
     LOGICAL ::  galilei_transformation = .FALSE.                 !< namelist parameter
-    LOGICAL ::  gamma_constant = .FALSE.                         !< namelist parameter, chooses between depth-dependent and depth-independent forms
-    LOGICAL ::  gamma_z_dependent = .FALSE.                      !< namelist parameter, chooses between depth-dependent and depth-independent forms
                                                                  !< of scalar transfer coefficients for MOST method McPhee (1987)
     LOGICAL ::  humidity = .FALSE.                               !< namelist parameter
     LOGICAL ::  humidity_remote = .FALSE.                        !< switch for receiving near-surface humidity flux (atmosphere-ocean coupling)

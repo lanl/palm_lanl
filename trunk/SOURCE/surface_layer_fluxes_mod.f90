@@ -231,8 +231,7 @@
         ONLY:  air_chemistry, c1, c2, c3, cloud_droplets, cloud_physics,       &
                constant_flux_layer, constant_heatflux, constant_scalarflux,    &     
                constant_waterflux, coupling_mode, drag_law, drag_coeff, f, g,  &
-               gamma_constant, Gamma_T_const, Gamma_S_const,                   &
-               gamma_z_dependent, humidity,                                    &
+               gamma_mcphee, Gamma_T_const, Gamma_S_const, humidity,           &
                ibc_e_b, ibc_e_t, ibc_pt_b, ibc_pt_t,                           &
                initializing_actions, intermediate_timestep_count,              &
                intermediate_timestep_count_max, ij_av_width_mcphee,            &
@@ -2732,7 +2731,7 @@
 !--          parameterization
              ELSE
 
-                IF ( gamma_constant ) THEN
+                IF ( TRIM(gamma_mcphee) == 'constant' ) THEN
                    
                    surf%gamma_T(m) = ( surf%us(m) + 1E-30_wp ) * Gamma_T_const 
                    surf%gamma_S(m) = ( surf%us(m) + 1E-30_wp ) * Gamma_S_const 
@@ -2741,7 +2740,7 @@
 
 !--                Depth-dependent formulation. Coefficient value for stability function
 !--                from Zhou et al. (2017)
-                   IF ( gamma_z_dependent ) THEN
+                   IF ( TRIM(gamma_mcphee) == 'depth-dependent' ) THEN
 
                       Gamma_turb = (1.0_wp/kappa) * (LOG(ABS(zu(nzt-surf%koff)) / &
                                                          surf%z0(m) )             & 
@@ -2752,7 +2751,7 @@
                       Gamma_mol_T = 12.5_wp * prandtl_number**(0.67_wp) - 6.0_wp
                       Gamma_mol_S = 12.5_wp * schmidt_number**(0.67_wp) - 6.0_wp
 
-                   ELSE
+                   ELSEIF ( TRIM(gamma_mcphee) == 'BL-integrated' ) THEN 
 
 !--                   viscous sublayer thickness, Tennekes and Lumley (1972) p. 160
                       h_nu = 5.0_wp * molecular_viscosity / ( surf%us(m) + 1E-30_wp )

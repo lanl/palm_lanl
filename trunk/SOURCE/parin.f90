@@ -610,7 +610,7 @@
              dz_stretch_level_start, dz_stretch_level_end, d_stk,              &
              end_time_1d, ensemble_member_nr, e_init,                          &
              e_min, fft_method, flux_input_mode, flux_output_mode, forcing,    &
-             galilei_transformation, gamma_constant, gamma_z_dependent, humidity, &
+             galilei_transformation, gamma_mcphee, humidity,                   &
              ij_av_width_mcphee, inflow_damping_height, inflow_damping_width,  &
              inflow_disturbance_begin, inflow_disturbance_end,                 &
              initialize_to_geostrophic, initializing_actions, km_constant,     &

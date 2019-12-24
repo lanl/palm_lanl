@@ -4179,6 +4179,16 @@
           ENDIF
        ENDIF
     ENDIF
+
+!
+!-- Check whether prandtl_number is appropriate
+    IF ( TRIM(gamma_mcphee) /= 'constant'        .AND.                         &
+         TRIM(gamma_mcphee) /= 'depth-dependent' .AND.                         &
+         TRIM(gamma_mcphee) /= 'BL-integrated'         ) THEN
+       message_string = 'gamma_mcphee is not one of the allowed values'
+       CALL message( 'check_parameters', 'PA0656', 1, 1, 0, 6, 0 )
+    ENDIF
+
 !
 !-- Check whether prandtl_number is appropriate
     IF ( TRIM(most_method) == 'mcphee' ) THEN

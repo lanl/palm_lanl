@@ -216,7 +216,7 @@
                 DO  i = nxl, nxr
                    prho(k,j,i)      = rho_ref*(1.0 -                           &
                                          alpha_const*(pt_p(k,j,i) - pt_ref) +  &
-                                         beta_const*(sa_p(k,j,i) - sa_ref)    )
+                                         beta_const*(sa_p(k,j,i) - sa_ref) )
                    rho_ocean(k,j,i) = rho_ref*(1.0 -                           &
                                          alpha_const*(pt_p(k,j,i) - pt_ref) +  &
                                          beta_const*(sa_p(k,j,i) - sa_ref) +   & 
@@ -298,10 +298,13 @@
                    beta_S(k,j,i) = 1.0/rho_ocean(k,j,i)*(dpnomdS2*pden - pnom*dpdendS2) / (pden*pden)
 
                    IF (linear_eqnOfState) THEN
-                      prho(k,j,i) = rho_ref*(1.0 - alpha_T(k,j,i)*(pt1 - pt_ref) + &
-                          beta_S(k,j,i)*(sa1 - sa_ref))
-                      rho_ocean(k,j,i) = rho_ref*(1.0 - alpha_T(k,j,i)*(pt1 - pt_ref) + &
-                          beta_S(k,j,i)*(sa1 - sa_ref) + drho_dp_const * hyp(k) * 1E-4_wp)
+                      prho(k,j,i)      = rho_ref*(1.0 -                        &
+                                         alpha_T(k,j,i)*(pt1 - pt_ref) +       &
+                                         beta_S(k,j,i)*(sa1 - sa_ref) )
+                      rho_ocean(k,j,i) = rho_ref*(1.0 -                        &
+                                         alpha_T(k,j,i)*(pt1 - pt_ref) +       &
+                                         beta_S(k,j,i)*(sa1 - sa_ref) +        &
+                                         drho_dp_const * hyp(k) * 1E-4_wp)
                    ENDIF
                 ENDDO
              ENDDO
@@ -397,7 +400,7 @@
           DO  k = nzb+1, nzt
              prho(k,j,i)      = rho_ref*(1.0 -                                 &
                                    alpha_const*(pt_p(k,j,i) - pt_ref) +        &
-                                   beta_const*(sa_p(k,j,i) - sa_ref)    )      
+                                   beta_const*(sa_p(k,j,i) - sa_ref)  )      
              rho_ocean(k,j,i) = rho_ref*(1.0 -                                 &
                                    alpha_const*(pt_p(k,j,i) - pt_ref) +        &
                                    beta_const*(sa_p(k,j,i) - sa_ref) +         & 
@@ -453,10 +456,11 @@
              rho_ocean(k,j,i) = pnom / pden
 
              IF (linear_eqnOfState) THEN
-                prho(k,j,i) = rho_ref*(1.0 - alpha_T(k,j,i)*(pt1 - pt_ref) + &
-                    beta_S(k,j,i)*(sa1 - sa_ref))
+                prho(k,j,i)      = rho_ref*(1.0 - alpha_T(k,j,i)*(pt1 - pt_ref) + &
+                                            beta_S(k,j,i)*(sa1 - sa_ref) )
                 rho_ocean(k,j,i) = rho_ref*(1.0 - alpha_T(k,j,i)*(pt1 - pt_ref) + &
-                    beta_S(k,j,i)*(sa1 - sa_ref) + drho_dp_const * hyp(k) * 1E-4_wp)
+                                            beta_S(k,j,i)*(sa1 - sa_ref) +        &
+                                            drho_dp_const * hyp(k) * 1E-4_wp)
              ENDIF
 
           ENDDO
@@ -516,9 +520,9 @@
 
        IF (linear_eqnOfState .AND. fixed_alpha) THEN
           eqn_state_seawater_func = rho_ref*(1.0 -                             &
-                                       alpha_const*(pt - pt_ref) +             &
-                                       beta_const*(sa - sa_ref) +              & 
-                                       drho_dp_const * p * 1E-4_wp     )
+                                             alpha_const*(pt - pt_ref) +       &
+                                             beta_const*(sa - sa_ref) +        & 
+                                             drho_dp_const * p * 1E-4_wp     )
        ELSE
 !
 !--       Pressure is needed in dbar

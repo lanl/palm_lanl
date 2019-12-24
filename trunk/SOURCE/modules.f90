@@ -1545,6 +1545,7 @@
     REAL(wp) ::  particle_maximum_age = 9999999.9_wp           !< namelist parameter
     REAL(wp) ::  prandtl_number = 1.0_wp                       !< namelist parameter
     REAL(wp) ::  precipitation_amount_interval = 9999999.9_wp  !< namelist parameter
+    REAL(wp) ::  p_ref = 1013.25_wp                            !< namelist parameter, units mbar, reference pressure for linear eos
     REAL(wp) ::  prho_reference                                !< reference state of potential density
     REAL(wp) ::  pt_damping_factor = 0.0_wp                    !< namelist parameter
     REAL(wp) ::  pt_damping_width = 0.0_wp                     !< namelist parameter

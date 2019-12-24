@@ -642,7 +642,8 @@
              sigma_bulk, spinup_time, spinup_pt_amplitude, spinup_pt_mean,     &
              statistic_regions, stokes_force, stokes_drift_method,             &
              subs_vertical_gradient,                                           &
-             subs_vertical_gradient_level, surface_heatflux, surface_pressure, &
+             subs_vertical_gradient_level, surface_flux_diags,                 &
+             surface_heatflux, surface_pressure,                               &
              surface_scalarflux, surface_waterflux,                            &
              s_surface, s_surface_initial_change, s_vertical_gradient,         &
              s_vertical_gradient_level, time_utc_init, timestep_scheme,        &

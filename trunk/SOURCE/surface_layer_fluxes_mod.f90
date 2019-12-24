@@ -242,7 +242,8 @@
                message_string, microphysics_morrison, microphysics_seifert,    &
                molecular_viscosity, most_method, most_xy_av, neutral, ocean,   &
                passive_scalar, prandtl_number, pt_surface, q_surface,          &
-               run_coupled, schmidt_number, surface_pressure, simulated_time,  &
+               run_coupled, schmidt_number, surface_flux_diags,                &
+               surface_pressure, simulated_time,                               &
                terminate_run, time_since_reference_point, urban_surface,       &
                z_offset_mcphee, zeta_max, zeta_min
 
@@ -379,6 +380,7 @@
        ENDIF
 
        IF ( TRIM(constant_flux_layer) == 'top' )  THEN
+          downward = .True.
 !
 !--       First call for horizontal default-type surfaces 
           IF ( surf_def_h(2)%ns >= 1 )  THEN
@@ -387,13 +389,14 @@
 !--          Derive scalar properties at the nth grid level 
 !--          from the surface from their 3-d arrays
              IF ( ocean .AND. trim(most_method) == 'mcphee' ) THEN
-                surf => surf_def_h(2)
+                IF ( .NOT. koff_constant_mcphee ) CALL calc_koff
                 CALL calc_pt_sa
              ELSE
                 CALL calc_pt_q
                 IF ( .NOT. neutral )  CALL calc_pt_surface
              ENDIF
           ENDIF
+          downward = .False.
        ENDIF
 
 !
@@ -513,7 +516,33 @@
           ENDIF
           
           downward = .FALSE.
-       
+          
+          IF ( surface_flux_diags ) THEN
+             m = 1
+             WRITE(message_string,*) 'melt = ',surf%melt(m)*3e7_wp
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'u = ',surf%usurf(m) - surf%ufar(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'v = ',surf%vsurf(m) - surf%vfar(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'us = ',surf%us(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'uw = ',surf%usws(m)/rho_ref_zw(nzt)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'vw = ',surf%usws(m)/rho_ref_zw(nzt)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'gamma_T = ',surf%gamma_T(m)/surf%us(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'gamma_S = ',surf%gamma_S(m)/surf%us(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'dT = ',surf%pt1(m) - surf%pt_io(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'dS = ',surf%sa1(m) - surf%sa_io(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'k_offset_mcphee = ',k_offset_mcphee 
+             CALL location_message(message_string,.TRUE.) 
+          ENDIF
+
        ENDIF
 !
 !--    Calculate surfaces fluxes at vertical surfaces for momentum 
@@ -1730,7 +1759,7 @@
 ! ------------
 !> Calculate potential temperature and salinity at nth level below the top surface
 !------------------------------------------------------------------------------!
-    SUBROUTINE calc_pt_sa
+    SUBROUTINE calc_koff
 
        IMPLICIT NONE
 
@@ -1745,78 +1774,92 @@
        !$OMP PARALLEL DO PRIVATE( i, j, k, m, n )
        k_prev = k_offset_mcphee
        
-       IF ( .NOT. koff_constant_mcphee ) THEN
-!--       Evolve k_offset_mcphee using the minimum scalar slope with depth
+!--    Evolve k_offset_mcphee using the minimum scalar slope with depth
 
-!--       Determine the minimum k_offset_mcphee from the greater of 1 offset
-!--       from the previous k_offset_mcphee or the starting value given in the 
-!--       namelist file 
-          koff_min = MAX(k_prev - 1,koff_min_mcphee)
-          
-!--       Determine the maximum depth limit for k_offset_mcphee
+!--    Determine the minimum k_offset_mcphee from the greater of 1 offset
+!--    from the previous k_offset_mcphee or the starting value given in the 
+!--    namelist file 
+       koff_min = MAX(k_prev - 1,koff_min_mcphee)
+       
+!--    Determine the maximum depth limit for k_offset_mcphee
 
-!--       Solve for the theoretical BL thickness
-          ol_av = hom(nzb,1,112,0)
-          us_av = hom(nzb,1,pr_palm,0)
-          eta_star_av = ( 1.0_wp + xi_N * us_av /                              &
-                           (ABS(f) * ri_crit * ol_av ) )**-0.5_wp
-          
-          z_TBL = 0.4_wp * eta_star_av * us_av / ABS(f)
-          
-!--       Determine the maximum k_offset_mcphee from the lesser of  
-!--       1 x the theoretical bounday layer depth or 1/3 the domain depth ...
-          koff_max = 0
-          DO WHILE (ABS(zu(nzt-koff_max)) < MIN( z_TBL, ABS(zu(0))/3.0_wp ) )
-             koff_max = koff_max + 1   
-          ENDDO
-          
-!--       ... or one offset from the previous k_offset_mcphee
-          IF (koff_max > k_prev + 1) koff_max = k_prev+1
-          IF (koff_max < koff_min  ) koff_max = koff_min
-          
-!--       Look for minimum scalar slope within depth limits
-          ALLOCATE( pt_z_av(1:koff_max) )
-          ALLOCATE( sa_z_av(1:koff_max) )
-          ALLOCATE( dptdz_av(1:koff_max) )
-          ALLOCATE( dsadz_av(1:koff_max) )
-          ALLOCATE( dz_off(1:koff_max) )
-          
-          dptdz_av(1) = 9999
-          dsadz_av(1) = 9999
-          
-          !$OMP PARALLEL DO PRIVATE( k )
-          DO k = 1,koff_max
-             pt_z_av(k) = hom(nzt-k,1,4,0)
-             sa_z_av(k) = hom(nzt-k,1,23,0)
-             IF (k > 1) THEN
-                dptdz_av(k) = (pt_z_av(k) - pt_z_av(k-1))/dzu(nzt-k)
-                dsadz_av(k) = (sa_z_av(k) - sa_z_av(k-1))/dzu(nzt-k)
-             ENDIF
-          ENDDO
+!--    Solve for the theoretical BL thickness
+       ol_av = hom(nzb,1,112,0)
+       us_av = hom(nzb,1,pr_palm,0)
+       eta_star_av = ( 1.0_wp + xi_N * us_av /                              &
+                        (ABS(f) * ri_crit * ol_av ) )**-0.5_wp
+       
+       z_TBL = 0.4_wp * eta_star_av * us_av / ABS(f)
+       
+!--    Determine the maximum k_offset_mcphee from the lesser of  
+!--    1 x the theoretical bounday layer depth or 1/3 the domain depth ...
+       koff_max = 0
+       DO WHILE (ABS(zu(nzt-koff_max)) < MIN( z_TBL, ABS(zu(0))/3.0_wp ) )
+          koff_max = koff_max + 1   
+       ENDDO
+       
+!--    ... or one offset from the previous k_offset_mcphee
+       IF (koff_max > k_prev + 1) koff_max = k_prev+1
+       IF (koff_max < koff_min  ) koff_max = koff_min
+       
+!--    Look for minimum scalar slope within depth limits
+       ALLOCATE( pt_z_av(1:koff_max) )
+       ALLOCATE( sa_z_av(1:koff_max) )
+       ALLOCATE( dptdz_av(1:koff_max) )
+       ALLOCATE( dsadz_av(1:koff_max) )
+       ALLOCATE( dz_off(1:koff_max) )
+       
+       dptdz_av(1) = 9999
+       dsadz_av(1) = 9999
+       
+       !$OMP PARALLEL DO PRIVATE( k )
+       DO k = 1,koff_max
+          pt_z_av(k) = hom(nzt-k,1,4,0)
+          sa_z_av(k) = hom(nzt-k,1,23,0)
+          IF (k > 1) THEN
+             dptdz_av(k) = (pt_z_av(k) - pt_z_av(k-1))/dzu(nzt-k)
+             dsadz_av(k) = (sa_z_av(k) - sa_z_av(k-1))/dzu(nzt-k)
+          ENDIF
+       ENDDO
 
-          k_ptmin         = MINLOC(ABS(dptdz_av),DIM=1)
-          k_samin         = MINLOC(ABS(dsadz_av),DIM=1)
-          k_offset_mcphee = MAX(k_ptmin,k_samin)
-          
-          DEALLOCATE( pt_z_av )
-          DEALLOCATE( sa_z_av )
-          DEALLOCATE( dptdz_av)
-          DEALLOCATE( dsadz_av)
-          DEALLOCATE( dz_off  )
-          
-!--       Enforce depth limits on k_offset_mcphee
-          IF (k_offset_mcphee < koff_min) k_offset_mcphee = koff_min
+       k_ptmin         = MINLOC(ABS(dptdz_av),DIM=1)
+       k_samin         = MINLOC(ABS(dsadz_av),DIM=1)
+       k_offset_mcphee = MAX(k_ptmin,k_samin)
+       
+       DEALLOCATE( pt_z_av )
+       DEALLOCATE( sa_z_av )
+       DEALLOCATE( dptdz_av)
+       DEALLOCATE( dsadz_av)
+       DEALLOCATE( dz_off  )
+       
+!--    Enforce depth limits on k_offset_mcphee
+       IF (k_offset_mcphee < koff_min) k_offset_mcphee = koff_min
 
-!--       Convert to depth units
-          z_offset_mcphee = ABS(zu(nzt-k_offset_mcphee))
-          
-       ENDIF
+    END SUBROUTINE calc_koff
+
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Calculate potential temperature and salinity at nth level below the top surface
+!------------------------------------------------------------------------------!
+    SUBROUTINE calc_pt_sa
+
+       IMPLICIT NONE
+
+       INTEGER(iwp) ::  m,n,n_av,p,q       !< loop variable over all horizontal surf elements 
+       INTEGER(iwp) ::  ibit               !< 
+       INTEGER(iwp) ::  koff_max, koff_min, k_ptmin, k_samin, k_prev
+       REAL(wp) ::  pt_loc = 0.0_wp, sa_loc = 0.0_wp
+
+       !$OMP PARALLEL DO PRIVATE( i, j, k, m, n )
+       
+       ibit = MERGE( -1.0_wp, 1.0_wp, downward )
        
        IF (most_xy_av) THEN
        
 !--       Use horizontal averages for far-field scalar inputs to mcphee method
-          surf%pt1(:) = hom(nzt+ibit,1,4,0)
-          surf%sa1(:) = hom(nzt+ibit,1,23,0)
+          surf%pt1(:) = hom(nzt+ibit-surf%koff,1,4,0)
+          surf%sa1(:) = hom(nzt+ibit-surf%koff,1,23,0)
 
        ELSEIF ( k_av_width_mcphee > 0 .OR. ij_av_width_mcphee > 0 ) THEN
 !
@@ -1834,8 +1877,8 @@
              pt_loc = 0.0_wp
              sa_loc = 0.0_wp
              
-             DO n = MAX(nzb  ,k - k_offset_mcphee - k_av_width_mcphee),        &
-                    MIN(nzt+1,k - k_offset_mcphee + k_av_width_mcphee)
+             DO n = MAX(nzb  ,k + ibit*k_offset_mcphee - k_av_width_mcphee),    &
+                    MIN(nzt+1,k + ibit*k_offset_mcphee + k_av_width_mcphee)
                 DO p = MAX(nys,j - ij_av_width_mcphee),                        &
                        MIN(nyn,j + ij_av_width_mcphee)
                    DO q = MAX(nxl,i - ij_av_width_mcphee),                     &
@@ -1861,8 +1904,8 @@
              i   = surf%i(m)            
              j   = surf%j(m)
              k   = surf%k(m)
-             surf%pt1(m) = pt(k+ibit,j,i)
-             surf%sa1(m) = sa(k+ibit,j,i)
+             surf%pt1(m) = pt(k+ibit*k_offset_mcphee,j,i)
+             surf%sa1(m) = sa(k+ibit*k_offset_mcphee,j,i)
           ENDDO
        
        ENDIF

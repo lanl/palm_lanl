@@ -2687,17 +2687,17 @@
                    h_nu = 5.0_wp * molecular_viscosity / ( surf%us(m) + 1E-30_wp )
                    
 !--                Scaling factor for stability of stratification
-                   eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /                  &
-                              ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5
+                   eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /               &
+                              ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5_wp
                    
-                   Gamma_turb = ( 1 / kappa ) *                                   &
-                                       LOG( ( surf%us(m) * xi_N * eta_star**2 ) / &
-                                            ( ABS(f) * h_nu ) )                   &
-                                + ( 1 / ( 2 * xi_N * eta_star ) )                 &
-                                - ( 1 / kappa )
+                   Gamma_turb = ( 1.0_wp / kappa ) *                           &
+                                  LOG( ( surf%us(m) * xi_N * eta_star**2.0_wp ) / &
+                                       ( ABS(f) * h_nu ) )                     &
+                                + ( 1.0_wp / ( 2.0_wp * xi_N * eta_star ) )    &
+                                - ( 1.0_wp / kappa )
                    
-                   Gamma_mol_T = 12.5_wp * prandtl_number**(2/3) - 6
-                   Gamma_mol_S = 12.5_wp * schmidt_number**(2/3) - 6
+                   Gamma_mol_T = 12.5_wp * prandtl_number**(0.67_wp) - 6.0_wp
+                   Gamma_mol_S = 12.5_wp * schmidt_number**(0.67_wp) - 6.0_wp
 
                    surf%gamma_T(m) = ( surf%us(m) + 1E-30_wp ) / (Gamma_turb + Gamma_mol_T)
                    surf%gamma_S(m) = ( surf%us(m) + 1E-30_wp ) / (Gamma_turb + Gamma_mol_S)

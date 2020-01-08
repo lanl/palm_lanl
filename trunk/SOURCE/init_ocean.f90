@@ -307,7 +307,7 @@
        ENDIF
     ELSE ! no slope
        DO  i = nxlg, nxrg
-          ref_ambient(i,:) = ref_state(:)
+          ref_ambient(:,i) = ref_state(:)
        ENDDO
     ENDIF
 

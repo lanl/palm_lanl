@@ -6,6 +6,7 @@
 
         ocean = .T.,
         idealized_diurnal = .F.,
+        reference_state = 'single_value',
 
         initializing_actions = 'set_constant_profiles',
 
@@ -20,7 +21,7 @@
 
         use_top_fluxes= .T.,
         use_surface_fluxes = .F.,
-        constant_flux_layer= .F.,
+        constant_flux_layer= 'none',
 
         top_momentumflux_u = 0.0,
         top_momentumflux_v = 0.0,

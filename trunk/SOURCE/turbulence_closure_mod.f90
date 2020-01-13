@@ -401,6 +401,9 @@
           CASE ( 'Moeng_Wyngaard' )
              les_mw = .TRUE.
 
+          CASE ( 'AMD' )
+             les_amd = .TRUE.
+
           CASE DEFAULT
              !> @todo rework this part so that only one call of this error exists
              message_string = 'Unknown turbulence closure: ' //                &

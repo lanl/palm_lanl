@@ -1168,7 +1168,7 @@
     CHARACTER (LEN=20)   ::  random_generator = 'random-parallel'         !< namelist parameter
     CHARACTER (LEN=20)   ::  reference_state = 'initial_profile'          !< namelist parameter
     CHARACTER (LEN=20)   ::  timestep_scheme = 'runge-kutta-3'            !< namelist parameter
-    CHARACTER (LEN=20)   ::  turbulence_closure = 'Moeng_Wyngaard'        !< namelist parameter
+    CHARACTER (LEN=20)   ::  turbulence_closure = 'Moeng_Wyngaard'        !< namelist parameter. Options include 'Moeng_Wyngaard','AMD'
     CHARACTER (LEN=40)   ::  topography = 'flat'                          !< namelist parameter
     CHARACTER (LEN=64)   ::  host = '????'                                !< hostname on which PALM is running, ENVPAR namelist parameter provided by mrun
     CHARACTER (LEN=80)   ::  log_message                                  !< user-defined message for debugging (sse data_log.f90)
@@ -1381,6 +1381,7 @@
     LOGICAL ::  large_scale_forcing = .FALSE.                    !< namelist parameter
     LOGICAL ::  large_scale_subsidence = .FALSE.                 !< namelist parameter
     LOGICAL ::  land_surface = .FALSE.                           !< use land surface model?
+    LOGICAL ::  les_amd = .FALSE.                                !< use Anisotropic Minimum Dissipation turbulence closure for LES mode
     LOGICAL ::  les_mw = .FALSE.                                 !< use Moeng-Wyngaard turbulence closure for LES mode
     LOGICAL ::  lsf_exception = .FALSE.                          !< use of lsf with buildings (temporary)?
     LOGICAL ::  lsf_surf = .TRUE.                                !< use surface forcing (large scale forcing)?

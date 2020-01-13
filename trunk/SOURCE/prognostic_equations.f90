@@ -1492,9 +1492,11 @@
 
 !
 !--       Calculate prognostic equations for turbulence closure
-          CALL cpu_log( log_point(41), 'tcm-equation', 'start' )
-          CALL tcm_prognostic( i, j, i_omp_start, tn )
-          CALL cpu_log( log_point(41), 'tcm-equation', 'stop' )
+          IF ( .NOT. les_amd ) THEN
+             CALL cpu_log( log_point(41), 'tcm-equation', 'start' )
+             CALL tcm_prognostic( i, j, i_omp_start, tn )
+             CALL cpu_log( log_point(41), 'tcm-equation', 'stop' )
+          ENDIF
 
 !
 !--       If required, compute prognostic equation for chemical quantites

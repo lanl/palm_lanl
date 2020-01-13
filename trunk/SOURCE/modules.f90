@@ -659,6 +659,21 @@
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  c_v_m_l                !< mean phase velocity at outflow for v-component used in radiation boundary condition (local subdomain value)
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  c_w_m                  !< mean phase velocity at outflow for w-component used in radiation boundary condition
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  c_w_m_l                !< mean phase velocity at outflow for w-component used in radiation boundary condition (local subdomain value)
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dptdx                  !< Gradient of potential temperature in x-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dptdy                  !< Gradient of potential temperature in y-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dptdz                  !< Gradient of potential temperature in z-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dsadx                  !< Gradient of salinity in x-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dsady                  !< Gradient of salinity in y-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dsadz                  !< Gradient of salinity in z-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dudx                   !< Gradient of u-component in x-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dudy                   !< Gradient of u-component in y-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dudz                   !< Gradient of u-component in z-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dvdx                   !< Gradient of v-component in x-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dvdy                   !< Gradient of v-component in y-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dvdz                   !< Gradient of v-component in z-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dwdx                   !< Gradient of w-component in x-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dwdy                   !< Gradient of w-component in y-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dwdz                   !< Gradient of w-component in z-direction
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  ddzu                   !< 1/dzu
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  ddzu_pres              !< modified ddzu for pressure solver
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  dd2zu                  !< 1/(dzu(k)+dzu(k+1))

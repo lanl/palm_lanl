@@ -1465,6 +1465,11 @@
                    km_av(:,nysc-nbgp:nync+nbgp,nxlc-nbgp:nxrc+nbgp) =          &
                       tmp_3d(:,nysf-nbgp:nynf+nbgp,nxlf-nbgp:nxrf+nbgp)
 
+                CASE ( 'ks' )
+                   IF ( k == 1 )  READ ( 13 )  tmp_3d
+                   ks(:,nysc-nbgp:nync+nbgp,nxlc-nbgp:nxrc+nbgp) =          &
+                      tmp_3d(:,nysf-nbgp:nynf+nbgp,nxlf-nbgp:nxrf+nbgp)
+
                 CASE ( 'lpt_av' )
                    IF ( .NOT. ALLOCATED( lpt_av ) )  THEN
                       ALLOCATE( lpt_av(nzb:nzt+1,nysg:nyng,nxlg:nxrg ))

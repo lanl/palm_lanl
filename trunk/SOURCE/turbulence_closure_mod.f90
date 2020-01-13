@@ -118,7 +118,7 @@
     USE arrays_3d,                                                             &
         ONLY:  alpha_T, beta_S, diss, diss_p, dptdx, dptdy, dptdz,             &
                dsadx, dsady, dsadz, dudx, dudy, dudz, dvdx, dvdy, dvdz,        &
-               dwdx, dwdy, dwdz, dzu, e, e_p, kh, km,                          &
+               dwdx, dwdy, dwdz, dzu, e, e_p, kh, km, ks,                      &
                mean_inflow_profiles, prho, pt, tdiss_m, te_m, tend, u, v, vpt, w
 #else
     USE arrays_3d,                                                             &
@@ -126,7 +126,7 @@
                dptdx, dptdy, dptdz,                                            &
                dsadx, dsady, dsadz, dudx, dudy, dudz, dvdx, dvdy, dvdz,        &
                dwdx, dwdy, dwdz, dzu, e,                                       &
-               e_1, e_2, e_3, e_p, kh, km, mean_inflow_profiles, prho, pt,     &
+               e_1, e_2, e_3, e_p, kh, km, ks, mean_inflow_profiles, prho, pt, &
                tdiss_m, te_m, tend, u, v, vpt, w
 #endif
 
@@ -360,8 +360,8 @@
  SUBROUTINE tcm_check_parameters
 
     USE control_parameters,                                                    &
-        ONLY:  message_string, nest_domain, neutral, turbulent_inflow,         &
-               turbulent_outflow
+        ONLY:  les_mw, les_amd, message_string, nest_domain, neutral,          &
+               turbulent_inflow, turbulent_outflow
 
     IMPLICIT NONE
 
@@ -408,15 +408,14 @@
 
     ELSE
 
-       c_0 = 0.1_wp !according to Lilly (1967) and Deardorff (1980)
-
-       dsig_e = 1.0_wp !assure to use K_m to calculate TKE instead
-                       !of K_e which is used in RANS mode
-
        SELECT CASE ( TRIM( turbulence_closure ) )
 
           CASE ( 'Moeng_Wyngaard' )
              les_mw = .TRUE.
+             c_0 = 0.1_wp !according to Lilly (1967) and Deardorff (1980)
+
+             dsig_e = 1.0_wp !assure to use K_m to calculate TKE instead
+                             !of K_e which is used in RANS mode
 
           CASE ( 'AMD' )
              les_amd = .TRUE.
@@ -1048,6 +1047,9 @@
 !------------------------------------------------------------------------------!
  SUBROUTINE tcm_init_arrays
 
+    USE control_parameters,                                                    &
+        ONLY:  les_amd
+    
     USE microphysics_mod,                                                      &
         ONLY:  collision_turbulence
 
@@ -1060,6 +1062,7 @@
     IMPLICIT NONE
 
     ALLOCATE( kh(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
+    ALLOCATE( ks(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
     ALLOCATE( km(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
 
     ALLOCATE( dummy1(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )                           !> @todo remove later
@@ -1161,9 +1164,15 @@
 !------------------------------------------------------------------------------!
  SUBROUTINE tcm_init
 
+    USE arrays_3d,                                                             &
+        ONLY:  dzw
+    
     USE control_parameters,                                                    &
         ONLY:  complex_terrain, dissipation_1d, topography
 
+    USE grid_variables,                                                        &
+        ONLY:  dx, dy
+    
     USE model_1d_mod,                                                          &
         ONLY:  diss1d, e1d, kh1d, km1d, l1d
 
@@ -1180,7 +1189,20 @@
 
 !
 !-- Initialize mixing length
-    CALL tcm_init_mixing_length
+    IF ( les_amd ) THEN
+       ALLOCATE( l_grid(1:nzt) )
+       
+!
+!--    Compute the grid-dependent lengthscale.
+       DO  k = 1, nzt
+          l_grid(k)  = ( 0.33333333333333_wp *                                 &
+                         ( dx**-2.0_wp + dy**-2.0_wp + dzw(k)**-2.0_wp )       & 
+                       )**-0.5_wp
+       ENDDO
+    
+    ELSE
+       CALL tcm_init_mixing_length
+    ENDIF
     dummy3 = l_wall                 !> @todo remove later
 
 !
@@ -1388,7 +1410,6 @@
           diss_p = diss
           tdiss_m = 0.0_wp
        ENDIF
-
     ENDIF
 
  END SUBROUTINE tcm_init
@@ -1451,6 +1472,7 @@
 !
 !-- Initialize the mixing length in case of an LES-simulation
     IF ( .NOT. rans_mode )  THEN
+
 !
 !--    Compute the grid-dependent mixing length.
        DO  k = 1, nzt
@@ -2117,7 +2139,6 @@
     REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) :: advec  !< advection term of TKE tendency
     REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) :: produc !< production term of TKE tendency
 
-    CALL location_message('entering tcm_prognostic',.TRUE.)
 !
 !-- If required, compute prognostic equation for turbulent kinetic
 !-- energy (TKE)
@@ -2742,10 +2763,13 @@
  SUBROUTINE calc_scalar_gradients( i,j )
     
     USE arrays_3d,                                                             &
-        ONLY:  alpha_T, beta_S, dptdx, dptdy, dptdz, dsadx, dsady, dsadz, ddzu,&
+        ONLY:  alpha_T, beta_S, dptdx, dptdy, dptdz, dsadx, dsady, dsadz,      &
                ddzw, dd2zu, pt, q, ql, sa, rho_ocean, drho_ref_zw, rho_ref_zw, &
                zu,zw
     
+    USE control_parameters,                                                    &
+        ONLY:  constant_flux_layer, message_string, most_method, neutral
+
     USE grid_variables,                                                        &
         ONLY:  ddx, dx, ddy, dy
 
@@ -2816,7 +2840,7 @@
              DO  m = surf_s, surf_e
                 k = surf_def_h(0)%k(m)
 
-                dsadz(k)     = ( sa(k+1,j,i) - sa(k,j,i) ) * ddzu(k)
+                dsadz(k)     = ( sa(k+1,j,i) - sa(k,j,i) ) * dd2zu(k)
 
              ENDDO
           ENDIF
@@ -2883,6 +2907,8 @@
 !
 !--       Compute gradients at downward-facing walls, only for
 !--       non-natural default surfaces
+!--       Note: for flat surfaces, the "wall" is not at zu(k + koff) 
+!--       but rather zw(k + koff) which is dz/2 lower
           surf_s = surf_def_h(2)%start_index(j,i)
           surf_e = surf_def_h(2)%end_index(j,i)
           DO  m = surf_s, surf_e
@@ -2910,6 +2936,9 @@
     USE arrays_3d,                                                             &
         ONLY:  dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz,           &
                ddzu, ddzw, dd2zu, q, ql, S
+
+    USE control_parameters,                                                    &
+        ONLY:  message_string 
 
     USE grid_variables,                                                        &
         ONLY:  ddx, dx, ddy, dy
@@ -2965,7 +2994,6 @@
        dwdz(k)  =           ( w(k,j,i)   - w(k-1,j,i)   ) * ddzw(k)
 
     ENDDO
-    IF ( i == nxlg .AND. j == nysg )CALL location_message('finished',.TRUE.)
 
     IF ( TRIM(constant_flux_layer) == 'bottom' )  THEN
 !
@@ -3163,7 +3191,6 @@
 
        ENDDO
     ENDIF  ! constant_flux_layer
-    IF ( i == nxlg .AND. j == nysg ) CALL location_message('finished',.TRUE.)
  
  END SUBROUTINE calc_velocity_gradients
 
@@ -4148,11 +4175,15 @@
 !------------------------------------------------------------------------------!
  SUBROUTINE tcm_diffusivities( var, var_reference )
 
-    USE control_parameters,                                                    &
-        ONLY:  e_min, outflow_l, outflow_n, outflow_r, outflow_s, message_string
+    USE arrays_3d,                                                             &
+        ONLY:  drho_ref_zu, dd2zu, pt, sa
 
+    USE control_parameters,                                                    &
+        ONLY:  atmos_ocean_sign, e_min, g, les_mw, les_amd,                    &
+               message_string, outflow_l, outflow_n, outflow_r, outflow_s
+    
     USE grid_variables,                                                        &
-        ONLY:  dx, dy
+        ONLY:  dx, dy, ddx
 
     USE statistics,                                                            &
         ONLY :  rmask, sums_l_l
@@ -4162,20 +4193,23 @@
 
     IMPLICIT NONE
 
-    INTEGER(iwp) ::  i                   !< loop index
-    INTEGER(iwp) ::  j                   !< loop index
-    INTEGER(iwp) ::  k                   !< loop index
-    INTEGER(iwp) ::  m                   !< loop index
-    INTEGER(iwp) ::  n                   !< loop index
+    INTEGER(iwp) ::  i,j,k,ii,jj,kk,m,n  !< loop index
     INTEGER(iwp) ::  omp_get_thread_num  !< opemmp function to get thread number
     INTEGER(iwp) ::  sr                  !< statistic region
     INTEGER(iwp) ::  tn                  !< thread number
 
+    REAL(wp)     ::  axz                 !< anisotropy factor
     REAL(wp)     ::  flag                !< topography flag
     REAL(wp)     ::  l                   !< mixing length
     REAL(wp)     ::  ll                  !< adjusted mixing length
     REAL(wp)     ::  var_reference       !< reference temperature
+    REAL(wp)     ::  km_num = 0.0_wp, kh_num = 0.0_wp, ks_num = 0.0_wp,        &
+                     km_den = 0.0_wp, kh_den = 0.0_wp, ks_den = 0.0_wp     
+                     !< numerator and denominators of diffusivities
 
+    REAL(wp), DIMENSION(3)   ::  dptdxi,dsadxi !< scalar gradients
+    REAL(wp), DIMENSION(3,3) ::  dudxi         !< velocity gradients
+    REAL(wp), DIMENSION(nzb:nzt+1) ::  C       !< coefficient
 #if defined( __nopointer )
     REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  var  !< temperature
 #else
@@ -4197,7 +4231,7 @@
 
 !
 !-- Introduce an optional minimum tke
-    IF ( e_min > 0.0_wp )  THEN
+    IF ( e_min > 0.0_wp .AND. .NOT. les_amd )  THEN
        !$OMP DO
        DO  i = nxlg, nxrg
           DO  j = nysg, nyng
@@ -4235,6 +4269,89 @@
           ENDDO
        ENDDO
 
+    ELSEIF ( les_amd )  THEN
+       
+       !$OMP DO
+       DO  k = nzb+1, nzt
+          C(k) = ( c_0 * l_grid(k) )**2.0_wp
+       ENDDO
+       
+       !$OMP DO
+       DO  i = nxl, nxr
+          DO  j = nys, nyn
+             
+             CALL calc_velocity_gradients( i,j )
+             
+             CALL calc_scalar_gradients  ( i,j )
+             
+             IF ( les_amd ) THEN
+                DO  k = nzb+1, nzt
+                   axz = ddx/dd2zu(k)
+                   dudz(k) = dudz(k) * axz
+                   dvdz(k) = dudz(k) * axz
+                   dwdx(k) = dudz(k) / axz
+                   dwdy(k) = dudz(k) / axz
+                   dptdz(k) = dptdz(k) * axz
+                   dsadz(k) = dsadz(k) * axz
+                ENDDO
+             ENDIF
+             
+             DO  k = nzb+1, nzt
+
+                flag = MERGE( 1.0_wp, 0.0_wp, BTEST( wall_flags_0(k,j,i), 0 ) )
+
+!
+!--             Store strain rates in matrix form
+                dudxi(1,:) = (/ dudx(k),dudy(k),dudz(k) /)
+                dudxi(2,:) = (/ dvdx(k),dvdy(k),dvdz(k) /)
+                dudxi(3,:) = (/ dwdx(k),dwdy(k),dwdz(k) /)
+                dptdxi = (/ dptdx(k),dptdy(k),dptdz(k) /)
+                dsadxi = (/ dsadx(k),dsady(k),dsadz(k) /)
+                
+!
+!--             Compute diffusivity terms
+                DO kk = 1, 3
+                   DO jj = 1, 3
+                      DO ii = 1, 3
+                          km_num = km_num +                                    &
+                                   -0.5_wp * dudxi(ii,kk) * dudxi(jj,kk) *     &
+                                   ( dudxi(ii,jj) + dudxi(jj,ii) )
+                      ENDDO
+                      km_den = km_den + dudxi(jj,kk)**2.0_wp
+                      kh_num = kh_num +                                        &
+                               -1.0_wp * dudxi(jj,kk) * dptdxi(kk) * dptdxi(jj)
+                      ks_num = ks_num +                                        &
+                               -1.0_wp * dudxi(jj,kk) * dsadxi(kk) * dsadxi(jj)
+                   ENDDO
+                   km_num = km_num + atmos_ocean_sign * g *                    &
+                                     dudxi(3,kk) *                             &
+                                     ( -1.0_wp * alpha_T(k,j,i) * dptdxi(3) +  & 
+                                                 beta_S(k,j,i)  * dsadxi(3) )
+                   kh_den = kh_den + dptdxi(kk)**2.0_wp
+                   ks_den = ks_den + dsadxi(kk)**2.0_wp
+                ENDDO
+                
+!
+!--             Compute diffusities
+                km(k,j,i) = C(k) * ( MAX( km_num, 0.0_wp ) * flag              &
+                                     / ( km_den + 1e-10_wp )       )
+
+                kh(k,j,i) = C(k) * ( MAX( kh_num, 0.0_wp ) * flag              &
+                                     / ( kh_den + 1e-10_wp )       )
+
+                ks(k,j,i) = C(k) * ( MAX( ks_num, 0.0_wp ) * flag              &
+                                     / ( ks_den + 1e-10_wp )       )
+                
+                km_num = 0.0_wp
+                km_den = 0.0_wp
+                kh_num = 0.0_wp
+                kh_den = 0.0_wp
+                ks_num = 0.0_wp
+                ks_den = 0.0_wp
+             ENDDO
+          ENDDO
+       ENDDO
+    
     ELSEIF ( rans_tke_l )  THEN
 
        !$OMP DO
@@ -4433,6 +4550,8 @@
        kh(:,nyn+1,:) = kh(:,nyn,:)
        IF ( ocean ) ks(:,nyn+1,:) = ks(:,nyn,:)
     ENDIF
+
+    IF ( ocean .AND. .NOT. les_amd ) ks = kh
 
  END SUBROUTINE tcm_diffusivities
 

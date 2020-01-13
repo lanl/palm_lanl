@@ -283,8 +283,8 @@
                e, e_p, flux_s_e, flux_s_nc, flux_s_nr, flux_s_pt, flux_s_q,    &
                flux_s_qc, flux_s_qr, flux_s_s, flux_s_sa, flux_l_e, flux_l_nc, &
                flux_l_nr, flux_l_pt, flux_l_q, flux_l_qc, flux_l_qr, flux_l_s, &
-               flux_l_sa, nc, nc_p, nr, nr_p, pt, ptdf_x, ptdf_y, pt_init,     &
-               pt_p, prho, q, q_init, q_p, qc, qc_p, qr, qr_p,                 &
+               flux_l_sa, kh, ks, nc, nc_p, nr, nr_p, pt, ptdf_x, ptdf_y,      &
+               pt_init, pt_p, prho, q, q_init, q_p, qc, qc_p, qr, qr_p,        &
                rdf, rdf_uv, rdf_sc,                                            &
                ref_state, rho_ocean, s,  s_init, s_p, sa, sa_init, sa_p, tend, &
                te_m, tnc_m,  tnr_m, tpt_m, tq_m, tqc_m, tqr_m, ts_m, tsa_m,    &
@@ -311,8 +311,9 @@
                dpdy_phase, dt_3d, f, g, humidity, idealized_diurnal,           &
                inflow_l, initialize_to_geostrophic,intermediate_timestep_count,&
                intermediate_timestep_count_max, large_scale_forcing,           &
-               large_scale_subsidence, message_string, microphysics_morrison,  &
-               microphysics_seifert, microphysics_sat_adjust, neutral, nudging,&
+               large_scale_subsidence, les_amd, les_mw, message_string,        &
+               microphysics_morrison, microphysics_seifert,                    &
+               microphysics_sat_adjust, neutral, nudging,                      &
                ocean, outflow_l, outflow_s, passive_scalar, plant_canopy,      &
                prho_reference, pt_reference, pt_reference, pt_reference,       &
                scalar_advec, scalar_advec, simulated_time, sloping_surface,    &
@@ -879,7 +880,7 @@
              CALL cpu_log( log_point(61), 'pt-advec', 'stop' )
 
              CALL cpu_log( log_point(62), 'pt-diffusion', 'start' )
-             CALL diffusion_s( i, j, pt,                                       &
+             CALL diffusion_s( i, j, pt, kh,                                   &
                                surf_def_h(0)%shf, surf_def_h(1)%shf,           &
                                surf_def_h(2)%shf,                              &
                                surf_lsm_h%shf,    surf_usm_h%shf,              &
@@ -998,16 +999,17 @@
              CALL cpu_log( log_point(64), 'sa-advec', 'stop' )
 
              CALL cpu_log( log_point(65), 'sa-diffusion', 'start' )
-             CALL diffusion_s( i, j, sa,                                       &
-                               surf_def_h(0)%sasws, surf_def_h(1)%sasws,       &
-                               surf_def_h(2)%sasws,                            &
-                               surf_lsm_h%sasws,    surf_usm_h%sasws,          &
-                               surf_def_v(0)%sasws, surf_def_v(1)%sasws,       &
-                               surf_def_v(2)%sasws, surf_def_v(3)%sasws,       &
-                               surf_lsm_v(0)%sasws, surf_lsm_v(1)%sasws,       &
-                               surf_lsm_v(2)%sasws, surf_lsm_v(3)%sasws,       &
-                               surf_usm_v(0)%sasws, surf_usm_v(1)%sasws,       &
+             CALL diffusion_s( i, j, sa, ks,                                &
+                               surf_def_h(0)%sasws, surf_def_h(1)%sasws,    &
+                               surf_def_h(2)%sasws,                         &
+                               surf_lsm_h%sasws,    surf_usm_h%sasws,       &
+                               surf_def_v(0)%sasws, surf_def_v(1)%sasws,    &
+                               surf_def_v(2)%sasws, surf_def_v(3)%sasws,    &
+                               surf_lsm_v(0)%sasws, surf_lsm_v(1)%sasws,    &
+                               surf_lsm_v(2)%sasws, surf_lsm_v(3)%sasws,    &
+                               surf_usm_v(0)%sasws, surf_usm_v(1)%sasws,    &
                                surf_usm_v(2)%sasws, surf_usm_v(3)%sasws )
+             
              CALL cpu_log( log_point(65), 'sa-diffusion', 'stop' )
 
 !
@@ -1079,7 +1081,7 @@
              ELSE
                 CALL advec_s_up( i, j, q )
              ENDIF
-             CALL diffusion_s( i, j, q,                                        &
+             CALL diffusion_s( i, j, q, kh,                                    &
                                surf_def_h(0)%qsws, surf_def_h(1)%qsws,         &
                                surf_def_h(2)%qsws,                             &
                                surf_lsm_h%qsws,    surf_usm_h%qsws,            &
@@ -1166,7 +1168,7 @@
                 ELSE
                    CALL advec_s_up( i, j, qc )
                 ENDIF
-                CALL diffusion_s( i, j, qc,                                   &
+                CALL diffusion_s( i, j, qc, kh,                               &
                                   surf_def_h(0)%qcsws, surf_def_h(1)%qcsws,   &
                                   surf_def_h(2)%qcsws,                        &
                                   surf_lsm_h%qcsws,    surf_usm_h%qcsws,      &
@@ -1223,7 +1225,7 @@
                 ELSE
                    CALL advec_s_up( i, j, nc )
                 ENDIF
-                CALL diffusion_s( i, j, nc,                                    &
+                CALL diffusion_s( i, j, nc, kh,                                &
                                   surf_def_h(0)%ncsws, surf_def_h(1)%ncsws,    &
                                   surf_def_h(2)%ncsws,                         &
                                   surf_lsm_h%ncsws,    surf_usm_h%ncsws,       &
@@ -1288,7 +1290,7 @@
                 ELSE
                    CALL advec_s_up( i, j, qr )
                 ENDIF
-                CALL diffusion_s( i, j, qr,                                   &
+                CALL diffusion_s( i, j, qr, kh,                               &
                                   surf_def_h(0)%qrsws, surf_def_h(1)%qrsws,   &
                                   surf_def_h(2)%qrsws,                        &
                                   surf_lsm_h%qrsws,    surf_usm_h%qrsws,      &
@@ -1345,7 +1347,7 @@
                 ELSE
                    CALL advec_s_up( i, j, nr )
                 ENDIF
-                CALL diffusion_s( i, j, nr,                                    &
+                CALL diffusion_s( i, j, nr, kh,                                &
                                   surf_def_h(0)%nrsws, surf_def_h(1)%nrsws,    &
                                   surf_def_h(2)%nrsws,                         &
                                   surf_lsm_h%nrsws,    surf_usm_h%nrsws,       &
@@ -1411,7 +1413,7 @@
              ELSE
                 CALL advec_s_up( i, j, s )
              ENDIF
-             CALL diffusion_s( i, j, s,                                        &
+             CALL diffusion_s( i, j, s, kh,                                    &
                                surf_def_h(0)%ssws, surf_def_h(1)%ssws,         &
                                surf_def_h(2)%ssws,                             &
                                surf_lsm_h%ssws,    surf_usm_h%ssws,            &
@@ -1892,7 +1894,7 @@
           enddo
        enddo
 
-       CALL diffusion_s( pt,                                                   &
+       CALL diffusion_s( pt, kh,                                               &
                          surf_def_h(0)%shf, surf_def_h(1)%shf,                 &
                          surf_def_h(2)%shf,                                    &
                          surf_lsm_h%shf,    surf_usm_h%shf,                    &
@@ -2030,7 +2032,7 @@
           ENDIF
        ENDIF
 
-       CALL diffusion_s( sa,                                                   &
+       CALL diffusion_s( sa, ks,                                               &
                          surf_def_h(0)%sasws, surf_def_h(1)%sasws,             &
                          surf_def_h(2)%sasws,                                  &
                          surf_lsm_h%sasws,    surf_usm_h%sasws,                &
@@ -2137,7 +2139,7 @@
           ENDIF
        ENDIF
 
-       CALL diffusion_s( q,                                                    &
+       CALL diffusion_s( q, kh,                                                &
                          surf_def_h(0)%qsws, surf_def_h(1)%qsws,               &
                          surf_def_h(2)%qsws,                                   &
                          surf_lsm_h%qsws,    surf_usm_h%qsws,                  &
@@ -2251,7 +2253,7 @@
              ENDIF
           ENDIF
 
-          CALL diffusion_s( qc,                                                &
+          CALL diffusion_s( qc, kh,                                            &
                             surf_def_h(0)%qcsws, surf_def_h(1)%qcsws,          &
                             surf_def_h(2)%qcsws,                               &
                             surf_lsm_h%qcsws,    surf_usm_h%qcsws,             &
@@ -2337,7 +2339,7 @@
              ENDIF
           ENDIF
 
-          CALL diffusion_s( nc,                                                &
+          CALL diffusion_s( nc, kh,                                            &
                             surf_def_h(0)%ncsws, surf_def_h(1)%ncsws,          &
                             surf_def_h(2)%ncsws,                               &
                             surf_lsm_h%ncsws,    surf_usm_h%ncsws,             &
@@ -2430,7 +2432,7 @@
              ENDIF
           ENDIF
 
-          CALL diffusion_s( qr,                                                &
+          CALL diffusion_s( qr, kh,                                            &
                             surf_def_h(0)%qrsws, surf_def_h(1)%qrsws,          &
                             surf_def_h(2)%qrsws,                               &
                             surf_lsm_h%qrsws,    surf_usm_h%qrsws,             &
@@ -2516,7 +2518,7 @@
              ENDIF
           ENDIF
 
-          CALL diffusion_s( nr,                                                &
+          CALL diffusion_s( nr, kh,                                            &
                             surf_def_h(0)%nrsws, surf_def_h(1)%nrsws,          &
                             surf_def_h(2)%nrsws,                               &
                             surf_lsm_h%nrsws,    surf_usm_h%nrsws,             &
@@ -2610,7 +2612,7 @@
           ENDIF
        ENDIF
 
-       CALL diffusion_s( s,                                                    &
+       CALL diffusion_s( s, kh,                                                &
                          surf_def_h(0)%ssws, surf_def_h(1)%ssws,               &
                          surf_def_h(2)%ssws,                                   &
                          surf_lsm_h%ssws,    surf_usm_h%ssws,                  &

@@ -3,4 +3,6 @@ PALM_*.*
 .nfs*
 run_script_*
 compile_*
+!run_script_lanl
+!compile_lanl
 .gitignore

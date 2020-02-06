@@ -276,7 +276,7 @@
 
 
     USE arrays_3d,                                                             &
-        ONLY:  ddzu, ddzw, e, hyp, km, kh,                                     &
+        ONLY:  ddzu, ddzw, e, hyp, km, kh, ks,                                 &
                nc, nr, p, prho, prr, pt, q,                                    &
                qc, ql, qr, rho_ref_zu, rho_ref_zw, rho_ocean,                  &
                s, sa, u, ug, v, vg, vpt, w, w_subs,                            &
@@ -778,6 +778,8 @@
                     sums_l(k,153,tn) = sums_l(k,153,tn) + &
                                        ( sa(k,j,i)-hom(k,1,23,sr) )**2         &
                                        * rmask(j,i,sr) * flag
+                    sums_l(k,156,tn) = sums_l(k,156,tn) + ks(k,j,i)            &
+                                                        * rmask(j,i,sr) * flag
                 ENDIF
 
                 IF ( humidity )  THEN
@@ -807,15 +809,20 @@
 !--          quantities is seperated from the previous loop in order to
 !--          allow vectorization of that loop.
              sums_l(nzb+4,pr_palm,tn) = sums_l(nzb+4,pr_palm,tn) + sums_l_etot
-             top_bottom_flag = 0
-             !
+             IF (use_top_fluxes) THEN
+                top_bottom_flag = 2
+             ELSE
+                top_bottom_flag = 0
+             ENDIF
+
+!
 !--          2D-arrays (being collected in the last column of sums_l)
              IF ( surf_def_h(top_bottom_flag)%end_index(j,i) >=                &
                   surf_def_h(top_bottom_flag)%start_index(j,i) )  THEN
                 m = surf_def_h(top_bottom_flag)%start_index(j,i)
                 sums_l(nzb,pr_palm,tn)   = sums_l(nzb,pr_palm,tn) +            &
-                                              surf_def_h(top_bottom_flag)%us(m)&
-                                              * rmask(j,i,sr)
+                                           surf_def_h(top_bottom_flag)%us(m)   &
+                                           * rmask(j,i,sr)
                 sums_l(nzb+1,pr_palm,tn) = sums_l(nzb+1,pr_palm,tn) +          &
                                            surf_def_h(top_bottom_flag)%usws(m) &
                                            * rmask(j,i,sr)
@@ -837,56 +844,24 @@
                 ENDIF
 !--             Summation of surface temperature.
                 sums_l(nzb+14,pr_palm,tn) = sums_l(nzb+14,pr_palm,tn)   +      &
-                                            surf_def_h(top_bottom_flag)%pt_surface(m) *      &
-                                            rmask(j,i,sr)
-             ENDIF
-
-             top_bottom_flag = 2
-             IF ( surf_def_h(top_bottom_flag)%end_index(j,i) >=                &
-                  surf_def_h(top_bottom_flag)%start_index(j,i) )  THEN
-                m = surf_def_h(top_bottom_flag)%start_index(j,i)
-
-                sums_l(nzb,pr_palm,tn)   = sums_l(nzb,pr_palm,tn) +            &
-                                              surf_def_h(top_bottom_flag)%us(m)&
-                                              * rmask(j,i,sr)
-                sums_l(nzb+1,pr_palm,tn) = sums_l(nzb+1,pr_palm,tn) +          &
-                                           surf_def_h(top_bottom_flag)%usws(m) &
-                                           * rmask(j,i,sr)
-                sums_l(nzb+2,pr_palm,tn) = sums_l(nzb+2,pr_palm,tn) +          &
-                                           surf_def_h(top_bottom_flag)%vsws(m) &
-                                           * rmask(j,i,sr)
-                sums_l(nzb+3,pr_palm,tn) = sums_l(nzb+3,pr_palm,tn) +          &
-                                           surf_def_h(top_bottom_flag)%ts(m)   &
-                                           * rmask(j,i,sr)
-                IF ( humidity )  THEN
-                   sums_l(nzb+12,pr_palm,tn) = sums_l(nzb+12,pr_palm,tn) +     &
-                                               surf_def_h(top_bottom_flag)%qs(m)&
-                                               * rmask(j,i,sr)
-                ENDIF
-                IF ( passive_scalar )  THEN
-                   sums_l(nzb+13,pr_palm,tn) = sums_l(nzb+13,pr_palm,tn) +     &
-                                               surf_def_h(top_bottom_flag)%ss(m)&
-                                               * rmask(j,i,sr)
-                ENDIF
-!--             Summation of surface temperature.
-                sums_l(nzb+14,pr_palm,tn) = sums_l(nzb+14,pr_palm,tn)   +      &
-                                            surf_def_h(top_bottom_flag)%pt_surface(m) *      &
+                                            surf_def_h(top_bottom_flag)%pt_surface(m) *&
                                             rmask(j,i,sr)
                 IF ( idealized_diurnal ) THEN
-                   sums_l(nzb+15,pr_palm,tn) = sums_l(nzb+15,pr_palm,tn) +           &
-                                            surf_def_h(2)%shf_sol(m) * rmask(j,i,sr)
+                   sums_l(nzb+15,pr_palm,tn) = sums_l(nzb+15,pr_palm,tn) +     &
+                                            surf_def_h(top_bottom_flag)%shf_sol(m) * rmask(j,i,sr)
                 ELSE
                    sums_l(nzb+15,pr_palm,tn) = 0.0
                 ENDIF
 
                 sums_l(nzb+16,pr_palm,tn) = sums_l(nzb+16,pr_palm,tn) +           &
-                            surf_def_h(2)%shf(m) !* rmask(j,i,sr)
+                            surf_def_h(top_bottom_flag)%shf(m) * rmask(j,i,sr)
                 
                 IF ( ocean ) THEN
                    sums_l(nzb+17,pr_palm,tn) = sums_l(nzb+17,pr_palm,tn) +        &
-                                               surf_def_h(2)%sasws(m) * rmask(j,i,sr)
+                                               surf_def_h(top_bottom_flag)%sasws(m) * rmask(j,i,sr)
                 ENDIF
 
+                !CALL location_message('finished',.TRUE.)
              ENDIF
              IF ( surf_lsm_h%end_index(j,i) >= surf_lsm_h%start_index(j,i) )  THEN
                  m = surf_lsm_h%start_index(j,i)
@@ -1054,7 +1029,7 @@
 !
 !--                Salinity flux w"sa"
                    sums_l(k,65,tn) = sums_l(k,65,tn)                              &
-                                            - 0.5_wp * ( kh(k,j,i) + kh(k+1,j,i) )&
+                                            - 0.5_wp * ( ks(k,j,i) + ks(k+1,j,i) )&
                                               * ( sa(k+1,j,i) - sa(k,j,i) )       &
                                               * rho_ref_zw(k)                     &
                                               * salinityflux_output_conversion(k) &
@@ -2103,11 +2078,13 @@
        hom(:,1,32,sr) = sums(:,32)     ! w*2
        hom(:,1,33,sr) = sums(:,33)     ! pt*2
        hom(:,1,153,sr) = sums(:,153)   ! sa*2
+       hom(:,1,156,sr) = sums(:,156)   ! ks
        hom(:,1,34,sr) = sums(:,34)     ! e*
        hom(:,1,35,sr) = sums(:,35)     ! w*2pt*
        hom(:,1,36,sr) = sums(:,36)     ! w*pt*2
        hom(:,1,154,sr) = sums(:,154)   ! w*2sa*
        hom(:,1,155,sr) = sums(:,155)   ! w*sa*2
+       hom(:,1,156,sr) = sums(:,156)   ! ks
        hom(:,1,37,sr) = sums(:,37)     ! w*e*
        hom(:,1,38,sr) = sums(:,38)     ! w*3
        hom(:,1,39,sr) = sums(:,38) / ( abs( sums(:,32) ) + 1E-20_wp )**1.5_wp   ! Sw

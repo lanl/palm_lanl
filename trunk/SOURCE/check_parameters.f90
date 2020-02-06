@@ -2745,6 +2745,12 @@
                 data_output_pr(i)     = data_output_pr(i)(2:)
              ENDIF
 
+          CASE ( 'ks' )
+             dopr_index(i)   = 156
+             dopr_unit(i)    = 'm2/s'
+             hom(:,2,156,:)   = SPREAD( zu, 2, statistic_regions+1 )
+             hom(nzb,2,156,:) = 0.0_wp
+
           CASE ( 'l', '#l' )
              dopr_index(i)   = 11
              dopr_unit(i)    = 'm'

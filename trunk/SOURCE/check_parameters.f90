@@ -1539,7 +1539,7 @@
           WRITE( message_string, * ) 'in atmosphere and sloped case, initial   & 
                                       scalar fields will have gradients normal &
                                       to the boundary, not parallel to gravity'
-          CALL message( 'check_parameters', 'PA0043', 1, 2, 0, 6, 0 )
+          CALL message( 'check_parameters', 'PA0043', 0, 2, 0, 6, 0 )
        ENDIF
     ENDIF
     cos_alpha_surface = COS( alpha_surface / 180.0_wp * pi )
@@ -1549,7 +1549,7 @@
        WRITE( message_string, * ) 'ambient density for buoyancy will not be    & 
                                   used because there is no slope, i.e.,        &
                                   alpha_surface ==0 '
-       CALL message( 'check_parameters', 'PA0043', 1, 2, 0, 6, 0 )
+       CALL message( 'check_parameters', 'PA0043', 0, 2, 0, 6, 0 )
     ENDIF
 
 !

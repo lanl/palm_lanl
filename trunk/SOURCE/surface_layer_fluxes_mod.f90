@@ -229,8 +229,10 @@
 
     USE control_parameters,                                                    &
         ONLY:  air_chemistry, c1, c2, c3, cloud_droplets, cloud_physics,       &
-               constant_flux_layer, constant_heatflux, constant_scalarflux,    &     
-               constant_waterflux, coupling_mode, drag_law, drag_coeff, f, g,  &
+               constant_flux_layer, constant_heatflux,                         & 
+               constant_top_heatflux, constant_bottom_heatflux,                &
+               constant_scalarflux, constant_waterflux,                        &     
+               coupling_mode, drag_law, drag_coeff, f, g,                      &
                gamma_mcphee, Gamma_T_const, Gamma_S_const, humidity,           &
                ibc_e_b, ibc_e_t, ibc_pt_b, ibc_pt_t,                           &
                initializing_actions, intermediate_timestep_count,              &
@@ -418,6 +420,7 @@
 !--          Default-type upward-facing horizontal surfaces
              IF ( surf_def_h(0)%ns >= 1 )  THEN
                 surf => surf_def_h(0)
+                constant_heatflux = constant_bottom_heatflux
                 CALL calc_scaling_parameters
                 CALL calc_uvw_abs
                 IF ( .NOT. neutral )  CALL calc_ol
@@ -428,6 +431,7 @@
 !--          Natural-type horizontal surfaces
              IF ( surf_lsm_h%ns >= 1 )  THEN
                 surf => surf_lsm_h
+                constant_heatflux = constant_bottom_heatflux
                 CALL calc_scaling_parameters
                 CALL calc_uvw_abs
                 IF ( .NOT. neutral )  CALL calc_ol
@@ -438,6 +442,7 @@
 !--          Urban-type horizontal surfaces
              IF ( surf_usm_h%ns >= 1 )  THEN
                 surf => surf_usm_h
+                constant_heatflux = constant_bottom_heatflux
                 CALL calc_scaling_parameters
                 CALL calc_uvw_abs
                 IF ( .NOT. neutral )  CALL calc_ol
@@ -452,6 +457,7 @@
 !--          Default-type upward-facing horizontal surfaces
              IF ( surf_def_h(0)%ns >= 1 )  THEN
                 surf => surf_def_h(0)
+                constant_heatflux = constant_bottom_heatflux
                 CALL calc_uvw_abs
                 IF ( .NOT. neutral )  CALL calc_ol
                 CALL calc_us
@@ -462,6 +468,7 @@
 !--          Natural-type horizontal surfaces
              IF ( surf_lsm_h%ns >= 1 )  THEN
                 surf => surf_lsm_h
+                constant_heatflux = constant_bottom_heatflux
                 CALL calc_uvw_abs
                 IF ( .NOT. neutral )  CALL calc_ol
                 CALL calc_us
@@ -472,6 +479,7 @@
 !--          Urban-type horizontal surfaces
              IF ( surf_usm_h%ns >= 1 )  THEN
                 surf => surf_usm_h
+                constant_heatflux = constant_bottom_heatflux
                 CALL calc_uvw_abs
                 IF ( .NOT. neutral )  CALL calc_ol
                 CALL calc_us
@@ -488,6 +496,7 @@
           IF ( surf_def_h(1)%ns >= 1 )  THEN
              downward = .TRUE.
              surf => surf_def_h(1)
+             constant_heatflux = constant_bottom_heatflux
              CALL calc_uvw_abs
              CALL calc_us
              CALL calc_surface_fluxes
@@ -501,6 +510,7 @@
           
           downward = .TRUE.
           surf => surf_def_h(2)
+          constant_heatflux = constant_top_heatflux
 
           IF ( trim(most_method) == 'mcphee' ) THEN
              CALL calc_uvw_abs 
@@ -577,6 +587,7 @@
 !--    case. This is due to the requirement of ts in parameterization of heat
 !--    flux in land-surface model in case of aero_resist_kray is not true.
        IF ( TRIM(constant_flux_layer) == 'bottom' ) THEN
+          constant_heatflux = constant_bottom_heatflux
           IF ( .NOT. aero_resist_kray )  THEN
              IF ( most_method == 'circular' )  THEN
                 DO  l = 0, 1
@@ -2292,6 +2303,7 @@
 !--       Compute the vertical kinematic heat flux, salt flux, and melt rate 
 !--       according to the 3 equation parameterization (Asay-Davis et al. 2016)
           IF ( trim(most_method) == 'mcphee' .AND. downward ) THEN
+             CALL location_message('Reassign heat flux using mcphee',.TRUE.)
              
              !$OMP PARALLEL DO PRIVATE( i, j, k, s_factor )
              DO  m = 1, surf%ns  
@@ -2318,6 +2330,7 @@
                         simulated_time > 0.0_wp                        ) .OR.  &
                       .NOT.  land_surface                              ) .AND. &
                     .NOT. urban_surface )  THEN
+             CALL location_message('Reassign heat flux using theta_s and u_s',.TRUE.)
              !$OMP PARALLEL DO PRIVATE( i, j, k )
              DO  m = 1, surf%ns 
                 i    = surf%i(m)            

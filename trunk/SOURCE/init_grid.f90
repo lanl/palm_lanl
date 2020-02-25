@@ -1871,8 +1871,11 @@
     INTEGER(iwp) ::  td            !< tunnel wall depth
     INTEGER(iwp) ::  th            !< height of outer tunnel wall
 
-    INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  nzb_local         !< index for topography top at cell-center
-    INTEGER(iwp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  topo !< input array for 3D topography and dummy array for setting "outer"-flags
+    INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  nzb_local         
+                                   !< index for topography top at cell-center
+    INTEGER(iwp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  topo 
+                                   !< input array for 3D topography and dummy 
+                                   !< array for setting "outer"-flags
 
 
 !
@@ -1888,7 +1891,9 @@
 !   
 !--       Initialilize 3D topography array, used later for initializing flags
           IF ( TRIM(constant_flux_layer) == 'top' ) THEN
-             topo(nzb+1:nzt,:,:) = IBSET( topo(nzb+1:nzt,:,:), 0 ) 
+             topo(nzb:nzt,:,:) = IBSET( topo(nzb:nzt,:,:), 0 ) 
+          ELSEIF ( TRIM(constant_flux_layer) == 'bottom' ) THEN
+             topo(nzb:nzt+1,:,:) = IBSET( topo(nzb:nzt+1,:,:), 0 ) 
           ELSE
              topo(nzb+1:nzt+1,:,:) = IBSET( topo(nzb+1:nzt+1,:,:), 0 ) 
           ENDIF

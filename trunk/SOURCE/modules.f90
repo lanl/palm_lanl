@@ -1358,6 +1358,7 @@
     LOGICAL ::  conserve_volume_flow = .FALSE.                   !< namelist parameter
     LOGICAL ::  constant_diffusion = .FALSE.                     !< diffusion coefficient constant?
     LOGICAL ::  constant_heatflux = .TRUE.                       !< heat flux at all surfaces constant?
+    LOGICAL ::  constant_bottom_heatflux = .TRUE.                !< heat flux at domain bottom constant?
     LOGICAL ::  constant_top_heatflux = .TRUE.                   !< heat flux at domain top constant?
     LOGICAL ::  constant_top_momentumflux = .FALSE.              !< momentum flux at domain topconstant?
     LOGICAL ::  constant_top_salinityflux = .TRUE.               !< salinity flux at ocean domain top?

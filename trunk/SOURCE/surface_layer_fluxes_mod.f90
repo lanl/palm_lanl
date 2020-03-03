@@ -1701,17 +1701,28 @@
 
 !--    Compute u* at horizontal surfaces at the scalars' grid points
        !$OMP PARALLEL  DO PRIVATE( z_mo )
-       DO  m = 1, surf%ns
-
-          z_mo = surf%z_mo(m)
-!
-!--       Compute u* at the scalars' grid points
-          surf%us(m) = kappa * surf%uvw_abs(m) /                               &
-                      ( LOG( z_mo / surf%z0(m) )                               &
-                     - MERGE(psi_m( z_mo       / surf%ol(m) ),0.0_wp,stability)&
-                     + MERGE(psi_m( surf%z0(m) / surf%ol(m) ),0.0_wp,stability))
+       IF ( stability ) THEN
+          DO  m = 1, surf%ns
    
-       ENDDO
+             z_mo = surf%z_mo(m)
+   !
+   !--       Compute u* at the scalars' grid points
+             surf%us(m) = kappa * surf%uvw_abs(m) /                            &
+                         ( LOG( z_mo / surf%z0(m) )                            &
+                           - psi_m( z_mo       / surf%ol(m) )                  &
+                           + psi_m( surf%z0(m) / surf%ol(m) ) )
+      
+          ENDDO
+       ELSE
+          DO  m = 1, surf%ns
+   
+             z_mo = surf%z_mo(m)
+   !
+   !--       Compute u* at the scalars' grid points
+             surf%us(m) = kappa * surf%uvw_abs(m) / LOG( z_mo / surf%z0(m) )
+      
+          ENDDO
+       ENDIF
 
     END SUBROUTINE calc_us
 
@@ -2495,28 +2506,49 @@
              
                 ELSE
                    !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
-                   DO  m = 1, surf%ns  
+                   IF ( stability ) THEN
+                      DO  m = 1, surf%ns  
    
-                      k = surf%k(m)
-                      
+                         k = surf%k(m)
+                         
 !
-!--                   Compute friction velocity components
-                      surf%usws(m) = kappa * ( surf%ufar(m) - surf%usurf(m) )             &
-                             / ( LOG( surf%z_mo(m) / surf%z0(m) )                         &
-                         - MERGE( psi_m( surf%z_mo(m) / surf%ol(m)),0.0_wp,stability )    &
-                         + MERGE( psi_m( surf%z0(m)  / surf%ol(m)),0.0_wp,stability ) )
-                      
-                      surf%vsws(m) = kappa * ( surf%vfar(m) - surf%vsurf(m) )             &
-                             / ( LOG( surf%z_mo(m) / surf%z0(m) )                         &
-                         - MERGE( psi_m( surf%z_mo(m) / surf%ol(m)),0.0_wp,stability )    &
-                         + MERGE( psi_m( surf%z0(m)  / surf%ol(m)),0.0_wp,stability ) )
-                      
+!--                      Compute friction velocity components
+                         surf%usws(m) = kappa * ( surf%ufar(m) - surf%usurf(m) )  &
+                                / ( LOG( surf%z_mo(m) / surf%z0(m) )              &
+                                    - psi_m( surf%z_mo(m) / surf%ol(m))           &
+                                    + psi_m( surf%z0(m)  / surf%ol(m)) )
+                         
+                         surf%vsws(m) = kappa * ( surf%vfar(m) - surf%vsurf(m) )  &
+                                / ( LOG( surf%z_mo(m) / surf%z0(m) )              &
+                                    - psi_m( surf%z_mo(m) / surf%ol(m))           &
+                                    + psi_m( surf%z0(m)  / surf%ol(m)) )
+                         
 !
-!--                   Compute momentum flux components
-                      surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k+1)
-                      surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k+1)
-                   
-                   ENDDO     
+!--                      Compute momentum flux components
+                         surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k+1)
+                         surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k+1)
+                      
+                      ENDDO
+                   ELSE
+                      DO  m = 1, surf%ns  
+   
+                         k = surf%k(m)
+                         
+!
+!--                      Compute friction velocity components
+                         surf%usws(m) = kappa * ( surf%ufar(m) - surf%usurf(m) )  &
+                                / LOG( surf%z_mo(m) / surf%z0(m) )
+                         
+                         surf%vsws(m) = kappa * ( surf%vfar(m) - surf%vsurf(m) )  &
+                                / LOG( surf%z_mo(m) / surf%z0(m) )
+                         
+!
+!--                      Compute momentum flux components
+                         surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k+1)
+                         surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k+1)
+                      
+                      ENDDO
+                   ENDIF
                 ENDIF 
              ELSE
 

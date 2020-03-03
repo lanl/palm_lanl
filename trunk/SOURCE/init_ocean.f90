@@ -101,9 +101,9 @@
                message_string, molecular_viscosity, ocean, prandtl_number,     &
                prho_reference,                                                 &
                pt_surface, pt_vertical_gradient, pt_slope_offset,              &
-               rho_reference, rho_surface,                                     &
+               rho_ref, rho_reference, rho_surface,                            &
                sa_surface, sa_vertical_gradient, sa_slope_offset,              &
-               slope_offset, slope_normal_gradients, stokes_force,           &
+               slope_offset, slope_normal_gradients, stokes_force,             &
                surface_pressure, use_single_reference_value 
 
     USE eqn_state_seawater_mod,                                                &
@@ -160,6 +160,7 @@
 
     rho_surface = eqn_state_seawater_func( hyp(nzt+1), pt_init(nzt+1), sa_init(nzt+1) )
     rho_ref_zw(nzt+1) = rho_surface
+    rho_ref = eqn_state_seawater_func( p_ref * 100.0_wp, pt_init(nzt+1), sa_init(nzt+1) )
     
     hyp(nzt)      = hyp(nzt+1) + rho_surface * g * 0.5_wp * dzu(nzt+1)
 

@@ -1870,6 +1870,19 @@
     ENDIF
 
 !
+!-- Check whether reference temperature and salinity are significantly different from initial conditions
+    IF (linear_eqnOfState) THEN
+       IF (ABS(pt_ref - pt_surface) > 10.0_wp) THEN
+          message_string = 'reference temperature is significantly different from initial surface temperature'
+          CALL message( 'check_parameters', 'PA0042', 0, 0, 0, 6, 0 )
+       ENDIF
+       IF (ABS(sa_ref - sa_surface) > 5.0_wp) THEN
+          message_string = 'reference salinity is significantly different from initial surface salinity'
+          CALL message( 'check_parameters', 'PA0042', 0, 0, 0, 6, 0 )
+       ENDIF
+    ENDIF
+
+!
 !-- Sign of buoyancy/stability terms
     IF ( ocean )  atmos_ocean_sign = -1.0_wp
 

@@ -98,8 +98,8 @@
         ONLY:  alpha_surface, ambient_density_for_buoyancy, cos_alpha_surface, &
                dpdxy, dpdxy_loc, dpdx, dpdy, dpdx_phase, dpdy_phase,           &
                f, g, initialize_to_geostrophic,                                &
-               message_string, molecular_viscosity, ocean, prandtl_number,     &
-               prho_reference,                                                 &
+               message_string, molecular_viscosity, ocean, p_ref,              &
+               prandtl_number, prho_reference,                                 &
                pt_surface, pt_vertical_gradient, pt_slope_offset,              &
                rho_ref, rho_reference, rho_surface,                            &
                sa_surface, sa_vertical_gradient, sa_slope_offset,              &

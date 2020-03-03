@@ -1115,7 +1115,16 @@
     CHARACTER (LEN=6)    ::  constant_flux_layer = 'none'                 !< namelist parameter
     CHARACTER (LEN=8)    ::  coupling_char = ''                           !< appended to filenames in coupled or nested runs ('_O': ocean PE,
                                                                           !< '_NV': vertically nested atmosphere PE, '_N##': PE of nested domain ##
-    CHARACTER (LEN=8)    ::  most_method = 'newton'                       !< namelist parameter
+    CHARACTER (LEN=8)    ::  most_method = 'newton'                       !< namelist parameter. Characterizes method for solving surface fluxes
+                                                                          !< Choose from following options:
+                                                                          !< 'newton'
+                                                                          !< 'circular'
+                                                                          !< 'mcphee' turns evolving melt rates on, solves 3 equation parameterization
+    CHARACTER (LEN=9)    ::  drag_law = 'quadratic'                       !< namelist parameter. Choose from following options:
+                                                                          !< 'quadratic' uses log law-of-the-wall without considering stability in ocean cases
+                                                                          !<             and with stability in atmospheric cases
+                                                                          !< 'businger' uses log law-of-the-wall with linear stability function
+                                                                          !< 'rotation' uses MOST with stability and rotation
     CHARACTER (LEN=8)    ::  run_date                                     !< date of simulation run, printed to HEADER file
     CHARACTER (LEN=8)    ::  run_time                                     !< time of simulation run, printed to HEADER file
     CHARACTER (LEN=9)    ::  simulated_time_chr                           !< simulated time, printed to RUN_CONTROL file
@@ -1154,6 +1163,7 @@
     CHARACTER (LEN=20)   ::  coupling_mode_remote = 'uncoupled'           !< coupling mode of the remote process in case of coupled atmosphere-ocean runs
     CHARACTER (LEN=20)   ::  dissipation_1d = 'detering'                  !< namelist parameter
     CHARACTER (LEN=20)   ::  fft_method = 'temperton-algorithm'           !< namelist parameter
+    CHARACTER (LEN=20)   ::  gamma_mcphee = 'BL-integrated'               !< namelist parameter
     CHARACTER (LEN=20)   ::  mixing_length_1d = 'blackadar'               !< namelist parameter
     CHARACTER (LEN=20)   ::  random_generator = 'random-parallel'         !< namelist parameter
     CHARACTER (LEN=20)   ::  reference_state = 'initial_profile'          !< namelist parameter
@@ -1359,6 +1369,7 @@
     LOGICAL ::  force_bound_s = .FALSE.                          !< flag indicating domain boundary on south side to set forcing boundary conditions
     LOGICAL ::  forcing = .FALSE.                                !< flag controlling forcing from large-scale model
     LOGICAL ::  galilei_transformation = .FALSE.                 !< namelist parameter
+                                                                 !< of scalar transfer coefficients for MOST method McPhee (1987)
     LOGICAL ::  humidity = .FALSE.                               !< namelist parameter
     LOGICAL ::  humidity_remote = .FALSE.                        !< switch for receiving near-surface humidity flux (atmosphere-ocean coupling)
     LOGICAL ::  inflow_l = .FALSE.                               !< left domain boundary has non-cyclic inflow?
@@ -1416,6 +1427,7 @@
     LOGICAL ::  spinup = .FALSE.                                 !< perform model spinup without atmosphere code?
     LOGICAL ::  stokes_force = .FALSE.                           !< switch for use of Stokes forces
     LOGICAL ::  stop_dt = .FALSE.                                !< internal switch to stop the time stepping
+    LOGICAL ::  surface_flux_diags = .FALSE.                     !< namelist parameter
     LOGICAL ::  synchronous_exchange = .FALSE.                   !< namelist parameter
     LOGICAL ::  syn_turb_gen = .FALSE.                           !< flag for synthetic turbulence generator module
     LOGICAL ::  terminate_run = .FALSE.                          !< terminate run (cpu-time limit, restarts)?
@@ -1523,6 +1535,8 @@
     REAL(wp) ::  fx = 0.0_wp                                   !< Coriolis parameter
     REAL(wp) ::  fy = 0.0_wp                                   !< Coriolis parameter
     REAL(wp) ::  g = 9.81_wp                                   !< gravitational acceleration
+    REAL(wp) ::  Gamma_T_const = 0.011_wp                      !< namelist parameter, thermal exchange coefficient
+    REAL(wp) ::  Gamma_S_const = 3.1E-4_wp                     !< namelist parameter, haline exchange coefficient
     REAL(wp) ::  ideal_solar_division = 0.67_wp                !< value for breakdown of double exponential
     REAL(wp) ::  ideal_solar_efolding1 = 1.0_wp/1.0_wp         !< efolding depth for IR in solar (m^-1)
     REAL(wp) ::  ideal_solar_efolding2 = 1.0_wp/17.0_wp        !< efolding depth for blue in solar (m^-1)

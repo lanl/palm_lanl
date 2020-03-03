@@ -602,7 +602,7 @@
              data_output_during_spinup,                                        &
              day_of_year_init,                                                 &
              dissipation_1d,                                                   &
-             dp_external, dp_level_b, dp_smooth, dpdxy,                        &
+             dp_external, dp_level_b, dp_smooth, dpdxy, drag_coeff, drag_law,  &
              dpdx, dpdx_phase, dpdx_freq, dpdy, dpdy_phase, dpdy_freq,         &
              drag_coeff, drho_dp_const, dry_aerosol_radius,                    &
              dt, dt_pr_1d, dt_run_control_1d, dt_spinup,                       &
@@ -610,8 +610,8 @@
              dz_stretch_level_start, dz_stretch_level_end, d_stk,              &
              end_time_1d, ensemble_member_nr, e_init,                          &
              e_min, fft_method, flux_input_mode, flux_output_mode, forcing,    &
-             galilei_transformation, humidity, ij_av_width_mcphee,             &
-             inflow_damping_height, inflow_damping_width,                      &
+             galilei_transformation, gamma_mcphee, humidity,                   &
+             ij_av_width_mcphee, inflow_damping_height, inflow_damping_width,  &
              inflow_disturbance_begin, inflow_disturbance_end,                 &
              initialize_to_geostrophic, initializing_actions, km_constant,     &
              koff_constant_mcphee, k_offset_mcphee, k_av_width_mcphee,         &
@@ -642,7 +642,8 @@
              sigma_bulk, spinup_time, spinup_pt_amplitude, spinup_pt_mean,     &
              statistic_regions, stokes_force, stokes_drift_method,             &
              subs_vertical_gradient,                                           &
-             subs_vertical_gradient_level, surface_heatflux, surface_pressure, &
+             subs_vertical_gradient_level, surface_flux_diags,                 &
+             surface_heatflux, surface_pressure,                               &
              surface_scalarflux, surface_waterflux,                            &
              s_surface, s_surface_initial_change, s_vertical_gradient,         &
              s_vertical_gradient_level, time_utc_init, timestep_scheme,        &

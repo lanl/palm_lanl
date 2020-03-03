@@ -230,8 +230,9 @@
     USE control_parameters,                                                    &
         ONLY:  air_chemistry, c1, c2, c3, cloud_droplets, cloud_physics,       &
                constant_flux_layer, constant_heatflux, constant_scalarflux,    &     
-               constant_waterflux, coupling_mode, drag_coeff, f, g,            &
-               humidity, ibc_e_b, ibc_e_t, ibc_pt_b, ibc_pt_t,                 &
+               constant_waterflux, coupling_mode, drag_law, drag_coeff, f, g,  &
+               gamma_mcphee, Gamma_T_const, Gamma_S_const, humidity,           &
+               ibc_e_b, ibc_e_t, ibc_pt_b, ibc_pt_t,                           &
                initializing_actions, intermediate_timestep_count,              &
                intermediate_timestep_count_max, ij_av_width_mcphee,            &
                k_offset_mcphee,                                                &
@@ -240,7 +241,8 @@
                message_string, microphysics_morrison, microphysics_seifert,    &
                molecular_viscosity, most_method, most_xy_av, neutral, ocean,   &
                passive_scalar, prandtl_number, pt_surface, q_surface,          &
-               run_coupled, schmidt_number, surface_pressure, simulated_time,  &
+               run_coupled, schmidt_number, surface_flux_diags,                &
+               surface_pressure, simulated_time,                               &
                terminate_run, time_since_reference_point, urban_surface,       &
                z_offset_mcphee, zeta_max, zeta_min
 
@@ -377,6 +379,7 @@
        ENDIF
 
        IF ( TRIM(constant_flux_layer) == 'top' )  THEN
+          downward = .True.
 !
 !--       First call for horizontal default-type surfaces 
           IF ( surf_def_h(2)%ns >= 1 )  THEN
@@ -385,13 +388,14 @@
 !--          Derive scalar properties at the nth grid level 
 !--          from the surface from their 3-d arrays
              IF ( ocean .AND. trim(most_method) == 'mcphee' ) THEN
-                surf => surf_def_h(2)
+                IF ( .NOT. koff_constant_mcphee ) CALL calc_koff
                 CALL calc_pt_sa
              ELSE
                 CALL calc_pt_q
                 IF ( .NOT. neutral )  CALL calc_pt_surface
              ENDIF
           ENDIF
+          downward = .False.
        ENDIF
 
 !
@@ -511,7 +515,33 @@
           ENDIF
           
           downward = .FALSE.
-       
+          
+          IF ( surface_flux_diags ) THEN
+             m = 1
+             WRITE(message_string,*) 'melt = ',surf%melt(m)*3e7_wp
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'u = ',surf%usurf(m) - surf%ufar(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'v = ',surf%vsurf(m) - surf%vfar(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'us = ',surf%us(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'uw = ',surf%usws(m)/rho_ref_zw(nzt)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'vw = ',surf%usws(m)/rho_ref_zw(nzt)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'gamma_T = ',surf%gamma_T(m)/surf%us(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'gamma_S = ',surf%gamma_S(m)/surf%us(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'dT = ',surf%pt1(m) - surf%pt_io(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'dS = ',surf%sa1(m) - surf%sa_io(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'k_offset_mcphee = ',k_offset_mcphee 
+             CALL location_message(message_string,.TRUE.) 
+          ENDIF
+
        ENDIF
 !
 !--    Calculate surfaces fluxes at vertical surfaces for momentum 
@@ -1662,49 +1692,35 @@
        IMPLICIT NONE
 
        INTEGER(iwp) ::  m       !< loop variable over all horizontal surf elements 
+       LOGICAL      ::  stability = .FALSE. !< Use stability function 
+      
+!--
+       IF ( TRIM(drag_law) == 'businger' ) stability = .TRUE.
+       IF ( .NOT. ocean )                  stability = .TRUE. 
+       IF ( surf_vertical )                stability = .FALSE.
 
-!
 !--    Compute u* at horizontal surfaces at the scalars' grid points
-       IF ( .NOT. surf_vertical )  THEN
-!
-!--       Compute u* at upward-facing surfaces
-          IF ( .NOT. downward )  THEN
-             !$OMP PARALLEL  DO PRIVATE( z_mo )
-             DO  m = 1, surf%ns
-
-                z_mo = surf%z_mo(m)
-!
-!--             Compute u* at the scalars' grid points
-                surf%us(m) = kappa * surf%uvw_abs(m) /                         &
-                            ( LOG( z_mo / surf%z0(m) )                         &
-                           - psi_m( z_mo / surf%ol(m) )                        &
-                           + psi_m( surf%z0(m) / surf%ol(m) ) )
-   
-             ENDDO
-!
-!--       Compute u* at downward-facing surfaces. This case, do not consider
-!--       any stability. 
-          ELSE
-             !$OMP PARALLEL  DO PRIVATE( z_mo )
-             DO  m = 1, surf%ns
-
-                z_mo = surf%z_mo(m)
-!
-!--             Compute u* at the scalars' grid points
-                surf%us(m) = kappa * surf%uvw_abs(m) / LOG( z_mo / surf%z0(m) )
-          
-             ENDDO
-          ENDIF
-!
-!--    Compute u* at vertical surfaces at the u/v/v grid, respectively. 
-!--    No stability is considered in this case.
-       ELSE
-          !$OMP PARALLEL DO PRIVATE( z_mo )
+       !$OMP PARALLEL  DO PRIVATE( z_mo )
+       IF ( stability ) THEN
           DO  m = 1, surf%ns
+   
              z_mo = surf%z_mo(m)
-
+   !
+   !--       Compute u* at the scalars' grid points
+             surf%us(m) = kappa * surf%uvw_abs(m) /                            &
+                         ( LOG( z_mo / surf%z0(m) )                            &
+                           - psi_m( z_mo       / surf%ol(m) )                  &
+                           + psi_m( surf%z0(m) / surf%ol(m) ) )
+      
+          ENDDO
+       ELSE
+          DO  m = 1, surf%ns
+   
+             z_mo = surf%z_mo(m)
+   !
+   !--       Compute u* at the scalars' grid points
              surf%us(m) = kappa * surf%uvw_abs(m) / LOG( z_mo / surf%z0(m) )
-
+      
           ENDDO
        ENDIF
 
@@ -1753,7 +1769,7 @@
 ! ------------
 !> Calculate potential temperature and salinity at nth level below the top surface
 !------------------------------------------------------------------------------!
-    SUBROUTINE calc_pt_sa
+    SUBROUTINE calc_koff
 
        IMPLICIT NONE
 
@@ -1768,79 +1784,92 @@
        !$OMP PARALLEL DO PRIVATE( i, j, k, m, n )
        k_prev = k_offset_mcphee
        
-       IF ( .NOT. koff_constant_mcphee ) THEN
-!--       Evolve k_offset_mcphee using the minimum scalar slope with depth
+!--    Evolve k_offset_mcphee using the minimum scalar slope with depth
 
-!--       Determine the minimum k_offset_mcphee from the greater of 1 offset
-!--       from the previous k_offset_mcphee or the starting value given in the 
-!--       namelist file 
-          koff_min = MAX(k_prev - 1,koff_min_mcphee)
-          
-!--       Determine the maximum depth limit for k_offset_mcphee
+!--    Determine the minimum k_offset_mcphee from the greater of 1 offset
+!--    from the previous k_offset_mcphee or the starting value given in the 
+!--    namelist file 
+       koff_min = MAX(k_prev - 1,koff_min_mcphee)
+       
+!--    Determine the maximum depth limit for k_offset_mcphee
 
-!--       Solve for the theoretical BL thickness
-          ol_av = hom(nzb,1,112,0)
-          us_av = hom(nzb,1,pr_palm,0)
-          eta_star_av = ( 1.0_wp + xi_N * us_av /                              &
-                           (ABS(f) * ri_crit * ol_av ) )**-0.5_wp
-          
-          z_TBL = 0.4_wp * eta_star_av * us_av / ABS(f)
-          
-!--       Determine the maximum k_offset_mcphee from the lesser of  
-!--       2 x the theoretical bounday layer depth or 1/3 the domain depth ...
-          koff_max = 0
-          DO WHILE (ABS(zu(nzt-koff_max)) < MIN( 2.0_wp * z_TBL, (1.0_wp/3.0_wp)*ABS(zu(0)) ) )
-             koff_max = koff_max + 1   
-          ENDDO
-          
-          IF (koff_max < k_prev + 1) koff_max = k_prev+1
-!--       ... or one offset from the previous k_offset_mcphee
-          koff_max = MIN(k_prev + 1,koff_max)
-          
-!--       Look for minimum scalar slope within depth limits
-          ALLOCATE( pt_z_av(1:koff_max) )
-          ALLOCATE( sa_z_av(1:koff_max) )
-          ALLOCATE( dptdz_av(1:koff_max) )
-          ALLOCATE( dsadz_av(1:koff_max) )
-          ALLOCATE( dz_off(1:koff_max) )
-          
-          dptdz_av(1) = 9999
-          dsadz_av(1) = 9999
-          
-          !$OMP PARALLEL DO PRIVATE( k )
-          DO k = 1,koff_max
-             pt_z_av(k) = hom(nzt-k,1,4,0)
-             sa_z_av(k) = hom(nzt-k,1,23,0)
-             IF (k > 1) THEN
-                dptdz_av(k) = (pt_z_av(k) - pt_z_av(k-1))/dzu(nzt-k)
-                dsadz_av(k) = (sa_z_av(k) - sa_z_av(k-1))/dzu(nzt-k)
-             ENDIF
-          ENDDO
+!--    Solve for the theoretical BL thickness
+       ol_av = hom(nzb,1,112,0)
+       us_av = hom(nzb,1,pr_palm,0)
+       eta_star_av = ( 1.0_wp + xi_N * us_av /                              &
+                        (ABS(f) * ri_crit * ol_av ) )**-0.5_wp
+       
+       z_TBL = 0.4_wp * eta_star_av * us_av / ABS(f)
+       
+!--    Determine the maximum k_offset_mcphee from the lesser of  
+!--    1 x the theoretical bounday layer depth or 1/3 the domain depth ...
+       koff_max = 0
+       DO WHILE (ABS(zu(nzt-koff_max)) < MIN( z_TBL, ABS(zu(0))/3.0_wp ) )
+          koff_max = koff_max + 1   
+       ENDDO
+       
+!--    ... or one offset from the previous k_offset_mcphee
+       IF (koff_max > k_prev + 1) koff_max = k_prev+1
+       IF (koff_max < koff_min  ) koff_max = koff_min
+       
+!--    Look for minimum scalar slope within depth limits
+       ALLOCATE( pt_z_av(1:koff_max) )
+       ALLOCATE( sa_z_av(1:koff_max) )
+       ALLOCATE( dptdz_av(1:koff_max) )
+       ALLOCATE( dsadz_av(1:koff_max) )
+       ALLOCATE( dz_off(1:koff_max) )
+       
+       dptdz_av(1) = 9999
+       dsadz_av(1) = 9999
+       
+       !$OMP PARALLEL DO PRIVATE( k )
+       DO k = 1,koff_max
+          pt_z_av(k) = hom(nzt-k,1,4,0)
+          sa_z_av(k) = hom(nzt-k,1,23,0)
+          IF (k > 1) THEN
+             dptdz_av(k) = (pt_z_av(k) - pt_z_av(k-1))/dzu(nzt-k)
+             dsadz_av(k) = (sa_z_av(k) - sa_z_av(k-1))/dzu(nzt-k)
+          ENDIF
+       ENDDO
 
-          k_ptmin         = MINLOC(ABS(dptdz_av),DIM=1)
-          k_samin         = MINLOC(ABS(dsadz_av),DIM=1)
-          k_offset_mcphee = MAX(k_ptmin,k_samin)
-          
-          DEALLOCATE( pt_z_av )
-          DEALLOCATE( sa_z_av )
-          DEALLOCATE( dptdz_av)
-          DEALLOCATE( dsadz_av)
-          DEALLOCATE( dz_off  )
-          
-!--       Enforce depth limits on k_offset_mcphee
-          IF (k_offset_mcphee < koff_min) k_offset_mcphee = koff_min
-          IF (k_offset_mcphee > koff_max) k_offset_mcphee = koff_max
+       k_ptmin         = MINLOC(ABS(dptdz_av),DIM=1)
+       k_samin         = MINLOC(ABS(dsadz_av),DIM=1)
+       k_offset_mcphee = MAX(k_ptmin,k_samin)
+       
+       DEALLOCATE( pt_z_av )
+       DEALLOCATE( sa_z_av )
+       DEALLOCATE( dptdz_av)
+       DEALLOCATE( dsadz_av)
+       DEALLOCATE( dz_off  )
+       
+!--    Enforce depth limits on k_offset_mcphee
+       IF (k_offset_mcphee < koff_min) k_offset_mcphee = koff_min
 
-!--       Convert to depth units
-          z_offset_mcphee = ABS(zu(nzt-k_offset_mcphee))
-          
-       ENDIF
+    END SUBROUTINE calc_koff
+
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Calculate potential temperature and salinity at nth level below the top surface
+!------------------------------------------------------------------------------!
+    SUBROUTINE calc_pt_sa
+
+       IMPLICIT NONE
+
+       INTEGER(iwp) ::  m,n,n_av,p,q       !< loop variable over all horizontal surf elements 
+       INTEGER(iwp) ::  ibit               !< 
+       INTEGER(iwp) ::  koff_max, koff_min, k_ptmin, k_samin, k_prev
+       REAL(wp) ::  pt_loc = 0.0_wp, sa_loc = 0.0_wp
+
+       !$OMP PARALLEL DO PRIVATE( i, j, k, m, n )
+       
+       ibit = MERGE( -1.0_wp, 1.0_wp, downward )
        
        IF (most_xy_av) THEN
        
 !--       Use horizontal averages for far-field scalar inputs to mcphee method
-          surf%pt1(:) = hom(nzt+ibit,1,4,0)
-          surf%sa1(:) = hom(nzt+ibit,1,23,0)
+          surf%pt1(:) = hom(nzt+ibit-surf%koff,1,4,0)
+          surf%sa1(:) = hom(nzt+ibit-surf%koff,1,23,0)
 
        ELSEIF ( k_av_width_mcphee > 0 .OR. ij_av_width_mcphee > 0 ) THEN
 !
@@ -1858,8 +1887,8 @@
              pt_loc = 0.0_wp
              sa_loc = 0.0_wp
              
-             DO n = MAX(nzb  ,k - k_offset_mcphee - k_av_width_mcphee),        &
-                    MIN(nzt+1,k - k_offset_mcphee + k_av_width_mcphee)
+             DO n = MAX(nzb  ,k + ibit*k_offset_mcphee - k_av_width_mcphee),    &
+                    MIN(nzt+1,k + ibit*k_offset_mcphee + k_av_width_mcphee)
                 DO p = MAX(nys,j - ij_av_width_mcphee),                        &
                        MIN(nyn,j + ij_av_width_mcphee)
                    DO q = MAX(nxl,i - ij_av_width_mcphee),                     &
@@ -1885,8 +1914,8 @@
              i   = surf%i(m)            
              j   = surf%j(m)
              k   = surf%k(m)
-             surf%pt1(m) = pt(k+ibit,j,i)
-             surf%sa1(m) = sa(k+ibit,j,i)
+             surf%pt1(m) = pt(k+ibit*k_offset_mcphee,j,i)
+             surf%sa1(m) = sa(k+ibit*k_offset_mcphee,j,i)
           ENDDO
        
        ENDIF
@@ -2235,7 +2264,8 @@
        INTEGER(iwp)  ::  ibit    !< flag to mask computation of relative velocity in case of downward-facing surfaces
        INTEGER(iwp)  ::  m       !< loop variable over all horizontal surf elements
        INTEGER(iwp)  ::  lsp     !< running index for chemical species
-
+       LOGICAL       :: stability = .FALSE.
+       REAL(wp)                            ::  p_mo=0.0_wp,p_0=0.0_wp    !< dummy to precalculate logarithm
        REAL(wp)                            ::  dum         !< dummy to precalculate logarithm
        REAL(wp)                            ::  eta_star    !< stability factor
        REAL(wp)                            ::  flag_u      !< flag indicating u-grid, used for calculation of horizontal momentum fluxes at vertical surfaces
@@ -2246,6 +2276,9 @@
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  u_i         !< u-component interpolated onto scalar grid point, required for momentum fluxes at vertical surfaces 
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  v_i         !< v-component interpolated onto scalar grid point, required for momentum fluxes at vertical surfaces 
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  w_i         !< w-component interpolated onto scalar grid point, required for momentum fluxes at vertical surfaces 
+
+       IF ( TRIM(drag_law) == 'businger' ) stability = .TRUE.
+       IF ( .NOT. ocean )                  stability = .TRUE. 
 
 !
 !--    Reference velocity is at k+1 for downward-facing surfaces, 
@@ -2433,41 +2466,90 @@
 !--       At downward-facing surfaces
           ELSE
 
-             IF ( trim(most_method) == 'mcphee' ) THEN
-
-                !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
-                DO  m = 1, surf%ns  
-   
-                   k = surf%k(m)
-!
-!--                Compute friction velocity components
-                   us_x = kappa * ( surf%ufar(m) - surf%usurf(m) )             &
-                          / LOG( surf%z_mo(m) / surf%z0(m) )
-                   us_y = kappa * ( surf%vfar(m) - surf%vsurf(m) )             &
-                          / LOG( surf%z_mo(m) / surf%z0(m) )
+             IF ( trim(most_method) == 'mcphee') THEN
+             
+                IF (trim(drag_law) == 'rotation') THEN
                    
-!--                Use the neutral eta_star limit for destabilizing cases
-                   IF ( surf%melt(m) <= 0.0_wp ) THEN                          
-                      eta_star = 1.0_wp
+                   !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
+                   DO  m = 1, surf%ns  
+   
+                      k = surf%k(m)
+!
+!--                   Compute friction velocity components
+                      us_x = kappa * ( surf%ufar(m) - surf%usurf(m) )             &
+                             / LOG( surf%z_mo(m) / surf%z0(m) )
+                      us_y = kappa * ( surf%vfar(m) - surf%vsurf(m) )             &
+                             / LOG( surf%z_mo(m) / surf%z0(m) )
+                      
+!--                   Use the neutral eta_star limit for destabilizing cases
+                      IF ( surf%melt(m) <= 0.0_wp ) THEN                          
+                         eta_star = 1.0_wp
+                      ELSE
+                         eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /            &
+                                 ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5
+                      ENDIF
+!                      
+!--                   Compute nondimensional depth zeta
+                      zeta = MAX(-1.0_wp * ABS( zu(nzt) / zeta_min ),                 &
+                                 ABS(f) * -1.0_wp * ABS( surf%z_mo(m) ) /           &
+                                 ( eta_star * surf%us(m) + 1E-30_wp ) )
+!
+!--                   Compute complex surface stress
+                      tau = EXP( SQRT( im / ( kappa * xi_N ) ) * zeta )
+!
+!--                   Compute momentum flux components
+                      surf%usws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
+                                     ( us_x * REAL(tau) - us_y * IMAG(tau) )
+                      surf%vsws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
+                                     ( us_x * IMAG(tau) + us_y * REAL(tau) )
+                   ENDDO     
+             
+                ELSE
+                   !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
+                   IF ( stability ) THEN
+                      DO  m = 1, surf%ns  
+   
+                         k = surf%k(m)
+                         
+!
+!--                      Compute friction velocity components
+                         surf%usws(m) = kappa * ( surf%ufar(m) - surf%usurf(m) )  &
+                                / ( LOG( surf%z_mo(m) / surf%z0(m) )              &
+                                    - psi_m( surf%z_mo(m) / surf%ol(m))           &
+                                    + psi_m( surf%z0(m)  / surf%ol(m)) )
+                         
+                         surf%vsws(m) = kappa * ( surf%vfar(m) - surf%vsurf(m) )  &
+                                / ( LOG( surf%z_mo(m) / surf%z0(m) )              &
+                                    - psi_m( surf%z_mo(m) / surf%ol(m))           &
+                                    + psi_m( surf%z0(m)  / surf%ol(m)) )
+                         
+!
+!--                      Compute momentum flux components
+                         surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k+1)
+                         surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k+1)
+                      
+                      ENDDO
                    ELSE
-                      eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /            &
-                              ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5
+                      DO  m = 1, surf%ns  
+   
+                         k = surf%k(m)
+                         
+!
+!--                      Compute friction velocity components
+                         surf%usws(m) = kappa * ( surf%ufar(m) - surf%usurf(m) )  &
+                                / LOG( surf%z_mo(m) / surf%z0(m) )
+                         
+                         surf%vsws(m) = kappa * ( surf%vfar(m) - surf%vsurf(m) )  &
+                                / LOG( surf%z_mo(m) / surf%z0(m) )
+                         
+!
+!--                      Compute momentum flux components
+                         surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k+1)
+                         surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k+1)
+                      
+                      ENDDO
                    ENDIF
-!                   
-!--                Compute nondimensional depth zeta
-                   zeta = MAX(-1.0_wp * ABS( zu(nzt) / zeta_min ),                 &
-                              ABS(f) * -1.0_wp * ABS( surf%z_mo(m) ) /           &
-                              ( eta_star * surf%us(m) + 1E-30_wp ) )
-!
-!--                Compute complex surface stress
-                   tau = EXP( SQRT( im / ( kappa * xi_N ) ) * zeta )
-!
-!--                Compute momentum flux components
-                   surf%usws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
-                                  ( us_x * REAL(tau) - us_y * IMAG(tau) )
-                   surf%vsws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
-                                  ( us_x * IMAG(tau) + us_y * REAL(tau) )
-                ENDDO     
+                ENDIF 
              ELSE
 
                 !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
@@ -2621,9 +2703,12 @@
        INTEGER(iwp)  ::  n                   !< iteration counter
        INTEGER(iwp)  ::  nn = 0              !< iteration counter
        INTEGER(iwp)  ::  max_iter = 10       !< maximum number of iterations
+       
        LOGICAL       :: destabilizing = .FALSE.
+       LOGICAL       :: stability = .FALSE.
 
        REAL(wp) ::  a, b, c                  !< coefficients of quadratic equation
+       REAL(wp) ::  d                        !< factor in molecular transfer coefficient
        REAL(wp) ::  eta_star                 !< stability parameter
        REAL(wp) ::  dptf_dsa                 !< derivative of conservative temperature 
                                              !< at freezing point with respect to salinity
@@ -2636,6 +2721,8 @@
        REAL(wp) ::  Gamma_turb               !< turbulent contribution to exchange velocity
        REAL(wp) ::  Gamma_mol_T, Gamma_mol_S !< molecular contribution to exchange velocity
 
+       IF ( TRIM(drag_law) == 'businger' ) stability = .TRUE.
+       
        DO m = 1, surf%ns
 
           !$OMP PARALLEL DO PRIVATE( i, j, k )
@@ -2676,25 +2763,51 @@
 !--          parameterization
              ELSE
 
-!--             viscous sublayer thickness, Tennekes and Lumley (1972) p. 160
-                h_nu = 5.0_wp * molecular_viscosity / ( surf%us(m) + 1E-30_wp )
+                IF ( TRIM(gamma_mcphee) == 'constant' ) THEN
+                   
+                   surf%gamma_T(m) = ( surf%us(m) + 1E-30_wp ) * Gamma_T_const 
+                   surf%gamma_S(m) = ( surf%us(m) + 1E-30_wp ) * Gamma_S_const 
                 
-!--             Scaling factor for stability of stratification
-                eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /                  &
-                           ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5
-                
-                Gamma_turb = ( 1 / kappa ) *                                   &
-                                    LOG( ( surf%us(m) * xi_N * eta_star**2 ) / &
-                                         ( ABS(f) * h_nu ) )                   &
-                             + ( 1 / ( 2 * xi_N * eta_star ) )                 &
-                             - ( 1 / kappa )
-                
-                Gamma_mol_T = 12.5_wp * prandtl_number**(2/3) - 6
-                Gamma_mol_S = 12.5_wp * schmidt_number**(2/3) - 6
+                ELSE
 
-                surf%gamma_T(m) = ( surf%us(m) + 1E-30_wp ) / (Gamma_turb + Gamma_mol_T)
-                surf%gamma_S(m) = ( surf%us(m) + 1E-30_wp ) / (Gamma_turb + Gamma_mol_S)
+!--                Depth-dependent formulation. Coefficient value for stability function
+!--                from Zhou et al. (2017)
+                   IF ( TRIM(gamma_mcphee) == 'depth-dependent' ) THEN
+
+                      Gamma_turb = (1.0_wp/kappa) * (LOG(ABS(zu(nzt-surf%koff)) / &
+                                                         surf%z0(m) )             & 
+                        - MERGE(-5.6_wp*( ABS(zu(nzt-surf%koff))/surf%ol(m) ),    &
+                                0.0_wp,stability)                                 &
+                        + MERGE(-5.6_wp*(surf%z0(m)/surf%ol(m)),0.0_wp,stability) )
+                      
+                      Gamma_mol_T = 12.5_wp * prandtl_number**(0.67_wp) - 6.0_wp
+                      Gamma_mol_S = 12.5_wp * schmidt_number**(0.67_wp) - 6.0_wp
+
+                   ELSEIF ( TRIM(gamma_mcphee) == 'BL-integrated' ) THEN 
+
+!--                   viscous sublayer thickness, Tennekes and Lumley (1972) p. 160
+                      h_nu = 5.0_wp * molecular_viscosity / ( surf%us(m) + 1E-30_wp )
+                      
+!--                   Scaling factor for stability of stratification
+                      eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /               &
+                                 ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5_wp
+                      
+                      Gamma_turb = ( 1.0_wp / kappa ) *                           &
+                                     LOG( ( surf%us(m) * xi_N * eta_star**2.0_wp ) / &
+                                          ( ABS(f) * h_nu ) )                     &
+                                   + ( 1.0_wp / ( 2.0_wp * xi_N * eta_star ) )    &
+                                   - ( 1.0_wp / kappa )
+                      
+                      Gamma_mol_T = 12.5_wp * prandtl_number**(0.67_wp) - 6.0_wp
+                      Gamma_mol_S = 12.5_wp * schmidt_number**(0.67_wp) - 6.0_wp
+
+                   ENDIF 
                 
+                   surf%gamma_T(m) = ( surf%us(m) + 1E-30_wp ) / (Gamma_turb + Gamma_mol_T)
+                   surf%gamma_S(m) = ( surf%us(m) + 1E-30_wp ) / (Gamma_turb + Gamma_mol_S)
+                   
+                ENDIF 
+             
              ENDIF
 
 !
@@ -2774,12 +2887,16 @@
                   * ( 1.0_wp + x**2 ) * 0.125_wp )
        ELSE
 
-          psi_m = - b * ( zeta - c_d_d ) * EXP( -d * zeta ) - a * zeta         &
-                   - bc_d_d
+          IF (trim(drag_law) == 'businger') THEN
 !
-!--       Old version for stable conditions (only valid for z/L < 0.5)
-!--       psi_m = - 5.0_wp * zeta
+!--          Old version for stable conditions (only valid for z/L < 0.5)
+!--          Coefficient choice following Wyngaard (2010)
+             psi_m = - 4.8_wp * zeta
 
+          ELSE
+             psi_m = - b * ( zeta - c_d_d ) * EXP( -d * zeta ) - a * zeta         &
+                     - bc_d_d
+          ENDIF
        ENDIF
 
     END FUNCTION psi_m

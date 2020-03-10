@@ -544,9 +544,9 @@
              CALL location_message(message_string,.TRUE.)
              WRITE(message_string,*) 'gamma_S = ',surf%gamma_S(m)/surf%us(m)
              CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'dT = ',surf%pt1(m) - surf%pt_io(m)
+             WRITE(message_string,*) 'dT = ',surf%pt1(m) - surf%pt_surface(m)
              CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'dS = ',surf%sa1(m) - surf%sa_io(m)
+             WRITE(message_string,*) 'dS = ',surf%sa1(m) - surf%sa_surface(m)
              CALL location_message(message_string,.TRUE.)
              WRITE(message_string,*) 'k_offset_mcphee = ',k_offset_mcphee 
              CALL location_message(message_string,.TRUE.) 
@@ -1957,6 +1957,17 @@
           surf%pt_surface(m) = pt(k+koff,j,i)
 
        ENDDO
+       IF ( ocean ) THEN
+          DO  m = 1, surf%ns 
+
+             i   = surf%i(m)            
+             j   = surf%j(m)
+             k   = surf%k(m)
+
+             surf%sa_surface(m) = sa(k+koff,j,i)
+
+          ENDDO
+       ENDIF
 
     END SUBROUTINE calc_pt_surface
 
@@ -2313,14 +2324,15 @@
                 k = surf%k(m)
                 
                 s_factor = -1.0_wp * surf%gamma_S(m) *                         &
-                           ( surf%sa_io(m) - surf%sa1(m) ) / surf%sa_io(m)
+                           ( surf%sa_surface(m) - surf%sa1(m) ) /              &
+                           surf%sa_surface(m)
 
                 surf%shf(m)   = -1.0_wp * rho_ocean(k,j,i) *                   &
                                 ( surf%gamma_T(m) + s_factor ) *               &
-                                ( surf%pt_io(m) - surf%pt1(m) )
+                                ( surf%pt_surface(m) - surf%pt1(m) )
                 surf%sasws(m) = -1.0_wp * rho_ocean(k,j,i) *                   &
                                 ( surf%gamma_S(m) + s_factor ) *               &
-                                ( surf%sa_io(m) - surf%sa1(m) )
+                                ( surf%sa_surface(m) - surf%sa1(m) )
                 surf%melt(m)  = s_factor * rho_ocean(k,j,i)/1e3
 
              ENDDO
@@ -2744,7 +2756,7 @@
           k = surf%k(m)
 
 !--       Store sa, pt at the boundary at the previous time step
-          sa_io_p = surf%sa_io(m)
+          sa_io_p = surf%sa_surface(m)
 
           dptf_dsa = pt_freezing_SA(surface_pressure/1e2,sa_io_p)
           pt_io_p  = pt_freezing(surface_pressure/1e2,sa_io_p)
@@ -2755,7 +2767,7 @@
 
 !--          Store previous salinity for use in freezing temperature equation 
 !--          and derivative of freezing temperature w.r.t. salinity
-             sa_io_k = surf%sa_io(m)
+             sa_io_k = surf%sa_surface(m)
              
 !--          Update Obukhov length each iteration because it depends on the
 !--          buoyancy flux  
@@ -2830,15 +2842,15 @@
              b = ( surf%gamma_T(m) * term1 ) - ( surf%gamma_S(m) * ( l_m / cpw ) ) 
              c = surf%gamma_S(m) * surf%sa1(m) * ( l_m / cpw )
 
-             surf%sa_io(m) = 2.0_wp*c / (-1.0_wp*b + SQRT(b**2 - 4.0_wp*a*c))
+             surf%sa_surface(m) = 2.0_wp*c / (-1.0_wp*b + SQRT(b**2 - 4.0_wp*a*c))
 !
 !--          Calculate approximate freezing temperature at ice-ocean interface
-             surf%pt_io(m) = pt_io_p + ( dptf_dsa * ( surf%sa_io(m) - sa_io_p ) )
+             surf%pt_surface(m) = pt_io_p + ( dptf_dsa * ( surf%sa_surface(m) - sa_io_p ) )
 
              nn = nn + 1
 
 !--          Stop iterations if interface salinity change is small enough
-             IF ( ABS(surf%sa_io(m) - sa_io_k) < dsa_tol ) EXIT
+             IF ( ABS(surf%sa_surface(m) - sa_io_k) < dsa_tol ) EXIT
 
           ENDDO ! end iterations
 
@@ -2846,10 +2858,10 @@
 !
 !--    Terminate simulation if interface salinity is NaN or less than minimum
 !--    Only check for m=1 to minimize computational cost
-       IF ( isnan(surf%sa_io(1)) ) THEN
+       IF ( isnan(surf%sa_surface(1)) ) THEN
           WRITE(message_string,*) 'Interface salinity is NaN'
           CALL message( 'surface_layer_fluxes', 'PA0655', 3, 2, 0, 6, 0 )
-       ELSEIF ( surf%sa_io(1) < sa_io_min ) THEN
+       ELSEIF ( surf%sa_surface(1) < sa_io_min ) THEN
           WRITE(message_string,*) 'Interface salinity < minimum salinity '
           CALL message( 'surface_layer_fluxes', 'PA0655', 3, 2, 0, 6, 0 )
        ENDIF

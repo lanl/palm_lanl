@@ -183,7 +183,7 @@
         ONLY:  alpha_T, beta_S, csflux_input_conversion,                       &
                heatflux_input_conversion, momentumflux_input_conversion,       &
                scalarflux_input_conversion, salinityflux_input_conversion,     &
-               waterflux_input_conversion, sa_init, zu, zw
+               waterflux_input_conversion, zu, zw
 
     USE chem_modules
 
@@ -265,8 +265,6 @@
 
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt1       !< Potential temperature at first grid level
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  sa1       !< Salinity at first grid level
-       REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt_io     !< Potential temperature at ice-ocean interface
-       REAL(wp), DIMENSION(:), ALLOCATABLE ::  sa_io     !< Salinity at ice-ocean interface
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  melt      !< Melt rate in m/s
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  qv1       !< mixing ratio at first grid level
        REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  css     !< scaling parameter chemical species
@@ -318,6 +316,7 @@
        REAL(wp), DIMENSION(:,:), ALLOCATABLE   ::  rrtm_asdir      !< albedo for shortwave direct radiation, solar angle of 60°
 
        REAL(wp), DIMENSION(:), ALLOCATABLE   ::  pt_surface        !< skin-surface temperature
+       REAL(wp), DIMENSION(:), ALLOCATABLE   ::  sa_surface        !< Salinity at skin surface
        REAL(wp), DIMENSION(:), ALLOCATABLE   ::  rad_net           !< net radiation 
        REAL(wp), DIMENSION(:), ALLOCATABLE   ::  rad_net_l         !< net radiation, used in USM
        REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  lambda_h          !< heat conductivity of soil/ wall (W/m/K) 
@@ -1086,6 +1085,7 @@
 !
 !--    Salinity surface flux
        IF ( ocean ) THEN
+         DEALLOCATE ( surfaces%sa_surface ) 
          DEALLOCATE ( surfaces%sasws )
          DEALLOCATE ( surfaces%shf_sol )
        ENDIF
@@ -1225,6 +1225,7 @@
          ALLOCATE ( surfaces%sasws(1:surfaces%ns) )
          ALLOCATE ( surfaces%shf_sol(1:surfaces%ns) )
          ALLOCATE ( surfaces%sa1(1:surfaces%ns) )
+         ALLOCATE ( surfaces%sa_surface(1:surfaces%ns) )
        ENDIF
 
 !
@@ -1232,8 +1233,6 @@
        IF ( most_method == 'mcphee' ) THEN
           ALLOCATE ( surfaces%gamma_T(1:surfaces%ns) )
           ALLOCATE ( surfaces%gamma_S(1:surfaces%ns) )
-          ALLOCATE ( surfaces%sa_io(1:surfaces%ns) )
-          ALLOCATE ( surfaces%pt_io(1:surfaces%ns) )
           ALLOCATE ( surfaces%melt(1:surfaces%ns) )
        ENDIF
 
@@ -2223,9 +2222,9 @@
                       surf%shf(num_h) = 0.0_wp
                       surf%melt(num_h) = 0.0_wp
                       surf%sasws(num_h) = 0.0_wp
-                      surf%sa_io(num_h) = sa_init(nzt)
-                      surf%pt_io(num_h) = 0.0_wp
                    ENDIF
+                   surf%pt_surface(num_h) = pt_surface
+                   surf%sa_surface(num_h) = sa_surface
 
                 ENDIF
 

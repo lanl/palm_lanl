@@ -3817,9 +3817,9 @@
              CONTINUE
 
           CASE ( 'ghf*', 'lwp*', 'melt*', 'ol*', 'pra*', 'prr*', 'pt1*',       &
-                 'pt_io*', 'qsws*', 'r_a*', 'sa1*', 'sa_io*', 'shf_sol*',      &
-                 'shf*', 'sasws*', 'ssws*', 't*', 'tsurf*', 'u*', 'usws*',     &
-                 'vsws*', 'z0*', 'z0h*', 'z0q*' )
+                 'pt_surface*', 'qsws*', 'r_a*', 'sa1*', 'sa_surface*',        &
+                 'shf_sol*', 'shf*', 'sasws*', 'ssws*', 't*', 'tsurf*', 'u*',  &
+                 'usws*', 'vsws*', 'z0*', 'z0h*', 'z0q*' )
              IF ( k == 0  .OR.  data_output(i)(ilen-2:ilen) /= '_xy' )  THEN
                 message_string = 'illegal value for data_output: "' //         &
                                  TRIM( var ) // '" & only 2d-horizontal ' //   &

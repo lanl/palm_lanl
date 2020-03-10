@@ -512,9 +512,16 @@
           DO m = 1,surf_def_h(2)%ns
              i = surf_def_h(2)%i(m)
              j = surf_def_h(2)%j(m)
-             sums_l(nzt+1, 4,tn)  = sums_l(nzt+1, 4,tn) + surf_def_h(2)%pt_io(m)
-             sums_l(nzt+1,23,tn)  = sums_l(nzt+1,23,tn) + surf_def_h(2)%sa_io(m)
+             sums_l(nzt+1, 4,tn)  = sums_l(nzt+1, 4,tn) + surf_def_h(2)%pt_surface(m)
           ENDDO
+          IF ( ocean ) THEN
+             !%OMP DO
+             DO m = 1,surf_def_h(2)%ns
+                i = surf_def_h(2)%i(m)
+                j = surf_def_h(2)%j(m)
+                sums_l(nzt+1,23,tn)  = sums_l(nzt+1,23,tn) + surf_def_h(2)%sa_surface(m)
+             ENDDO
+          ENDIF
        ENDIF
 
 !
@@ -662,7 +669,7 @@
           IF ( k == nzt+1 .AND. TRIM(most_method) == 'mcphee' ) THEN
              sums(k,4) = 0.0_wp 
              DO m = 1,surf_def_h(2)%ns
-                sums(k,4) = sums(k,4) + surf_def_h(2)%pt_io(m) 
+                sums(k,4) = sums(k,4) + surf_def_h(2)%pt_surface(m) 
              ENDDO
              sums(k,4) = sums(k,4)/surf_def_h(2)%ns
           ENDIF
@@ -683,7 +690,7 @@
              IF ( k == nzt+1 .AND. TRIM(most_method) == 'mcphee' ) THEN
                 sums(k,23) = 0.0_wp 
                 DO m = 1,surf_def_h(2)%ns
-                   sums(k,23) = sums(k,23) + surf_def_h(2)%sa_io(m) 
+                   sums(k,23) = sums(k,23) + surf_def_h(2)%sa_surface(m) 
                 ENDDO
                 sums(k,23) = sums(k,23)/surf_def_h(2)%ns
              ENDIF
@@ -861,7 +868,6 @@
                                                surf_def_h(top_bottom_flag)%sasws(m) * rmask(j,i,sr)
                 ENDIF
 
-                !CALL location_message('finished',.TRUE.)
              ENDIF
              IF ( surf_lsm_h%end_index(j,i) >= surf_lsm_h%start_index(j,i) )  THEN
                  m = surf_lsm_h%start_index(j,i)
@@ -2078,7 +2084,6 @@
        hom(:,1,32,sr) = sums(:,32)     ! w*2
        hom(:,1,33,sr) = sums(:,33)     ! pt*2
        hom(:,1,153,sr) = sums(:,153)   ! sa*2
-       hom(:,1,156,sr) = sums(:,156)   ! ks
        hom(:,1,34,sr) = sums(:,34)     ! e*
        hom(:,1,35,sr) = sums(:,35)     ! w*2pt*
        hom(:,1,36,sr) = sums(:,36)     ! w*pt*2

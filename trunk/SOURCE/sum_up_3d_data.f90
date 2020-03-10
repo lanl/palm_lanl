@@ -363,7 +363,7 @@
                 ENDIF
                 pt1_av = 0.0_wp
              
-             CASE ( 'pt_io*' )
+             CASE ( 'pt_surface*' )
                 IF ( .NOT. ALLOCATED( pt_io_av ) )  THEN
                    ALLOCATE( pt_io_av(nysg:nyng,nxlg:nxrg) )
                 ENDIF
@@ -477,7 +477,7 @@
                 ENDIF
                 sa1_av = 0.0_wp
              
-             CASE ( 'sa_io*' )
+             CASE ( 'sa_surface*' )
                 IF ( .NOT. ALLOCATED( sa_io_av ) )  THEN
                    ALLOCATE( sa_io_av(nysg:nyng,nxlg:nxrg) )
                 ENDIF
@@ -851,14 +851,21 @@
                 ENDIF
              ENDIF
           
-          CASE ( 'pt_io*' )
+          CASE ( 'pt_surface*' )
              IF ( ALLOCATED( pt_io_av ) ) THEN 
                 IF ( TRIM(constant_flux_layer) == 'top') THEN
                    DO  m = 1, surf_def_h(2)%ns
                       i = surf_def_h(2)%i(m)
                       j = surf_def_h(2)%j(m)
                       k = surf_def_h(2)%k(m)
-                      pt_io_av(j,i) = pt_io_av(j,i) + surf_def_h(2)%pt_io(m) 
+                      pt_io_av(j,i) = pt_io_av(j,i) + surf_def_h(2)%pt_surface(m) 
+                   ENDDO
+                ELSEIF ( TRIM(constant_flux_layer) == 'bottom') THEN
+                   DO  m = 1, surf_def_h(0)%ns
+                      i = surf_def_h(0)%i(m)
+                      j = surf_def_h(0)%j(m)
+                      k = surf_def_h(0)%k(m)
+                      pt_io_av(j,i) = pt_io_av(j,i) + surf_def_h(0)%pt_surface(m) 
                    ENDDO
                 ENDIF
              ENDIF
@@ -1090,14 +1097,21 @@
                 ENDIF
              ENDIF
           
-          CASE ( 'sa_io*' )
+          CASE ( 'sa_surface*' )
              IF ( ALLOCATED( sa_io_av ) ) THEN 
                 IF ( TRIM(constant_flux_layer) == 'top') THEN
                    DO  m = 1, surf_def_h(2)%ns
                       i = surf_def_h(2)%i(m)
                       j = surf_def_h(2)%j(m)
                       k = surf_def_h(2)%k(m)
-                      sa_io_av(j,i) = sa_io_av(j,i) + surf_def_h(2)%sa_io(m) 
+                      sa_io_av(j,i) = sa_io_av(j,i) + surf_def_h(2)%sa_surface(m) 
+                   ENDDO
+                ELSEIF ( TRIM(constant_flux_layer) == 'bottom') THEN
+                   DO  m = 1, surf_def_h(0)%ns
+                      i = surf_def_h(0)%i(m)
+                      j = surf_def_h(0)%j(m)
+                      k = surf_def_h(0)%k(m)
+                      sa_io_av(j,i) = sa_io_av(j,i) + surf_def_h(0)%sa_surface(m) 
                    ENDDO
                 ENDIF
              ENDIF

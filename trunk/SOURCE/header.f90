@@ -1225,7 +1225,7 @@
 
     IF ( use_surface_fluxes )  THEN
        WRITE ( io, 303 )
-       IF ( constant_heatflux )  THEN
+       IF ( constant_bottom_heatflux )  THEN
           IF ( large_scale_forcing .AND. lsf_surf )  THEN
              IF ( surf_def_h(0)%ns >= 1 )  WRITE ( io, 306 )  surf_def_h(0)%shf(1)
           ELSE
@@ -1268,7 +1268,7 @@
        WRITE ( io, 305 )  (zu(1)-zu(0)), roughness_length,                     &
                           z0h_factor*roughness_length, kappa,                  &
                           zeta_min, zeta_max
-       IF ( .NOT. constant_heatflux )  WRITE ( io, 308 )
+       IF ( .NOT. constant_bottom_heatflux )  WRITE ( io, 308 )
        IF ( .NOT. constant_bottom_salinityflux )  WRITE ( io, 284 )
        IF ( humidity  .AND.  .NOT. constant_waterflux )  THEN
           WRITE ( io, 312 )

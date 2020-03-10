@@ -1039,6 +1039,14 @@
 
     END SELECT
 
+    IF ( TRIM(constant_flux_layer) == 'top' )    top_constant_flux_layer = .TRUE.
+    IF ( TRIM(constant_flux_layer) == 'bottom' ) bottom_constant_flux_layer = .TRUE.
+    IF ( top_constant_flux_layer .AND. bottom_constant_flux_layer) THEN
+       message_string = 'Constant flux layer cannot currently be ' //       &
+                        'implemented at both top and bottom boundaries ' // &
+                        'of the domain. Choose one.'
+       CALL message( 'check_parameters', 'PA0014', 1, 2, 0, 6, 0 )
+    ENDIF
 !
 !-- Check topography setting (check for illegal parameter combinations)
     IF ( topography /= 'flat' )  THEN
@@ -1066,21 +1074,12 @@
        IF ( cloud_droplets )  THEN
           WRITE( action, '(A)' )  'cloud_droplets = .TRUE.'
        ENDIF
-       IF ( TRIM(constant_flux_layer) == 'none' .OR.                           &
-            TRIM(constant_flux_layer) == 'top'  .OR.                           &
+       IF ( TRIM(constant_flux_layer) == 'top'  .OR.                           &
             TRIM(constant_flux_layer) == 'bottom'    ) THEN
           WRITE( action, '(A,A)' )  'constant_flux_layer = ', TRIM(constant_flux_layer)
        ELSE
           message_string = 'unknown constant_flux_layer: constant_flux_layer  = "' // &
                             TRIM(constant_flux_layer) // '"'
-          CALL message( 'check_parameters', 'PA0014', 1, 2, 0, 6, 0 )
-       ENDIF
-       IF ( TRIM(constant_flux_layer) == 'top' )    top_constant_flux_layer = .TRUE.
-       IF ( TRIM(constant_flux_layer) == 'bottom' ) bottom_constant_flux_layer = .TRUE.
-       IF ( top_constant_flux_layer .AND. bottom_constant_flux_layer) THEN
-          message_string = 'Constant flux layer cannot currently be ' //       &
-                           'implemented at both top and bottom boundaries ' // &
-                           'of the domain. Choose one.'
           CALL message( 'check_parameters', 'PA0014', 1, 2, 0, 6, 0 )
        ENDIF
        IF ( action /= ' ' )  THEN
@@ -1988,6 +1987,8 @@
 !-- fluxes have to be used in the diffusion-terms
     IF ( bottom_constant_flux_layer ) use_surface_fluxes = .TRUE.
     IF ( top_constant_flux_layer    ) use_top_fluxes = .TRUE.
+    WRITE(message_string,*) 'constant_flux_layer = ', TRIM(constant_flux_layer)
+    CALL location_message(message_string,.TRUE.)
 
 !-- Check initial conditions for bubble case
     IF ( INDEX( initializing_actions, 'initialize_3D_bubble' ) /= 0 .OR.         &
@@ -4692,7 +4693,7 @@
 
 !
 !-- Check roughness length, which has to be smaller than dz/2
-    IF ( ( top_constant_flux_layer .OR. bottom_constant_flux_layer ) .OR.      &
+    IF ( ( top_constant_flux_layer .OR. bottom_constant_flux_layer ) .AND.     &
          ( INDEX( initializing_actions, 'set_1d-model_profiles' ) /= 0 ) .AND. &
            roughness_length >= 0.5 * dz(1) )  THEN
        message_string = 'roughness_length must be smaller than dz/2'

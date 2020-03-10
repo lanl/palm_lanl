@@ -1652,6 +1652,8 @@
                                                               .FALSE.,.TRUE. )  
 !
 !--                   Default surface type
+!--                   Note: surf_def_h(0) will be initialized even when 
+!--                   use_surface_fluxes = .FALSE.
                       ELSE
                          CALL initialize_horizontal_surfaces( k, j, i,         &
                                                               surf_def_h(0),   &

@@ -2348,7 +2348,7 @@
     IF ( TRIM( initializing_actions ) /= 'read_restart_data'  .AND.            &
          TRIM( initializing_actions ) /= 'cyclic_fill' )  THEN
  
-       IF ( use_surface_fluxes  .AND.  constant_heatflux  .AND.                &
+       IF ( use_surface_fluxes  .AND.  constant_bottom_heatflux  .AND.         &
             random_heatflux )  THEN
           IF ( surf_def_h(0)%ns >= 1 )  CALL disturb_heatflux( surf_def_h(0) )
           IF ( surf_lsm_h%ns    >= 1 )  CALL disturb_heatflux( surf_lsm_h    )
@@ -2373,7 +2373,7 @@
 !-- Initialize surface forcing corresponding to large-scale forcing. Therein, 
 !-- initialize heat-fluxes, etc. via datatype. Revise it later!
     IF ( large_scale_forcing .AND. lsf_surf )  THEN
-       IF ( use_surface_fluxes  .AND.  constant_heatflux )  THEN
+       IF ( use_surface_fluxes  .AND.  constant_bottom_heatflux )  THEN
           CALL ls_forcing_surf ( simulated_time )
        ENDIF
     ENDIF

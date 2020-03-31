@@ -1369,6 +1369,8 @@
     LOGICAL ::  create_disturbances = .TRUE.                     !< namelist parameter
     LOGICAL ::  data_output_during_spinup = .FALSE.              !< namelist parameter
     LOGICAL ::  data_output_2d_on_each_pe = .TRUE.               !< namelist parameter
+    LOGICAL ::  diffusivity_diags = .FALSE.                      !< namelist parameter
+    LOGICAL ::  diffusivity_from_surface_fluxes = .FALSE.         !< namelist parameter
     LOGICAL ::  disturbance_created = .FALSE.                    !< flow disturbance imposed?
     LOGICAL ::  do2d_at_begin = .FALSE.                          !< namelist parameter
     LOGICAL ::  do3d_at_begin = .FALSE.                          !< namelist parameter

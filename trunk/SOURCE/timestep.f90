@@ -126,7 +126,7 @@
  
 
     USE arrays_3d,                                                             &
-        ONLY:  dzu, dzw, kh, km, u, v, w
+        ONLY:  dzu, dzw, kh, km, ks, u, v, w
 
     USE control_parameters,                                                    &
         ONLY:  cfl_factor, coupling_mode, dt_3d, dt_fixed, dt_max,             &
@@ -141,7 +141,8 @@
         ONLY:  dx, dx2, dy, dy2
 
     USE indices,                                                               &
-        ONLY:  nxl, nxlg, nxr, nxrg, nyn, nyng, nys, nysg, nzb, nzt
+        ONLY:  nxl, nxlg, nxr, nxrg, nyn, nyng, nys, nysg, nzb, nzt,           &
+               wall_flags_0
 
     USE interfaces
 
@@ -169,6 +170,7 @@
     INTEGER(iwp) ::  k !< 
     INTEGER(iwp) ::  km_max_ijk(3) = -1  !< index values (i,j,k) of location where km_max occurs
     INTEGER(iwp) ::  kh_max_ijk(3) = -1  !< index values (i,j,k) of location where kh_max occurs
+    INTEGER(iwp) ::  ks_max_ijk(3) = -1  !< index values (i,j,k) of location where kh_max occurs
 
     LOGICAL ::  stop_dt_local !< local switch for controlling the time stepping
 
@@ -183,6 +185,7 @@
     REAL(wp) ::  dt_w_l            !< 
     REAL(wp) ::  km_max            !< maximum of Km in entire domain
     REAL(wp) ::  kh_max            !< maximum of Kh in entire domain
+    REAL(wp) ::  ks_max            !< maximum of Ks in entire domain
     REAL(wp) ::  u_gtrans_l        !< 
     REAL(wp) ::  u_max_l           !< 
     REAL(wp) ::  u_min_l           !< 
@@ -314,7 +317,10 @@
           DO  j = nys, nyn
              DO  k = nzb+1, nzt
                 dt_diff_l = MIN( dt_diff_l, dxyz2_min(k) /                     &
-                                    ( MAX( kh(k,j,i), km(k,j,i) ) + 1E-20_wp ) )
+                            ( MAX( kh(k,j,i), km(k,j,i), ks(k,j,i) )           &
+                              * MERGE( 1.0_wp, 0.0_wp,                         &
+                                       BTEST( wall_flags_0(k,j,i), 0 ) )       &
+                              + 1E-20_wp ) )
              ENDDO
           ENDDO
        ENDDO
@@ -345,6 +351,13 @@
           timestep_reason = 'D'
        ENDIF
 
+       CALL global_min_max( nzb, nzt+1, nysg, nyng, nxlg, nxrg, km, 'abs',  &
+                            0.0_wp, km_max, km_max_ijk )
+       CALL global_min_max( nzb, nzt+1, nysg, nyng, nxlg, nxrg, kh, 'abs',  &
+                            0.0_wp, kh_max, kh_max_ijk )
+       CALL global_min_max( nzb, nzt+1, nysg, nyng, nxlg, nxrg, ks, 'abs',  &
+                            0.0_wp, ks_max, ks_max_ijk )
+
 !
 !--    Set flag if the time step becomes too small.
        IF ( dt_3d < ( 0.00001_wp * dt_max ) )  THEN
@@ -357,6 +370,8 @@
                                0.0_wp, km_max, km_max_ijk )
           CALL global_min_max( nzb, nzt+1, nysg, nyng, nxlg, nxrg, kh, 'abs',  &
                                0.0_wp, kh_max, kh_max_ijk )
+          CALL global_min_max( nzb, nzt+1, nysg, nyng, nxlg, nxrg, ks, 'abs',  &
+                               0.0_wp, ks_max, ks_max_ijk )
 
           WRITE( message_string, * ) 'Time step has reached minimum limit.',   &
                '&dt              = ', dt_3d, ' s  Simulation is terminated.',  &
@@ -374,7 +389,9 @@
                '&km_max          = ', km_max, ' m2/s2  k=', km_max_ijk(1),     &
                '  j=', km_max_ijk(2), '  i=', km_max_ijk(3),                   &
                '&kh_max          = ', kh_max, ' m2/s2  k=', kh_max_ijk(1),     &
-                '  j=', kh_max_ijk(2), '  i=', kh_max_ijk(3)
+               '  j=', kh_max_ijk(2), '  i=', kh_max_ijk(3),                   &
+               '&ks_max          = ', ks_max, ' m2/s2  k=', ks_max_ijk(1),     &
+               '  j=', ks_max_ijk(2), '  i=', ks_max_ijk(3)
           CALL message( 'timestep', 'PA0312', 0, 1, 0, 6, 0 )
 !
 !--       In case of coupled runs inform the remote model of the termination 

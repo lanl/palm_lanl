@@ -2491,107 +2491,88 @@
 !--       At downward-facing surfaces
           ELSE
 
-             IF ( trim(most_method) == 'mcphee') THEN
-             
-                IF (trim(drag_law) == 'rotation') THEN
-                   
-                   !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
-                   DO  m = 1, surf%ns  
-   
-                      k = surf%k(m)
-!
-!--                   Compute friction velocity components
-                      us_x = kappa * ( surf%ufar(m) - surf%usurf(m) )             &
-                             / LOG( surf%z_mo(m) / surf%z0(m) )
-                      us_y = kappa * ( surf%vfar(m) - surf%vsurf(m) )             &
-                             / LOG( surf%z_mo(m) / surf%z0(m) )
-                      
-!--                   Use the neutral eta_star limit for destabilizing cases
-                      IF ( surf%melt(m) <= 0.0_wp ) THEN                          
-                         eta_star = 1.0_wp
-                      ELSE
-                         eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /            &
-                                 ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5
-                      ENDIF
-!                      
-!--                   Compute nondimensional depth zeta
-                      zeta = MAX(-1.0_wp * ABS( zu(nzt) / zeta_min ),                 &
-                                 ABS(f) * -1.0_wp * ABS( surf%z_mo(m) ) /           &
-                                 ( eta_star * surf%us(m) + 1E-30_wp ) )
-!
-!--                   Compute complex surface stress
-                      tau = EXP( SQRT( im / ( kappa * xi_N ) ) * zeta )
-!
-!--                   Compute momentum flux components
-                      surf%usws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
-                                     ( us_x * REAL(tau) - us_y * IMAG(tau) )
-                      surf%vsws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
-                                     ( us_x * IMAG(tau) + us_y * REAL(tau) )
-                   ENDDO     
-             
-                ELSE
-                   !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
-                   IF ( stability ) THEN
-                      DO  m = 1, surf%ns  
-   
-                         k = surf%k(m)
-                         
-!
-!--                      Compute friction velocity components
-                         surf%usws(m) = kappa * ( surf%ufar(m) - surf%usurf(m) )  &
-                                / ( LOG( surf%z_mo(m) / surf%z0(m) )              &
-                                    - psi_m( surf%z_mo(m) / surf%ol(m))           &
-                                    + psi_m( surf%z0(m)  / surf%ol(m)) )
-                         
-                         surf%vsws(m) = kappa * ( surf%vfar(m) - surf%vsurf(m) )  &
-                                / ( LOG( surf%z_mo(m) / surf%z0(m) )              &
-                                    - psi_m( surf%z_mo(m) / surf%ol(m))           &
-                                    + psi_m( surf%z0(m)  / surf%ol(m)) )
-                         
-!
-!--                      Compute momentum flux components
-                         surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k+1)
-                         surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k+1)
-                      
-                      ENDDO
-                   ELSE
-                      DO  m = 1, surf%ns  
-   
-                         k = surf%k(m)
-                         
-!
-!--                      Compute friction velocity components
-                         surf%usws(m) = kappa * ( surf%ufar(m) - surf%usurf(m) )  &
-                                / LOG( surf%z_mo(m) / surf%z0(m) )
-                         
-                         surf%vsws(m) = kappa * ( surf%vfar(m) - surf%vsurf(m) )  &
-                                / LOG( surf%z_mo(m) / surf%z0(m) )
-                         
-!
-!--                      Compute momentum flux components
-                         surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k+1)
-                         surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k+1)
-                      
-                      ENDDO
-                   ENDIF
-                ENDIF 
-             ELSE
-
+             IF (trim(drag_law) == 'rotation') THEN
+                
                 !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
                 DO  m = 1, surf%ns  
    
-                   i = surf%i(m)            
-                   j = surf%j(m)
                    k = surf%k(m)
-
-                   surf%usws(m) = surf%us(m) * rho_ref_zw(k+1) * kappa *       &
-                                  ( u(k,j,i) - u(k+1,j,i) )                    &
-                                  / LOG( surf%z_mo(m) / surf%z0(m) )
-                   surf%vsws(m) = surf%us(m) * rho_ref_zw(k+1) * kappa *       &
-                                  ( v(k,j,i) - v(k+1,j,i) )                    &
-                                  / LOG( surf%z_mo(m) / surf%z0(m) )
-                ENDDO
-             ENDIF
+!
+!--                Compute friction velocity components
+                   us_x = kappa * ( surf%ufar(m) - surf%usurf(m) )             &
+                          / LOG( surf%z_mo(m) / surf%z0(m) )
+                   us_y = kappa * ( surf%vfar(m) - surf%vsurf(m) )             &
+                          / LOG( surf%z_mo(m) / surf%z0(m) )
+                   
+!--                Use the neutral eta_star limit for destabilizing cases
+                   IF ( surf%ol(m) <= 0.0_wp ) THEN                          
+                      eta_star = 1.0_wp
+                   ELSE
+                      eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /            &
+                              ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5
+                   ENDIF
+!                   
+!--                Compute nondimensional depth zeta
+                   zeta = MAX(-1.0_wp * ABS( zu(nzt) / zeta_min ),                 &
+                              ABS(f) * -1.0_wp * ABS( surf%z_mo(m) ) /           &
+                              ( eta_star * surf%us(m) + 1E-30_wp ) )
+!
+!--                Compute complex surface stress
+                   tau = EXP( SQRT( im / ( kappa * xi_N ) ) * zeta )
+!
+!--                Compute momentum flux components
+                   surf%usws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
+                                  ( us_x * REAL(tau) - us_y * IMAG(tau) )
+                   surf%vsws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
+                                  ( us_x * IMAG(tau) + us_y * REAL(tau) )
+                ENDDO     
+             
+             ELSE
+                !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
+                IF ( stability ) THEN
+                   DO  m = 1, surf%ns  
+   
+                      k = surf%k(m)
+                      
+!
+!--                   Compute friction velocity components
+                      surf%usws(m) = kappa * ( surf%ufar(m) - surf%usurf(m) )  &
+                             / ( LOG( surf%z_mo(m) / surf%z0(m) )              &
+                                 - psi_m( surf%z_mo(m) / surf%ol(m))           &
+                                 + psi_m( surf%z0(m)  / surf%ol(m)) )
+                      
+                      surf%vsws(m) = kappa * ( surf%vfar(m) - surf%vsurf(m) )  &
+                             / ( LOG( surf%z_mo(m) / surf%z0(m) )              &
+                                 - psi_m( surf%z_mo(m) / surf%ol(m))           &
+                                 + psi_m( surf%z0(m)  / surf%ol(m)) )
+                      
+!
+!--                   Compute momentum flux components
+                      surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k+1)
+                      surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k+1)
+                   
+                   ENDDO
+                ELSE
+                   DO  m = 1, surf%ns  
+   
+                      k = surf%k(m)
+                      
+!
+!--                   Compute friction velocity components
+                      surf%usws(m) = kappa * ( surf%ufar(m) - surf%usurf(m) )  &
+                             / LOG( surf%z_mo(m) / surf%z0(m) )
+                      
+                      surf%vsws(m) = kappa * ( surf%vfar(m) - surf%vsurf(m) )  &
+                             / LOG( surf%z_mo(m) / surf%z0(m) )
+                      
+!
+!--                   Compute momentum flux components
+                      surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k+1)
+                      surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k+1)
+                   
+                   ENDDO
+                ENDIF
+             ENDIF 
           ENDIF
 
 !

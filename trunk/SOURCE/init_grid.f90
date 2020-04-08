@@ -391,7 +391,6 @@
     
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  min_dz_stretch_level_end !< Array that contains all minimum heights where the stretching can end
 
-
 !
 !-- Calculation of horizontal array bounds including ghost layers
     nxlg = nxl - nbgp
@@ -1877,7 +1876,6 @@
                                    !< input array for 3D topography and dummy 
                                    !< array for setting "outer"-flags
 
-
 !
 !-- Set outer and inner index arrays for non-flat topography.
 !-- Here consistency checks concerning domain size and periodicity are
@@ -1890,13 +1888,19 @@
        CASE ( 'flat' )
 !   
 !--       Initialilize 3D topography array, used later for initializing flags
-          IF ( TRIM(constant_flux_layer) == 'top' ) THEN
-             topo(nzb:nzt,:,:) = IBSET( topo(nzb:nzt,:,:), 0 ) 
-          ELSEIF ( TRIM(constant_flux_layer) == 'bottom' ) THEN
-             topo(nzb:nzt+1,:,:) = IBSET( topo(nzb:nzt+1,:,:), 0 ) 
-          ELSE
-             topo(nzb+1:nzt+1,:,:) = IBSET( topo(nzb+1:nzt+1,:,:), 0 ) 
-          ENDIF
+!--       This results in "topography" designated at both top and bottom surfaces,
+!--       because initializing surf_def_h arrays is the only way to use_top_fluxes
+!--       and use_bottom_fluxes. Thus, wall_flags_0 are changed below to prevent
+!--       "topography" from exerting drag in the non-wall cases.
+          topo(nzb+1:nzt,:,:) = IBSET( topo(nzb+1:nzt,:,:), 0 ) 
+!
+!--       This would be the desired implementation if boundary fluxes were dealt 
+!--       with outside of surf_def_h
+          !topo(nzb:nzt+1,:,:) = IBSET( topo(nzb:nzt+1,:,:), 0 ) 
+          !IF ( TRIM(constant_flux_layer) == 'bottom' )                         &
+          !topo(nzb,:,:) = IBCLR( topo(nzb,:,:), 0 ) 
+          !IF ( TRIM(constant_flux_layer) == 'top' )                            &
+          !   topo(nzt+1,:,:) = IBCLR( topo(nzt+1,:,:), 0 ) 
 
        CASE ( 'single_building' )
 !
@@ -2395,7 +2399,7 @@
 
     USE control_parameters,                                                    &
         ONLY:  bc_lr_cyc, bc_ns_cyc, constant_flux_layer, land_surface,        &
-               use_surface_fluxes, use_top_fluxes, urban_surface
+               message_string, use_surface_fluxes, use_top_fluxes, urban_surface
 
     USE indices,                                                               &
         ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, ny, nyn, nyng, nys, nysg, nz,   &
@@ -2435,7 +2439,6 @@
                  wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 2 )
 
           ENDDO
-
           DO k = nzb, nzt
 !
 !--          w grid
@@ -2443,11 +2446,21 @@
                   BTEST( topo(k+1,j,i), 0 ) )                                  &
                 wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 3 )
           ENDDO
-          IF ( TRIM(constant_flux_layer) /= 'top' )                            &
-             wall_flags_0(nzt+1,j,i) = IBSET( wall_flags_0(nzt+1,j,i), 3 )
 
        ENDDO
     ENDDO
+!
+!-- needed to prevent horizontal velocities from being set to 0
+    IF ( TRIM(constant_flux_layer) /= 'bottom' ) THEN
+       wall_flags_0(nzb,:,:) = IBSET( wall_flags_0(nzb,:,:), 1 )
+       wall_flags_0(nzb,:,:) = IBSET( wall_flags_0(nzb,:,:), 2 )
+       wall_flags_0(nzb,:,:) = IBSET( wall_flags_0(nzb,:,:), 3 )
+    ENDIF
+    IF ( TRIM(constant_flux_layer) /= 'top' ) THEN
+       wall_flags_0(nzt:nzt+1,:,:) = IBSET( wall_flags_0(nzt:nzt+1,:,:), 1 )
+       wall_flags_0(nzt:nzt+1,:,:) = IBSET( wall_flags_0(nzt:nzt+1,:,:), 2 )
+       wall_flags_0(nzt:nzt+1,:,:) = IBSET( wall_flags_0(nzt:nzt+1,:,:), 3 )
+    ENDIF
 
     CALL exchange_horiz_int( wall_flags_0, nys, nyn, nxl, nxr, nzt, nbgp )
 !

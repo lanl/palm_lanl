@@ -690,6 +690,7 @@
              cpu_log_barrierwait, create_disturbances,                         &
              cross_profiles, data_output, data_output_masks,                   &
              data_output_pr, data_output_2d_on_each_pe, disturbance_amplitude, &
+             disturbance_amplitude_pt, disturbance_amplitude_sa,               &
              disturbance_energy_limit, disturbance_level_b,                    &
              disturbance_level_t, do2d_at_begin, do3d_at_begin,                &
              dt, dt_averaging_input, dt_averaging_input_pr,                    &

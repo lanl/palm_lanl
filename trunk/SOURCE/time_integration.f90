@@ -873,12 +873,13 @@
                intermediate_timestep_count == 1 ) )                            &
           THEN
              time_disturb = time_disturb + dt_3d
-             IF ( time_disturb <= dt_disturb ) then !.or.  disturbance_energy_limit /= 0.0_wp  .AND.                 &
-          !           hom(nzb+5,1,pr_palm,0) < disturbance_energy_limit )  THEN
+             IF ( time_disturb <= dt_disturb  .AND.                            &
+                  hom(nzb+5,1,pr_palm,0) < disturbance_energy_limit )  THEN
+                  !.or.  disturbance_energy_limit /= 0.0_wp
                   CALL disturb_field( 'u', tend, u )
                   CALL disturb_field( 'v', tend, v )
-                  call disturb_field('pt', tend, pt )
-          !        call disturb_field('sa', tend, sa )
+                  CALL disturb_field('pt', tend, pt )
+                  IF ( ocean ) CALL disturb_field('sa', tend, sa )
 
  !            ELSEIF ( ( .NOT. bc_lr_cyc  .OR.  .NOT. bc_ns_cyc )            &
  !                    .AND. .NOT. nest_domain  .AND.  .NOT.  forcing )  THEN

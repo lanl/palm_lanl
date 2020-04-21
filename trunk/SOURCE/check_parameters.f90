@@ -1047,6 +1047,13 @@
                         'of the domain. Choose one.'
        CALL message( 'check_parameters', 'PA0014', 1, 2, 0, 6, 0 )
     ENDIF
+    
+    IF ( rans_tke_e .AND. .NOT. diffusivity_from_surface_fluxes )  THEN
+       diffusivity_from_surface_fluxes = .TRUE.
+       message_string = 'Diffusivity_from_surface_fluxes set to True for rans_tke_e.'
+       CALL message( 'check_parameters', 'PA0014', 1, 2, 1, 6, 0 )
+    ENDIF
+
 !
 !-- Check topography setting (check for illegal parameter combinations)
     IF ( topography /= 'flat' )  THEN

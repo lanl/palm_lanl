@@ -2843,7 +2843,9 @@
     
     ENDIF
 
-    IF ( .NOT. TRIM(constant_flux_layer) == 'none' )  THEN
+    IF ( .NOT. les_amd )  THEN 
+!-- Note: for les_amd, gradients at boundaries are not used to define 
+!-- diffusivities so this section is skipped to save computations 
 
        IF ( TRIM(constant_flux_layer) == 'bottom' )  THEN
 !
@@ -2856,7 +2858,6 @@
           DO  m = surf_s, surf_e
              k = surf_def_h(0)%k(m)
 
-!             dptdz(k)     = ( pt(k,j,i) - surf_def_h(0)%pt_surface(m) ) * ddzu(k)
              dptdz(k)     = ( pt(k+1,j,i) - surf_def_h(0)%pt_surface(m) ) * dd2zu(k)
 
           ENDDO
@@ -3019,203 +3020,209 @@
 
     ENDDO
 
-    IF ( TRIM(constant_flux_layer) == 'bottom' )  THEN
-!
-!--    Compute gradients at north- and south-facing surfaces.
-!--    Note, no vertical natural surfaces so far.
-       DO  l = 0, 1
-!
-!--       Default surfaces
-          surf_s = surf_def_v(l)%start_index(j,i)
-          surf_e = surf_def_v(l)%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k           = surf_def_v(l)%k(m)
-             
-             usvs        = surf_def_v(l)%mom_flux_tke(0,m)
-             wsvs        = surf_def_v(l)%mom_flux_tke(1,m)
+    IF ( .NOT. les_amd ) THEN
+!-- Note: for les_amd, gradients at boundaries are not used to define 
+!-- diffusivities so this section is skipped to save computations 
+!-- Furthermore, use of u_0 relies on having already calculated km
 
-             km_neutral = kappa * ( usvs**2 + wsvs**2 )**0.25_wp               &
-                             * 0.5_wp * dy
+       IF ( TRIM(constant_flux_layer) == 'bottom' )  THEN
 !
-!--          -1.0 for right-facing wall, 1.0 for left-facing wall
-             sign_dir = MERGE( 1.0_wp, -1.0_wp,                                &
-                               BTEST( wall_flags_0(k,j-1,i), 0 ) )
-             dudy(k) = sign_dir * usvs / ( km_neutral + 1E-10_wp )
-             dwdy(k) = sign_dir * wsvs / ( km_neutral + 1E-10_wp )
+!--       Compute gradients at north- and south-facing surfaces.
+!--       Note, no vertical natural surfaces so far.
+          DO  l = 0, 1
+!
+!--          Default surfaces
+             surf_s = surf_def_v(l)%start_index(j,i)
+             surf_e = surf_def_v(l)%end_index(j,i)
+             DO  m = surf_s, surf_e
+                k           = surf_def_v(l)%k(m)
+                
+                usvs        = surf_def_v(l)%mom_flux_tke(0,m)
+                wsvs        = surf_def_v(l)%mom_flux_tke(1,m)
+
+                km_neutral = kappa * ( usvs**2 + wsvs**2 )**0.25_wp               &
+                                * 0.5_wp * dy
+!
+!--             -1.0 for right-facing wall, 1.0 for left-facing wall
+                sign_dir = MERGE( 1.0_wp, -1.0_wp,                                &
+                                  BTEST( wall_flags_0(k,j-1,i), 0 ) )
+                dudy(k) = sign_dir * usvs / ( km_neutral + 1E-10_wp )
+                dwdy(k) = sign_dir * wsvs / ( km_neutral + 1E-10_wp )
+             
+             ENDDO
+!
+!--          Natural surfaces
+             surf_s = surf_lsm_v(l)%start_index(j,i)
+             surf_e = surf_lsm_v(l)%end_index(j,i)
+             DO  m = surf_s, surf_e
+                k           = surf_lsm_v(l)%k(m)
+                
+                usvs        = surf_lsm_v(l)%mom_flux_tke(0,m)
+                wsvs        = surf_lsm_v(l)%mom_flux_tke(1,m)
+
+                km_neutral = kappa * ( usvs**2 + wsvs**2 )**0.25_wp               &
+                                * 0.5_wp * dy
+!
+!--             -1.0 for right-facing wall, 1.0 for left-facing wall
+                sign_dir = MERGE( 1.0_wp, -1.0_wp,                                &
+                                  BTEST( wall_flags_0(k,j-1,i), 0 ) )
+                dudy(k) = sign_dir * usvs / ( km_neutral + 1E-10_wp )
+                dwdy(k) = sign_dir * wsvs / ( km_neutral + 1E-10_wp )
+             
+             ENDDO
+!
+!--          Urban surfaces
+             surf_s = surf_usm_v(l)%start_index(j,i)
+             surf_e = surf_usm_v(l)%end_index(j,i)
+             DO  m = surf_s, surf_e
+                k           = surf_usm_v(l)%k(m)
+                
+                usvs        = surf_usm_v(l)%mom_flux_tke(0,m)
+                wsvs        = surf_usm_v(l)%mom_flux_tke(1,m)
+
+                km_neutral = kappa * ( usvs**2 + wsvs**2 )**0.25_wp               &
+                                * 0.5_wp * dy
+!
+!--             -1.0 for right-facing wall, 1.0 for left-facing wall
+                sign_dir = MERGE( 1.0_wp, -1.0_wp,                                &
+                                  BTEST( wall_flags_0(k,j-1,i), 0 ) )
+                dudy(k) = sign_dir * usvs / ( km_neutral + 1E-10_wp )
+                dwdy(k) = sign_dir * wsvs / ( km_neutral + 1E-10_wp )
+             
+             ENDDO
+          ENDDO
+!
+!--       Compute gradients at east- and west-facing walls
+          DO  l = 2, 3
+!
+!--          Default surfaces
+             surf_s = surf_def_v(l)%start_index(j,i)
+             surf_e = surf_def_v(l)%end_index(j,i)
+             DO  m = surf_s, surf_e
+                k           = surf_def_v(l)%k(m)
+                vsus        = surf_def_v(l)%mom_flux_tke(0,m)
+                wsus        = surf_def_v(l)%mom_flux_tke(1,m)
+
+                km_neutral = kappa * ( vsus**2 + wsus**2 )**0.25_wp               &
+                                   * 0.5_wp * dx
+!
+!--             -1.0 for right-facing wall, 1.0 for left-facing wall
+                sign_dir = MERGE( 1.0_wp, -1.0_wp,                                &
+                                  BTEST( wall_flags_0(k,j,i-1), 0 ) )
+                dvdx(k) = sign_dir * vsus / ( km_neutral + 1E-10_wp )
+                dwdx(k) = sign_dir * wsus / ( km_neutral + 1E-10_wp )
+             
+             ENDDO
+!
+!--          Natural surfaces
+             surf_s = surf_lsm_v(l)%start_index(j,i)
+             surf_e = surf_lsm_v(l)%end_index(j,i)
+             DO  m = surf_s, surf_e
+                k           = surf_lsm_v(l)%k(m)
+                
+                vsus        = surf_lsm_v(l)%mom_flux_tke(0,m)
+                wsus        = surf_lsm_v(l)%mom_flux_tke(1,m)
+
+                km_neutral = kappa * ( vsus**2 + wsus**2 )**0.25_wp               &
+                                   * 0.5_wp * dx
+!
+!--             -1.0 for right-facing wall, 1.0 for left-facing wall
+                sign_dir = MERGE( 1.0_wp, -1.0_wp,                                &
+                                  BTEST( wall_flags_0(k,j,i-1), 0 ) )
+                dvdx(k) = sign_dir * vsus / ( km_neutral + 1E-10_wp )
+                dwdx(k) = sign_dir * wsus / ( km_neutral + 1E-10_wp )
+             
+             ENDDO
+!
+!--          Urban surfaces
+             surf_s = surf_usm_v(l)%start_index(j,i)
+             surf_e = surf_usm_v(l)%end_index(j,i)
+             DO  m = surf_s, surf_e
+                k           = surf_usm_v(l)%k(m)
+                
+                vsus        = surf_usm_v(l)%mom_flux_tke(0,m)
+                wsus        = surf_usm_v(l)%mom_flux_tke(1,m)
+
+                km_neutral = kappa * ( vsus**2 + wsus**2 )**0.25_wp               &
+                                   * 0.5_wp * dx
+!
+!--             -1.0 for right-facing wall, 1.0 for left-facing wall
+                sign_dir = MERGE( 1.0_wp, -1.0_wp,                                &
+                                  BTEST( wall_flags_0(k,j,i-1), 0 ) )
+                dvdx(k) = sign_dir * vsus / ( km_neutral + 1E-10_wp )
+                dwdx(k) = sign_dir * wsus / ( km_neutral + 1E-10_wp )
+             
+             ENDDO
+          ENDDO
+!
+!--       Compute gradients at upward-facing walls, first for
+!--       non-natural default surfaces
+          surf_s = surf_def_h(0)%start_index(j,i)
+          surf_e = surf_def_h(0)%end_index(j,i)
+          DO  m = surf_s, surf_e
+             k = surf_def_h(0)%k(m)
+!
+!--          Please note, actually, an interpolation of u_0 and v_0
+!--          onto the grid center would be required. However, this
+!--          would require several data transfers between 2D-grid and
+!--          wall type. The effect of this missing interpolation is
+!--          negligible. (See also production_e_init).
+             dudz(k)     = ( u(k+1,j,i) - surf_def_h(0)%u_0(m) ) * dd2zu(k)
+             dvdz(k)     = ( v(k+1,j,i) - surf_def_h(0)%v_0(m) ) * dd2zu(k)
           
           ENDDO
 !
 !--       Natural surfaces
-          surf_s = surf_lsm_v(l)%start_index(j,i)
-          surf_e = surf_lsm_v(l)%end_index(j,i)
+          surf_s = surf_lsm_h%start_index(j,i)
+          surf_e = surf_lsm_h%end_index(j,i)
           DO  m = surf_s, surf_e
-             k           = surf_lsm_v(l)%k(m)
-             
-             usvs        = surf_lsm_v(l)%mom_flux_tke(0,m)
-             wsvs        = surf_lsm_v(l)%mom_flux_tke(1,m)
+             k = surf_lsm_h%k(m)
 
-             km_neutral = kappa * ( usvs**2 + wsvs**2 )**0.25_wp               &
-                             * 0.5_wp * dy
-!
-!--          -1.0 for right-facing wall, 1.0 for left-facing wall
-             sign_dir = MERGE( 1.0_wp, -1.0_wp,                                &
-                               BTEST( wall_flags_0(k,j-1,i), 0 ) )
-             dudy(k) = sign_dir * usvs / ( km_neutral + 1E-10_wp )
-             dwdy(k) = sign_dir * wsvs / ( km_neutral + 1E-10_wp )
+             dudz(k)     = ( u(k+1,j,i) - surf_lsm_h%u_0(m) ) * dd2zu(k)
+             dvdz(k)     = ( v(k+1,j,i) - surf_lsm_h%v_0(m) ) * dd2zu(k)
           
           ENDDO
 !
 !--       Urban surfaces
-          surf_s = surf_usm_v(l)%start_index(j,i)
-          surf_e = surf_usm_v(l)%end_index(j,i)
+          surf_s = surf_usm_h%start_index(j,i)
+          surf_e = surf_usm_h%end_index(j,i)
           DO  m = surf_s, surf_e
-             k           = surf_usm_v(l)%k(m)
+             k = surf_usm_h%k(m)
+
+             dudz(k)     = ( u(k+1,j,i) - surf_usm_h%u_0(m) ) * dd2zu(k)
+             dvdz(k)     = ( v(k+1,j,i) - surf_usm_h%v_0(m) ) * dd2zu(k)
+          
+          ENDDO
+!
+!--       Compute gradients at downward-facing walls, only for
+!--       non-natural default surfaces
+          surf_s = surf_def_h(1)%start_index(j,i)
+          surf_e = surf_def_h(1)%end_index(j,i)
+          DO  m = surf_s, surf_e
+             k = surf_def_h(1)%k(m)
+
+             dudz(k)     = ( surf_def_h(1)%u_0(m) - u(k-1,j,i) ) * dd2zu(k)
+             dvdz(k)     = ( surf_def_h(1)%v_0(m) - v(k-1,j,i) ) * dd2zu(k)
+
+          ENDDO
+       ENDIF
+       IF ( TRIM(constant_flux_layer) == 'top' )  THEN
+!
+!--       Compute gradients at downward-facing walls, only for
+!--       non-natural default surfaces
+          surf_s = surf_def_h(2)%start_index(j,i)
+          surf_e = surf_def_h(2)%end_index(j,i)
+          DO  m = surf_s, surf_e
+
+             k = surf_def_h(2)%k(m)
              
-             usvs        = surf_usm_v(l)%mom_flux_tke(0,m)
-             wsvs        = surf_usm_v(l)%mom_flux_tke(1,m)
+             dudz(k)     = ( surf_def_h(2)%u_0(m) - u(k-1,j,i) ) * dd2zu(k)
+             dvdz(k)     = ( surf_def_h(2)%v_0(m) - v(k-1,j,i) ) * dd2zu(k)
 
-             km_neutral = kappa * ( usvs**2 + wsvs**2 )**0.25_wp               &
-                             * 0.5_wp * dy
-!
-!--          -1.0 for right-facing wall, 1.0 for left-facing wall
-             sign_dir = MERGE( 1.0_wp, -1.0_wp,                                &
-                               BTEST( wall_flags_0(k,j-1,i), 0 ) )
-             dudy(k) = sign_dir * usvs / ( km_neutral + 1E-10_wp )
-             dwdy(k) = sign_dir * wsvs / ( km_neutral + 1E-10_wp )
-          
           ENDDO
-       ENDDO
-!
-!--    Compute gradients at east- and west-facing walls
-       DO  l = 2, 3
-!
-!--       Default surfaces
-          surf_s = surf_def_v(l)%start_index(j,i)
-          surf_e = surf_def_v(l)%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k           = surf_def_v(l)%k(m)
-             vsus        = surf_def_v(l)%mom_flux_tke(0,m)
-             wsus        = surf_def_v(l)%mom_flux_tke(1,m)
-
-             km_neutral = kappa * ( vsus**2 + wsus**2 )**0.25_wp               &
-                                * 0.5_wp * dx
-!
-!--          -1.0 for right-facing wall, 1.0 for left-facing wall
-             sign_dir = MERGE( 1.0_wp, -1.0_wp,                                &
-                               BTEST( wall_flags_0(k,j,i-1), 0 ) )
-             dvdx(k) = sign_dir * vsus / ( km_neutral + 1E-10_wp )
-             dwdx(k) = sign_dir * wsus / ( km_neutral + 1E-10_wp )
-          
-          ENDDO
-!
-!--       Natural surfaces
-          surf_s = surf_lsm_v(l)%start_index(j,i)
-          surf_e = surf_lsm_v(l)%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k           = surf_lsm_v(l)%k(m)
-             
-             vsus        = surf_lsm_v(l)%mom_flux_tke(0,m)
-             wsus        = surf_lsm_v(l)%mom_flux_tke(1,m)
-
-             km_neutral = kappa * ( vsus**2 + wsus**2 )**0.25_wp               &
-                                * 0.5_wp * dx
-!
-!--          -1.0 for right-facing wall, 1.0 for left-facing wall
-             sign_dir = MERGE( 1.0_wp, -1.0_wp,                                &
-                               BTEST( wall_flags_0(k,j,i-1), 0 ) )
-             dvdx(k) = sign_dir * vsus / ( km_neutral + 1E-10_wp )
-             dwdx(k) = sign_dir * wsus / ( km_neutral + 1E-10_wp )
-          
-          ENDDO
-!
-!--       Urban surfaces
-          surf_s = surf_usm_v(l)%start_index(j,i)
-          surf_e = surf_usm_v(l)%end_index(j,i)
-          DO  m = surf_s, surf_e
-             k           = surf_usm_v(l)%k(m)
-             
-             vsus        = surf_usm_v(l)%mom_flux_tke(0,m)
-             wsus        = surf_usm_v(l)%mom_flux_tke(1,m)
-
-             km_neutral = kappa * ( vsus**2 + wsus**2 )**0.25_wp               &
-                                * 0.5_wp * dx
-!
-!--          -1.0 for right-facing wall, 1.0 for left-facing wall
-             sign_dir = MERGE( 1.0_wp, -1.0_wp,                                &
-                               BTEST( wall_flags_0(k,j,i-1), 0 ) )
-             dvdx(k) = sign_dir * vsus / ( km_neutral + 1E-10_wp )
-             dwdx(k) = sign_dir * wsus / ( km_neutral + 1E-10_wp )
-          
-          ENDDO
-       ENDDO
-!
-!--    Compute gradients at upward-facing walls, first for
-!--    non-natural default surfaces
-       surf_s = surf_def_h(0)%start_index(j,i)
-       surf_e = surf_def_h(0)%end_index(j,i)
-       DO  m = surf_s, surf_e
-          k = surf_def_h(0)%k(m)
-!
-!--       Please note, actually, an interpolation of u_0 and v_0
-!--       onto the grid center would be required. However, this
-!--       would require several data transfers between 2D-grid and
-!--       wall type. The effect of this missing interpolation is
-!--       negligible. (See also production_e_init).
-          dudz(k)     = ( u(k+1,j,i) - surf_def_h(0)%u_0(m) ) * dd2zu(k)
-          dvdz(k)     = ( v(k+1,j,i) - surf_def_h(0)%v_0(m) ) * dd2zu(k)
-       
-       ENDDO
-!
-!--    Natural surfaces
-       surf_s = surf_lsm_h%start_index(j,i)
-       surf_e = surf_lsm_h%end_index(j,i)
-       DO  m = surf_s, surf_e
-          k = surf_lsm_h%k(m)
-
-          dudz(k)     = ( u(k+1,j,i) - surf_lsm_h%u_0(m) ) * dd2zu(k)
-          dvdz(k)     = ( v(k+1,j,i) - surf_lsm_h%v_0(m) ) * dd2zu(k)
-       
-       ENDDO
-!
-!--    Urban surfaces
-       surf_s = surf_usm_h%start_index(j,i)
-       surf_e = surf_usm_h%end_index(j,i)
-       DO  m = surf_s, surf_e
-          k = surf_usm_h%k(m)
-
-          dudz(k)     = ( u(k+1,j,i) - surf_usm_h%u_0(m) ) * dd2zu(k)
-          dvdz(k)     = ( v(k+1,j,i) - surf_usm_h%v_0(m) ) * dd2zu(k)
-       
-       ENDDO
-!
-!--    Compute gradients at downward-facing walls, only for
-!--    non-natural default surfaces
-       surf_s = surf_def_h(1)%start_index(j,i)
-       surf_e = surf_def_h(1)%end_index(j,i)
-       DO  m = surf_s, surf_e
-          k = surf_def_h(1)%k(m)
-
-          dudz(k)     = ( surf_def_h(1)%u_0(m) - u(k-1,j,i) ) * dd2zu(k)
-          dvdz(k)     = ( surf_def_h(1)%v_0(m) - v(k-1,j,i) ) * dd2zu(k)
-
-       ENDDO
+       ENDIF  ! constant_flux_layer
     ENDIF
-    IF ( TRIM(constant_flux_layer) == 'top' )  THEN
-!
-!--    Compute gradients at downward-facing walls, only for
-!--    non-natural default surfaces
-       surf_s = surf_def_h(2)%start_index(j,i)
-       surf_e = surf_def_h(2)%end_index(j,i)
-       DO  m = surf_s, surf_e
 
-          k = surf_def_h(2)%k(m)
-          
-          dudz(k)     = ( surf_def_h(2)%u_0(m) - u(k-1,j,i) ) * dd2zu(k)
-          dvdz(k)     = ( surf_def_h(2)%v_0(m) - v(k-1,j,i) ) * dd2zu(k)
-
-       ENDDO
-    ENDIF  ! constant_flux_layer
- 
  END SUBROUTINE calc_velocity_gradients
 
 !------------------------------------------------------------------------------!
@@ -4509,11 +4516,9 @@
           kh(k+1,j,i) = kh(k,j,i)
        ENDDO
      
-    ELSE
-!    ENDIF
-!       
-!    IF ( diffusivity_from_surface_fluxes ) THEN
-       CALL location_message('diffusivity from surface fluxes',.TRUE.)
+    ENDIF
+       
+    IF ( diffusivity_from_surface_fluxes ) THEN
        IF ( TRIM(constant_flux_layer) == 'bottom' ) THEN
 !
 !--       Up- and downward facing surfaces
@@ -4556,22 +4561,23 @@
 !--    surface-forced cases, leading to higher eddy diffusivities
 
        IF ( TRIM(constant_flux_layer) == 'top' ) THEN
+!--    Note: velocity gradients are computed in the same way as in diffusion_u 
           DO  m = 1, surf_def_h(2)%ns
              i = surf_def_h(2)%i(m)
              j = surf_def_h(2)%j(m)
              k = surf_def_h(2)%k(m)
              
-             km(k,j,i) = ( surf_def_h(2)%usws(m)**2.0_wp +                        &
-                           surf_def_h(2)%vsws(m)**2.0_wp )**0.5_wp *              &
-                           drho_ref_zu(k) /                                       &
-                       ( dd2zu(k) *                                               &
-                         ( ( surf_def_h(2)%u_0(m) - u(k-1,j,i) )**2.0_wp +        &
-                           ( surf_def_h(2)%v_0(m) - v(k-1,j,i) )**2.0_wp )**0.5_wp&
-                         + 1e-20_wp )
+             km(k,j,i) = MAX( ( surf_def_h(2)%usws(m)**2.0_wp +                &
+                                surf_def_h(2)%vsws(m)**2.0_wp )**0.5_wp *      &
+                           drho_ref_zu(k) / ( ddzu(k) *                        &
+                       (  ( u(k,j,i)**2.0_wp + v(k,j,i)**2.0_wp )**0.5_wp      & 
+                        - ( u(k-1,j,i)**2.0_wp + v(k-1,j,i)**2.0_wp )**0.5_wp )& 
+                           + 1e-20_wp ), 0.0_wp )
              
-             kh(k,j,i) = MAX( surf_def_h(2)%shf(m) * drho_ref_zu(k) /        &
-                         ( ( pt(k-1,j,i) - surf_def_h(2)%pt_surface(m) ) *        &
-                           dd2zu(k) + 1e-20_wp ), 0.0_wp )
+             kh(k,j,i) = MAX( surf_def_h(2)%shf(m) * drho_ref_zu(k) /          &
+                              ( ( pt(k,j,i) - pt(k-1,j,i) ) *                  &
+                                ddzu(k) + 1e-20_wp ),                          &
+                              0.0_wp )
           ENDDO
           IF ( ocean ) THEN
              DO  m = 1, surf_def_h(2)%ns
@@ -4579,16 +4585,17 @@
                 j = surf_def_h(2)%j(m)
                 k = surf_def_h(2)%k(m)
 
-                ks(k,j,i) = MAX( surf_def_h(2)%sasws(m) * drho_ref_zu(k) /&
-                            ( ( sa(k-1,j,i) - surf_def_h(2)%sa_surface(m) ) * &
-                              dd2zu(k) + 1e-20_wp ), 0.0_wp )
+                ks(k,j,i) = MAX( surf_def_h(2)%sasws(m) * drho_ref_zu(k) /     &
+                                 ( ( sa(k,j,i) - sa(k-1,j,i) ) *               &
+                                   ddzu(k) + 1e-20_wp ),                       &
+                                 0.0_wp )
              ENDDO
           ENDIF
 
        ENDIF
-!    ENDIF
-!
-!    IF ( rans_tke_e )  THEN
+    ENDIF
+
+    IF ( rans_tke_e )  THEN
        CALL exchange_horiz( km, nbgp )
        CALL exchange_horiz( kh, nbgp )
        IF ( ocean ) CALL exchange_horiz( ks, nbgp )
@@ -4653,17 +4660,13 @@
        CALL location_message(message_string,.TRUE.)
        WRITE(message_string,*) 'surf%sasws = ',      surf_def_h(l)%sasws(m)
        CALL location_message(message_string,.TRUE.)
-       WRITE(message_string,*) 'surf%u_0,u(nzt-1) = ',surf_def_h(l)%u_0(m),',',u(k-1,j,i)
+       WRITE(message_string,*) 'u(nzt-1:nzt) = ', u(k-1:k,j,i)
        CALL location_message(message_string,.TRUE.)
-       WRITE(message_string,*) 'surf%v_0,v(nzt-1) = ',surf_def_h(l)%v_0(m),',',v(k-1,j,i)
+       WRITE(message_string,*) 'v(nzt-1:nzt) = ', v(k-1:k,j,i)
        CALL location_message(message_string,.TRUE.)
-       WRITE(message_string,*) 'surf%pt_surface,pt(nzt-1) = ', surf_def_h(l)%pt_surface(m),',',pt(k-1,j,i)
+       WRITE(message_string,*) 'pt(nzt-1:nzt) = ', pt(k-1:k,j,i)
        CALL location_message(message_string,.TRUE.)
-       WRITE(message_string,*) 'surf%sa_surface,sa(nzt-1) = ', surf_def_h(l)%sa_surface(m),',',sa(k-1,j,i)
-       CALL location_message(message_string,.TRUE.)
-       WRITE(message_string,*) 'C(nzt) = ', C(k)
-       CALL location_message(message_string,.TRUE.)
-       WRITE(message_string,*) 'ax,ay,az(nzt) = ', ax,',',ay,',',az(k)
+       WRITE(message_string,*) 'sa(nzt-1:nzt) = ', sa(k-1:k,j,i)
        CALL location_message(message_string,.TRUE.)
     ENDIF
 

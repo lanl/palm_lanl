@@ -2382,9 +2382,9 @@
 !
 !-- Impose random perturbation on the horizontal velocity field and then
 !-- remove the divergences from the velocity field at the initial stage
-    IF ( create_disturbances  .AND.  disturbance_energy_limit /= 0.0_wp  .AND. &
+    IF ( create_disturbances  .AND.                                            &
          TRIM( initializing_actions ) /= 'read_restart_data'  .AND.            &
-         TRIM( initializing_actions ) /= 'cyclic_fill' )  THEN
+         TRIM( initializing_actions ) /= 'cyclic_fill'              )  THEN
 
        CALL location_message( 'creating initial disturbances', .FALSE. )
        CALL disturb_field( 'u', tend, u )

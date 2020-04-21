@@ -38,7 +38,6 @@
         dt_coupling = 600.0,
         end_time = 3600.0,
         create_disturbances = .T.,
-        disturbance_energy_limit = 1.0e-2,
 !        disturbance_level_b = -4.,
         dt_disturb = 150.,
         dt_run_control = 0.0,

@@ -1984,8 +1984,6 @@
                           zu(disturbance_level_ind_t), disturbance_level_ind_t
        IF ( .NOT. bc_lr_cyc  .OR.  .NOT. bc_ns_cyc )  THEN
           WRITE ( io, 472 )  inflow_disturbance_begin, inflow_disturbance_end
-       ELSE
-          WRITE ( io, 473 )  disturbance_energy_limit
        ENDIF
        WRITE ( io, 474 )  TRIM( random_generator )
     ENDIF

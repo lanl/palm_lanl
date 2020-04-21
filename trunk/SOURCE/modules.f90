@@ -1500,7 +1500,6 @@
     REAL(wp) ::  disturbance_amplitude = 0.25_wp               !< namelist parameter
     REAL(wp) ::  disturbance_amplitude_pt = 0.0_wp            !< namelist parameter
     REAL(wp) ::  disturbance_amplitude_sa = 0.0_wp            !< namelist parameter
-    REAL(wp) ::  disturbance_energy_limit = 0.01_wp            !< namelist parameter
     REAL(wp) ::  disturbance_level_b = -9999999.9_wp           !< namelist parameter
     REAL(wp) ::  disturbance_level_t = -9999999.9_wp           !< namelist parameter
     REAL(wp) ::  dp_level_b = 0.0_wp                           !< namelist parameter

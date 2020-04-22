@@ -83,6 +83,7 @@
 !> For coefficients see Jackett et al., 2006: J. Atm. Ocean Tech.
 !> eqn_state_seawater calculates the potential density referred at hyp(0).
 !> eqn_state_seawater_func calculates density.
+!> TODO Consider updating wioth Roquet et al. 2015 Accurate polynomial expressions...
 !------------------------------------------------------------------------------!
  MODULE eqn_state_seawater_mod
 

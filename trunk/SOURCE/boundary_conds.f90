@@ -201,7 +201,8 @@
                microphysics_morrison, microphysics_seifert, nest_domain,       &
                nest_bound_l, nest_bound_n, nest_bound_r, nest_bound_s, nudging,&
                ocean, outflow_l, outflow_n, outflow_r, outflow_s,              &
-               passive_scalar, rans_mode, rans_tke_e, tsc, use_cmax
+               passive_scalar, pt_surface_rate_change, rans_mode, rans_tke_e,  &
+               tsc, use_cmax
 
     USE grid_variables,                                                        &
         ONLY:  ddx, ddy, dx, dy
@@ -289,7 +290,7 @@
              i = bc_h(l)%i(m)            
              j = bc_h(l)%j(m)
              k = bc_h(l)%k(m)
-             pt_p(k+kb,j,i) = pt(k+kb,j,i)
+             pt_p(k+kb,j,i) = pt(k+kb,j,i) + pt_surface_rate_change * dt_3d 
           ENDDO
        ENDDO
 !

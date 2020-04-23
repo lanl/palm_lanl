@@ -315,7 +315,7 @@
                microphysics_morrison, microphysics_seifert,                    &
                microphysics_sat_adjust, neutral, nudging,                      &
                ocean, outflow_l, outflow_s, passive_scalar, plant_canopy,      &
-               prho_reference, pt_reference, pt_reference, pt_reference,       &
+               prho_reference, pt_surface_rate_change, pt_reference, pt_reference, pt_reference,       &
                scalar_advec, scalar_advec, simulated_time, sloping_surface,    &
                rayleigh_damping_geostrophic, rho_reference, timestep_scheme,   &
                tsc, use_single_reference_value, use_subsidence_tendencies,     &
@@ -1022,7 +1022,10 @@
 
 
              CALL user_actions( i, j, 'sa-tendency' )
-
+             IF ( i == nxl+1 .AND. j == nyn+1 ) THEN
+                WRITE(message_string,*) 'tend_sa(nzb) = ',tend(nzb,j,i) * dt_3d
+                CALL location_message(message_string,.TRUE.)
+             ENDIF
 !
 !--          Prognostic equation for salinity
              DO  k = nzb+1, nzt

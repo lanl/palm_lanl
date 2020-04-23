@@ -659,6 +659,9 @@
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  c_v_m_l                !< mean phase velocity at outflow for v-component used in radiation boundary condition (local subdomain value)
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  c_w_m                  !< mean phase velocity at outflow for w-component used in radiation boundary condition
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  c_w_m_l                !< mean phase velocity at outflow for w-component used in radiation boundary condition (local subdomain value)
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dbdx                   !< Gradient of u-component in x-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dbdy                   !< Gradient of u-component in y-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dbdz                   !< Gradient of u-component in z-direction
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  dptdx                  !< Gradient of potential temperature in x-direction
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  dptdy                  !< Gradient of potential temperature in y-direction
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  dptdz                  !< Gradient of potential temperature in z-direction
@@ -1357,10 +1360,10 @@
     LOGICAL ::  complex_terrain = .FALSE.                        !< namelist parameter
     LOGICAL ::  conserve_volume_flow = .FALSE.                   !< namelist parameter
     LOGICAL ::  constant_diffusion = .FALSE.                     !< diffusion coefficient constant?
-    LOGICAL ::  constant_heatflux = .TRUE.                       !< heat flux at all surfaces constant?
     LOGICAL ::  constant_bottom_heatflux = .TRUE.                !< heat flux at domain bottom constant?
     LOGICAL ::  constant_top_heatflux = .TRUE.                   !< heat flux at domain top constant?
     LOGICAL ::  constant_top_momentumflux = .FALSE.              !< momentum flux at domain topconstant?
+    LOGICAL ::  constant_salinityflux = .TRUE.                   !< salinity flux
     LOGICAL ::  constant_top_salinityflux = .TRUE.               !< salinity flux at ocean domain top?
     LOGICAL ::  constant_bottom_salinityflux = .TRUE.            !< salinity flux at ocean domain bottom?
     LOGICAL ::  constant_top_scalarflux = .TRUE.                 !< passive-scalar flux at domain top constant?
@@ -1490,6 +1493,8 @@
                                                                !< (=1.0 in atmosphere, =-1.0 in ocean)
     REAL(wp) ::  averaging_interval = 0.0_wp                   !< namelist parameter
     REAL(wp) ::  averaging_interval_pr = 9999999.9_wp          !< namelist parameter
+    REAL(wp) ::  beta_m_businger = 4.8_wp                      !< coefficient for businger stability function, momentum 
+    REAL(wp) ::  beta_h_businger = 5.6_wp                      !< coefficient for businger stability function, momentum 
     REAL(wp) ::  bc_pt_t_val                                   !< vertical gradient of pt near domain top
     REAL(wp) ::  bc_q_t_val                                    !< vertical gradient of humidity near domain top
     REAL(wp) ::  bc_s_t_val                                    !< vertical gradient of passive scalar near domain top
@@ -1589,6 +1594,7 @@
                                                                !< boundary of total domain
     REAL(wp) ::  pt_surface = 300.0_wp                         !< namelist parameter
     REAL(wp) ::  pt_surface_initial_change = 0.0_wp            !< namelist parameter
+    REAL(wp) ::  pt_surface_rate_change = 0.0_wp               !< namelist parameter, [K/s], only applied to bottom
     REAL(wp) ::  pt_ref = 15.0_wp                              !< potential temperature reference falue
     REAL(wp) ::  q_surface = 0.0_wp                            !< namelist parameter
     REAL(wp) ::  q_surface_initial_change = 0.0_wp             !< namelist parameter

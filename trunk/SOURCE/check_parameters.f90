@@ -2158,13 +2158,13 @@
     ELSE
        IF ( bc_pt_b == 'dirichlet' )  THEN
           ibc_pt_b = 0
-          IF ( bottom_constant_flux_layer )  THEN
-             message_string = 'boundary condition: bc_pt_b = "' //                &
-                  TRIM( bc_pt_b ) // '" is not allowed with constant_flux_layer'  &
-                  // ' = bottom. bc_pt_b set to "neumann".'
-             CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
-             bc_pt_b = 'neumann'
-          ENDIF
+          !IF ( bottom_constant_flux_layer )  THEN
+          !   message_string = 'boundary condition: bc_pt_b = "' //                &
+          !        TRIM( bc_pt_b ) // '" is not allowed with constant_flux_layer'  &
+          !        // ' = bottom. bc_pt_b set to "neumann".'
+          !   CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
+          !   bc_pt_b = 'neumann'
+          !ENDIF
        ELSEIF ( bc_pt_b == 'neumann' )  THEN
           ibc_pt_b = 1
        ELSE
@@ -2176,13 +2176,13 @@
 
     IF ( bc_pt_t == 'dirichlet' )  THEN
        ibc_pt_t = 0
-       IF ( top_constant_flux_layer )  THEN
-          message_string = 'boundary condition: bc_pt_t = "' //                &
-               TRIM( bc_pt_t ) // '" is not allowed with constant_flux_layer'  &
-               // ' = bottom. bc_pt_t set to "neumann".'
-          CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
-          bc_pt_t = 'neumann'
-       ENDIF
+       !IF ( top_constant_flux_layer )  THEN
+       !   message_string = 'boundary condition: bc_pt_t = "' //                &
+       !        TRIM( bc_pt_t ) // '" is not allowed with constant_flux_layer'  &
+       !        // ' = bottom. bc_pt_t set to "neumann".'
+       !   CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
+       !   bc_pt_t = 'neumann'
+       !ENDIF
     ELSEIF ( bc_pt_t == 'neumann' )  THEN
        ibc_pt_t = 1
     ELSEIF ( bc_pt_t == 'initial_gradient' )  THEN
@@ -2205,18 +2205,19 @@
 !
 !   This IF clause needs revision, got too complex!!
     IF ( surface_heatflux == 9999999.9_wp  )  THEN
-       constant_heatflux = .FALSE.
+       constant_bottom_heatflux = .FALSE.
        IF ( large_scale_forcing  .OR.  land_surface  .OR.  urban_surface )  THEN
           IF ( ibc_pt_b == 0 )  THEN
-             constant_heatflux = .FALSE.
+             constant_bottom_heatflux = .FALSE.
           ELSEIF ( ibc_pt_b == 1 )  THEN
-             constant_heatflux = .TRUE.
+             constant_bottom_heatflux = .TRUE.
              surface_heatflux = 0.0_wp
           ENDIF
        ENDIF
     ELSE
-       constant_heatflux = .TRUE.
+       constant_bottom_heatflux = .TRUE.
     ENDIF
+    IF ( pt_surface_rate_change /= 0.0_wp ) constant_bottom_heatflux = .FALSE. 
 
     IF ( top_heatflux     == 9999999.9_wp )  THEN
        constant_top_heatflux = .FALSE.
@@ -2259,15 +2260,15 @@
 !-- A given surface temperature implies Dirichlet boundary condition for
 !-- temperature. In this case specification of a constant heat flux is
 !-- forbidden.
-    IF ( ibc_pt_b == 0  .AND.  constant_heatflux  .AND.                        &
+    IF ( ibc_pt_b == 0 .AND. constant_bottom_heatflux .AND.                    &
          surface_heatflux /= 0.0_wp )  THEN
        message_string = 'boundary_condition: bc_pt_b = "' // TRIM( bc_pt_b ) //&
-                        '" is not allowed with constant_heatflux = .TRUE.'
+                        '" is not allowed with constant_bottom_heatflux = .TRUE.'
        CALL message( 'check_parameters', 'PA0065', 1, 2, 0, 6, 0 )
     ENDIF
-    IF ( constant_heatflux  .AND.  pt_surface_initial_change /= 0.0_wp )  THEN
-       WRITE ( message_string, * )  'constant_heatflux = .TRUE. is not allo',  &
-               'wed with pt_surface_initial_change (/=0) = ',                  &
+    IF ( constant_bottom_heatflux  .AND.  pt_surface_initial_change /= 0.0_wp )  THEN
+       WRITE ( message_string, * )  'constant_bottom_heatflux = .TRUE. is not',&
+               ' allowed with pt_surface_initial_change (/=0) = ',             &
                pt_surface_initial_change
        CALL message( 'check_parameters', 'PA0066', 1, 2, 0, 6, 0 )
     ENDIF
@@ -2288,13 +2289,13 @@
     IF ( ocean )  THEN
        IF ( bc_sa_t == 'dirichlet' )  THEN
           ibc_sa_t = 0
-          IF ( top_constant_flux_layer )  THEN
-             message_string = 'boundary condition: bc_sa_t = "' //                &
-                  TRIM( bc_sa_t ) // '" is not allowed with constant_flux_layer'  &
-                  // ' = bottom. bc_sa_t set to "neumann".'
-             CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
-             bc_sa_t = 'neumann'
-          ENDIF
+          !IF ( top_constant_flux_layer )  THEN
+          !   message_string = 'boundary condition: bc_sa_t = "' //                &
+          !        TRIM( bc_sa_t ) // '" is not allowed with constant_flux_layer'  &
+          !        // ' = bottom. bc_sa_t set to "neumann".'
+          !   CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
+          !   bc_sa_t = 'neumann'
+          !ENDIF
        ELSEIF ( bc_sa_t == 'neumann' )  THEN
           ibc_sa_t = 1
        ELSE
@@ -2305,13 +2306,13 @@
 
        IF ( bc_sa_b == 'dirichlet' )  THEN
           ibc_sa_b = 0
-          IF ( bottom_constant_flux_layer  )  THEN
-             message_string = 'boundary condition: bc_sa_b = "' //                &
-                  TRIM( bc_sa_b ) // '" is not allowed with constant_flux_layer'  &
-                  // ' = bottom. bc_sa_b set to "neumann".'
-             CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
-             bc_sa_b = 'neumann'
-          ENDIF
+          !IF ( bottom_constant_flux_layer  )  THEN
+          !   message_string = 'boundary condition: bc_sa_b = "' //                &
+          !        TRIM( bc_sa_b ) // '" is not allowed with constant_flux_layer'  &
+          !        // ' = bottom. bc_sa_b set to "neumann".'
+          !   CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
+          !   bc_sa_b = 'neumann'
+          !ENDIF
        ELSEIF ( bc_sa_b == 'neumann' )  THEN
           ibc_sa_b = 1
        ELSE

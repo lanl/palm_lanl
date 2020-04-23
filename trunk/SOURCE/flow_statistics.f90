@@ -366,6 +366,7 @@
     REAL(wp) ::  flag             !<
     REAL(wp) ::  height           !<
     REAL(wp) ::  pts              !<
+    REAL(wp) ::  sum_pt,sum_sa    !<
     REAL(wp) ::  sums_l_eper      !<
     REAL(wp) ::  sums_l_etot      !<
     REAL(wp) ::  ust              !<
@@ -509,17 +510,36 @@
 
        IF ( TRIM(constant_flux_layer) == 'top' ) THEN
           !%OMP DO
+          sum_pt = 0.0_wp
           DO m = 1,surf_def_h(2)%ns
              i = surf_def_h(2)%i(m)
              j = surf_def_h(2)%j(m)
-             sums_l(nzt+1, 4,tn)  = sums_l(nzt+1, 4,tn) + surf_def_h(2)%pt_surface(m)
+             sum_pt  = sum_pt + surf_def_h(2)%pt_surface(m)
           ENDDO
           IF ( ocean ) THEN
+             sum_sa = 0.0_wp
              !%OMP DO
              DO m = 1,surf_def_h(2)%ns
                 i = surf_def_h(2)%i(m)
                 j = surf_def_h(2)%j(m)
-                sums_l(nzt+1,23,tn)  = sums_l(nzt+1,23,tn) + surf_def_h(2)%sa_surface(m)
+                sum_sa  = sum_sa + surf_def_h(2)%sa_surface(m)
+             ENDDO
+          ENDIF
+       ELSEIF ( TRIM(constant_flux_layer) == 'bottom' ) THEN
+          !%OMP DO
+          sum_pt = 0.0_wp
+          DO m = 1,surf_def_h(0)%ns
+             i = surf_def_h(0)%i(m)
+             j = surf_def_h(0)%j(m)
+             sum_pt  = sum_pt + surf_def_h(0)%pt_surface(m)
+          ENDDO
+          IF ( ocean ) THEN
+             sum_sa = 0.0_wp
+             !%OMP DO
+             DO m = 1,surf_def_h(2)%ns
+                i = surf_def_h(2)%i(m)
+                j = surf_def_h(2)%j(m)
+                sum_sa  = sum_sa + surf_def_h(0)%sa_surface(m)
              ENDDO
           ENDIF
        ENDIF
@@ -666,14 +686,9 @@
           ELSE
              sums(k,4) = sums(nzt,4)
           ENDIF
-          IF ( k == nzt+1 .AND. TRIM(most_method) == 'mcphee' ) THEN
-             sums(k,4) = 0.0_wp 
-             DO m = 1,surf_def_h(2)%ns
-                sums(k,4) = sums(k,4) + surf_def_h(2)%pt_surface(m) 
-             ENDDO
-             sums(k,4) = sums(k,4)/surf_def_h(2)%ns
-          ENDIF
        ENDDO
+       IF ( TRIM(constant_flux_layer) == 'top') sums(nzt+1,4) = sum_pt/surf_def_h(2)%ns
+       IF ( TRIM(constant_flux_layer) == 'bottom') sums(nzb,4) = sum_pt/surf_def_h(0)%ns
        hom(:,1,1,sr) = sums(:,1)             ! u
        hom(:,1,2,sr) = sums(:,2)             ! v
        hom(:,1,4,sr) = sums(:,4)             ! pt
@@ -687,17 +702,13 @@
              ELSE
                 sums(k,23) = sums(nzt,23)
              ENDIF
-             IF ( k == nzt+1 .AND. TRIM(most_method) == 'mcphee' ) THEN
-                sums(k,23) = 0.0_wp 
-                DO m = 1,surf_def_h(2)%ns
-                   sums(k,23) = sums(k,23) + surf_def_h(2)%sa_surface(m) 
-                ENDDO
-                sums(k,23) = sums(k,23)/surf_def_h(2)%ns
-             ENDIF
           ENDDO
-          hom(:,1,23,sr) = sums(:,23)             ! sa
+          IF ( TRIM(constant_flux_layer) == 'top') THEN
+             sums(nzt+1,23) = sum_sa/surf_def_h(2)%ns
+          ENDIF
+          hom(:,1,23,sr) = sums(:,23)                      ! sa
           IF ( TRIM(most_method) == 'mcphee') THEN
-             hom(nzb,1,112,sr) = sums(nzb,112)             ! ol
+             hom(nzb,1,112,sr)     = sums(nzb,112)         ! ol
              hom(nzb,1,pr_palm,sr) = sums(nzb,pr_palm)     ! us
           ENDIF
        ENDIF

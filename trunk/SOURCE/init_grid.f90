@@ -2399,7 +2399,8 @@
 
     USE control_parameters,                                                    &
         ONLY:  bc_lr_cyc, bc_ns_cyc, constant_flux_layer, land_surface,        &
-               message_string, use_surface_fluxes, use_top_fluxes, urban_surface
+               message_string, pt_surface_rate_change, use_surface_fluxes,     &
+               use_top_fluxes, urban_surface
 
     USE indices,                                                               &
         ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, ny, nyn, nyng, nys, nysg, nz,   &
@@ -2499,8 +2500,8 @@
 !--          treat edges (u(k,j,i+1)) simply by a gradient approach, i.e. these
 !--          points are not masked within diffusion_u. Tests had shown that the
 !--          effect on the flow is negligible. 
-             IF ( TRIM(constant_flux_layer) /= 'none' .OR.                     &
-                  use_surface_fluxes                       )  THEN
+             IF ( ( TRIM(constant_flux_layer) /= 'none' .OR.                   &
+                  use_surface_fluxes ) .AND. pt_surface_rate_change == 0.0_wp )  THEN
                 IF ( BTEST( wall_flags_0(k,j,i), 0 ) )                         &
                    wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 8 )
              ELSE

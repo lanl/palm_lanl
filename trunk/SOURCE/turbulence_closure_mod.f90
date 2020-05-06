@@ -116,14 +116,14 @@
 
 #if defined( __nopointer )
     USE arrays_3d,                                                             &
-        ONLY:  alpha_T, beta_S, diss, diss_p, dptdx, dptdy, dptdz,             &
-               dsadx, dsady, dsadz, dudx, dudy, dudz, dvdx, dvdy, dvdz,        &
-               dwdx, dwdy, dwdz, dzu, e, e_p, kh, km, ks,                      &
+        ONLY:  alpha_T, beta_S, diss, diss_p, dbdx, dbdy, dbdz,                &
+               dptdx, dptdy, dptdz, dsadx, dsady, dsadz, dudx, dudy, dudz,     &
+               dvdx, dvdy, dvdz, dwdx, dwdy, dwdz, dzu, e, e_p, kh, km, ks,    &
                mean_inflow_profiles, prho, pt, tdiss_m, te_m, tend, u, v, vpt, w
 #else
     USE arrays_3d,                                                             &
         ONLY:  alpha_T, beta_S, diss, diss_1, diss_2, diss_3, diss_p,          &
-               dptdx, dptdy, dptdz,                                            &
+               dbdx, dbdy, dbdz, dptdx, dptdy, dptdz,                          &
                dsadx, dsady, dsadz, dudx, dudy, dudz, dvdx, dvdy, dvdz,        &
                dwdx, dwdy, dwdz, dzu, e,                                       &
                e_1, e_2, e_3, e_p, kh, km, ks, mean_inflow_profiles, prho, pt, &
@@ -420,10 +420,6 @@
                              !of K_e which is used in RANS mode
 
           CASE ( 'AMD' ) 
-             les_amd = .TRUE.
-             c_0 = 3.0_wp**-0.5_wp ! for second-order accurate schemes
-
-          CASE ( 'AMD-strat' ) 
              les_amd = .TRUE.
              c_0 = 3.0_wp**-0.5_wp ! for second-order accurate schemes
 
@@ -1125,6 +1121,9 @@
     ENDIF
 
     IF (les_mw .OR. les_amd) THEN
+       ALLOCATE( dbdx(nzb+1:nzt) )
+       ALLOCATE( dbdy(nzb+1:nzt) )
+       ALLOCATE( dbdz(nzb+1:nzt) )
        ALLOCATE( dptdx(nzb+1:nzt) )
        ALLOCATE( dptdy(nzb+1:nzt) )
        ALLOCATE( dptdz(nzb+1:nzt) )
@@ -1223,7 +1222,6 @@
           CALL location_message(message_string,.TRUE.)
        ENDIF
     ELSE
-       CALL location_message('tcm_init_mixing_length for mw closure',.TRUE.)
        CALL tcm_init_mixing_length
     ENDIF
     dummy3 = l_wall                 !> @todo remove later
@@ -2787,9 +2785,9 @@
  SUBROUTINE calc_scalar_gradients( i,j )
     
     USE arrays_3d,                                                             &
-        ONLY:  alpha_T, beta_S, dptdx, dptdy, dptdz, dsadx, dsady, dsadz,      &
-               ddzw, dd2zu, pt, q, ql, sa, rho_ocean, drho_ref_zw, rho_ref_zw, &
-               zu,zw
+        ONLY:  alpha_T, beta_S, dbdx, dbdy, dbdz, dptdx, dptdy, dptdz,         &
+               dsadx, dsady, dsadz, ddzw, dd2zu, prho, pt, q, ql, sa,          &
+               ref_ambient, ref_state, drho_ref_zw, rho_ref_zw, zu, zw
     
     USE control_parameters,                                                    &
         ONLY:  constant_flux_layer, message_string, most_method, neutral
@@ -2810,7 +2808,13 @@
     INTEGER(iwp) ::  m       !< loop index
     INTEGER(iwp) ::  surf_e  !< end index of surface elements at given i-j position
     INTEGER(iwp) ::  surf_s  !< start index of surface elements at given i-j position
+    REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  var !<
 
+    IF ( ocean ) THEN
+       var = prho
+    ELSE
+       var = pt
+    ENDIF
 !
 !-- All instances of dptdz and dsadz are computed over 2 cell widths. 
     DO  k = nzb+1, nzt
@@ -2820,6 +2824,20 @@
                                pt(k,j-1,i) - pt(k,j-1,i+1) ) * ddy
        dptdz(k)  = 0.5_wp  * ( pt(k+1,j,i) + pt(k+1,j,i+1) -                   &
                                pt(k-1,j,i) - pt(k-1,j,i+1) ) * dd2zu(k)
+
+       dbdx(k) = ( ( var(k,j,i+1) - ref_ambient(k,i+1) )                       &
+                 - ( var(k,j,i)   - ref_ambient(k,i)    ) ) *                  &
+                 ddx / ref_state(k)
+       dbdy(k) = ( 0.5_wp * ( var(k,j+1,i)   - ref_ambient(k,i) +              &
+                              var(k,j+1,i+1) - ref_ambient(k,i+1) )            & 
+                 - 0.5_wp * ( var(k,j-1,i)   - ref_ambient(k,i) +              &
+                              var(k,j-1,i+1) - ref_ambient(k,i+1) ) ) *        &
+                 ddy / ref_state(k)
+       dbdz(k) = ( ( 0.5_wp * ( var(k+1,j,i) + var(k+1,j,i+1) )                &
+                     - ref_ambient(k+1,i)                     )/ ref_state(k+1)&
+                 - ( 0.5_wp * ( var(k-1,j,i) + var(k-1,j,i+1) )                &
+                     - ref_ambient(k-1,i)                     )/ ref_state(k-1)&
+                 ) * dd2zu(k)
        
     ENDDO
     
@@ -4227,7 +4245,7 @@
         ONLY:  drho_ref_zu, dd2zu, ddzu, pt, sa
 
     USE control_parameters,                                                    &
-        ONLY:  atmos_ocean_sign, diffusivity_diags,                            &
+        ONLY:  atmos_ocean_sign, cos_alpha_surface, diffusivity_diags,                            &
                diffusivity_from_surface_fluxes, e_min, g, les_mw, les_amd,     &
                message_string, outflow_l, outflow_n, outflow_r, outflow_s
     
@@ -4243,32 +4261,41 @@
     IMPLICIT NONE
 
     INTEGER(iwp) ::  i,j,k,ii,jj,kk,m,n  !< loop index
+    INTEGER(iwp) ::  klog
     INTEGER(iwp) ::  omp_get_thread_num  !< opemmp function to get thread number
     INTEGER(iwp) ::  sr                  !< statistic region
     INTEGER(iwp) ::  tn                  !< thread number
     
-    LOGICAL      ::  stratification_affects_km = .FALSE.
-    
     REAL(wp)     ::  axy,axz,ayz         !< anisotropy factor
     REAL(wp)     ::  flag                !< topography flag
     REAL(wp)     ::  l                   !< mixing length
-    REAL(wp)     ::  ll                  !< adjusted mixing length
+    REAL(wp)     ::  ll,mm,nn            !< adjusted mixing length
     REAL(wp)     ::  var_reference       !< reference temperature
+    REAL(wp)     ::  km_max = 1e0_wp    !< maximum value of km
+    REAL(wp)     ::  kden_min = 1e-20_wp  !< minimum value in denominator of diffusivity
     REAL(wp)     ::  km_grav = 0.0_wp, km_num = 0.0_wp, kh_num = 0.0_wp,       &
                      ks_num = 0.0_wp, km_den = 0.0_wp, kh_den = 0.0_wp,        &
-                     ks_den = 0.0_wp     
+                     ks_den = 0.0_wp
                      !< numerator and denominators of diffusivities
+    REAL(wp)     ::  km_num_sum = 0.0_wp, km_den_sum = 0.0_wp,                 &
+                     km_grav_sum = 0.0_wp, km_sum = 0.0_wp 
+                     !< variables for diffusivity_diags
 
-    REAL(wp), DIMENSION(3)   ::  dptdxi,dsadxi !< scalar gradients
-    REAL(wp), DIMENSION(3,3) ::  dudxi,S       !< velocity gradients
+    REAL(wp), DIMENSION(3)   ::  dbdxi, dptdxi, dsadxi !< scalar gradients
+    REAL(wp), DIMENSION(3,3) ::  dudxi, S              !< velocity gradients,
+                                                       !< strain tensor
 #if defined( __nopointer )
     REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  var  !< temperature
 #else
     REAL(wp), DIMENSION(:,:,:), POINTER ::  var  !< temperature
 #endif
 
-    IF ( TRIM( turbulence_closure ) == 'AMD-strat' )                           &
-       stratification_affects_km = .TRUE.
+    IF ( TRIM(constant_flux_layer) == 'top') THEN
+       klog = nzt
+    ELSE
+       klog = nzb+1
+    ENDIF
+
 !
 !-- Default thread number in case of one thread
     tn = 0
@@ -4332,6 +4359,12 @@
        ENDDO
        
        !$OMP DO
+       km_num_sum = 0.0_wp
+       km_den_sum = 0.0_wp
+       km_grav_sum = 0.0_wp
+       km_sum = 0.0_wp
+       mm = 0.0_wp
+       nn = 0.0_wp
        DO  i = nxl, nxr
           DO  j = nys, nyn
              
@@ -4358,6 +4391,10 @@
                 dudxi(3,:) = (/ dwdx(k) /axz, dwdy(k) /ayz, dwdz(k)        /)
                 dptdxi     = (/ dptdx(k)/ax , dptdy(k)/ay , dptdz(k)/az(k) /)
                 dsadxi     = (/ dsadx(k)/ax , dsady(k)/ay , dsadz(k)/az(k) /)
+                dbdxi      = (/ dbdx(k) /ax , dbdy(k) /ay , dbdz(k) /az(k) /)
+                ! Alternative to dbdxi:
+                !( -1.0_wp * alpha_T(k,j,i) * dptdxi(kk) +  & 
+                !  beta_S(k,j,i)  * dsadxi(kk) )
 !
 !--             Calculate strain rate
                 DO jj = 1, 3
@@ -4376,60 +4413,55 @@
                       ENDDO
                       km_den = km_den + dudxi(jj,kk)**2.0_wp
                       kh_num = kh_num + dudxi(jj,kk) * dptdxi(kk) * dptdxi(jj)
-                      ks_num = ks_num + dudxi(jj,kk) * dsadxi(kk) * dsadxi(jj)
                    ENDDO
-                   km_grav = km_grav + atmos_ocean_sign * g *                  &
-                                     dudxi(3,kk) *                             &
-                                     ( -1.0_wp * alpha_T(k,j,i) * dptdxi(3) +  & 
-                                                 beta_S(k,j,i)  * dsadxi(3) )
+                   km_grav = km_grav - cos_alpha_surface * atmos_ocean_sign * g * &
+                                       dudxi(3,kk) * dbdxi(kk)
                    kh_den = kh_den + dptdxi(kk)**2.0_wp
-                   ks_den = ks_den + dsadxi(kk)**2.0_wp
                 ENDDO
                 
 !
 !--             Compute diffusities
-                IF ( stratification_affects_km ) km_num = km_num + km_grav
-                km(k,j,i) = C(k) * MAX( -1.0_wp * km_num, 0.0_wp ) * flag /    &
-                            ( km_den + 1e-20_wp )
+                km(k,j,i) = MIN( km_max,                                       &
+                            C(k) * MAX( -1.0_wp * km_num + km_grav, 0.0_wp ) * &
+                            flag / ( km_den + kden_min ) )
                 kh(k,j,i) = C(k) * MAX( -1.0_wp * kh_num, 0.0_wp ) * flag /    &
-                            ( kh_den + 1e-20_wp )
-                ks(k,j,i) = C(k) * MAX( -1.0_wp * ks_num, 0.0_wp ) * flag /    &
-                            ( ks_den + 1e-20_wp )
+                            ( kh_den + kden_min )
                 
-                IF ( diffusivity_diags .AND. i == surf_def_h(2)%i(m)           &
-                     .AND. j == surf_def_h(2)%j(m) .AND. k == nzt-1  ) THEN
-                   WRITE(message_string,*) 'dudz(nzt-1:nzt)',dudz(nzt-1:nzt)
-                   CALL location_message(message_string,.TRUE.)
-                   WRITE(message_string,*) 'dvdz(nzt-1:nzt)',dvdz(nzt-1:nzt)
-                   CALL location_message(message_string,.TRUE.)
-                   WRITE(message_string,*) 'dptdz(nzt-1:nzt)',dptdz(nzt-1:nzt)
-                   CALL location_message(message_string,.TRUE.)
-                   WRITE(message_string,*) 'dsadz(nzt-1:nzt)',dsadz(nzt-1:nzt)
-                   CALL location_message(message_string,.TRUE.)
-                   WRITE(message_string,*) 'km_grav',km_grav
-                   CALL location_message(message_string,.TRUE.)
-                   WRITE(message_string,*) 'km_num',km_num
-                   CALL location_message(message_string,.TRUE.)
-                   WRITE(message_string,*) 'km_den',km_den
-                   CALL location_message(message_string,.TRUE.)
-                   WRITE(message_string,*) 'km(',k,') = ',km(k,j,i)
-                   CALL location_message(message_string,.TRUE.)
-                   WRITE(message_string,*) 'kh_num',kh_num
-                   CALL location_message(message_string,.TRUE.)
-                   WRITE(message_string,*) 'kh_den',kh_den
-                   CALL location_message(message_string,.TRUE.)
-                   WRITE(message_string,*) 'kh(',k,') = ',kh(k,j,i)
-                   CALL location_message(message_string,.TRUE.)
-                   WRITE(message_string,*) 'ks_num',ks_num
-                   CALL location_message(message_string,.TRUE.)
-                   WRITE(message_string,*) 'ks_den',ks_den
-                   CALL location_message(message_string,.TRUE.)
-                   WRITE(message_string,*) 'ks(',k,') = ',ks(k,j,i)
-                   CALL location_message(message_string,.TRUE.)
+                IF ( ocean ) THEN
+                   DO kk = 1, 3
+                      DO jj = 1, 3
+                         ks_num = ks_num + dudxi(jj,kk) * dsadxi(kk) * dsadxi(jj)
+                      ENDDO
+                      ks_den = ks_den + dsadxi(kk)**2.0_wp
+                   ENDDO
+                   ks(k,j,i) = C(k) * MAX( -1.0_wp * ks_num, 0.0_wp ) * flag /    &
+                               ( ks_den + kden_min )
                 ENDIF
+                IF ( k == klog ) THEN
+                   km_sum      = km_sum + km(k,j,i)
+                   km_num_sum  = km_num_sum + km_num
+                   km_den_sum  = km_den_sum + km_den
+                   km_grav_sum = km_grav_sum + km_grav
+                   nn = nn + 1
+                   IF ( km_num > 0.0_wp ) mm = mm + 1.0_wp
+                ENDIF
+
              ENDDO
           ENDDO
        ENDDO
+       
+       IF ( diffusivity_diags ) THEN
+          WRITE(message_string,*) 'km_grav_av(',klog,') = ',km_grav_sum/nn
+          CALL location_message(message_string,.TRUE.)
+          WRITE(message_string,*) 'km_num_av(',klog,') = ',km_num_sum/nn
+          CALL location_message(message_string,.TRUE.)
+          WRITE(message_string,*) 'km_den_av(',klog,') = ',km_den_sum/nn
+          CALL location_message(message_string,.TRUE.)
+          WRITE(message_string,*) 'km_av(',klog,') = ',km_sum/nn
+          CALL location_message(message_string,.TRUE.)
+          WRITE(message_string,*) 'Number of km(',klog,') cutoff = ',mm
+          CALL location_message(message_string,.TRUE.)
+       ENDIF
     
     ELSEIF ( rans_tke_l )  THEN
 
@@ -4640,35 +4672,27 @@
 
     IF ( ocean .AND. .NOT. les_amd ) ks = kh
 
-    IF ( diffusivity_diags ) THEN
-       m = 1
-       IF (TRIM(constant_flux_layer)=='top') l = 2
-       i = surf_def_h(l)%i(m)
-       j = surf_def_h(l)%j(m)
-       k = surf_def_h(l)%k(m)
-       WRITE(message_string,*) 'km(nzt-1:nzt,j,i) = ',   km(k-1:k,i,j)
-       CALL location_message(message_string,.TRUE.)
-       WRITE(message_string,*) 'kh(nzt-1:nzt,j,i) = ',   kh(k-1:k,i,j)
-       CALL location_message(message_string,.TRUE.)
-       WRITE(message_string,*) 'ks(nzt-1:nzt,j,i) = ',   ks(k-1:k,i,j)
-       CALL location_message(message_string,.TRUE.)
-       WRITE(message_string,*) 'surf%usws = ',       surf_def_h(l)%usws(m)
-       CALL location_message(message_string,.TRUE.)
-       WRITE(message_string,*) 'surf%vsws = ',       surf_def_h(l)%vsws(m)
-       CALL location_message(message_string,.TRUE.)
-       WRITE(message_string,*) 'surf%shf= ',         surf_def_h(l)%shf(m)
-       CALL location_message(message_string,.TRUE.)
-       WRITE(message_string,*) 'surf%sasws = ',      surf_def_h(l)%sasws(m)
-       CALL location_message(message_string,.TRUE.)
-       WRITE(message_string,*) 'u(nzt-1:nzt) = ', u(k-1:k,j,i)
-       CALL location_message(message_string,.TRUE.)
-       WRITE(message_string,*) 'v(nzt-1:nzt) = ', v(k-1:k,j,i)
-       CALL location_message(message_string,.TRUE.)
-       WRITE(message_string,*) 'pt(nzt-1:nzt) = ', pt(k-1:k,j,i)
-       CALL location_message(message_string,.TRUE.)
-       WRITE(message_string,*) 'sa(nzt-1:nzt) = ', sa(k-1:k,j,i)
-       CALL location_message(message_string,.TRUE.)
-    ENDIF
+    !IF ( diffusivity_diags ) THEN
+    !   m = 1
+    !   IF (TRIM(constant_flux_layer)=='top') l = 2
+    !   i = surf_def_h(l)%i(m)
+    !   j = surf_def_h(l)%j(m)
+    !   k = surf_def_h(l)%k(m)
+    !   WRITE(message_string,*) 'km(nzt-1:nzt,j,i) = ',   km(k-1:k,i,j)
+    !   CALL location_message(message_string,.TRUE.)
+    !   WRITE(message_string,*) 'kh(nzt-1:nzt,j,i) = ',   kh(k-1:k,i,j)
+    !   CALL location_message(message_string,.TRUE.)
+    !   WRITE(message_string,*) 'ks(nzt-1:nzt,j,i) = ',   ks(k-1:k,i,j)
+    !   CALL location_message(message_string,.TRUE.)
+    !   WRITE(message_string,*) 'surf%usws = ',       surf_def_h(l)%usws(m)
+    !   CALL location_message(message_string,.TRUE.)
+    !   WRITE(message_string,*) 'surf%vsws = ',       surf_def_h(l)%vsws(m)
+    !   CALL location_message(message_string,.TRUE.)
+    !   WRITE(message_string,*) 'surf%shf= ',         surf_def_h(l)%shf(m)
+    !   CALL location_message(message_string,.TRUE.)
+    !   WRITE(message_string,*) 'surf%sasws = ',      surf_def_h(l)%sasws(m)
+    !   CALL location_message(message_string,.TRUE.)
+    !ENDIF
 
  END SUBROUTINE tcm_diffusivities
 

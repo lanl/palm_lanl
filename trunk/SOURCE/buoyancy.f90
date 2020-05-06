@@ -163,7 +163,6 @@
        REAL(wp), DIMENSION(:,:,:), POINTER ::  var
 #endif
 
-       ! TODO define ref_ambient and ref_state for atmosphere cases
        IF ( wind_component == 1 )  THEN
 
           IF ( sloping_surface )  THEN

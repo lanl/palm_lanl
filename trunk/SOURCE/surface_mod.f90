@@ -248,6 +248,7 @@
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  ts        !< scaling parameter temerature
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  qs        !< scaling parameter humidity
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  ss        !< scaling parameter passive scalar
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  sas       !< scaling parameter salinity
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  qcs       !< scaling parameter qc
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  ncs       !< scaling parameter nc
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  qrs       !< scaling parameter qr
@@ -743,6 +744,7 @@
              ENDDO
           ENDDO
        ENDDO
+
 !
 !--    Count number of vertical surfaces on local domain 
        DO  i = nxl, nxr
@@ -1085,9 +1087,11 @@
 !
 !--    Salinity surface flux
        IF ( ocean ) THEN
+         DEALLOCATE ( surfaces%shf_sol ) 
          DEALLOCATE ( surfaces%sa_surface ) 
          DEALLOCATE ( surfaces%sasws )
-         DEALLOCATE ( surfaces%shf_sol )
+         DEALLOCATE ( surfaces%sa1 )
+         DEALLOCATE ( surfaces%sas )
        ENDIF
 
     END SUBROUTINE deallocate_surface_attributes_h
@@ -1222,9 +1226,10 @@
 !
 !--    Salinity surface flux
        IF ( ocean )  THEN
-         ALLOCATE ( surfaces%sasws(1:surfaces%ns) )
          ALLOCATE ( surfaces%shf_sol(1:surfaces%ns) )
+         ALLOCATE ( surfaces%sasws(1:surfaces%ns) )
          ALLOCATE ( surfaces%sa1(1:surfaces%ns) )
+         ALLOCATE ( surfaces%sas(1:surfaces%ns) )
          ALLOCATE ( surfaces%sa_surface(1:surfaces%ns) )
        ENDIF
 
@@ -2061,7 +2066,7 @@
              IF ( use_surface_fluxes .AND. (.NOT. is_top) )  THEN
 
                 IF ( upward_facing )  THEN
-                   IF ( constant_heatflux )  THEN
+                   IF ( constant_bottom_heatflux )  THEN
 !   
 !--                   Initialize surface heatflux. However, skip this for now if 
 !--                   if random_heatflux is set. This case, shf is initialized later.

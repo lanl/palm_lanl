@@ -228,11 +228,12 @@
     USE cpulog
 
     USE control_parameters,                                                    &
-        ONLY:  air_chemistry, c1, c2, c3, cloud_droplets, cloud_physics,       &
-               constant_flux_layer, constant_heatflux,                         & 
-               constant_top_heatflux, constant_bottom_heatflux,                &
-               constant_scalarflux, constant_waterflux,                        &     
-               coupling_mode, drag_law, drag_coeff, f, g,                      &
+        ONLY:  air_chemistry, beta_m_businger, beta_h_businger, c1, c2, c3,    &
+               cloud_droplets, cloud_physics, constant_flux_layer,             & 
+                constant_top_heatflux, constant_salinityflux,&
+               constant_bottom_heatflux, constant_top_salinityflux,            &
+               constant_bottom_salinityflux, constant_scalarflux,              &
+               constant_waterflux, coupling_mode, drag_law, drag_coeff, f, g,  &
                gamma_mcphee, Gamma_T_const, Gamma_S_const, humidity,           &
                ibc_e_b, ibc_e_t, ibc_pt_b, ibc_pt_t,                           &
                initializing_actions, intermediate_timestep_count,              &
@@ -242,9 +243,9 @@
                l_m, land_surface, large_scale_forcing, lsf_surf,               &
                message_string, microphysics_morrison, microphysics_seifert,    &
                molecular_viscosity, most_method, most_xy_av, neutral, ocean,   &
-               passive_scalar, prandtl_number, pt_surface, q_surface,          &
-               run_coupled, schmidt_number, surface_flux_diags,                &
-               surface_pressure, simulated_time,                               &
+               passive_scalar, prandtl_number, pt_surface,                     &
+               pt_surface_rate_change, q_surface, run_coupled, schmidt_number, &
+               surface_flux_diags, surface_pressure, simulated_time,           &
                terminate_run, time_since_reference_point, urban_surface,       &
                z_offset_mcphee, zeta_max, zeta_min
 
@@ -283,6 +284,7 @@
 
     INTEGER(iwp), PARAMETER ::  num_steps = 15000  !< number of steps in the lookup table
 
+    LOGICAL      ::  constant_heatflux 
     LOGICAL      ::  coupled_run       !< Flag for coupled atmosphere-ocean runs
     LOGICAL      ::  downward = .FALSE.!< Flag indicating downward-facing horizontal surface
     LOGICAL      ::  mom_uv  = .FALSE. !< Flag indicating calculation of usvs and vsus at vertical surfaces
@@ -328,7 +330,7 @@
 !> Main routine to compute the surface fluxes
 !------------------------------------------------------------------------------!
     SUBROUTINE surface_layer_fluxes
-
+       
        IMPLICIT NONE
 
        surf_vertical = .FALSE.
@@ -511,6 +513,7 @@
           downward = .TRUE.
           surf => surf_def_h(2)
           constant_heatflux = constant_top_heatflux
+          constant_salinityflux = constant_top_salinityflux
 
           IF ( trim(most_method) == 'mcphee' ) THEN
              CALL calc_uvw_abs 
@@ -588,6 +591,7 @@
 !--    flux in land-surface model in case of aero_resist_kray is not true.
        IF ( TRIM(constant_flux_layer) == 'bottom' ) THEN
           constant_heatflux = constant_bottom_heatflux
+          constant_salinityflux = constant_bottom_salinityflux
           IF ( .NOT. aero_resist_kray )  THEN
              IF ( most_method == 'circular' )  THEN
                 DO  l = 0, 1
@@ -1981,7 +1985,7 @@
        IMPLICIT NONE
 
 
-       INTEGER(iwp) ::  ibit          !< flag to mask computation of relative velocity in case of downward-facing surfaces
+       INTEGER(iwp)  ::  ibit    !< flag to mask computation of relative velocity in case of downward-facing surfaces
        INTEGER(iwp)  ::  m       !< loop variable over all horizontal surf elements 
        INTEGER(iwp)  ::  lsp     !< running index for chemical species
 
@@ -2040,6 +2044,23 @@
                                       + psi_h( surf%z0h(m) / surf%ol(m) ) )
 
           ENDDO
+          IF ( surface_flux_diags) THEN
+             WRITE(message_string,*) 'theta based on pt_surface = ', surf%pt_surface(m)
+             CALL location_message(message_string,.TRUE.)
+          ENDIF
+          IF ( ocean ) THEN
+             !$OMP PARALLEL DO PRIVATE( z_mo )
+             DO  m = 1, surf%ns   
+
+                z_mo = surf%z_mo(m)
+
+                surf%sas(m) = kappa * ( surf%sa1(m) - surf%sa_surface(m) )     &
+                                     / ( LOG( z_mo / surf%z0h(m) )             &
+                                         - psi_h( z_mo / surf%ol(m) )          &
+                                         + psi_h( surf%z0h(m) / surf%ol(m) ) )
+
+             ENDDO
+          ENDIF
 
        ENDIF
 ! 
@@ -2313,8 +2334,7 @@
 !
 !--       Compute the vertical kinematic heat flux, salt flux, and melt rate 
 !--       according to the 3 equation parameterization (Asay-Davis et al. 2016)
-          IF ( trim(most_method) == 'mcphee' .AND. downward ) THEN
-             CALL location_message('Reassign heat flux using mcphee',.TRUE.)
+          IF ( TRIM(most_method) == 'mcphee' .AND. downward ) THEN
              
              !$OMP PARALLEL DO PRIVATE( i, j, k, s_factor )
              DO  m = 1, surf%ns  
@@ -2333,23 +2353,32 @@
                 surf%sasws(m) = -1.0_wp * rho_ocean(k,j,i) *                   &
                                 ( surf%gamma_S(m) + s_factor ) *               &
                                 ( surf%sa_surface(m) - surf%sa1(m) )
-                surf%melt(m)  = s_factor * rho_ocean(k,j,i)/1e3
+                surf%melt(m)  = s_factor * rho_ocean(k,j,i)/1.0e3_wp
 
              ENDDO
              
-          ELSEIF ( .NOT.  constant_heatflux  .AND.                             &
-                    ( ( time_since_reference_point <= skip_time_do_lsm  .AND.  &
+          ELSEIF ( ( ( time_since_reference_point <= skip_time_do_lsm  .AND.  &
                         simulated_time > 0.0_wp                        ) .OR.  &
                       .NOT.  land_surface                              ) .AND. &
-                    .NOT. urban_surface )  THEN
-             CALL location_message('Reassign heat flux using theta_s and u_s',.TRUE.)
-             !$OMP PARALLEL DO PRIVATE( i, j, k )
-             DO  m = 1, surf%ns 
-                i    = surf%i(m)            
-                j    = surf%j(m)
-                k    = surf%k(m)
-                surf%shf(m) = -surf%ts(m) * surf%us(m) * rho_ref_zw(k+ibit)
-             ENDDO
+                      .NOT. urban_surface )  THEN
+             IF ( .NOT. constant_heatflux ) THEN
+                !$OMP PARALLEL DO PRIVATE( i, j, k )
+                DO  m = 1, surf%ns 
+                   i    = surf%i(m)            
+                   j    = surf%j(m)
+                   k    = surf%k(m)
+                   surf%shf(m) = -surf%ts(m) * surf%us(m) * rho_ref_zw(k+ibit)
+                ENDDO
+             ENDIF
+             IF ( ocean .AND. .NOT. constant_salinityflux ) THEN
+                !$OMP PARALLEL DO PRIVATE( i, j, k )
+                DO  m = 1, surf%ns 
+                   i    = surf%i(m)            
+                   j    = surf%j(m)
+                   k    = surf%k(m)
+                   surf%sasws(m) = -surf%sas(m) * surf%us(m) * rho_ref_zw(k+ibit)
+                ENDDO
+             ENDIF
 
           ENDIF
 !
@@ -2779,7 +2808,7 @@
 !--                Depth-dependent formulation. Coefficient value for stability function
 !--                from Zhou et al. (2017)
                    IF ( TRIM(gamma_mcphee) == 'depth-dependent' ) THEN
-
+                      ! Consider replacing 5.6 with beta_h_businger
                       Gamma_turb = (1.0_wp/kappa) * (LOG(ABS(zu(nzt-surf%koff)) / &
                                                          surf%z0(m) )             & 
                         - MERGE(-5.6_wp*( ABS(zu(nzt-surf%koff))/surf%ol(m) ),    &
@@ -2881,6 +2910,8 @@
 
        REAL(wp), PARAMETER :: a = 1.0_wp            !< constant
        REAL(wp), PARAMETER :: b = 0.66666666666_wp  !< constant
+       REAL(wp), PARAMETER :: bb = -16.0_wp          !< constant
+                              !< reported as -15.0 in Abkar and Moin 2017
        REAL(wp), PARAMETER :: c = 5.0_wp            !< constant
        REAL(wp), PARAMETER :: d = 0.35_wp           !< constant
        REAL(wp), PARAMETER :: c_d_d = c / d         !< constant
@@ -2888,16 +2919,16 @@
 
 
        IF ( zeta < 0.0_wp )  THEN
-          x = SQRT( SQRT( 1.0_wp  - 16.0_wp * zeta ) )
+!--       unstable conditions
+!--       Businger et al. 1971, Stull 1988         
+          x = SQRT( SQRT( 1.0_wp + bb * zeta ) )
           psi_m = pi * 0.5_wp - 2.0_wp * ATAN( x ) + LOG( ( 1.0_wp + x )**2    &
                   * ( 1.0_wp + x**2 ) * 0.125_wp )
        ELSE
 
           IF (trim(drag_law) == 'businger') THEN
-!
-!--          Old version for stable conditions (only valid for z/L < 0.5)
-!--          Coefficient choice following Wyngaard (2010)
-             psi_m = - 4.8_wp * zeta
+!--          (only valid for z/L < 0.5)
+             psi_m = beta_m_businger * zeta
 
           ELSE
              psi_m = - b * ( zeta - c_d_d ) * EXP( -d * zeta ) - a * zeta         &
@@ -2924,6 +2955,8 @@
 
        REAL(wp), PARAMETER :: a = 1.0_wp            !< constant
        REAL(wp), PARAMETER :: b = 0.66666666666_wp  !< constant
+       REAL(wp), PARAMETER :: bb = -16.0_wp          !< constant
+                              !< reported as 15.0 in Abkar and Moin 2017
        REAL(wp), PARAMETER :: c = 5.0_wp            !< constant
        REAL(wp), PARAMETER :: d = 0.35_wp           !< constant
        REAL(wp), PARAMETER :: c_d_d = c / d         !< constant
@@ -2931,15 +2964,20 @@
 
 
        IF ( zeta < 0.0_wp )  THEN
-          x = SQRT( 1.0_wp  - 16.0_wp * zeta )
+!--       unstable conditions
+!--       Businger et al. 1971, Stull 1988         
+          x = SQRT( 1.0_wp + bb * zeta )
           psi_h = 2.0_wp * LOG( (1.0_wp + x ) / 2.0_wp )
        ELSE
-          psi_h = - b * ( zeta - c_d_d ) * EXP( -d * zeta ) - (1.0_wp          &
-                  + 0.66666666666_wp * a * zeta )**1.5_wp - bc_d_d             &
-                  + 1.0_wp
-!
-!--       Old version for stable conditions (only valid for z/L < 0.5)
-!--       psi_h = - 5.0_wp * zeta
+!--       stable conditions
+          IF (TRIM(drag_law) == 'businger') THEN
+!--          (only valid for z/L < 0.5)
+             psi_h = beta_h_businger * zeta
+          ELSE
+             psi_h = - b * ( zeta - c_d_d ) * EXP( -d * zeta ) - (1.0_wp          &
+                     + 0.66666666666_wp * a * zeta )**1.5_wp - bc_d_d             &
+                     + 1.0_wp
+          ENDIF
        ENDIF
 
     END FUNCTION psi_h

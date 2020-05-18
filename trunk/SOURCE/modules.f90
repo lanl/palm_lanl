@@ -1493,8 +1493,9 @@
                                                                !< (=1.0 in atmosphere, =-1.0 in ocean)
     REAL(wp) ::  averaging_interval = 0.0_wp                   !< namelist parameter
     REAL(wp) ::  averaging_interval_pr = 9999999.9_wp          !< namelist parameter
-    REAL(wp) ::  beta_m_businger = 4.8_wp                      !< coefficient for businger stability function, momentum 
-    REAL(wp) ::  beta_h_businger = 5.6_wp                      !< coefficient for businger stability function, momentum 
+    REAL(wp) ::  beta_m_businger = -4.8_wp                     !< coefficient for businger stability function, momentum 
+    REAL(wp) ::  beta_h_businger = -5.6_wp                     !< coefficient for businger stability function, heat
+                                                               !< -7.8 according to Businger 1971, Stull 1988
     REAL(wp) ::  bc_pt_t_val                                   !< vertical gradient of pt near domain top
     REAL(wp) ::  bc_q_t_val                                    !< vertical gradient of humidity near domain top
     REAL(wp) ::  bc_s_t_val                                    !< vertical gradient of passive scalar near domain top

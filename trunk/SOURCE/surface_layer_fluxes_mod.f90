@@ -529,31 +529,6 @@
           
           downward = .FALSE.
           
-          IF ( surface_flux_diags ) THEN
-             m = 1
-             WRITE(message_string,*) 'melt = ',surf%melt(m)*3e7_wp
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'u = ',surf%usurf(m) - surf%ufar(m)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'v = ',surf%vsurf(m) - surf%vfar(m)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'us = ',surf%us(m)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'uw = ',surf%usws(m)/rho_ref_zw(nzt)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'vw = ',surf%usws(m)/rho_ref_zw(nzt)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'gamma_T = ',surf%gamma_T(m)/surf%us(m)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'gamma_S = ',surf%gamma_S(m)/surf%us(m)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'dT = ',surf%pt1(m) - surf%pt_surface(m)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'dS = ',surf%sa1(m) - surf%sa_surface(m)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'k_offset_mcphee = ',k_offset_mcphee 
-             CALL location_message(message_string,.TRUE.) 
-          ENDIF
 
        ENDIF
 !
@@ -844,6 +819,40 @@
           ENDDO 
           mom_tke = .FALSE.
   
+       ENDIF
+       IF ( surface_flux_diags ) THEN
+          IF ( TRIM(constant_flux_layer) == 'top') THEN
+             surf => surf_def_h(2)
+          ELSE
+             surf => surf_def_h(0)
+          ENDIF
+          m = 1
+          WRITE(message_string,*) 'du_surf = ',surf%usurf(m) - surf%ufar(m)
+          CALL location_message(message_string,.TRUE.)
+          WRITE(message_string,*) 'dv_surf = ',surf%vsurf(m) - surf%vfar(m)
+          CALL location_message(message_string,.TRUE.)
+          WRITE(message_string,*) 'us = ',surf%us(m)
+          CALL location_message(message_string,.TRUE.)
+          WRITE(message_string,*) 'uw_surf = ',surf%usws(m)/rho_ref_zw(nzt)
+          CALL location_message(message_string,.TRUE.)
+          WRITE(message_string,*) 'vw_surf = ',surf%usws(m)/rho_ref_zw(nzt)
+          CALL location_message(message_string,.TRUE.)
+          WRITE(message_string,*) 'dpt_surf = ',surf%pt1(m) - surf%pt_surface(m)
+          CALL location_message(message_string,.TRUE.)
+          IF ( ocean ) THEN
+             WRITE(message_string,*) 'dsa_surf = ',surf%sa1(m) - surf%sa_surface(m)
+             CALL location_message(message_string,.TRUE.)
+          ENDIF
+          IF ( TRIM(most_method) == 'mcphee') THEN
+             WRITE(message_string,*) 'melt = ',surf%melt(m)*3e7_wp
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'gamma_T = ',surf%gamma_T(m)/surf%us(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'gamma_S = ',surf%gamma_S(m)/surf%us(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'k_offset_mcphee = ',k_offset_mcphee 
+             CALL location_message(message_string,.TRUE.) 
+          ENDIF
        ENDIF
 
     END SUBROUTINE surface_layer_fluxes
@@ -2044,10 +2053,6 @@
                                       + psi_h( surf%z0h(m) / surf%ol(m) ) )
 
           ENDDO
-          IF ( surface_flux_diags) THEN
-             WRITE(message_string,*) 'theta based on pt_surface = ', surf%pt_surface(m)
-             CALL location_message(message_string,.TRUE.)
-          ENDIF
           IF ( ocean ) THEN
              !$OMP PARALLEL DO PRIVATE( z_mo )
              DO  m = 1, surf%ns   

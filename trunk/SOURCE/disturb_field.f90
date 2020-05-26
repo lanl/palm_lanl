@@ -88,7 +88,8 @@
 
     USE control_parameters,                                                    &
         ONLY:  dist_nxl, dist_nxr, dist_nyn, dist_nys, dist_range,             &
-               disturbance_amplitude, disturbance_created,                     &
+               disturbance_amplitude, disturbance_amplitude_pt,                &
+               disturbance_amplitude_sa, disturbance_created,                  &
                disturbance_level_ind_b, disturbance_level_ind_t, iran,         &
                random_generator, topography
                 
@@ -118,6 +119,7 @@
     INTEGER(iwp) ::  k       !< index variable
 
     REAL(wp) ::  randomnumber  !<
+    REAL(wp) ::  disturbance_ampl !<
     
     REAL(wp) ::  dist1(nzb:nzt+1,nysg:nyng,nxlg:nxrg)  !<
     REAL(wp) ::  field(nzb:nzt+1,nysg:nyng,nxlg:nxrg)  !<
@@ -129,6 +131,16 @@
 !
 !-- Set flag number, 20 for u-grid, 21 for v-grid, required to mask topography
     flag_nr = MERGE( 20, 21, TRIM(var_char) == 'u' )
+
+!-- Set disturbance amplitude
+    IF ( TRIM(var_char) == 'pt' ) THEN
+       disturbance_ampl = disturbance_amplitude_pt
+    ELSEIF ( TRIM(var_char) == 'sa' ) THEN
+       disturbance_ampl = disturbance_amplitude_sa
+    ELSE
+       disturbance_ampl = disturbance_amplitude
+    ENDIF
+
 !
 !-- Create an additional temporary array and initialize the arrays needed
 !-- to store the disturbance
@@ -145,7 +157,7 @@
        DO  i = dist_nxl(dist_range), dist_nxr(dist_range)
           DO  j = dist_nys(dist_range), dist_nyn(dist_range)
              DO  k = disturbance_level_ind_b, disturbance_level_ind_t
-                randomnumber = 3.0_wp * disturbance_amplitude *                &
+                randomnumber = 3.0_wp * disturbance_ampl *                     &
                                ( random_function( iran ) - 0.5_wp )
                 IF ( nxl <= i  .AND.  nxr >= i  .AND.  nys <= j  .AND.         &
                      nyn >= j )                                                &
@@ -161,7 +173,7 @@
              CALL random_seed_parallel( put=seq_random_array(:, j, i) )
              DO  k = disturbance_level_ind_b, disturbance_level_ind_t
                 CALL random_number_parallel( random_dummy )
-                randomnumber = 3.0_wp * disturbance_amplitude *                &
+                randomnumber = 3.0_wp * disturbance_ampl *                     &
                                ( random_dummy - 0.5_wp )
                 IF ( nxl <= i  .AND.  nxr >= i  .AND.  nys <= j  .AND.         &
                      nyn >= j )                                                &
@@ -177,7 +189,7 @@
           DO  j = dist_nys(dist_range), dist_nyn(dist_range)
              DO  k = disturbance_level_ind_b, disturbance_level_ind_t
                 CALL RANDOM_NUMBER( randomnumber )
-                randomnumber = 3.0_wp * disturbance_amplitude *                &
+                randomnumber = 3.0_wp * disturbance_ampl *                     &
                                 ( randomnumber - 0.5_wp )
                 IF ( nxl <= i .AND. nxr >= i .AND. nys <= j .AND. nyn >= j )   &
                 THEN

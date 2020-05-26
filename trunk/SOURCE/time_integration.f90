@@ -369,7 +369,7 @@
                cloud_physics, constant_flux_layer, constant_heatflux,          &
                create_disturbances, dopr_n, constant_diffusion, coupling_mode, &
                coupling_start_time, current_timestep_number,                   &
-               disturbance_created, disturbance_energy_limit, dist_range,      &
+               disturbance_created, dist_range,                                &
                do_sum, dt_3d, dt_averaging_input, dt_averaging_input_pr,       &
                dt_coupling, dt_data_output_av, dt_disturb, dt_do2d_xy,         &
                dt_do2d_xz, dt_do2d_yz, dt_do3d, dt_domask,dt_dopts, dt_dopr,   &
@@ -873,12 +873,11 @@
                intermediate_timestep_count == 1 ) )                            &
           THEN
              time_disturb = time_disturb + dt_3d
-             IF ( time_disturb <= dt_disturb ) then !.or.  disturbance_energy_limit /= 0.0_wp  .AND.                 &
-          !           hom(nzb+5,1,pr_palm,0) < disturbance_energy_limit )  THEN
+             IF ( time_disturb <= dt_disturb )  THEN
                   CALL disturb_field( 'u', tend, u )
                   CALL disturb_field( 'v', tend, v )
-                  call disturb_field('pt', tend, pt )
-          !        call disturb_field('sa', tend, sa )
+                  CALL disturb_field('pt', tend, pt )
+                  IF ( ocean ) CALL disturb_field('sa', tend, sa )
 
  !            ELSEIF ( ( .NOT. bc_lr_cyc  .OR.  .NOT. bc_ns_cyc )            &
  !                    .AND. .NOT. nest_domain  .AND.  .NOT.  forcing )  THEN

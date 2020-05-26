@@ -669,8 +669,8 @@
              cpu_log_barrierwait, create_disturbances,                         &
              cross_profiles, data_output, data_output_masks,                   &
              data_output_pr, data_output_2d_on_each_pe, disturbance_amplitude, &
-             disturbance_energy_limit, disturbance_level_b,                    &
-             disturbance_level_t, do2d_at_begin, do3d_at_begin,                &
+             disturbance_level_b, disturbance_level_t,                         &
+             do2d_at_begin, do3d_at_begin,                                     &
              dt, dt_averaging_input, dt_averaging_input_pr,                    &
              dt_coupling, dt_data_output, dt_data_output_av, dt_disturb,       &
              dt_domask, dt_dopr, dt_dopr_listing, dt_dots, dt_do2d_xy,         &
@@ -690,8 +690,9 @@
              cpu_log_barrierwait, create_disturbances,                         &
              cross_profiles, data_output, data_output_masks,                   &
              data_output_pr, data_output_2d_on_each_pe, disturbance_amplitude, &
-             disturbance_energy_limit, disturbance_level_b,                    &
-             disturbance_level_t, do2d_at_begin, do3d_at_begin,                &
+             disturbance_amplitude_pt, disturbance_amplitude_sa,               &
+             disturbance_level_b, disturbance_level_t,                         &
+             do2d_at_begin, do3d_at_begin,                                     &
              dt, dt_averaging_input, dt_averaging_input_pr,                    &
              dt_coupling, dt_data_output, dt_data_output_av, dt_disturb,       &
              dt_domask, dt_dopr, dt_dopr_listing, dt_dots, dt_do2d_xy,         &

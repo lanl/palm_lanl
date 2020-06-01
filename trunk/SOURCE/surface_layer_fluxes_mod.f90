@@ -1868,8 +1868,8 @@
        IF (most_xy_av) THEN
        
 !--       Use horizontal averages for far-field scalar inputs to mcphee method
-          surf%pt1(:) = hom(nzt+ibit-surf%koff,1,4,0)
-          surf%sa1(:) = hom(nzt+ibit-surf%koff,1,23,0)
+          surf%pt1(:) = hom(nzt+ibit*k_offset_mcphee,1,4,0)
+          surf%sa1(:) = hom(nzt+ibit*k_offset_mcphee,1,23,0)
 
        ELSEIF ( k_av_width_mcphee > 0 .OR. ij_av_width_mcphee > 0 ) THEN
 !

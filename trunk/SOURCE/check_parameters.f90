@@ -1644,6 +1644,17 @@
           ug_vertical_gradient_level(1) = 0.0_wp
        ENDIF
 
+! 
+!--    Check for simultaneous use of non-zero surface velocities and 
+!--    geostrophic velocities and provide warning if so
+       IF (rayleigh_damping_geostrophic .AND. (ug_surface /= 0.0_wp            &
+            .OR. vg_surface /= 0.0_wp)) THEN
+          WRITE( message_string, *) 'WARNING: surface velocities &
+               (ug_surface and vg_surface) will be overwritten &
+               with geostrophic velocities'
+          CALL message( 'check_parameters', 'PA0900', 0, 1, 0, 6, 0)
+       ENDIF
+
 !
 !--
 !--    If required, compute initial profile of the geostrophic wind

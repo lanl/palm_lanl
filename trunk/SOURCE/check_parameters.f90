@@ -1645,14 +1645,16 @@
        ENDIF
 
 ! 
-!--    Check for simultaneous use of non-zero surface velocities and 
-!--    geostrophic velocities and provide warning if so
+!--    Check that geostrophic velocities are imposed only through a
+!--    horizontal pressure gradient OR through setting the appropriate
+!--    ug terms in the input file
        IF (rayleigh_damping_geostrophic .AND. (ug_surface /= 0.0_wp            &
             .OR. vg_surface /= 0.0_wp)) THEN
-          WRITE( message_string, *) 'WARNING: surface velocities &
-               (ug_surface and vg_surface) will be overwritten &
-               with geostrophic velocities'
-          CALL message( 'check_parameters', 'PA0900', 0, 1, 0, 6, 0)
+          WRITE( message_string, *) 'ERROR: Geostrophic velocities &
+               are being set in both the pressure and coriolis terms. &
+               Either set rayleigh_damping_geostrophic = .F. or set &
+               ug_surface and vg_surface to 0. '
+          CALL message( 'check_parameters', 'PA0900', 1, 2, 0, 6, 0)
        ENDIF
 
 !

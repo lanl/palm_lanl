@@ -1648,14 +1648,18 @@
 !--    Check that geostrophic velocities are imposed only through a
 !--    horizontal pressure gradient OR through setting the appropriate
 !--    ug terms in the input file
-       IF (rayleigh_damping_geostrophic .AND. (ug_surface /= 0.0_wp            &
-            .OR. vg_surface /= 0.0_wp)) THEN
-          WRITE( message_string, *) 'ERROR: Geostrophic velocities &
-               are being set in both the pressure and coriolis terms. &
-               Either set rayleigh_damping_geostrophic = .F. or set &
-               ug_surface and vg_surface to 0. '
-          CALL message( 'check_parameters', 'PA0900', 1, 2, 0, 6, 0)
-       ENDIF
+       DO i = 1, 11
+          IF (rayleigh_damping_geostrophic .AND. (ug_surface /= 0.0_wp            &
+               .OR. vg_surface /= 0.0_wp .OR. ug_vertical_gradient(i) /=0.0_wp    &
+               .OR. vg_vertical_gradient(i) /=0.0_wp)) THEN
+             WRITE( message_string, *) 'ERROR: Geostrophic velocities &
+                  are being set in both the pressure and coriolis terms. &
+                  Either set rayleigh_damping_geostrophic = .F. or set &
+                  ug_surface, vg_surface, ug_vertical_gradient, and &
+                  vg_vertical_gradient to 0. '
+             CALL message( 'check_parameters', 'PA0900', 1, 2, 0, 6, 0)
+          ENDIF
+       ENDDO
 
 !
 !--

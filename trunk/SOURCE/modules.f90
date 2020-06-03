@@ -1415,7 +1415,7 @@
     LOGICAL ::  rans_mode = .FALSE.                              !< switch between RANS and LES mode
     LOGICAL ::  rans_tke_e = .FALSE.                             !< use TKE-e turbulence closure for RANS mode
     LOGICAL ::  rans_tke_l = .FALSE.                             !< use TKE-l turbulence closure for RANS mode
-    LOGICAL ::  rayleigh_damping_geostrophic = .TRUE.            !< namelist parameter, damp to the geostrophic velocity 
+    LOGICAL ::  rayleigh_damping_geostrophic = .FALSE.            !< namelist parameter, damp to the geostrophic velocity 
     LOGICAL ::  read_svf = .FALSE.                               !< ENVPAR namelist parameter to steer input of svf (ENVPAR is created by palmrun)
     LOGICAL ::  recycling_yshift = .FALSE.                       !< namelist parameter
     LOGICAL ::  run_control_header = .FALSE.                     !< onetime output of RUN_CONTROL header

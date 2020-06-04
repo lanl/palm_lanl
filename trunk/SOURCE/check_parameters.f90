@@ -1039,6 +1039,13 @@
 
     END SELECT
 
+    IF ( .NOT. (TRIM(constant_flux_layer) == 'none'  .OR.                      &
+                TRIM(constant_flux_layer) == 'top'  .OR.                       &
+                TRIM(constant_flux_layer) == 'bottom')    ) THEN
+       message_string = 'unknown constant_flux_layer: constant_flux_layer  = "' // &
+                         TRIM(constant_flux_layer) // '"'
+       CALL message( 'check_parameters', 'PA0014', 1, 2, 0, 6, 0 )
+    ENDIF
     IF ( TRIM(constant_flux_layer) == 'top' )    top_constant_flux_layer = .TRUE.
     IF ( TRIM(constant_flux_layer) == 'bottom' ) bottom_constant_flux_layer = .TRUE.
     IF ( top_constant_flux_layer .AND. bottom_constant_flux_layer) THEN
@@ -1084,10 +1091,6 @@
        IF ( TRIM(constant_flux_layer) == 'top'  .OR.                           &
             TRIM(constant_flux_layer) == 'bottom'    ) THEN
           WRITE( action, '(A,A)' )  'constant_flux_layer = ', TRIM(constant_flux_layer)
-       ELSE
-          message_string = 'unknown constant_flux_layer: constant_flux_layer  = "' // &
-                            TRIM(constant_flux_layer) // '"'
-          CALL message( 'check_parameters', 'PA0014', 1, 2, 0, 6, 0 )
        ENDIF
        IF ( action /= ' ' )  THEN
           message_string = 'a non-flat topography does not allow ' //          &

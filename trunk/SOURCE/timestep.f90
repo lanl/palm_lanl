@@ -170,7 +170,7 @@
     INTEGER(iwp) ::  k !< 
     INTEGER(iwp) ::  km_max_ijk(3) = -1  !< index values (i,j,k) of location where km_max occurs
     INTEGER(iwp) ::  kh_max_ijk(3) = -1  !< index values (i,j,k) of location where kh_max occurs
-    INTEGER(iwp) ::  ks_max_ijk(3) = -1  !< index values (i,j,k) of location where kh_max occurs
+    INTEGER(iwp) ::  ks_max_ijk(3) = -1  !< index values (i,j,k) of location where ks_max occurs
 
     LOGICAL ::  stop_dt_local !< local switch for controlling the time stepping
 

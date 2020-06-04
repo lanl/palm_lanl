@@ -2157,14 +2157,11 @@
        ibc_pt_b = 2
     ELSE
        IF ( bc_pt_b == 'dirichlet' )  THEN
+!--       Dirichlet conditions are allowed with constant_flux_layer as a way of
+!--       specifying the surface conditions that are used in the MOST solution
+!--       Diffusive fluxes are still set to 0 at the boundary in prognostic equations
+!--       as surf%shf is applied at the boundary
           ibc_pt_b = 0
-          !IF ( bottom_constant_flux_layer )  THEN
-          !   message_string = 'boundary condition: bc_pt_b = "' //                &
-          !        TRIM( bc_pt_b ) // '" is not allowed with constant_flux_layer'  &
-          !        // ' = bottom. bc_pt_b set to "neumann".'
-          !   CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
-          !   bc_pt_b = 'neumann'
-          !ENDIF
        ELSEIF ( bc_pt_b == 'neumann' )  THEN
           ibc_pt_b = 1
        ELSE
@@ -2175,14 +2172,16 @@
     ENDIF
 
     IF ( bc_pt_t == 'dirichlet' )  THEN
+!--    Dirichlet conditions are allowed with constant_flux_layer as a way of
+!--    specifying the surface conditions that are used in the MOST solution
+!--    Diffusive fluxes are still set to 0 at the boundary in prognostic equations
+!--    as surf%shf is applied at the boundary
        ibc_pt_t = 0
-       !IF ( top_constant_flux_layer )  THEN
-       !   message_string = 'boundary condition: bc_pt_t = "' //                &
-       !        TRIM( bc_pt_t ) // '" is not allowed with constant_flux_layer'  &
-       !        // ' = bottom. bc_pt_t set to "neumann".'
-       !   CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
-       !   bc_pt_t = 'neumann'
-       !ENDIF
+       IF (TRIM(most_method) == 'mcphee' ) THEN
+          message_string = 'boundary condition: bc_p_t = "' //            &
+             TRIM( bc_p_t ) // '" is not allowed with most_method "mcphee"'
+          CALL message( 'check_parameters', 'PA0061', 1, 2, 0, 6, 0 )
+       ENDIF
     ELSEIF ( bc_pt_t == 'neumann' )  THEN
        ibc_pt_t = 1
     ELSEIF ( bc_pt_t == 'initial_gradient' )  THEN
@@ -2289,13 +2288,6 @@
     IF ( ocean )  THEN
        IF ( bc_sa_t == 'dirichlet' )  THEN
           ibc_sa_t = 0
-          !IF ( top_constant_flux_layer )  THEN
-          !   message_string = 'boundary condition: bc_sa_t = "' //                &
-          !        TRIM( bc_sa_t ) // '" is not allowed with constant_flux_layer'  &
-          !        // ' = bottom. bc_sa_t set to "neumann".'
-          !   CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
-          !   bc_sa_t = 'neumann'
-          !ENDIF
        ELSEIF ( bc_sa_t == 'neumann' )  THEN
           ibc_sa_t = 1
        ELSE
@@ -2306,13 +2298,6 @@
 
        IF ( bc_sa_b == 'dirichlet' )  THEN
           ibc_sa_b = 0
-          !IF ( bottom_constant_flux_layer  )  THEN
-          !   message_string = 'boundary condition: bc_sa_b = "' //                &
-          !        TRIM( bc_sa_b ) // '" is not allowed with constant_flux_layer'  &
-          !        // ' = bottom. bc_sa_b set to "neumann".'
-          !   CALL message( 'check_parameters', 'PA0075', 0, 0, 0, 6, 0)
-          !   bc_sa_b = 'neumann'
-          !ENDIF
        ELSEIF ( bc_sa_b == 'neumann' )  THEN
           ibc_sa_b = 1
        ELSE

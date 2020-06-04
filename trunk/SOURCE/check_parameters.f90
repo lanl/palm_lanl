@@ -4689,9 +4689,9 @@
 
 !
 !-- Check roughness length, which has to be smaller than dz/2
-    IF ( ( top_constant_flux_layer .OR. bottom_constant_flux_layer ) .AND.     &
-         ( INDEX( initializing_actions, 'set_1d-model_profiles' ) /= 0 ) .AND. &
-           roughness_length >= 0.5 * dz(1) )  THEN
+    IF ( ( top_constant_flux_layer .OR. bottom_constant_flux_layer .OR.        &
+           INDEX( initializing_actions, 'set_1d-model_profiles' ) /= 0 ) .AND. &
+         roughness_length >= 0.5 * dz(1) )  THEN
        message_string = 'roughness_length must be smaller than dz/2'
        CALL message( 'check_parameters', 'PA0424', 1, 2, 0, 6, 0 )
     ENDIF

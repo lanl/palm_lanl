@@ -3299,8 +3299,7 @@
     DO  i = nxl, nxr
        DO  j = nys, nyn
           
-          CALL calc_velocity_gradients( i, j )
-          
+          CALL calc_velocity_gradients( i, j ) 
           DO  k = nzb+1, nzt
              def = 2.0_wp * (                                                  &
                              dudx(k)**2 + dvdy(k)**2 + dwdz(k)**2              &
@@ -4272,7 +4271,7 @@
     REAL(wp)     ::  ll,mm,nn            !< adjusted mixing length
     REAL(wp)     ::  var_reference       !< reference temperature
     REAL(wp)     ::  km_max = 1e0_wp    !< maximum value of km
-    REAL(wp)     ::  kden_min = 1e-20_wp  !< minimum value in denominator of diffusivity
+    REAL(wp)     ::  kden_min = 1e-10_wp  !< minimum value in denominator of diffusivity
     REAL(wp)     ::  km_grav = 0.0_wp, km_num = 0.0_wp, kh_num = 0.0_wp,       &
                      ks_num = 0.0_wp, km_den = 0.0_wp, kh_den = 0.0_wp,        &
                      ks_den = 0.0_wp

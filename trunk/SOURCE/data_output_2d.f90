@@ -871,13 +871,13 @@
                          local_pf(i,j,nzb+1) = surf_def_h(2)%pt_surface(m)
                       ENDDO
                    ELSE
-                      IF ( .NOT. ALLOCATED( pt_io_av ) ) THEN
-                         ALLOCATE( pt_io_av(nysg:nyng,nxlg:nxrg) )
-                         pt_io_av = REAL( fill_value, KIND = wp )
+                      IF ( .NOT. ALLOCATED( pt_surface_av ) ) THEN
+                         ALLOCATE( pt_surface_av(nysg:nyng,nxlg:nxrg) )
+                         pt_surface_av = REAL( fill_value, KIND = wp )
                       ENDIF
                       DO  i = nxl, nxr
                          DO  j = nys, nyn
-                            local_pf(i,j,nzb+1) =  pt_io_av(j,i)
+                            local_pf(i,j,nzb+1) =  pt_surface_av(j,i)
                          ENDDO
                       ENDDO
                    ENDIF
@@ -890,13 +890,13 @@
                          local_pf(i,j,nzb+1) = surf_def_h(0)%pt_surface(m)
                       ENDDO
                    ELSE
-                      IF ( .NOT. ALLOCATED( pt_io_av ) ) THEN
-                         ALLOCATE( pt_io_av(nysg:nyng,nxlg:nxrg) )
-                         pt_io_av = REAL( fill_value, KIND = wp )
+                      IF ( .NOT. ALLOCATED( pt_surface_av ) ) THEN
+                         ALLOCATE( pt_surface_av(nysg:nyng,nxlg:nxrg) )
+                         pt_surface_av = REAL( fill_value, KIND = wp )
                       ENDIF
                       DO  i = nxl, nxr
                          DO  j = nys, nyn
-                            local_pf(i,j,nzb+1) =  pt_io_av(j,i)
+                            local_pf(i,j,nzb+1) =  pt_surface_av(j,i)
                          ENDDO
                       ENDDO
                    ENDIF
@@ -1193,13 +1193,13 @@
                          local_pf(i,j,nzb+1) = surf_def_h(2)%sa_surface(m)
                       ENDDO
                    ELSE
-                      IF ( .NOT. ALLOCATED( sa_io_av ) ) THEN
-                         ALLOCATE( sa_io_av(nysg:nyng,nxlg:nxrg) )
-                         sa_io_av = REAL( fill_value, KIND = wp )
+                      IF ( .NOT. ALLOCATED( sa_surface_av ) ) THEN
+                         ALLOCATE( sa_surface_av(nysg:nyng,nxlg:nxrg) )
+                         sa_surface_av = REAL( fill_value, KIND = wp )
                       ENDIF
                       DO  i = nxl, nxr
                          DO  j = nys, nyn
-                            local_pf(i,j,nzb+1) =  sa_io_av(j,i)
+                            local_pf(i,j,nzb+1) =  sa_surface_av(j,i)
                          ENDDO
                       ENDDO
                    ENDIF
@@ -1212,13 +1212,13 @@
                          local_pf(i,j,nzb+1) = surf_def_h(0)%sa_surface(m)
                       ENDDO
                    ELSE
-                      IF ( .NOT. ALLOCATED( sa_io_av ) ) THEN
-                         ALLOCATE( sa_io_av(nysg:nyng,nxlg:nxrg) )
-                         sa_io_av = REAL( fill_value, KIND = wp )
+                      IF ( .NOT. ALLOCATED( sa_surface_av ) ) THEN
+                         ALLOCATE( sa_surface_av(nysg:nyng,nxlg:nxrg) )
+                         sa_surface_av = REAL( fill_value, KIND = wp )
                       ENDIF
                       DO  i = nxl, nxr
                          DO  j = nys, nyn
-                            local_pf(i,j,nzb+1) =  sa_io_av(j,i)
+                            local_pf(i,j,nzb+1) =  sa_surface_av(j,i)
                          ENDDO
                       ENDDO
                    ENDIF

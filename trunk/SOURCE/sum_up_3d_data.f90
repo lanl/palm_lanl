@@ -194,9 +194,9 @@
         ONLY:  diss_av, e_av, ghf_av, kh_av, km_av, lpt_av, lwp_av, melt_av,   &
                nc_av, nr_av,                                                   &
                ol_av, p_av, pc_av, pr_av, prr_av,                              &
-               pt1_av, pt_io_av, pt_av, q_av, qc_av, ql_av,                    &
+               pt1_av, pt_surface_av, pt_av, q_av, qc_av, ql_av,               &
                ql_c_av, ql_v_av, ql_vp_av, qr_av, qsws_av, qv_av, r_a_av,      &
-               rho_ocean_av, s_av, sa_av, sa1_av, sa_io_av,                    &
+               rho_ocean_av, s_av, sa_av, sa1_av, sa_surface_av,               &
                shf_av, sasws_av, ssws_av, ts_av,                               &
                tsurf_av, u_av, us_av, usws_av, v_av, vsws_av,                  &
                vpt_av, w_av, z0_av, z0h_av,                                    &
@@ -364,10 +364,10 @@
                 pt1_av = 0.0_wp
              
              CASE ( 'pt_surface*' )
-                IF ( .NOT. ALLOCATED( pt_io_av ) )  THEN
-                   ALLOCATE( pt_io_av(nysg:nyng,nxlg:nxrg) )
+                IF ( .NOT. ALLOCATED( pt_surface_av ) )  THEN
+                   ALLOCATE( pt_surface_av(nysg:nyng,nxlg:nxrg) )
                 ENDIF
-                pt_io_av = 0.0_wp
+                pt_surface_av = 0.0_wp
              
              CASE ( 'q' )
                 IF ( .NOT. ALLOCATED( q_av ) )  THEN
@@ -478,10 +478,10 @@
                 sa1_av = 0.0_wp
              
              CASE ( 'sa_surface*' )
-                IF ( .NOT. ALLOCATED( sa_io_av ) )  THEN
-                   ALLOCATE( sa_io_av(nysg:nyng,nxlg:nxrg) )
+                IF ( .NOT. ALLOCATED( sa_surface_av ) )  THEN
+                   ALLOCATE( sa_surface_av(nysg:nyng,nxlg:nxrg) )
                 ENDIF
-                sa_io_av = 0.0_wp
+                sa_surface_av = 0.0_wp
              
              CASE ( 'shf*' )
                 IF ( .NOT. ALLOCATED( shf_av ) )  THEN
@@ -852,20 +852,20 @@
              ENDIF
           
           CASE ( 'pt_surface*' )
-             IF ( ALLOCATED( pt_io_av ) ) THEN 
+             IF ( ALLOCATED( pt_surface_av ) ) THEN 
                 IF ( TRIM(constant_flux_layer) == 'top') THEN
                    DO  m = 1, surf_def_h(2)%ns
                       i = surf_def_h(2)%i(m)
                       j = surf_def_h(2)%j(m)
                       k = surf_def_h(2)%k(m)
-                      pt_io_av(j,i) = pt_io_av(j,i) + surf_def_h(2)%pt_surface(m) 
+                      pt_surface_av(j,i) = pt_surface_av(j,i) + surf_def_h(2)%pt_surface(m) 
                    ENDDO
                 ELSEIF ( TRIM(constant_flux_layer) == 'bottom') THEN
                    DO  m = 1, surf_def_h(0)%ns
                       i = surf_def_h(0)%i(m)
                       j = surf_def_h(0)%j(m)
                       k = surf_def_h(0)%k(m)
-                      pt_io_av(j,i) = pt_io_av(j,i) + surf_def_h(0)%pt_surface(m) 
+                      pt_surface_av(j,i) = pt_surface_av(j,i) + surf_def_h(0)%pt_surface(m) 
                    ENDDO
                 ENDIF
              ENDIF
@@ -1098,20 +1098,20 @@
              ENDIF
           
           CASE ( 'sa_surface*' )
-             IF ( ALLOCATED( sa_io_av ) ) THEN 
+             IF ( ALLOCATED( sa_surface_av ) ) THEN 
                 IF ( TRIM(constant_flux_layer) == 'top') THEN
                    DO  m = 1, surf_def_h(2)%ns
                       i = surf_def_h(2)%i(m)
                       j = surf_def_h(2)%j(m)
                       k = surf_def_h(2)%k(m)
-                      sa_io_av(j,i) = sa_io_av(j,i) + surf_def_h(2)%sa_surface(m) 
+                      sa_surface_av(j,i) = sa_surface_av(j,i) + surf_def_h(2)%sa_surface(m) 
                    ENDDO
                 ELSEIF ( TRIM(constant_flux_layer) == 'bottom') THEN
                    DO  m = 1, surf_def_h(0)%ns
                       i = surf_def_h(0)%i(m)
                       j = surf_def_h(0)%j(m)
                       k = surf_def_h(0)%k(m)
-                      sa_io_av(j,i) = sa_io_av(j,i) + surf_def_h(0)%sa_surface(m) 
+                      sa_surface_av(j,i) = sa_surface_av(j,i) + surf_def_h(0)%sa_surface(m) 
                    ENDDO
                 ENDIF
              ENDIF

@@ -1595,7 +1595,7 @@
                                                                !< boundary of total domain
     REAL(wp) ::  pt_surface = 300.0_wp                         !< namelist parameter
     REAL(wp) ::  pt_surface_initial_change = 0.0_wp            !< namelist parameter
-    REAL(wp) ::  pt_surface_rate_change = 0.0_wp               !< namelist parameter, [K/s], only applied to bottom
+    REAL(wp) ::  pt_surface_rate_change = 0.0_wp               !< namelist parameter, dpt/dt applied to the k=nzb level with units [K/s]
     REAL(wp) ::  pt_ref = 15.0_wp                              !< potential temperature reference falue
     REAL(wp) ::  q_surface = 0.0_wp                            !< namelist parameter
     REAL(wp) ::  q_surface_initial_change = 0.0_wp             !< namelist parameter

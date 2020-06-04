@@ -244,7 +244,7 @@
                message_string, microphysics_morrison, microphysics_seifert,    &
                molecular_viscosity, most_method, most_xy_av, neutral, ocean,   &
                passive_scalar, prandtl_number, pt_surface,                     &
-               pt_surface_rate_change, q_surface, run_coupled, schmidt_number, &
+               q_surface, run_coupled, schmidt_number,                         &
                surface_flux_diags, surface_pressure, simulated_time,           &
                terminate_run, time_since_reference_point, urban_surface,       &
                z_offset_mcphee, zeta_max, zeta_min

@@ -283,7 +283,11 @@
        DO  l = 0, 1
 !
 !--       Set kb, for upward-facing surfaces value at topography top (k-1) is set,
-!--       for downward-facing surfaces at topography bottom (k+1). 
+!--       for downward-facing surfaces at topography bottom (k+1).
+!--       A constant potential temperature drift rate will be applied if nonzero
+!--       value for pt_surface_rate_change is given in namelist file.
+!--       In other LES codes, this was found to result in less flow intermittancy
+!--       than applying heat flux boundary conditions ().
           kb = MERGE( -1, 1, l == 0 )
           !$OMP PARALLEL DO PRIVATE( i, j, k )
           DO  m = 1, bc_h(l)%ns

@@ -2786,7 +2786,7 @@
     
     USE arrays_3d,                                                             &
         ONLY:  alpha_T, beta_S, dbdx, dbdy, dbdz, dptdx, dptdy, dptdz,         &
-               dsadx, dsady, dsadz, ddzw, dd2zu, prho, pt, q, ql, sa,          &
+               dsadx, dsady, dsadz, ddzu, ddzw, dd2zu, prho, pt, q, ql, sa,    &
                ref_ambient, ref_state, drho_ref_zw, rho_ref_zw, zu, zw
     
     USE control_parameters,                                                    &
@@ -2819,37 +2819,29 @@
 !-- All instances of dptdz and dsadz are computed over 2 cell widths. 
     DO  k = nzb+1, nzt
 
-       dptdx(k)  =           ( pt(k,j,i+1) - pt(k,j,i)     ) * ddx
-       dptdy(k)  = 0.25_wp * ( pt(k,j+1,i) + pt(k,j+1,i+1) -                   &
-                               pt(k,j-1,i) - pt(k,j-1,i+1) ) * ddy
-       dptdz(k)  = 0.5_wp  * ( pt(k+1,j,i) + pt(k+1,j,i+1) -                   &
-                               pt(k-1,j,i) - pt(k-1,j,i+1) ) * dd2zu(k)
+       dptdx(k)  = 0.5_wp * ( pt(k,j,i+1) - pt(k,j,i-1) ) * ddx
+       dptdy(k)  = 0.5_wp * ( pt(k,j+1,i) - pt(k,j-1,i) ) * ddy
+       dptdz(k)  = ( pt(k+1,j,i) - pt(k-1,j,i) ) * dd2zu(k)
 
-       dbdx(k) = ( ( var(k,j,i+1) - ref_ambient(k,i+1) )                       &
-                 - ( var(k,j,i)   - ref_ambient(k,i)    ) ) *                  &
+       dbdx(k) = 0.5_wp * ( ( var(k,j,i+1) - ref_ambient(k,i+1) )              &
+                          - ( var(k,j,i-1) - ref_ambient(k,i-1) ) ) *          &
                  ddx / ref_state(k)
-       dbdy(k) = ( 0.5_wp * ( var(k,j+1,i)   - ref_ambient(k,i) +              &
-                              var(k,j+1,i+1) - ref_ambient(k,i+1) )            & 
-                 - 0.5_wp * ( var(k,j-1,i)   - ref_ambient(k,i) +              &
-                              var(k,j-1,i+1) - ref_ambient(k,i+1) ) ) *        &
+       dbdy(k) = 0.5_wp * ( ( var(k,j+1,i) - ref_ambient(k,i) )                &
+                          - ( var(k,j-1,i) - ref_ambient(k,i) ) ) *            &
                  ddy / ref_state(k)
-       dbdz(k) = ( ( 0.5_wp * ( var(k+1,j,i) + var(k+1,j,i+1) )                &
-                     - ref_ambient(k+1,i)                     )/ ref_state(k+1)&
-                 - ( 0.5_wp * ( var(k-1,j,i) + var(k-1,j,i+1) )                &
-                     - ref_ambient(k-1,i)                     )/ ref_state(k-1)&
-                 ) * dd2zu(k)
-       
+       dbdz(k) = ( ( var(k+1,j,i) - ref_ambient(k+1,i) ) / ref_state(k+1)      &
+                 - ( var(k-1,j,i) - ref_ambient(k-1,i) ) / ref_state(k-1) ) *  &
+                 dd2zu(k)
+       ENDIF 
     ENDDO
     
     IF ( ocean ) THEN
        
        DO  k = nzb+1, nzt
        
-          dsadx(k)  =           ( sa(k,j,i+1) - sa(k,j,i)     ) * ddx
-          dsady(k)  = 0.25_wp * ( sa(k,j+1,i) + sa(k,j+1,i+1) -                   &
-                                  sa(k,j-1,i) - sa(k,j-1,i+1) ) * ddy
-          dsadz(k)  = 0.5_wp  * ( sa(k+1,j,i) + sa(k+1,j,i+1) -                   &
-                                  sa(k-1,j,i) - sa(k-1,j,i+1) ) * dd2zu(k)
+          dsadx(k)  = 0.5_wp * ( sa(k,j,i+1) - sa(k,j,i-1) ) * ddx
+          dsady(k)  = 0.5_wp * ( sa(k,j+1,i) - sa(k,j-1,i) ) * ddy
+          dsadz(k)  = ( sa(k+1,j,i) - sa(k-1,j,i) ) * dd2zu(k)
  
        ENDDO
     
@@ -2876,14 +2868,15 @@
           DO  m = surf_s, surf_e
              k = surf_def_h(0)%k(m)
 
-             dptdz(k)     = ( pt(k+1,j,i) - surf_def_h(0)%pt_surface(m) ) * dd2zu(k)
+             dptdz(k)     = ( pt(k+1,j,i) - surf_def_h(0)%pt_surface(m) ) /    &
+                            ( zu(k+1) - zu(k) )
 
           ENDDO
           IF ( ocean ) THEN
              DO  m = surf_s, surf_e
                 k = surf_def_h(0)%k(m)
 
-                dsadz(k)     = ( sa(k+1,j,i) - sa(k,j,i) ) * dd2zu(k)
+                dsadz(k)  = ( sa(k+1,j,i) - sa(k,j,i) ) / ( zu(k+1) - zu(k) )
 
              ENDDO
           ENDIF
@@ -2894,14 +2887,14 @@
           DO  m = surf_s, surf_e
              k = surf_lsm_h%k(m)
 
-             dptdz(k)     = ( pt(k+1,j,i) - surf_lsm_h%pt_surface(m) ) * dd2zu(k)
+             dptdz(k)     = ( pt(k+1,j,i) - surf_lsm_h%pt_surface(m) ) / ( zu(k+1) - zu(k) )
           
           ENDDO
           IF ( ocean ) THEN
              DO  m = surf_s, surf_e
                 k = surf_lsm_h%k(m)
 
-                dsadz(k)    = ( sa(k+1,j,i) - surf_lsm_h%sa_surface(m) ) * dd2zu(k)
+                dsadz(k)    = ( sa(k+1,j,i) - surf_lsm_h%sa_surface(m) ) / ( zu(k+1) - zu(k) )
 
              ENDDO
           ENDIF
@@ -2912,15 +2905,16 @@
           DO  m = surf_s, surf_e
              k = surf_usm_h%k(m)
 
-             dptdz(k)     = ( pt(k+1,j,i) - surf_usm_h%pt_surface(m) ) * dd2zu(k)
+             dptdz(k)     = ( pt(k+1,j,i) - surf_usm_h%pt_surface(m) ) /       &
+                            ( zu(k+1) - zu(k) )
           
           ENDDO
           IF ( ocean ) THEN
              DO  m = surf_s, surf_e
                 k = surf_usm_h%k(m)
 
-                dsadz(k)     = ( sa(k+1,j,i) - surf_usm_h%sa_surface(m) ) * &
-                               dd2zu(k)
+                dsadz(k)  = ( sa(k+1,j,i) - surf_usm_h%sa_surface(m) ) /       &
+                            ( zu(k+1) - zu(k) )
              ENDDO
           ENDIF
 !
@@ -2931,16 +2925,16 @@
           DO  m = surf_s, surf_e
              k = surf_def_h(1)%k(m)
 
-             dptdz(k)     = ( surf_def_h(1)%pt_surface(m) - pt(k-1,j,i) ) * &
-                            dd2zu(k)
+             dptdz(k)     = ( surf_def_h(1)%pt_surface(m) - pt(k-1,j,i) ) /    &
+                            ( zu(k) - zu(k-1) )
 
           ENDDO
           IF ( ocean ) THEN
              DO  m = surf_s, surf_e
                 k = surf_def_h(1)%k(m)
 
-                dsadz(k)    = ( surf_def_h(1)%sa_surface(m) - sa(k-1,j,i) ) * &
-                              dd2zu(k)
+                dsadz(k)    = ( surf_def_h(1)%sa_surface(m) - sa(k-1,j,i) ) /  &
+                              ( zu(k) - zu(k-1) )
 
              ENDDO
           ENDIF
@@ -2957,16 +2951,16 @@
           DO  m = surf_s, surf_e
              k = surf_def_h(2)%k(m)
 
-            dptdz(k)     = ( surf_def_h(2)%pt_surface(m) - pt(k-1,j,i) ) *    &
-                            dd2zu(k)
+             dptdz(k)    = ( surf_def_h(2)%pt_surface(m) - pt(k-1,j,i) ) /     &
+                           ( zu(k) - zu(k-1) )
             
           ENDDO
           IF ( ocean ) THEN
              DO  m = surf_s, surf_e
                 k = surf_def_h(2)%k(m)
 
-                dsadz(k) = ( surf_def_h(2)%sa_surface(m) - sa(k-1,j,i) ) *    &
-                           dd2zu(k)
+                dsadz(k) = ( surf_def_h(2)%sa_surface(m) - sa(k-1,j,i) ) /     &
+                           ( zu(k) - zu(k-1) )
              ENDDO
           ENDIF
        ENDIF

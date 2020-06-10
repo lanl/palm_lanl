@@ -1,0 +1,59 @@
+#!/bin/bash
+
+#SBATCH  --job-name=PALM_TEST
+#SBATCH  --nodes=1
+#SBATCH  --ntasks-per-node=32
+#SBATCH  --output=PALM_TEST.%j
+#SBATCH --time=01:00:00
+#SBATCH -A esmd
+
+use_hdf5="False"
+do_coupled="False"
+do_restart="False"
+# number of cores for atmosphere and ocean, respectively, only used when do_coupled = True
+# atm_cores + ocn_cores should be equal to $SLURM_NTASKS
+atm_cores=32
+ocn_cores=32
+test_case="test_oceanml"
+run_config="mpirun"
+openmp_threads=1
+repo_path=$PWD
+exec_path="/path/to/build/directory"
+
+cd $SLURM_SUBMIT_DIR
+export PATH="$repo_path/trunk/SCRIPTS:${PATH}"
+module use -a /usr/projects/climate/SHARED_CLIMATE/modulefiles/all
+module purge
+
+#get ntasks and nprocs from SLURM variables
+NTASKS=$SLURM_NTASKS
+nnodes=$SLURM_JOB_NUM_NODES
+NN=$((NTASKS/nnodes))
+
+echo "PROCS = $NN"
+
+timestring=`squeue -h -j $SLURM_JOBID -o "%l"`
+WTIME=`echo $timestring | sed -E 's/(.*):(.+):(.+)/\1*3600+\2*60+\3/;s/(.+):(.+)/\1*60+\2/' | bc`
+
+echo "WTIME = $WTIME"
+
+# set options for palm_simple_run
+palm_options="-w $exec_path -c $run_config -s $test_case -n $NN -p $NTASKS -t $openmp_threads -T $WTIME"
+
+module load intel/19.0.5
+module load mvapich2/2.3.2
+export NETCDF=/share/apps/netcdf-MPI/4.7.4/intel/19.0.5/mvapich2/2.3.2
+export NETCDF_PATH=/share/apps/netcdf-MPI/4.7.4/intel/19.0.5/mvapich2/2.3.2
+export HDF5_PATH=/share/apps/netcdf-MPI/4.7.4/intel/19.0.5/mvapich2/2.3.2
+export LD_LIBRARY_PATH="${NETCDF}/lib:{$LD_LIBRARY_PATH}"
+palm_options="$palm_options -b ifort.compy"
+
+if [[ $do_restart == "True" ]]; then
+    palm_options="$palm_options -r"
+fi
+
+if [[ $do_coupled == "True" ]]; then
+    palm_simple_run $palm_options -Y "$atm_cores $ocn_cores"
+else
+    palm_simple_run $palm_options
+fi

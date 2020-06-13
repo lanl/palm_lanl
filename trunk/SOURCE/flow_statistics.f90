@@ -1009,7 +1009,7 @@
                 flag = MERGE( 1.0_wp, 0.0_wp,                                  &
                               BTEST( wall_flags_0(k,j,i), 23 ) ) *             &
                        MERGE( 1.0_wp, 0.0_wp,                                  &
-                              BTEST( wall_flags_0(k,j,i), 9  ) )
+                              BTEST( wall_flags_0(k+1,j,i), 9  ) )
 !
 !--             Momentum flux w"u"
                 sums_l(k,12,tn) = sums_l(k,12,tn) - 0.25_wp * (                &

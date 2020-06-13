@@ -2832,6 +2832,15 @@
        dbdz(k) = ( ( var(k+1,j,i) - ref_ambient(k+1,i) ) / ref_state(k+1)      &
                  - ( var(k-1,j,i) - ref_ambient(k-1,i) ) / ref_state(k-1) ) *  &
                  dd2zu(k)
+       IF ( TRIM( most_method ) == 'mcphee' .AND.                              &
+            .NOT. BTEST(wall_flags_0(k+1,j,i), 9) ) THEN
+          dptdz(k)  = ( 3.0_wp * pt(k,j,i) - 4.0_wp * pt(k-1,j,i)              &
+                        + pt(k-2,j,i) ) * dd2zu(k)
+          dbdz(k) = (                                                          &
+             3.0_wp * ( var(k,j,i) - ref_ambient(k,i) ) / ref_state(k)         &
+           - 4.0_wp * ( var(k-1,j,i) - ref_ambient(k-1,i) ) / ref_state(k-1)   &
+           + 1.0_wp * ( var(k-2,j,i) - ref_ambient(k-2,i) ) / ref_state(k-2) ) &
+           * dd2zu(k)
        ENDIF 
     ENDDO
     
@@ -2842,6 +2851,11 @@
           dsadx(k)  = 0.5_wp * ( sa(k,j,i+1) - sa(k,j,i-1) ) * ddx
           dsady(k)  = 0.5_wp * ( sa(k,j+1,i) - sa(k,j-1,i) ) * ddy
           dsadz(k)  = ( sa(k+1,j,i) - sa(k-1,j,i) ) * dd2zu(k)
+          IF ( TRIM( most_method ) == 'mcphee' .AND.                           &
+               .NOT. BTEST(wall_flags_0(k+1,j,i), 9) ) THEN
+             dsadz(k)  = ( 3.0_wp * sa(k,j,i) - 4.0_wp * sa(k-1,j,i)           &
+                           + sa(k-2,j,i) ) * dd2zu(k)
+          ENDIF 
  
        ENDDO
     

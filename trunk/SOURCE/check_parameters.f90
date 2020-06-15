@@ -1088,7 +1088,14 @@
        IF ( cloud_droplets )  THEN
           WRITE( action, '(A)' )  'cloud_droplets = .TRUE.'
        ENDIF
-       IF ( TRIM(constant_flux_layer) == 'top'  .OR.                           &
+       IF ( u_bott /= 9999999.9_wp ) THEN
+          WRITE( action, '(A)' ) 'u_bott /= 9999999.9_wp'
+       ENDIF
+       IF( v_bott /= 9999999.9_wp ) THEN
+          WRITE( action, '(A)' ) 'v_bott /= 9999999.9_wp'
+       ENDIF
+       IF ( TRIM(constant_flux_layer) == 'none' .OR.                           &
+            TRIM(constant_flux_layer) == 'top'  .OR.                           &
             TRIM(constant_flux_layer) == 'bottom'    ) THEN
           WRITE( action, '(A,A)' )  'constant_flux_layer = ', TRIM(constant_flux_layer)
        ENDIF

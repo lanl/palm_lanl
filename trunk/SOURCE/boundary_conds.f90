@@ -239,9 +239,13 @@
     IF ( ibc_uv_b == 0 ) THEN
        IF ( u_bott /= 9999999.9_wp ) THEN
           u_p(nzb,:,:) = u_bott
+       ELSE
+          u_p(nzb,:,:) = u_init(nzb)
        ENDIF
        IF ( v_bott /= 9999999.9_wp ) THEN
           v_p(nzb,:,:) = v_bott
+       ELSE
+          v_p(nzb,:,:) = v_init(nzb)
        ENDIF
     ELSEIF ( ibc_uv_b == 1 )  THEN
        u_p(nzb,:,:) = u_p(nzb+1,:,:)

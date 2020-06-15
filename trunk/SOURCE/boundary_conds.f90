@@ -202,7 +202,7 @@
                nest_bound_l, nest_bound_n, nest_bound_r, nest_bound_s, nudging,&
                ocean, outflow_l, outflow_n, outflow_r, outflow_s,              &
                passive_scalar, pt_surface_rate_change, rans_mode, rans_tke_e,  &
-               tsc, use_cmax
+               tsc, use_cmax, u_top, u_bott, v_top, v_bott
 
     USE grid_variables,                                                        &
         ONLY:  ddx, ddy, dx, dy
@@ -235,8 +235,15 @@
 
 
 !
-!-- Bottom boundary 
-    IF ( ibc_uv_b == 1 )  THEN
+!-- Bottom boundary
+    IF ( ibc_uv_b == 0 ) THEN
+       IF ( u_bott /= 9999999.9_wp ) THEN
+          u_p(nzb,:,:) = u_bott
+       ENDIF
+       IF ( v_bott /= 9999999.9_wp ) THEN
+          v_p(nzb,:,:) = v_bott
+       ENDIF
+    ELSEIF ( ibc_uv_b == 1 )  THEN
        u_p(nzb,:,:) = u_p(nzb+1,:,:)
        v_p(nzb,:,:) = v_p(nzb+1,:,:)
     ENDIF
@@ -260,8 +267,16 @@
 !
 !-- Top boundary. A nested domain ( ibc_uv_t = 3 ) does not require settings.
     IF ( ibc_uv_t == 0 )  THEN
-        u_p(nzt+1,:,:) = u_init(nzt+1)
-        v_p(nzt+1,:,:) = v_init(nzt+1)
+       IF ( u_top /= 9999999.9_wp ) THEN
+          u_p(nzt+1,:,:) = u_top
+       ELSE
+          u_p(nzt+1,:,:) = u_init(nzt+1)
+       ENDIF
+       IF ( v_top /= 9999999.9_wp ) THEN
+          v_p(nzt+1,:,:) = v_top
+       ELSE
+          v_p(nzt+1,:,:) = v_init(nzt+1)
+       ENDIF
     ELSEIF ( ibc_uv_t == 1 )  THEN
         u_p(nzt+1,:,:) = u_p(nzt,:,:)
         v_p(nzt+1,:,:) = v_p(nzt,:,:)

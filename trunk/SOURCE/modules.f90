@@ -1398,7 +1398,7 @@
     LOGICAL ::  inflow_n = .FALSE.                               !< north domain boundary has non-cyclic inflow?
     LOGICAL ::  inflow_r = .FALSE.                               !< right domain boundary has non-cyclic inflow?
     LOGICAL ::  inflow_s = .FALSE.                               !< south domain boundary has non-cyclic inflow?
-    LOGICAL ::  initialize_to_geostrophic = .TRUE.               !< namelist parameter, damp to the geostrophic velocity
+    LOGICAL ::  initialize_to_geostrophic = .FALSE.              !< namelist parameter, damp to the geostrophic velocity
     LOGICAL ::  koff_constant_mcphee = .FALSE.                   !< namelist parameter
     LOGICAL ::  large_scale_forcing = .FALSE.                    !< namelist parameter
     LOGICAL ::  large_scale_subsidence = .FALSE.                 !< namelist parameter
@@ -1664,9 +1664,13 @@
     REAL(wp) ::  tunnel_width_x = 9999999.9_wp                 !< namelist parameter
     REAL(wp) ::  tunnel_width_y = 9999999.9_wp                 !< namelist parameter
     REAL(wp) ::  tunnel_wall_depth = 9999999.9_wp              !< namelist parameter
+    REAL(wp) ::  u_top = 9999999.9_wp                          !< namelist parameter
+    REAL(wp) ::  u_bott = 9999999.9_wp                         !< namelist parameter
     REAL(wp) ::  ug_surface = 0.0_wp                           !< namelist parameter
     REAL(wp) ::  u_bulk = 0.0_wp                               !< namelist parameter
     REAL(wp) ::  u_gtrans = 0.0_wp                             !< transformed wind component (galilei transformation)
+    REAL(wp) ::  v_top = 9999999.9_wp                          !< namelist parameter
+    REAL(wp) ::  v_bott = 9999999.9_wp                         !< namelist parameter
     REAL(wp) ::  vg_surface = 0.0_wp                           !< namelist parameter
     REAL(wp) ::  vpt_reference = 9999999.9_wp                  !< reference state of virtual potential temperature
     REAL(wp) ::  v_bulk = 0.0_wp                               !< namelist parameter

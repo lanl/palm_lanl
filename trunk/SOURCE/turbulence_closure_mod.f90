@@ -4285,7 +4285,8 @@
                      ks_den = 0.0_wp
                      !< numerator and denominators of diffusivities
     REAL(wp)     ::  km_num_sum = 0.0_wp, km_den_sum = 0.0_wp,                 &
-                     km_grav_sum = 0.0_wp, km_sum = 0.0_wp 
+                     km_grav_sum = 0.0_wp, km_sum = 0.0_wp, kh_sum = 0.0_wp,   &
+                     ks_sum = 0.0_wp
                      !< variables for diffusivity_diags
 
     REAL(wp), DIMENSION(3)   ::  dbdxi, dptdxi, dsadxi !< scalar gradients
@@ -4370,6 +4371,8 @@
        km_den_sum = 0.0_wp
        km_grav_sum = 0.0_wp
        km_sum = 0.0_wp
+       kh_sum = 0.0_wp
+       ks_sum = 0.0_wp
        mm = 0.0_wp
        nn = 0.0_wp
        DO  i = nxl, nxr
@@ -4444,8 +4447,10 @@
                    ks(k,j,i) = C(k) * MAX( -1.0_wp * ks_num, 0.0_wp ) * flag /    &
                                ( ks_den + kden_min )
                 ENDIF
-                IF ( k == klog ) THEN
+                IF ( k == klog .AND. diffusivity_diags ) THEN
                    km_sum      = km_sum + km(k,j,i)
+                   kh_sum      = kh_sum + kh(k,j,i)
+                   ks_sum      = ks_sum + ks(k,j,i)
                    km_num_sum  = km_num_sum + km_num
                    km_den_sum  = km_den_sum + km_den
                    km_grav_sum = km_grav_sum + km_grav
@@ -4467,6 +4472,10 @@
           WRITE(message_string,*) 'km_av(',klog,') = ',km_sum/nn
           CALL location_message(message_string,.TRUE.)
           WRITE(message_string,*) 'Number of km(',klog,') cutoff = ',mm
+          CALL location_message(message_string,.TRUE.)
+          WRITE(message_string,*) 'kh(',klog,') = ',   kh_sum/nn
+          CALL location_message(message_string,.TRUE.)
+          WRITE(message_string,*) 'ks(',klog,',) = ',   ks_sum/nn
           CALL location_message(message_string,.TRUE.)
        ENDIF
     
@@ -4543,6 +4552,7 @@
           k = bc_h(0)%k(m)
           km(k-1,j,i) = km(k,j,i)
           kh(k-1,j,i) = kh(k,j,i)
+          ks(k-1,j,i) = ks(k,j,i)
        ENDDO
 !
 !--    Downward facing surfaces
@@ -4553,6 +4563,7 @@
           k = bc_h(1)%k(m)
           km(k+1,j,i) = km(k,j,i)
           kh(k+1,j,i) = kh(k,j,i)
+          ks(k+1,j,i) = ks(k,j,i)
        ENDDO
      
     ENDIF
@@ -4678,28 +4689,6 @@
     ENDIF
 
     IF ( ocean .AND. .NOT. les_amd ) ks = kh
-
-    !IF ( diffusivity_diags ) THEN
-    !   m = 1
-    !   IF (TRIM(constant_flux_layer)=='top') l = 2
-    !   i = surf_def_h(l)%i(m)
-    !   j = surf_def_h(l)%j(m)
-    !   k = surf_def_h(l)%k(m)
-    !   WRITE(message_string,*) 'km(nzt-1:nzt,j,i) = ',   km(k-1:k,i,j)
-    !   CALL location_message(message_string,.TRUE.)
-    !   WRITE(message_string,*) 'kh(nzt-1:nzt,j,i) = ',   kh(k-1:k,i,j)
-    !   CALL location_message(message_string,.TRUE.)
-    !   WRITE(message_string,*) 'ks(nzt-1:nzt,j,i) = ',   ks(k-1:k,i,j)
-    !   CALL location_message(message_string,.TRUE.)
-    !   WRITE(message_string,*) 'surf%usws = ',       surf_def_h(l)%usws(m)
-    !   CALL location_message(message_string,.TRUE.)
-    !   WRITE(message_string,*) 'surf%vsws = ',       surf_def_h(l)%vsws(m)
-    !   CALL location_message(message_string,.TRUE.)
-    !   WRITE(message_string,*) 'surf%shf= ',         surf_def_h(l)%shf(m)
-    !   CALL location_message(message_string,.TRUE.)
-    !   WRITE(message_string,*) 'surf%sasws = ',      surf_def_h(l)%sasws(m)
-    !   CALL location_message(message_string,.TRUE.)
-    !ENDIF
 
  END SUBROUTINE tcm_diffusivities
 

@@ -4652,6 +4652,16 @@
     ENDIF
 
 
+!
+!-- Model bottom
+    !$OMP PARALLEL DO
+    DO  i = nxlg, nxrg
+       DO  j = nysg, nyng
+          km(nzb,j,i) = km(nzb+1,j,i)
+          kh(nzb,j,i) = kh(nzb+1,j,i)
+       ENDDO
+    ENDDO
+    IF ( ocean ) ks(nzb,:,:) = ks(nzb+1,:,:)
 
 !
 !-- Model top

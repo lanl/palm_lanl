@@ -1890,17 +1890,19 @@
 !--       Initialilize 3D topography array, used later for initializing flags
 !--       This results in "topography" designated at both top and bottom surfaces,
 !--       because initializing surf_def_h arrays is the only way to use_top_fluxes
-!--       and use_bottom_fluxes. Thus, wall_flags_0 are changed below to prevent
-!--       "topography" from exerting drag in the non-wall cases.
-          topo(nzb+1:nzt,:,:) = IBSET( topo(nzb+1:nzt,:,:), 0 ) 
+!--       and use_bottom_fluxes. 
 !
-!--       This would be the desired implementation if boundary fluxes were dealt 
-!--       with outside of surf_def_h
-          !topo(nzb:nzt+1,:,:) = IBSET( topo(nzb:nzt+1,:,:), 0 ) 
-          !IF ( TRIM(constant_flux_layer) == 'bottom' )                         &
-          !topo(nzb,:,:) = IBCLR( topo(nzb,:,:), 0 ) 
-          !IF ( TRIM(constant_flux_layer) == 'top' )                            &
-          !   topo(nzt+1,:,:) = IBCLR( topo(nzt+1,:,:), 0 ) 
+!--       Setting topo everywhere in the domain means there is no topography
+          topo(nzb:nzt+1,:,:) = IBSET( topo(nzb:nzt+1,:,:), 0 ) 
+!--       Now set topography at the top and bottom booundaries
+          IF ( TRIM(constant_flux_layer) == 'top' ) THEN
+             topo(nzt+1,:,:) = IBCLR( topo(nzt+1,:,:), 0 ) 
+          ELSE
+!--          Note, this results in the nzb grid cell's values never being 
+!--          solve for but rather assigned from B.C.'s Consider only applying 
+!--          the following line if constant_flux_layer == 'bottom'
+             topo(nzb,:,:) = IBCLR( topo(nzb,:,:), 0 )
+          ENDIF
 
        CASE ( 'single_building' )
 !
@@ -2447,21 +2449,12 @@
                   BTEST( topo(k+1,j,i), 0 ) )                                  &
                 wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 3 )
           ENDDO
+          IF ( BTEST(topo(nzt+1,j,i), 0 ) ) THEN
+             wall_flags_0(nzt+1,j,i) = IBSET( wall_flags_0(nzt+1,j,i), 3 )
+          ENDIF
 
        ENDDO
     ENDDO
-!
-!-- needed to prevent horizontal velocities from being set to 0
-    IF ( TRIM(constant_flux_layer) /= 'bottom' ) THEN
-       wall_flags_0(nzb,:,:) = IBSET( wall_flags_0(nzb,:,:), 1 )
-       wall_flags_0(nzb,:,:) = IBSET( wall_flags_0(nzb,:,:), 2 )
-       wall_flags_0(nzb,:,:) = IBSET( wall_flags_0(nzb,:,:), 3 )
-    ENDIF
-    IF ( TRIM(constant_flux_layer) /= 'top' ) THEN
-       wall_flags_0(nzt:nzt+1,:,:) = IBSET( wall_flags_0(nzt:nzt+1,:,:), 1 )
-       wall_flags_0(nzt:nzt+1,:,:) = IBSET( wall_flags_0(nzt:nzt+1,:,:), 2 )
-       wall_flags_0(nzt:nzt+1,:,:) = IBSET( wall_flags_0(nzt:nzt+1,:,:), 3 )
-    ENDIF
 
     CALL exchange_horiz_int( wall_flags_0, nys, nyn, nxl, nxr, nzt, nbgp )
 !

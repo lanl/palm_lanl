@@ -366,7 +366,7 @@
                average_count_3d, averaging_interval, averaging_interval_pr,    &
                bc_lr_cyc, bc_ns_cyc, bc_pt_t_val,                              &
                bc_q_t_val, call_psolver_at_all_substeps, cloud_droplets,       &
-               cloud_physics, constant_flux_layer, constant_heatflux,          &
+               cloud_physics, constant_flux_layer, constant_bottom_heatflux,   &
                create_disturbances, dopr_n, constant_diffusion, coupling_mode, &
                coupling_start_time, current_timestep_number,                   &
                disturbance_created, dist_range,                                &
@@ -1355,7 +1355,7 @@
 
 !
 !--    If required, set the heat flux for the next time step at a random value
-       IF ( constant_heatflux  .AND.  random_heatflux )  THEN
+       IF ( constant_bottom_heatflux  .AND.  random_heatflux )  THEN
           IF ( surf_def_h(0)%ns >= 1 )  CALL disturb_heatflux( surf_def_h(0) )
           IF ( surf_lsm_h%ns    >= 1 )  CALL disturb_heatflux( surf_lsm_h    )
           IF ( surf_usm_h%ns    >= 1 )  CALL disturb_heatflux( surf_usm_h    )

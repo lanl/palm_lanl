@@ -982,7 +982,7 @@
  
 
        USE arrays_3d,                                                          &
-           ONLY:  e, kh, km, p, pt, q, ql, qc, nc, nr, prr,                    &
+           ONLY:  e, kh, km, ks, p, pt, q, ql, qc, nc, nr, prr,                &
                   precipitation_amount, qr, s, sa, u, u_m_l, u_m_n, u_m_r,     &
                   u_m_s, v, v_m_l, v_m_n, v_m_r, v_m_s, vpt, w, w_m_l, w_m_n,  &
                   w_m_r, w_m_s
@@ -1068,6 +1068,11 @@
        IF ( ALLOCATED( km_av ) )  THEN
           CALL wrd_write_string( 'km_av' ) 
           WRITE ( 14 )  km_av
+       ENDIF
+
+       IF ( ALLOCATED( ks ) )  THEN
+          CALL wrd_write_string( 'ks' ) 
+          WRITE ( 14 )  ks
        ENDIF
 
        IF ( ALLOCATED( lpt_av ) )  THEN

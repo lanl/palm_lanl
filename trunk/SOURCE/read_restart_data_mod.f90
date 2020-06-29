@@ -1069,9 +1069,9 @@
  
 
     USE arrays_3d,                                                             &
-        ONLY:  e, kh, km, p, pt, q, ql, qc, nc, nr, prr, precipitation_amount, &
-               qr, s, sa, u, u_m_l, u_m_n, u_m_r, u_m_s, v, v_m_l, v_m_n,      &
-               v_m_r, v_m_s, vpt, w, w_m_l, w_m_n, w_m_r, w_m_s
+        ONLY:  e, kh, km, ks, p, pt, q, ql, qc, nc, nr, prr,                   &
+               precipitation_amount, qr, s, sa, u, u_m_l, u_m_n, u_m_r, u_m_s, &
+               v, v_m_l, v_m_n, v_m_r, v_m_s, vpt, w, w_m_l, w_m_n, w_m_r, w_m_s
 
     USE averaging
 
@@ -1463,6 +1463,11 @@
                    ENDIF
                    IF ( k == 1 )  READ ( 13 )  tmp_3d
                    km_av(:,nysc-nbgp:nync+nbgp,nxlc-nbgp:nxrc+nbgp) =          &
+                      tmp_3d(:,nysf-nbgp:nynf+nbgp,nxlf-nbgp:nxrf+nbgp)
+
+                CASE ( 'ks' )
+                   IF ( k == 1 )  READ ( 13 )  tmp_3d
+                   ks(:,nysc-nbgp:nync+nbgp,nxlc-nbgp:nxrc+nbgp) =          &
                       tmp_3d(:,nysf-nbgp:nynf+nbgp,nxlf-nbgp:nxrf+nbgp)
 
                 CASE ( 'lpt_av' )

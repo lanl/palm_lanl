@@ -6,6 +6,12 @@ build_path="/path/to/build/directory/"
 compile_debug="False"
 build_flags=""
 
+if [[ ! -d $build_path ]]; then
+   mkdir -p $build_path
+fi
+# Save git commit hash to make directory
+git rev-parse HEAD > $build_path"build_commit.txt"
+
 if [[ $compile_debug == "True" ]]; then
     build_flags="-D"
 fi

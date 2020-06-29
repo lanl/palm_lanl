@@ -659,6 +659,24 @@
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  c_v_m_l                !< mean phase velocity at outflow for v-component used in radiation boundary condition (local subdomain value)
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  c_w_m                  !< mean phase velocity at outflow for w-component used in radiation boundary condition
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  c_w_m_l                !< mean phase velocity at outflow for w-component used in radiation boundary condition (local subdomain value)
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dbdx                   !< Gradient of buoyancy in x-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dbdy                   !< Gradient of buoyancy in y-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dbdz                   !< Gradient of buoyancy in z-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dptdx                  !< Gradient of potential temperature in x-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dptdy                  !< Gradient of potential temperature in y-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dptdz                  !< Gradient of potential temperature in z-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dsadx                  !< Gradient of salinity in x-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dsady                  !< Gradient of salinity in y-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dsadz                  !< Gradient of salinity in z-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dudx                   !< Gradient of u-component in x-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dudy                   !< Gradient of u-component in y-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dudz                   !< Gradient of u-component in z-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dvdx                   !< Gradient of v-component in x-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dvdy                   !< Gradient of v-component in y-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dvdz                   !< Gradient of v-component in z-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dwdx                   !< Gradient of w-component in x-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dwdy                   !< Gradient of w-component in y-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dwdz                   !< Gradient of w-component in z-direction
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  ddzu                   !< 1/dzu
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  ddzu_pres              !< modified ddzu for pressure solver
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  dd2zu                  !< 1/(dzu(k)+dzu(k+1))
@@ -766,6 +784,7 @@
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  flux_l_w    !< 6th-order advective flux at south face of grid box - w-component
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  kh          !< eddy diffusivity for heat
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  km          !< eddy diffusivity for momentum
+    REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  ks          !< eddy diffusivity for salt
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  prr         !< rain rate
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  p_loc       !< local array in multigrid/sor solver containing the pressure which is iteratively advanced in each iteration step
     REAL(wp), DIMENSION(:,:,:), ALLOCATABLE ::  tend        !< tendency field (time integration)
@@ -979,12 +998,12 @@
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  lwp_av                 !< avg. liquid water path
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  melt_av                !< avg. melt rate (m/s)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  pt1_av                 !< avg. input temperature for most method
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  pt_io_av               !< avg. interface temperature for most method mcphee
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  pt_surface_av          !< avg. interface temperature for most method mcphee
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  ol_av                  !< avg. Obukhov length
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  qsws_av                !< avg. surface moisture flux
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  r_a_av                 !< avg. resistance
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sa1_av                 !< avg. input salinity for most method
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sa_io_av               !< avg. interface salinity for most method mcphee
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sa_surface_av          !< avg. interface salinity for most method mcphee
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sasws_av               !< avg. surface salinity flux
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  ssws_av                !< avg. surface scalar flux
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  shf_av                 !< avg. surface heat flux
@@ -1168,7 +1187,7 @@
     CHARACTER (LEN=20)   ::  random_generator = 'random-parallel'         !< namelist parameter
     CHARACTER (LEN=20)   ::  reference_state = 'initial_profile'          !< namelist parameter
     CHARACTER (LEN=20)   ::  timestep_scheme = 'runge-kutta-3'            !< namelist parameter
-    CHARACTER (LEN=20)   ::  turbulence_closure = 'Moeng_Wyngaard'        !< namelist parameter
+    CHARACTER (LEN=20)   ::  turbulence_closure = 'Moeng_Wyngaard'        !< namelist parameter. Options include 'Moeng_Wyngaard','AMD'
     CHARACTER (LEN=40)   ::  topography = 'flat'                          !< namelist parameter
     CHARACTER (LEN=64)   ::  host = '????'                                !< hostname on which PALM is running, ENVPAR namelist parameter provided by mrun
     CHARACTER (LEN=80)   ::  log_message                                  !< user-defined message for debugging (sse data_log.f90)
@@ -1341,9 +1360,10 @@
     LOGICAL ::  complex_terrain = .FALSE.                        !< namelist parameter
     LOGICAL ::  conserve_volume_flow = .FALSE.                   !< namelist parameter
     LOGICAL ::  constant_diffusion = .FALSE.                     !< diffusion coefficient constant?
-    LOGICAL ::  constant_heatflux = .TRUE.                       !< heat flux at all surfaces constant?
+    LOGICAL ::  constant_bottom_heatflux = .TRUE.                !< heat flux at domain bottom constant?
     LOGICAL ::  constant_top_heatflux = .TRUE.                   !< heat flux at domain top constant?
     LOGICAL ::  constant_top_momentumflux = .FALSE.              !< momentum flux at domain topconstant?
+    LOGICAL ::  constant_salinityflux = .TRUE.                   !< salinity flux
     LOGICAL ::  constant_top_salinityflux = .TRUE.               !< salinity flux at ocean domain top?
     LOGICAL ::  constant_bottom_salinityflux = .TRUE.            !< salinity flux at ocean domain bottom?
     LOGICAL ::  constant_top_scalarflux = .TRUE.                 !< passive-scalar flux at domain top constant?
@@ -1352,6 +1372,8 @@
     LOGICAL ::  create_disturbances = .TRUE.                     !< namelist parameter
     LOGICAL ::  data_output_during_spinup = .FALSE.              !< namelist parameter
     LOGICAL ::  data_output_2d_on_each_pe = .TRUE.               !< namelist parameter
+    LOGICAL ::  diffusivity_diags = .FALSE.                      !< namelist parameter
+    LOGICAL ::  diffusivity_from_surface_fluxes = .FALSE.         !< namelist parameter
     LOGICAL ::  disturbance_created = .FALSE.                    !< flow disturbance imposed?
     LOGICAL ::  do2d_at_begin = .FALSE.                          !< namelist parameter
     LOGICAL ::  do3d_at_begin = .FALSE.                          !< namelist parameter
@@ -1381,6 +1403,7 @@
     LOGICAL ::  large_scale_forcing = .FALSE.                    !< namelist parameter
     LOGICAL ::  large_scale_subsidence = .FALSE.                 !< namelist parameter
     LOGICAL ::  land_surface = .FALSE.                           !< use land surface model?
+    LOGICAL ::  les_amd = .FALSE.                                !< use Anisotropic Minimum Dissipation turbulence closure for LES mode
     LOGICAL ::  les_mw = .FALSE.                                 !< use Moeng-Wyngaard turbulence closure for LES mode
     LOGICAL ::  lsf_exception = .FALSE.                          !< use of lsf with buildings (temporary)?
     LOGICAL ::  lsf_surf = .TRUE.                                !< use surface forcing (large scale forcing)?
@@ -1470,6 +1493,9 @@
                                                                !< (=1.0 in atmosphere, =-1.0 in ocean)
     REAL(wp) ::  averaging_interval = 0.0_wp                   !< namelist parameter
     REAL(wp) ::  averaging_interval_pr = 9999999.9_wp          !< namelist parameter
+    REAL(wp) ::  beta_m_businger = -4.8_wp                     !< coefficient for businger stability function, momentum 
+    REAL(wp) ::  beta_h_businger = -5.6_wp                     !< coefficient for businger stability function, heat
+                                                               !< -7.8 according to Businger 1971, Stull 1988
     REAL(wp) ::  bc_pt_t_val                                   !< vertical gradient of pt near domain top
     REAL(wp) ::  bc_q_t_val                                    !< vertical gradient of humidity near domain top
     REAL(wp) ::  bc_s_t_val                                    !< vertical gradient of passive scalar near domain top
@@ -1569,6 +1595,7 @@
                                                                !< boundary of total domain
     REAL(wp) ::  pt_surface = 300.0_wp                         !< namelist parameter
     REAL(wp) ::  pt_surface_initial_change = 0.0_wp            !< namelist parameter
+    REAL(wp) ::  pt_surface_rate_change = 0.0_wp               !< namelist parameter, dpt/dt applied to the k=nzb level with units [K/s]
     REAL(wp) ::  pt_ref = 15.0_wp                              !< potential temperature reference falue
     REAL(wp) ::  q_surface = 0.0_wp                            !< namelist parameter
     REAL(wp) ::  q_surface_initial_change = 0.0_wp             !< namelist parameter

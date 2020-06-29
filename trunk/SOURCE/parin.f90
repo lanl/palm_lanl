@@ -580,8 +580,9 @@
              y_shift, zeta_max, zeta_min, z0h_factor
 
     NAMELIST /initialization_parameters/  aerosol_bulk, alpha_surface,         &
-             ambient_density_for_buoyancy, approximation, bc_e_b, bc_e_t,      &
-             bc_lr, bc_ns, bc_p_b, bc_p_t, bc_pt_b, bc_pt_t, bc_q_b,           &
+             ambient_density_for_buoyancy, approximation,                      &
+             beta_m_businger, beta_h_businger, bc_e_b, bc_e_t, bc_lr, bc_ns,   &
+             bc_p_b, bc_p_t, bc_pt_b, bc_pt_t, bc_q_b,                         &
              bc_q_t,bc_s_b, bc_s_t, bc_sa_b, bc_sa_t, bc_uv_b, bc_uv_t,        &
              bottom_salinityflux, bubble_center_x, bubble_center_y,            &
              bubble_center_z, bubble_radius, bubble_pt, bubble_sa,             &
@@ -601,7 +602,7 @@
              cycle_mg, damp_level_1d,                                          &
              data_output_during_spinup,                                        &
              day_of_year_init,                                                 &
-             dissipation_1d,                                                   &
+             diffusivity_diags, diffusivity_from_surface_fluxes, dissipation_1d,&
              dp_external, dp_level_b, dp_smooth, dpdxy, drag_coeff, drag_law,  &
              dpdx, dpdx_phase, dpdx_freq, dpdy, dpdy_phase, dpdy_freq,         &
              drag_coeff, drho_dp_const, dry_aerosol_radius,                    &
@@ -628,8 +629,9 @@
              outflow_source_plane, passive_scalar,                             &
              prandtl_number, precipitation, psolver, pt_damping_factor,        &
              pt_damping_width, pt_reference, pt_surface,                       &
-             pt_surface_initial_change, pt_vertical_gradient,                  &
-             pt_vertical_gradient_level, q_surface, q_surface_initial_change,  &
+             pt_surface_initial_change, pt_surface_rate_change,                &
+             pt_vertical_gradient, pt_vertical_gradient_level,                 &
+             q_surface, q_surface_initial_change,                              &
              q_vertical_gradient, q_vertical_gradient_level,                   &
              random_generator, random_heatflux, rans_const_c, rans_const_sigma,&
              rans_mode,                                                        &

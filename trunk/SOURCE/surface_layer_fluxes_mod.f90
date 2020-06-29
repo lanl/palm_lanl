@@ -228,8 +228,11 @@
     USE cpulog
 
     USE control_parameters,                                                    &
-        ONLY:  air_chemistry, c1, c2, c3, cloud_droplets, cloud_physics,       &
-               constant_flux_layer, constant_heatflux, constant_scalarflux,    &     
+        ONLY:  air_chemistry, beta_m_businger, beta_h_businger, c1, c2, c3,    &
+               cloud_droplets, cloud_physics, constant_flux_layer,             & 
+                constant_top_heatflux, constant_salinityflux,&
+               constant_bottom_heatflux, constant_top_salinityflux,            &
+               constant_bottom_salinityflux, constant_scalarflux,              &
                constant_waterflux, coupling_mode, drag_law, drag_coeff, f, g,  &
                gamma_mcphee, Gamma_T_const, Gamma_S_const, humidity,           &
                ibc_e_b, ibc_e_t, ibc_pt_b, ibc_pt_t,                           &
@@ -240,9 +243,9 @@
                l_m, land_surface, large_scale_forcing, lsf_surf,               &
                message_string, microphysics_morrison, microphysics_seifert,    &
                molecular_viscosity, most_method, most_xy_av, neutral, ocean,   &
-               passive_scalar, prandtl_number, pt_surface, q_surface,          &
-               run_coupled, schmidt_number, surface_flux_diags,                &
-               surface_pressure, simulated_time,                               &
+               passive_scalar, prandtl_number, pt_surface,                     &
+               q_surface, run_coupled, schmidt_number,                         &
+               surface_flux_diags, surface_pressure, simulated_time,           &
                terminate_run, time_since_reference_point, urban_surface,       &
                z_offset_mcphee, zeta_max, zeta_min
 
@@ -281,6 +284,7 @@
 
     INTEGER(iwp), PARAMETER ::  num_steps = 15000  !< number of steps in the lookup table
 
+    LOGICAL      ::  constant_heatflux 
     LOGICAL      ::  coupled_run       !< Flag for coupled atmosphere-ocean runs
     LOGICAL      ::  downward = .FALSE.!< Flag indicating downward-facing horizontal surface
     LOGICAL      ::  mom_uv  = .FALSE. !< Flag indicating calculation of usvs and vsus at vertical surfaces
@@ -326,7 +330,7 @@
 !> Main routine to compute the surface fluxes
 !------------------------------------------------------------------------------!
     SUBROUTINE surface_layer_fluxes
-
+       
        IMPLICIT NONE
 
        surf_vertical = .FALSE.
@@ -418,6 +422,7 @@
 !--          Default-type upward-facing horizontal surfaces
              IF ( surf_def_h(0)%ns >= 1 )  THEN
                 surf => surf_def_h(0)
+                constant_heatflux = constant_bottom_heatflux
                 CALL calc_scaling_parameters
                 CALL calc_uvw_abs
                 IF ( .NOT. neutral )  CALL calc_ol
@@ -428,6 +433,7 @@
 !--          Natural-type horizontal surfaces
              IF ( surf_lsm_h%ns >= 1 )  THEN
                 surf => surf_lsm_h
+                constant_heatflux = constant_bottom_heatflux
                 CALL calc_scaling_parameters
                 CALL calc_uvw_abs
                 IF ( .NOT. neutral )  CALL calc_ol
@@ -438,6 +444,7 @@
 !--          Urban-type horizontal surfaces
              IF ( surf_usm_h%ns >= 1 )  THEN
                 surf => surf_usm_h
+                constant_heatflux = constant_bottom_heatflux
                 CALL calc_scaling_parameters
                 CALL calc_uvw_abs
                 IF ( .NOT. neutral )  CALL calc_ol
@@ -452,6 +459,7 @@
 !--          Default-type upward-facing horizontal surfaces
              IF ( surf_def_h(0)%ns >= 1 )  THEN
                 surf => surf_def_h(0)
+                constant_heatflux = constant_bottom_heatflux
                 CALL calc_uvw_abs
                 IF ( .NOT. neutral )  CALL calc_ol
                 CALL calc_us
@@ -462,6 +470,7 @@
 !--          Natural-type horizontal surfaces
              IF ( surf_lsm_h%ns >= 1 )  THEN
                 surf => surf_lsm_h
+                constant_heatflux = constant_bottom_heatflux
                 CALL calc_uvw_abs
                 IF ( .NOT. neutral )  CALL calc_ol
                 CALL calc_us
@@ -472,6 +481,7 @@
 !--          Urban-type horizontal surfaces
              IF ( surf_usm_h%ns >= 1 )  THEN
                 surf => surf_usm_h
+                constant_heatflux = constant_bottom_heatflux
                 CALL calc_uvw_abs
                 IF ( .NOT. neutral )  CALL calc_ol
                 CALL calc_us
@@ -488,6 +498,7 @@
           IF ( surf_def_h(1)%ns >= 1 )  THEN
              downward = .TRUE.
              surf => surf_def_h(1)
+             constant_heatflux = constant_bottom_heatflux
              CALL calc_uvw_abs
              CALL calc_us
              CALL calc_surface_fluxes
@@ -501,6 +512,8 @@
           
           downward = .TRUE.
           surf => surf_def_h(2)
+          constant_heatflux = constant_top_heatflux
+          constant_salinityflux = constant_top_salinityflux
 
           IF ( trim(most_method) == 'mcphee' ) THEN
              CALL calc_uvw_abs 
@@ -516,31 +529,6 @@
           
           downward = .FALSE.
           
-          IF ( surface_flux_diags ) THEN
-             m = 1
-             WRITE(message_string,*) 'melt = ',surf%melt(m)*3e7_wp
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'u = ',surf%usurf(m) - surf%ufar(m)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'v = ',surf%vsurf(m) - surf%vfar(m)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'us = ',surf%us(m)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'uw = ',surf%usws(m)/rho_ref_zw(nzt)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'vw = ',surf%usws(m)/rho_ref_zw(nzt)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'gamma_T = ',surf%gamma_T(m)/surf%us(m)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'gamma_S = ',surf%gamma_S(m)/surf%us(m)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'dT = ',surf%pt1(m) - surf%pt_io(m)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'dS = ',surf%sa1(m) - surf%sa_io(m)
-             CALL location_message(message_string,.TRUE.)
-             WRITE(message_string,*) 'k_offset_mcphee = ',k_offset_mcphee 
-             CALL location_message(message_string,.TRUE.) 
-          ENDIF
 
        ENDIF
 !
@@ -577,6 +565,8 @@
 !--    case. This is due to the requirement of ts in parameterization of heat
 !--    flux in land-surface model in case of aero_resist_kray is not true.
        IF ( TRIM(constant_flux_layer) == 'bottom' ) THEN
+          constant_heatflux = constant_bottom_heatflux
+          constant_salinityflux = constant_bottom_salinityflux
           IF ( .NOT. aero_resist_kray )  THEN
              IF ( most_method == 'circular' )  THEN
                 DO  l = 0, 1
@@ -829,6 +819,40 @@
           ENDDO 
           mom_tke = .FALSE.
   
+       ENDIF
+       IF ( surface_flux_diags ) THEN
+          IF ( TRIM(constant_flux_layer) == 'top') THEN
+             surf => surf_def_h(2)
+          ELSE
+             surf => surf_def_h(0)
+          ENDIF
+          m = 1
+          WRITE(message_string,*) 'du_surf = ',surf%usurf(m) - surf%ufar(m)
+          CALL location_message(message_string,.TRUE.)
+          WRITE(message_string,*) 'dv_surf = ',surf%vsurf(m) - surf%vfar(m)
+          CALL location_message(message_string,.TRUE.)
+          WRITE(message_string,*) 'us = ',surf%us(m)
+          CALL location_message(message_string,.TRUE.)
+          WRITE(message_string,*) 'uw_surf = ',surf%usws(m)/rho_ref_zw(nzt)
+          CALL location_message(message_string,.TRUE.)
+          WRITE(message_string,*) 'vw_surf = ',surf%usws(m)/rho_ref_zw(nzt)
+          CALL location_message(message_string,.TRUE.)
+          WRITE(message_string,*) 'dpt_surf = ',surf%pt1(m) - surf%pt_surface(m)
+          CALL location_message(message_string,.TRUE.)
+          IF ( ocean ) THEN
+             WRITE(message_string,*) 'dsa_surf = ',surf%sa1(m) - surf%sa_surface(m)
+             CALL location_message(message_string,.TRUE.)
+          ENDIF
+          IF ( TRIM(most_method) == 'mcphee') THEN
+             WRITE(message_string,*) 'melt = ',surf%melt(m)*3e7_wp
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'gamma_T = ',surf%gamma_T(m)/surf%us(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'gamma_S = ',surf%gamma_S(m)/surf%us(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'k_offset_mcphee = ',k_offset_mcphee 
+             CALL location_message(message_string,.TRUE.) 
+          ENDIF
        ENDIF
 
     END SUBROUTINE surface_layer_fluxes
@@ -1946,6 +1970,17 @@
           surf%pt_surface(m) = pt(k+koff,j,i)
 
        ENDDO
+       IF ( ocean ) THEN
+          DO  m = 1, surf%ns 
+
+             i   = surf%i(m)            
+             j   = surf%j(m)
+             k   = surf%k(m)
+
+             surf%sa_surface(m) = sa(k+koff,j,i)
+
+          ENDDO
+       ENDIF
 
     END SUBROUTINE calc_pt_surface
 
@@ -1959,7 +1994,7 @@
        IMPLICIT NONE
 
 
-       INTEGER(iwp) ::  ibit          !< flag to mask computation of relative velocity in case of downward-facing surfaces
+       INTEGER(iwp)  ::  ibit    !< flag to mask computation of relative velocity in case of downward-facing surfaces
        INTEGER(iwp)  ::  m       !< loop variable over all horizontal surf elements 
        INTEGER(iwp)  ::  lsp     !< running index for chemical species
 
@@ -2018,6 +2053,19 @@
                                       + psi_h( surf%z0h(m) / surf%ol(m) ) )
 
           ENDDO
+          IF ( ocean ) THEN
+             !$OMP PARALLEL DO PRIVATE( z_mo )
+             DO  m = 1, surf%ns   
+
+                z_mo = surf%z_mo(m)
+
+                surf%sas(m) = kappa * ( surf%sa1(m) - surf%sa_surface(m) )     &
+                                     / ( LOG( z_mo / surf%z0h(m) )             &
+                                         - psi_h( z_mo / surf%ol(m) )          &
+                                         + psi_h( surf%z0h(m) / surf%ol(m) ) )
+
+             ENDDO
+          ENDIF
 
        ENDIF
 ! 
@@ -2291,7 +2339,7 @@
 !
 !--       Compute the vertical kinematic heat flux, salt flux, and melt rate 
 !--       according to the 3 equation parameterization (Asay-Davis et al. 2016)
-          IF ( trim(most_method) == 'mcphee' .AND. downward ) THEN
+          IF ( TRIM(most_method) == 'mcphee' .AND. downward ) THEN
              
              !$OMP PARALLEL DO PRIVATE( i, j, k, s_factor )
              DO  m = 1, surf%ns  
@@ -2301,30 +2349,41 @@
                 k = surf%k(m)
                 
                 s_factor = -1.0_wp * surf%gamma_S(m) *                         &
-                           ( surf%sa_io(m) - surf%sa1(m) ) / surf%sa_io(m)
+                           ( surf%sa_surface(m) - surf%sa1(m) ) /              &
+                           surf%sa_surface(m)
 
                 surf%shf(m)   = -1.0_wp * rho_ocean(k,j,i) *                   &
                                 ( surf%gamma_T(m) + s_factor ) *               &
-                                ( surf%pt_io(m) - surf%pt1(m) )
+                                ( surf%pt_surface(m) - surf%pt1(m) )
                 surf%sasws(m) = -1.0_wp * rho_ocean(k,j,i) *                   &
                                 ( surf%gamma_S(m) + s_factor ) *               &
-                                ( surf%sa_io(m) - surf%sa1(m) )
-                surf%melt(m)  = s_factor * rho_ocean(k,j,i)/1e3
+                                ( surf%sa_surface(m) - surf%sa1(m) )
+                surf%melt(m)  = s_factor * rho_ocean(k,j,i)/1.0e3_wp
 
              ENDDO
              
-          ELSEIF ( .NOT.  constant_heatflux  .AND.                             &
-                    ( ( time_since_reference_point <= skip_time_do_lsm  .AND.  &
+          ELSEIF ( ( ( time_since_reference_point <= skip_time_do_lsm  .AND.  &
                         simulated_time > 0.0_wp                        ) .OR.  &
                       .NOT.  land_surface                              ) .AND. &
-                    .NOT. urban_surface )  THEN
-             !$OMP PARALLEL DO PRIVATE( i, j, k )
-             DO  m = 1, surf%ns 
-                i    = surf%i(m)            
-                j    = surf%j(m)
-                k    = surf%k(m)
-                surf%shf(m) = -surf%ts(m) * surf%us(m) * rho_ref_zw(k+ibit)
-             ENDDO
+                      .NOT. urban_surface )  THEN
+             IF ( .NOT. constant_heatflux ) THEN
+                !$OMP PARALLEL DO PRIVATE( i, j, k )
+                DO  m = 1, surf%ns 
+                   i    = surf%i(m)            
+                   j    = surf%j(m)
+                   k    = surf%k(m)
+                   surf%shf(m) = -surf%ts(m) * surf%us(m) * rho_ref_zw(k+ibit)
+                ENDDO
+             ENDIF
+             IF ( ocean .AND. .NOT. constant_salinityflux ) THEN
+                !$OMP PARALLEL DO PRIVATE( i, j, k )
+                DO  m = 1, surf%ns 
+                   i    = surf%i(m)            
+                   j    = surf%j(m)
+                   k    = surf%k(m)
+                   surf%sasws(m) = -surf%sas(m) * surf%us(m) * rho_ref_zw(k+ibit)
+                ENDDO
+             ENDIF
 
           ENDIF
 !
@@ -2466,107 +2525,88 @@
 !--       At downward-facing surfaces
           ELSE
 
-             IF ( trim(most_method) == 'mcphee') THEN
-             
-                IF (trim(drag_law) == 'rotation') THEN
-                   
-                   !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
-                   DO  m = 1, surf%ns  
-   
-                      k = surf%k(m)
-!
-!--                   Compute friction velocity components
-                      us_x = kappa * ( surf%ufar(m) - surf%usurf(m) )             &
-                             / LOG( surf%z_mo(m) / surf%z0(m) )
-                      us_y = kappa * ( surf%vfar(m) - surf%vsurf(m) )             &
-                             / LOG( surf%z_mo(m) / surf%z0(m) )
-                      
-!--                   Use the neutral eta_star limit for destabilizing cases
-                      IF ( surf%melt(m) <= 0.0_wp ) THEN                          
-                         eta_star = 1.0_wp
-                      ELSE
-                         eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /            &
-                                 ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5
-                      ENDIF
-!                      
-!--                   Compute nondimensional depth zeta
-                      zeta = MAX(-1.0_wp * ABS( zu(nzt) / zeta_min ),                 &
-                                 ABS(f) * -1.0_wp * ABS( surf%z_mo(m) ) /           &
-                                 ( eta_star * surf%us(m) + 1E-30_wp ) )
-!
-!--                   Compute complex surface stress
-                      tau = EXP( SQRT( im / ( kappa * xi_N ) ) * zeta )
-!
-!--                   Compute momentum flux components
-                      surf%usws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
-                                     ( us_x * REAL(tau) - us_y * IMAG(tau) )
-                      surf%vsws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
-                                     ( us_x * IMAG(tau) + us_y * REAL(tau) )
-                   ENDDO     
-             
-                ELSE
-                   !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
-                   IF ( stability ) THEN
-                      DO  m = 1, surf%ns  
-   
-                         k = surf%k(m)
-                         
-!
-!--                      Compute friction velocity components
-                         surf%usws(m) = kappa * ( surf%ufar(m) - surf%usurf(m) )  &
-                                / ( LOG( surf%z_mo(m) / surf%z0(m) )              &
-                                    - psi_m( surf%z_mo(m) / surf%ol(m))           &
-                                    + psi_m( surf%z0(m)  / surf%ol(m)) )
-                         
-                         surf%vsws(m) = kappa * ( surf%vfar(m) - surf%vsurf(m) )  &
-                                / ( LOG( surf%z_mo(m) / surf%z0(m) )              &
-                                    - psi_m( surf%z_mo(m) / surf%ol(m))           &
-                                    + psi_m( surf%z0(m)  / surf%ol(m)) )
-                         
-!
-!--                      Compute momentum flux components
-                         surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k+1)
-                         surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k+1)
-                      
-                      ENDDO
-                   ELSE
-                      DO  m = 1, surf%ns  
-   
-                         k = surf%k(m)
-                         
-!
-!--                      Compute friction velocity components
-                         surf%usws(m) = kappa * ( surf%ufar(m) - surf%usurf(m) )  &
-                                / LOG( surf%z_mo(m) / surf%z0(m) )
-                         
-                         surf%vsws(m) = kappa * ( surf%vfar(m) - surf%vsurf(m) )  &
-                                / LOG( surf%z_mo(m) / surf%z0(m) )
-                         
-!
-!--                      Compute momentum flux components
-                         surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k+1)
-                         surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k+1)
-                      
-                      ENDDO
-                   ENDIF
-                ENDIF 
-             ELSE
-
+             IF (trim(drag_law) == 'rotation') THEN
+                
                 !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
                 DO  m = 1, surf%ns  
    
-                   i = surf%i(m)            
-                   j = surf%j(m)
                    k = surf%k(m)
-
-                   surf%usws(m) = surf%us(m) * rho_ref_zw(k+1) * kappa *       &
-                                  ( u(k,j,i) - u(k+1,j,i) )                    &
-                                  / LOG( surf%z_mo(m) / surf%z0(m) )
-                   surf%vsws(m) = surf%us(m) * rho_ref_zw(k+1) * kappa *       &
-                                  ( v(k,j,i) - v(k+1,j,i) )                    &
-                                  / LOG( surf%z_mo(m) / surf%z0(m) )
-                ENDDO
-             ENDIF
+!
+!--                Compute friction velocity components
+                   us_x = kappa * ( surf%ufar(m) - surf%usurf(m) )             &
+                          / LOG( surf%z_mo(m) / surf%z0(m) )
+                   us_y = kappa * ( surf%vfar(m) - surf%vsurf(m) )             &
+                          / LOG( surf%z_mo(m) / surf%z0(m) )
+                   
+!--                Use the neutral eta_star limit for destabilizing cases
+                   IF ( surf%ol(m) <= 0.0_wp ) THEN                          
+                      eta_star = 1.0_wp
+                   ELSE
+                      eta_star = ( 1.0_wp + ( xi_N * surf%us(m) ) /            &
+                              ( ABS(f) * surf%ol(m) * ri_crit ) )**-0.5
+                   ENDIF
+!                   
+!--                Compute nondimensional depth zeta
+                   zeta = MAX(-1.0_wp * ABS( zu(nzt) / zeta_min ),                 &
+                              ABS(f) * -1.0_wp * ABS( surf%z_mo(m) ) /           &
+                              ( eta_star * surf%us(m) + 1E-30_wp ) )
+!
+!--                Compute complex surface stress
+                   tau = EXP( SQRT( im / ( kappa * xi_N ) ) * zeta )
+!
+!--                Compute momentum flux components
+                   surf%usws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
+                                  ( us_x * REAL(tau) - us_y * IMAG(tau) )
+                   surf%vsws(m) = rho_ref_zw(k+1) * surf%us(m) *               &
+                                  ( us_x * IMAG(tau) + us_y * REAL(tau) )
+                ENDDO     
+             
+             ELSE
+                !$OMP PARALLEL DO PRIVATE( i, j, k, z_mo )
+                IF ( stability ) THEN
+                   DO  m = 1, surf%ns  
+   
+                      k = surf%k(m)
+                      
+!
+!--                   Compute friction velocity components
+                      surf%usws(m) = kappa * ( surf%ufar(m) - surf%usurf(m) )  &
+                             / ( LOG( surf%z_mo(m) / surf%z0(m) )              &
+                                 - psi_m( surf%z_mo(m) / surf%ol(m))           &
+                                 + psi_m( surf%z0(m)  / surf%ol(m)) )
+                      
+                      surf%vsws(m) = kappa * ( surf%vfar(m) - surf%vsurf(m) )  &
+                             / ( LOG( surf%z_mo(m) / surf%z0(m) )              &
+                                 - psi_m( surf%z_mo(m) / surf%ol(m))           &
+                                 + psi_m( surf%z0(m)  / surf%ol(m)) )
+                      
+!
+!--                   Compute momentum flux components
+                      surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k+1)
+                      surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k+1)
+                   
+                   ENDDO
+                ELSE
+                   DO  m = 1, surf%ns  
+   
+                      k = surf%k(m)
+                      
+!
+!--                   Compute friction velocity components
+                      surf%usws(m) = kappa * ( surf%ufar(m) - surf%usurf(m) )  &
+                             / LOG( surf%z_mo(m) / surf%z0(m) )
+                      
+                      surf%vsws(m) = kappa * ( surf%vfar(m) - surf%vsurf(m) )  &
+                             / LOG( surf%z_mo(m) / surf%z0(m) )
+                      
+!
+!--                   Compute momentum flux components
+                      surf%usws(m) = surf%usws(m) * surf%us(m) * rho_ref_zw(k+1)
+                      surf%vsws(m) = surf%vsws(m) * surf%us(m) * rho_ref_zw(k+1)
+                   
+                   ENDDO
+                ENDIF
+             ENDIF 
           ENDIF
 
 !
@@ -2731,7 +2771,7 @@
           k = surf%k(m)
 
 !--       Store sa, pt at the boundary at the previous time step
-          sa_io_p = surf%sa_io(m)
+          sa_io_p = surf%sa_surface(m)
 
           dptf_dsa = pt_freezing_SA(surface_pressure/1e2,sa_io_p)
           pt_io_p  = pt_freezing(surface_pressure/1e2,sa_io_p)
@@ -2742,7 +2782,7 @@
 
 !--          Store previous salinity for use in freezing temperature equation 
 !--          and derivative of freezing temperature w.r.t. salinity
-             sa_io_k = surf%sa_io(m)
+             sa_io_k = surf%sa_surface(m)
              
 !--          Update Obukhov length each iteration because it depends on the
 !--          buoyancy flux  
@@ -2773,7 +2813,7 @@
 !--                Depth-dependent formulation. Coefficient value for stability function
 !--                from Zhou et al. (2017)
                    IF ( TRIM(gamma_mcphee) == 'depth-dependent' ) THEN
-
+                      ! Consider replacing 5.6 with beta_h_businger
                       Gamma_turb = (1.0_wp/kappa) * (LOG(ABS(zu(nzt-surf%koff)) / &
                                                          surf%z0(m) )             & 
                         - MERGE(-5.6_wp*( ABS(zu(nzt-surf%koff))/surf%ol(m) ),    &
@@ -2817,15 +2857,15 @@
              b = ( surf%gamma_T(m) * term1 ) - ( surf%gamma_S(m) * ( l_m / cpw ) ) 
              c = surf%gamma_S(m) * surf%sa1(m) * ( l_m / cpw )
 
-             surf%sa_io(m) = 2.0_wp*c / (-1.0_wp*b + SQRT(b**2 - 4.0_wp*a*c))
+             surf%sa_surface(m) = 2.0_wp*c / (-1.0_wp*b + SQRT(b**2 - 4.0_wp*a*c))
 !
 !--          Calculate approximate freezing temperature at ice-ocean interface
-             surf%pt_io(m) = pt_io_p + ( dptf_dsa * ( surf%sa_io(m) - sa_io_p ) )
+             surf%pt_surface(m) = pt_io_p + ( dptf_dsa * ( surf%sa_surface(m) - sa_io_p ) )
 
              nn = nn + 1
 
 !--          Stop iterations if interface salinity change is small enough
-             IF ( ABS(surf%sa_io(m) - sa_io_k) < dsa_tol ) EXIT
+             IF ( ABS(surf%sa_surface(m) - sa_io_k) < dsa_tol ) EXIT
 
           ENDDO ! end iterations
 
@@ -2833,10 +2873,10 @@
 !
 !--    Terminate simulation if interface salinity is NaN or less than minimum
 !--    Only check for m=1 to minimize computational cost
-       IF ( isnan(surf%sa_io(1)) ) THEN
+       IF ( isnan(surf%sa_surface(1)) ) THEN
           WRITE(message_string,*) 'Interface salinity is NaN'
           CALL message( 'surface_layer_fluxes', 'PA0655', 3, 2, 0, 6, 0 )
-       ELSEIF ( surf%sa_io(1) < sa_io_min ) THEN
+       ELSEIF ( surf%sa_surface(1) < sa_io_min ) THEN
           WRITE(message_string,*) 'Interface salinity < minimum salinity '
           CALL message( 'surface_layer_fluxes', 'PA0655', 3, 2, 0, 6, 0 )
        ENDIF
@@ -2875,6 +2915,8 @@
 
        REAL(wp), PARAMETER :: a = 1.0_wp            !< constant
        REAL(wp), PARAMETER :: b = 0.66666666666_wp  !< constant
+       REAL(wp), PARAMETER :: bb = -16.0_wp          !< constant
+                              !< reported as -15.0 in Abkar and Moin 2017
        REAL(wp), PARAMETER :: c = 5.0_wp            !< constant
        REAL(wp), PARAMETER :: d = 0.35_wp           !< constant
        REAL(wp), PARAMETER :: c_d_d = c / d         !< constant
@@ -2882,16 +2924,16 @@
 
 
        IF ( zeta < 0.0_wp )  THEN
-          x = SQRT( SQRT( 1.0_wp  - 16.0_wp * zeta ) )
+!--       unstable conditions
+!--       Businger et al. 1971, Stull 1988         
+          x = SQRT( SQRT( 1.0_wp + bb * zeta ) )
           psi_m = pi * 0.5_wp - 2.0_wp * ATAN( x ) + LOG( ( 1.0_wp + x )**2    &
                   * ( 1.0_wp + x**2 ) * 0.125_wp )
        ELSE
 
           IF (trim(drag_law) == 'businger') THEN
-!
-!--          Old version for stable conditions (only valid for z/L < 0.5)
-!--          Coefficient choice following Wyngaard (2010)
-             psi_m = - 4.8_wp * zeta
+!--          (only valid for z/L < 0.5)
+             psi_m = beta_m_businger * zeta
 
           ELSE
              psi_m = - b * ( zeta - c_d_d ) * EXP( -d * zeta ) - a * zeta         &
@@ -2918,6 +2960,8 @@
 
        REAL(wp), PARAMETER :: a = 1.0_wp            !< constant
        REAL(wp), PARAMETER :: b = 0.66666666666_wp  !< constant
+       REAL(wp), PARAMETER :: bb = -16.0_wp          !< constant
+                              !< reported as 15.0 in Abkar and Moin 2017
        REAL(wp), PARAMETER :: c = 5.0_wp            !< constant
        REAL(wp), PARAMETER :: d = 0.35_wp           !< constant
        REAL(wp), PARAMETER :: c_d_d = c / d         !< constant
@@ -2925,15 +2969,20 @@
 
 
        IF ( zeta < 0.0_wp )  THEN
-          x = SQRT( 1.0_wp  - 16.0_wp * zeta )
+!--       unstable conditions
+!--       Businger et al. 1971, Stull 1988         
+          x = SQRT( 1.0_wp + bb * zeta )
           psi_h = 2.0_wp * LOG( (1.0_wp + x ) / 2.0_wp )
        ELSE
-          psi_h = - b * ( zeta - c_d_d ) * EXP( -d * zeta ) - (1.0_wp          &
-                  + 0.66666666666_wp * a * zeta )**1.5_wp - bc_d_d             &
-                  + 1.0_wp
-!
-!--       Old version for stable conditions (only valid for z/L < 0.5)
-!--       psi_h = - 5.0_wp * zeta
+!--       stable conditions
+          IF (TRIM(drag_law) == 'businger') THEN
+!--          (only valid for z/L < 0.5)
+             psi_h = beta_h_businger * zeta
+          ELSE
+             psi_h = - b * ( zeta - c_d_d ) * EXP( -d * zeta ) - (1.0_wp          &
+                     + 0.66666666666_wp * a * zeta )**1.5_wp - bc_d_d             &
+                     + 1.0_wp
+          ENDIF
        ENDIF
 
     END FUNCTION psi_h

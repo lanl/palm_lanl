@@ -74,7 +74,7 @@
 
     USE control_parameters,                                                    &
         ONLY:  bc_lr, bc_ns, bc_pt_b, bc_q_b, constant_diffusion,              &
-               constant_heatflux, constant_waterflux,                          &
+               constant_bottom_heatflux, constant_waterflux,                   &
                data_output_pr, dt_3d, end_time, forcing,                       &
                force_bound_l, force_bound_n, force_bound_r, force_bound_s,     &  
                humidity, initializing_actions, intermediate_timestep_count,    &
@@ -1489,7 +1489,7 @@ flush(9)
        ENDIF
 !
 !--    Surface heat- and waterflux will be written later onto surface elements 
-       IF ( .NOT.  neutral  .AND.  constant_heatflux  .AND.                    &
+       IF ( .NOT.  neutral  .AND.  constant_bottom_heatflux  .AND.             &
             TRIM( initializing_actions ) /= 'read_restart_data' )  THEN
              surface_heatflux = shf_surf(1)
        ENDIF

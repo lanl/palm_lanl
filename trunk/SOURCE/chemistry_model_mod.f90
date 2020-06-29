@@ -124,11 +124,12 @@ MODULE chemistry_model_mod
    USE kinds,              ONLY: wp, iwp
    USE indices,            ONLY: nz, nzb,nzt,nysg,nyng,nxlg,nxrg,nys,nyn
    USE pegrid,             ONLY: myid, threads_per_task
-   USE control_parameters, ONLY: dt_3d, ws_scheme_sca, initializing_actions, message_string, &
-                                 omega, tsc, intermediate_timestep_count,      &
+   USE control_parameters, ONLY: dt_3d, ws_scheme_sca, initializing_actions,   &
+                                 intermediate_timestep_count,                  &
                                  intermediate_timestep_count_max,              &
+                                 message_string, omega, tsc,                   &
                                  timestep_scheme, use_prescribed_profile_data  
-   USE arrays_3d,          ONLY: hyp, pt, rdf_sc, tend, zu                     
+   USE arrays_3d,          ONLY: hyp, kh, pt, rdf_sc, tend, zu                     
    USE chem_gasphase_mod,  ONLY: nspec, spc_names, nkppctrl, nmaxfixsteps,     &
                                  t_steps, fill_temp, chem_gasphase_integrate,  &
                                  nvar, atol, rtol, nphot, phot_names
@@ -1493,7 +1494,7 @@ MODULE chemistry_model_mod
 
 !-- Diffusion terms (the last three arguments are zero)
 
-      CALL diffusion_s( i, j, cs_scalar,                                                 &
+      CALL diffusion_s( i, j, cs_scalar, kh,                                             &
                         surf_def_h(0)%cssws(ilsp,:), surf_def_h(1)%cssws(ilsp,:),        &
                         surf_def_h(2)%cssws(ilsp,:),                                     &
                         surf_lsm_h%cssws(ilsp,:), surf_usm_h%cssws(ilsp,:),              &
@@ -1603,7 +1604,7 @@ MODULE chemistry_model_mod
     ENDIF
 !
 !-- Diffusion terms  (the last three arguments are zero)
-    CALL diffusion_s( cs_scalar,                                               &
+    CALL diffusion_s( cs_scalar, kh,                                           &
                       surf_def_h(0)%cssws(ilsp,:),                             &
                       surf_def_h(1)%cssws(ilsp,:),                             &
                       surf_def_h(2)%cssws(ilsp,:),                             &
@@ -1621,6 +1622,7 @@ MODULE chemistry_model_mod
                       surf_usm_v(1)%cssws(ilsp,:),                             &
                       surf_usm_v(2)%cssws(ilsp,:),                             &
                       surf_usm_v(3)%cssws(ilsp,:) )
+
 !    
 !-- Prognostic equation for chemical species
     DO  i = nxl, nxr

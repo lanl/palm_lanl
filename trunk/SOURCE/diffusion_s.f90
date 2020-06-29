@@ -121,7 +121,7 @@
 ! ------------
 !> Call for all grid points
 !------------------------------------------------------------------------------!
-    SUBROUTINE diffusion_s( s, s_flux_def_h_up,                       &
+    SUBROUTINE diffusion_s( s, k_s, s_flux_def_h_up,                           &
                                s_flux_def_h_down, s_flux_t,                    &
                                s_flux_lsm_h_up,    s_flux_usm_h_up,            &
                                s_flux_def_v_north, s_flux_def_v_south,         &
@@ -133,7 +133,7 @@
                                s_flux_solar_t)
 
        USE arrays_3d,                                                          &
-           ONLY:  dzw, ddzu, ddzw, kh, tend, drho_ref_zu, rho_ref_zw, solar3d
+           ONLY:  dzw, ddzu, ddzw, tend, drho_ref_zu, rho_ref_zw, solar3d
        
        USE control_parameters,                                                 & 
            ONLY: use_surface_fluxes, use_top_fluxes, ideal_solar_division,     &
@@ -196,6 +196,7 @@
        REAL(wp), DIMENSION(:,:,:), POINTER ::  s  !< 
 #endif
 
+       REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) :: k_s !< placeholder for diffusivity 
        REAL(wp), DIMENSION(1:surf_def_h(2)%ns),INTENT(IN),OPTIONAL :: s_flux_solar_t  !<solar flux at sfc
 
        DO  i = nxl, nxr
@@ -216,15 +217,15 @@
 
                 tend(k,j,i) = tend(k,j,i)                                      &
                                           + 0.5_wp * (                         &
-                        mask_east  * ( kh(k,j,i) + kh(k,j,i+1) )               &
+                        mask_east  * ( k_s(k,j,i) + k_s(k,j,i+1) )             &
                                    * ( s(k,j,i+1) - s(k,j,i)   )               &
-                      - mask_west  * ( kh(k,j,i) + kh(k,j,i-1) )               &
+                      - mask_west  * ( k_s(k,j,i) + k_s(k,j,i-1) )             &
                                    * ( s(k,j,i)   - s(k,j,i-1) )               &
                                                      ) * ddx2 * flag           &
                                           + 0.5_wp * (                         &
-                        mask_north * ( kh(k,j,i) + kh(k,j+1,i) )               &
+                        mask_north * ( k_s(k,j,i) + k_s(k,j+1,i) )             &
                                    * ( s(k,j+1,i) - s(k,j,i)   )               &
-                      - mask_south * ( kh(k,j,i) + kh(k,j-1,i) )               &
+                      - mask_south * ( k_s(k,j,i) + k_s(k,j-1,i) )             &
                                    * ( s(k,j,i)   - s(k,j-1,i) )               &
                                                      ) * ddy2 * flag
              ENDDO
@@ -356,15 +357,15 @@
 
                 tend(k,j,i) = tend(k,j,i)                                      &
                                        + 0.5_wp * (                            &
-                                      ( kh(k,j,i) + kh(k+1,j,i) ) *            &
+                                      ( k_s(k,j,i) + k_s(k+1,j,i) ) *          &
                                           ( s(k+1,j,i)-s(k,j,i) ) * ddzu(k+1)  &
                                                             * rho_ref_zw(k)    &
                                                             * mask_top         &
-                                    - ( kh(k,j,i) + kh(k-1,j,i) ) *            &
+                                    - ( k_s(k,j,i) + k_s(k-1,j,i) ) *          &
                                           ( s(k,j,i)-s(k-1,j,i) ) * ddzu(k)    &
                                                             * rho_ref_zw(k-1)  &
                                                             * mask_bottom      &
-                                                  ) * ddzw(k) * drho_ref_zu(k)    &
+                                                  ) * ddzw(k) * drho_ref_zu(k) &
                                                               * flag
              ENDDO
 
@@ -459,7 +460,7 @@
 ! ------------
 !> Call for grid point i,j
 !------------------------------------------------------------------------------!
-    SUBROUTINE diffusion_s_ij( i, j, s,                                        &
+    SUBROUTINE diffusion_s_ij( i, j, s, k_s,                                   &
                                s_flux_def_h_up,    s_flux_def_h_down,          &
                                s_flux_t,                                       &
                                s_flux_lsm_h_up,    s_flux_usm_h_up,            &
@@ -469,10 +470,10 @@
                                s_flux_lsm_v_east,  s_flux_lsm_v_west,          &
                                s_flux_usm_v_north, s_flux_usm_v_south,         &
                                s_flux_usm_v_east,  s_flux_usm_v_west,          &
-                               s_flux_solar_t)
+                               s_flux_solar_t )
 
        USE arrays_3d,                                                          &
-           ONLY:  dzw, ddzu, ddzw, kh, tend, drho_ref_zu, rho_ref_zw, solar3d
+           ONLY:  dzw, ddzu, ddzw, tend, drho_ref_zu, rho_ref_zw, solar3d
            
        USE control_parameters,                                                 & 
            ONLY: use_surface_fluxes, use_top_fluxes, ideal_solar_division,     &
@@ -527,13 +528,16 @@
        REAL(wp), DIMENSION(1:surf_usm_v(2)%ns) ::  s_flux_usm_v_east  !< flux at east-facing vertical urban-type surfaces
        REAL(wp), DIMENSION(1:surf_usm_v(3)%ns) ::  s_flux_usm_v_west  !< flux at west-facing vertical urban-type surfaces
        REAL(wp), DIMENSION(1:surf_def_h(2)%ns) ::  s_flux_t           !< flux at model top
+       
 #if defined( __nopointer )
        REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  s !< 
 #else
        REAL(wp), DIMENSION(:,:,:), POINTER ::  s  !< 
 #endif
 
+       REAL(wp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) :: k_s !< placeholder for diffusivity 
        REAL(wp), DIMENSION(1:surf_def_h(2)%ns),INTENT(IN),OPTIONAL :: s_flux_solar_t  !<solar flux at sfc
+       
 !
 !--    Compute horizontal diffusion
        DO  k = nzb+1, nzt
@@ -553,15 +557,15 @@
 
           tend(k,j,i) = tend(k,j,i)                                            &
                                           + 0.5_wp * (                         &
-                            mask_east  * ( kh(k,j,i) + kh(k,j,i+1) )           &
+                            mask_east  * ( k_s(k,j,i) + k_s(k,j,i+1) )         &
                                        * ( s(k,j,i+1) - s(k,j,i)   )           &
-                          - mask_west  * ( kh(k,j,i) + kh(k,j,i-1) )           &
+                          - mask_west  * ( k_s(k,j,i) + k_s(k,j,i-1) )         &
                                        * ( s(k,j,i)   - s(k,j,i-1) )           &
                                                      ) * ddx2 * flag           &
                                           + 0.5_wp * (                         &
-                            mask_north * ( kh(k,j,i) + kh(k,j+1,i) )           &
+                            mask_north * ( k_s(k,j,i) + k_s(k,j+1,i) )         &
                                        * ( s(k,j+1,i) - s(k,j,i)   )           &
-                          - mask_south * ( kh(k,j,i) + kh(k,j-1,i) )           &
+                          - mask_south * ( k_s(k,j,i) + k_s(k,j-1,i) )         &
                                        * ( s(k,j,i)  - s(k,j-1,i)  )           &
                                                      ) * ddy2 * flag
        ENDDO
@@ -692,17 +696,16 @@
           flag        = MERGE( 1.0_wp, 0.0_wp,                                 &
                                BTEST( wall_flags_0(k,j,i), 0 ) )
 
-          tend(k,j,i) = tend(k,j,i)                                            &
-                                       + 0.5_wp * (                            &
-                                      ( kh(k,j,i) + kh(k+1,j,i) ) *            &
+          tend(k,j,i) = tend(k,j,i) + 0.5_wp * (                               &
+                                      ( k_s(k,j,i) + k_s(k+1,j,i) ) *          &
                                           ( s(k+1,j,i)-s(k,j,i) ) * ddzu(k+1)  &
                                                             * rho_ref_zw(k)    &
                                                             * mask_top         &
-                                    - ( kh(k,j,i) + kh(k-1,j,i) ) *            &
+                                    - ( k_s(k,j,i) + k_s(k-1,j,i) ) *          &
                                           ( s(k,j,i)-s(k-1,j,i) ) * ddzu(k)    &
                                                             * rho_ref_zw(k-1)  &
                                                             * mask_bottom      &
-                                                  ) * ddzw(k) * drho_ref_zu(k)    &
+                                                  ) * ddzw(k) * drho_ref_zu(k) &
                                                               * flag
        ENDDO
 

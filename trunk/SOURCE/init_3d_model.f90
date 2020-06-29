@@ -951,6 +951,7 @@
           ENDDO
           rho_ref_zw(nzt+1)  = rho_ref_zw(nzt)                                    &
                                + 2.0_wp * ( rho_ref_zu(nzt+1) - rho_ref_zw(nzt)  )
+          prho_reference = rho_ref_zu(nzb)
        ELSE
 !          DO  k = nzb, nzt+1
           p_hydrostatic(:)   = surface_pressure * 100.0_wp *                  &
@@ -961,6 +962,7 @@
                                 )**( r_d / cp )                              &
                                 ) / ( r_d * pt_init(nzb) )
           rho_ref_zw(:) = rho_ref_zu(nzb)
+          prho_reference = rho_ref_zu(nzb)
        ENDIF
 
     ENDIF
@@ -2346,7 +2348,7 @@
     IF ( TRIM( initializing_actions ) /= 'read_restart_data'  .AND.            &
          TRIM( initializing_actions ) /= 'cyclic_fill' )  THEN
  
-       IF ( use_surface_fluxes  .AND.  constant_heatflux  .AND.                &
+       IF ( use_surface_fluxes  .AND.  constant_bottom_heatflux  .AND.         &
             random_heatflux )  THEN
           IF ( surf_def_h(0)%ns >= 1 )  CALL disturb_heatflux( surf_def_h(0) )
           IF ( surf_lsm_h%ns    >= 1 )  CALL disturb_heatflux( surf_lsm_h    )
@@ -2371,7 +2373,7 @@
 !-- Initialize surface forcing corresponding to large-scale forcing. Therein, 
 !-- initialize heat-fluxes, etc. via datatype. Revise it later!
     IF ( large_scale_forcing .AND. lsf_surf )  THEN
-       IF ( use_surface_fluxes  .AND.  constant_heatflux )  THEN
+       IF ( use_surface_fluxes  .AND.  constant_bottom_heatflux )  THEN
           CALL ls_forcing_surf ( simulated_time )
        ENDIF
     ENDIF
@@ -2642,6 +2644,7 @@
 !-- the external pressure gradient
     dp_smooth_factor = 1.0_wp
     IF ( dp_external )  THEN
+       CALL location_message('initializing pressure gradient',.FALSE.)
 !
 !--    Set the starting level dp_level_ind_b only if it has not been set before
 !--    (e.g. in init_grid).
@@ -2658,6 +2661,7 @@
                           REAL( nzt - dp_level_ind_b, KIND=wp ) - 0.5_wp ) ) )
           ENDDO
        ENDIF
+       CALL location_message('finished',.TRUE.)
     ENDIF
 
 !

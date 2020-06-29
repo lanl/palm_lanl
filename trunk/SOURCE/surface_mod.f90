@@ -183,7 +183,7 @@
         ONLY:  alpha_T, beta_S, csflux_input_conversion,                       &
                heatflux_input_conversion, momentumflux_input_conversion,       &
                scalarflux_input_conversion, salinityflux_input_conversion,     &
-               waterflux_input_conversion, sa_init, zu, zw
+               waterflux_input_conversion, zu, zw
 
     USE chem_modules
 
@@ -248,6 +248,7 @@
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  ts        !< scaling parameter temerature
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  qs        !< scaling parameter humidity
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  ss        !< scaling parameter passive scalar
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  sas       !< scaling parameter salinity
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  qcs       !< scaling parameter qc
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  ncs       !< scaling parameter nc
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  qrs       !< scaling parameter qr
@@ -265,8 +266,6 @@
 
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt1       !< Potential temperature at first grid level
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  sa1       !< Salinity at first grid level
-       REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt_io     !< Potential temperature at ice-ocean interface
-       REAL(wp), DIMENSION(:), ALLOCATABLE ::  sa_io     !< Salinity at ice-ocean interface
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  melt      !< Melt rate in m/s
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  qv1       !< mixing ratio at first grid level
        REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  css     !< scaling parameter chemical species
@@ -318,6 +317,7 @@
        REAL(wp), DIMENSION(:,:), ALLOCATABLE   ::  rrtm_asdir      !< albedo for shortwave direct radiation, solar angle of 60°
 
        REAL(wp), DIMENSION(:), ALLOCATABLE   ::  pt_surface        !< skin-surface temperature
+       REAL(wp), DIMENSION(:), ALLOCATABLE   ::  sa_surface        !< Salinity at skin surface
        REAL(wp), DIMENSION(:), ALLOCATABLE   ::  rad_net           !< net radiation 
        REAL(wp), DIMENSION(:), ALLOCATABLE   ::  rad_net_l         !< net radiation, used in USM
        REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  lambda_h          !< heat conductivity of soil/ wall (W/m/K) 
@@ -744,6 +744,7 @@
              ENDDO
           ENDDO
        ENDDO
+
 !
 !--    Count number of vertical surfaces on local domain 
        DO  i = nxl, nxr
@@ -1086,8 +1087,11 @@
 !
 !--    Salinity surface flux
        IF ( ocean ) THEN
+         DEALLOCATE ( surfaces%shf_sol ) 
+         DEALLOCATE ( surfaces%sa_surface ) 
          DEALLOCATE ( surfaces%sasws )
-         DEALLOCATE ( surfaces%shf_sol )
+         DEALLOCATE ( surfaces%sa1 )
+         DEALLOCATE ( surfaces%sas )
        ENDIF
 
     END SUBROUTINE deallocate_surface_attributes_h
@@ -1222,9 +1226,11 @@
 !
 !--    Salinity surface flux
        IF ( ocean )  THEN
-         ALLOCATE ( surfaces%sasws(1:surfaces%ns) )
          ALLOCATE ( surfaces%shf_sol(1:surfaces%ns) )
+         ALLOCATE ( surfaces%sasws(1:surfaces%ns) )
          ALLOCATE ( surfaces%sa1(1:surfaces%ns) )
+         ALLOCATE ( surfaces%sas(1:surfaces%ns) )
+         ALLOCATE ( surfaces%sa_surface(1:surfaces%ns) )
        ENDIF
 
 !
@@ -1232,8 +1238,6 @@
        IF ( most_method == 'mcphee' ) THEN
           ALLOCATE ( surfaces%gamma_T(1:surfaces%ns) )
           ALLOCATE ( surfaces%gamma_S(1:surfaces%ns) )
-          ALLOCATE ( surfaces%sa_io(1:surfaces%ns) )
-          ALLOCATE ( surfaces%pt_io(1:surfaces%ns) )
           ALLOCATE ( surfaces%melt(1:surfaces%ns) )
        ENDIF
 
@@ -1652,6 +1656,8 @@
                                                               .FALSE.,.TRUE. )  
 !
 !--                   Default surface type
+!--                   Note: surf_def_h(0) will be initialized even when 
+!--                   use_surface_fluxes = .FALSE.
                       ELSE
                          CALL initialize_horizontal_surfaces( k, j, i,         &
                                                               surf_def_h(0),   &
@@ -2060,7 +2066,7 @@
              IF ( use_surface_fluxes .AND. (.NOT. is_top) )  THEN
 
                 IF ( upward_facing )  THEN
-                   IF ( constant_heatflux )  THEN
+                   IF ( constant_bottom_heatflux )  THEN
 !   
 !--                   Initialize surface heatflux. However, skip this for now if 
 !--                   if random_heatflux is set. This case, shf is initialized later.
@@ -2221,9 +2227,9 @@
                       surf%shf(num_h) = 0.0_wp
                       surf%melt(num_h) = 0.0_wp
                       surf%sasws(num_h) = 0.0_wp
-                      surf%sa_io(num_h) = sa_init(nzt)
-                      surf%pt_io(num_h) = 0.0_wp
                    ENDIF
+                   surf%pt_surface(num_h) = pt_surface
+                   surf%sa_surface(num_h) = sa_surface
 
                 ENDIF
 

@@ -391,7 +391,6 @@
     
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  min_dz_stretch_level_end !< Array that contains all minimum heights where the stretching can end
 
-
 !
 !-- Calculation of horizontal array bounds including ghost layers
     nxlg = nxl - nbgp
@@ -1871,9 +1870,11 @@
     INTEGER(iwp) ::  td            !< tunnel wall depth
     INTEGER(iwp) ::  th            !< height of outer tunnel wall
 
-    INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  nzb_local         !< index for topography top at cell-center
-    INTEGER(iwp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  topo !< input array for 3D topography and dummy array for setting "outer"-flags
-
+    INTEGER(iwp), DIMENSION(:,:), ALLOCATABLE ::  nzb_local         
+                                   !< index for topography top at cell-center
+    INTEGER(iwp), DIMENSION(nzb:nzt+1,nysg:nyng,nxlg:nxrg) ::  topo 
+                                   !< input array for 3D topography and dummy 
+                                   !< array for setting "outer"-flags
 
 !
 !-- Set outer and inner index arrays for non-flat topography.
@@ -1887,10 +1888,20 @@
        CASE ( 'flat' )
 !   
 !--       Initialilize 3D topography array, used later for initializing flags
+!--       This results in "topography" designated at both top and bottom surfaces,
+!--       because initializing surf_def_h arrays is the only way to use_top_fluxes
+!--       and use_bottom_fluxes. 
+!
+!--       Setting topo everywhere in the domain means there is no topography
+          topo(nzb:nzt+1,:,:) = IBSET( topo(nzb:nzt+1,:,:), 0 ) 
+!--       Now set topography at the top and bottom booundaries
           IF ( TRIM(constant_flux_layer) == 'top' ) THEN
-             topo(nzb+1:nzt,:,:) = IBSET( topo(nzb+1:nzt,:,:), 0 ) 
+             topo(nzt+1,:,:) = IBCLR( topo(nzt+1,:,:), 0 ) 
           ELSE
-             topo(nzb+1:nzt+1,:,:) = IBSET( topo(nzb+1:nzt+1,:,:), 0 ) 
+!--          Note, this results in the nzb grid cell's values never being 
+!--          solve for but rather assigned from B.C.'s Consider only applying 
+!--          the following line if constant_flux_layer == 'bottom'
+             topo(nzb,:,:) = IBCLR( topo(nzb,:,:), 0 )
           ENDIF
 
        CASE ( 'single_building' )
@@ -2390,7 +2401,8 @@
 
     USE control_parameters,                                                    &
         ONLY:  bc_lr_cyc, bc_ns_cyc, constant_flux_layer, land_surface,        &
-               use_surface_fluxes, use_top_fluxes, urban_surface
+               message_string, pt_surface_rate_change, use_surface_fluxes,     &
+               use_top_fluxes, urban_surface
 
     USE indices,                                                               &
         ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, ny, nyn, nyng, nys, nysg, nz,   &
@@ -2430,7 +2442,6 @@
                  wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 2 )
 
           ENDDO
-
           DO k = nzb, nzt
 !
 !--          w grid
@@ -2438,8 +2449,9 @@
                   BTEST( topo(k+1,j,i), 0 ) )                                  &
                 wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 3 )
           ENDDO
-          IF ( TRIM(constant_flux_layer) /= 'top' )                            &
+          IF ( BTEST(topo(nzt+1,j,i), 0 ) ) THEN
              wall_flags_0(nzt+1,j,i) = IBSET( wall_flags_0(nzt+1,j,i), 3 )
+          ENDIF
 
        ENDDO
     ENDDO
@@ -2481,8 +2493,8 @@
 !--          treat edges (u(k,j,i+1)) simply by a gradient approach, i.e. these
 !--          points are not masked within diffusion_u. Tests had shown that the
 !--          effect on the flow is negligible. 
-             IF ( TRIM(constant_flux_layer) /= 'none' .OR.                     &
-                  use_surface_fluxes                       )  THEN
+             IF ( ( TRIM(constant_flux_layer) /= 'none' .OR.                   &
+                  use_surface_fluxes ) .AND. pt_surface_rate_change == 0.0_wp )  THEN
                 IF ( BTEST( wall_flags_0(k,j,i), 0 ) )                         &
                    wall_flags_0(k,j,i) = IBSET( wall_flags_0(k,j,i), 8 )
              ELSE

@@ -659,9 +659,9 @@
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  c_v_m_l                !< mean phase velocity at outflow for v-component used in radiation boundary condition (local subdomain value)
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  c_w_m                  !< mean phase velocity at outflow for w-component used in radiation boundary condition
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  c_w_m_l                !< mean phase velocity at outflow for w-component used in radiation boundary condition (local subdomain value)
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dbdx                   !< Gradient of u-component in x-direction
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dbdy                   !< Gradient of u-component in y-direction
-    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dbdz                   !< Gradient of u-component in z-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dbdx                   !< Gradient of buoyancy in x-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dbdy                   !< Gradient of buoyancy in y-direction
+    REAL(wp), DIMENSION(:), ALLOCATABLE ::  dbdz                   !< Gradient of buoyancy in z-direction
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  dptdx                  !< Gradient of potential temperature in x-direction
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  dptdy                  !< Gradient of potential temperature in y-direction
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  dptdz                  !< Gradient of potential temperature in z-direction

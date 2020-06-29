@@ -357,7 +357,7 @@
     INTEGER(iwp) ::  omp_get_thread_num  !<
     INTEGER(iwp) ::  sr                  !<
     INTEGER(iwp) ::  tn                  !<
-    INTEGER(iwp) :: top_bottom_flag
+    INTEGER(iwp) ::  top_bottom_index
 
     LOGICAL ::  first  !<
 
@@ -828,55 +828,55 @@
 !--          allow vectorization of that loop.
              sums_l(nzb+4,pr_palm,tn) = sums_l(nzb+4,pr_palm,tn) + sums_l_etot
              IF (use_top_fluxes) THEN
-                top_bottom_flag = 2
+                top_bottom_index = 2
              ELSE
-                top_bottom_flag = 0
+                top_bottom_index = 0
              ENDIF
 
 !
 !--          2D-arrays (being collected in the last column of sums_l)
-             IF ( surf_def_h(top_bottom_flag)%end_index(j,i) >=                &
-                  surf_def_h(top_bottom_flag)%start_index(j,i) )  THEN
-                m = surf_def_h(top_bottom_flag)%start_index(j,i)
+             IF ( surf_def_h(top_bottom_index)%end_index(j,i) >=                &
+                  surf_def_h(top_bottom_index)%start_index(j,i) )  THEN
+                m = surf_def_h(top_bottom_index)%start_index(j,i)
                 sums_l(nzb,pr_palm,tn)   = sums_l(nzb,pr_palm,tn) +            &
-                                           surf_def_h(top_bottom_flag)%us(m)   &
+                                           surf_def_h(top_bottom_index)%us(m)   &
                                            * rmask(j,i,sr)
                 sums_l(nzb+1,pr_palm,tn) = sums_l(nzb+1,pr_palm,tn) +          &
-                                           surf_def_h(top_bottom_flag)%usws(m) &
+                                           surf_def_h(top_bottom_index)%usws(m) &
                                            * rmask(j,i,sr)
                 sums_l(nzb+2,pr_palm,tn) = sums_l(nzb+2,pr_palm,tn) +          &
-                                           surf_def_h(top_bottom_flag)%vsws(m) &
+                                           surf_def_h(top_bottom_index)%vsws(m) &
                                            * rmask(j,i,sr)
                 sums_l(nzb+3,pr_palm,tn) = sums_l(nzb+3,pr_palm,tn) +          &
-                                           surf_def_h(top_bottom_flag)%ts(m)   &
+                                           surf_def_h(top_bottom_index)%ts(m)   &
                                            * rmask(j,i,sr)
                 IF ( humidity )  THEN
                    sums_l(nzb+12,pr_palm,tn) = sums_l(nzb+12,pr_palm,tn) +     &
-                                               surf_def_h(top_bottom_flag)%qs(m)&
+                                               surf_def_h(top_bottom_index)%qs(m)&
                                                * rmask(j,i,sr)
                 ENDIF
                 IF ( passive_scalar )  THEN
                    sums_l(nzb+13,pr_palm,tn) = sums_l(nzb+13,pr_palm,tn) +     &
-                                               surf_def_h(top_bottom_flag)%ss(m)&
+                                               surf_def_h(top_bottom_index)%ss(m)&
                                                * rmask(j,i,sr)
                 ENDIF
 !--             Summation of surface temperature.
                 sums_l(nzb+14,pr_palm,tn) = sums_l(nzb+14,pr_palm,tn)   +      &
-                                            surf_def_h(top_bottom_flag)%pt_surface(m) *&
+                                            surf_def_h(top_bottom_index)%pt_surface(m) *&
                                             rmask(j,i,sr)
                 IF ( idealized_diurnal ) THEN
                    sums_l(nzb+15,pr_palm,tn) = sums_l(nzb+15,pr_palm,tn) +     &
-                                            surf_def_h(top_bottom_flag)%shf_sol(m) * rmask(j,i,sr)
+                                            surf_def_h(top_bottom_index)%shf_sol(m) * rmask(j,i,sr)
                 ELSE
                    sums_l(nzb+15,pr_palm,tn) = 0.0
                 ENDIF
 
                 sums_l(nzb+16,pr_palm,tn) = sums_l(nzb+16,pr_palm,tn) +           &
-                            surf_def_h(top_bottom_flag)%shf(m) * rmask(j,i,sr)
+                            surf_def_h(top_bottom_index)%shf(m) * rmask(j,i,sr)
                 
                 IF ( ocean ) THEN
                    sums_l(nzb+17,pr_palm,tn) = sums_l(nzb+17,pr_palm,tn) +        &
-                                               surf_def_h(top_bottom_flag)%sasws(m) * rmask(j,i,sr)
+                                               surf_def_h(top_bottom_index)%sasws(m) * rmask(j,i,sr)
                 ENDIF
 
              ENDIF

@@ -698,7 +698,7 @@
              dt, dt_averaging_input, dt_averaging_input_pr,                    &
              dt_coupling, dt_data_output, dt_data_output_av, dt_disturb,       &
              dt_domask, dt_dopr, dt_dopr_listing, dt_dots, dt_do2d_xy,         &
-             dt_do2d_xz, dt_do2d_yz, dt_do3d, dt_max, dt_restart,              &
+             dt_do2d_xz, dt_do2d_yz, dt_do3d, dt_max, dt_min, dt_restart,      &
              dt_run_control,end_time, force_print_header, mask_scale_x,        &
              mask_scale_y, mask_scale_z, mask_x, mask_y, mask_z, mask_x_loop,  &
              mask_y_loop, mask_z_loop, netcdf_data_format, netcdf_deflate,     &

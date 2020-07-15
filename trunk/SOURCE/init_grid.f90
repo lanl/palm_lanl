@@ -1892,16 +1892,11 @@
 !--       because initializing surf_def_h arrays is the only way to use_top_fluxes
 !--       and use_bottom_fluxes. 
 !
-!--       Setting topo everywhere in the domain means there is no topography
-          topo(nzb:nzt+1,:,:) = IBSET( topo(nzb:nzt+1,:,:), 0 ) 
-!--       Now set topography at the top and bottom booundaries
+!--       Set topography at bottom boundary, nzb
+          topo(nzb+1:nzt+1,:,:) = IBSET( topo(nzb:nzt+1,:,:), 0 ) 
+!--       Set topography at top boundary, nzt+1
           IF ( TRIM(constant_flux_layer) == 'top' ) THEN
              topo(nzt+1,:,:) = IBCLR( topo(nzt+1,:,:), 0 ) 
-          ELSE
-!--          Note, this results in the nzb grid cell's values never being 
-!--          solve for but rather assigned from B.C.'s Consider only applying 
-!--          the following line if constant_flux_layer == 'bottom'
-             topo(nzb,:,:) = IBCLR( topo(nzb,:,:), 0 )
           ENDIF
 
        CASE ( 'single_building' )

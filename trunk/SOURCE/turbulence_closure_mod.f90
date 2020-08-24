@@ -4280,15 +4280,13 @@
     REAL(wp)     ::  var_reference       !< reference temperature
     REAL(wp)     ::  km_max = 1e0_wp    !< maximum value of km
     REAL(wp)     ::  kden_min = 1e-10_wp  !< minimum value in denominator of diffusivity
-    REAL(wp)     ::  km_grav = 0.0_wp, km_num = 0.0_wp, kh_num = 0.0_wp,       &
-                     ks_num = 0.0_wp, km_den = 0.0_wp, kh_den = 0.0_wp,        &
-                     ks_den = 0.0_wp
+    REAL(wp)     ::  km_num = 0.0_wp, kh_num = 0.0_wp, ks_den = 0.0_wp,        &
+                     ks_num = 0.0_wp, km_den = 0.0_wp, kh_den = 0.0_wp         &
                      !< numerator and denominators of diffusivities
     REAL(wp)     ::  km_num_sum = 0.0_wp, km_den_sum = 0.0_wp,                 &
-                     km_grav_sum = 0.0_wp, km_sum = 0.0_wp, kh_sum = 0.0_wp,   &
-                     ks_sum = 0.0_wp
+                     km_sum = 0.0_wp, kh_sum = 0.0_wp, ks_sum = 0.0_wp
                      !< variables for diffusivity_diags
-
+    !REAL(wp)     ::  km_grav = 0.0_wp, km_grav_sum = 0.0_wp 
     REAL(wp), DIMENSION(3)   ::  dbdxi, dptdxi, dsadxi !< scalar gradients
     REAL(wp), DIMENSION(3,3) ::  dudxi, S              !< velocity gradients,
                                                        !< strain tensor
@@ -4369,7 +4367,7 @@
        !$OMP DO
        km_num_sum = 0.0_wp
        km_den_sum = 0.0_wp
-       km_grav_sum = 0.0_wp
+       !km_grav_sum = 0.0_wp
        km_sum = 0.0_wp
        kh_sum = 0.0_wp
        ks_sum = 0.0_wp
@@ -4385,7 +4383,7 @@
              DO  k = nzb+1, nzt
                 
                 km_num = 0.0_wp
-                km_grav = 0.0_wp
+                !km_grav = 0.0_wp
                 km_den = 0.0_wp
                 kh_num = 0.0_wp
                 kh_den = 0.0_wp
@@ -4424,16 +4422,19 @@
                       km_den = km_den + dudxi(jj,kk)**2.0_wp
                       kh_num = kh_num + dudxi(jj,kk) * dptdxi(kk) * dptdxi(jj)
                    ENDDO
-                   km_grav = km_grav - cos_alpha_surface * atmos_ocean_sign * g * &
-                                       dudxi(3,kk) * dbdxi(kk)
+                   !km_grav = km_grav - cos_alpha_surface * atmos_ocean_sign * g * &
+                   !                    dudxi(3,kk) * dbdxi(kk)
                    kh_den = kh_den + dptdxi(kk)**2.0_wp
                 ENDDO
                 
 !
 !--             Compute diffusities
                 km(k,j,i) = MIN( km_max,                                       &
-                            C(k) * MAX( -1.0_wp * km_num + km_grav, 0.0_wp ) * &
+                            C(k) * MAX( -1.0_wp * km_num, 0.0_wp ) *           &
                             flag / ( km_den + kden_min ) )
+                !km(k,j,i) = MIN( km_max,                                       &
+                !            C(k) * MAX( -1.0_wp * km_num + km_grav, 0.0_wp ) * &
+                !            flag / ( km_den + kden_min ) )
                 kh(k,j,i) = C(k) * MAX( -1.0_wp * kh_num, 0.0_wp ) * flag /    &
                             ( kh_den + kden_min )
                 
@@ -4453,7 +4454,7 @@
                    ks_sum      = ks_sum + ks(k,j,i)
                    km_num_sum  = km_num_sum + km_num
                    km_den_sum  = km_den_sum + km_den
-                   km_grav_sum = km_grav_sum + km_grav
+                   !km_grav_sum = km_grav_sum + km_grav
                    nn = nn + 1
                    IF ( km_num > 0.0_wp ) mm = mm + 1.0_wp
                 ENDIF
@@ -4463,8 +4464,8 @@
        ENDDO
        
        IF ( diffusivity_diags ) THEN
-          WRITE(message_string,*) 'km_grav_av(',klog,') = ',km_grav_sum/nn
-          CALL location_message(message_string,.TRUE.)
+          !WRITE(message_string,*) 'km_grav_av(',klog,') = ',km_grav_sum/nn
+          !CALL location_message(message_string,.TRUE.)
           WRITE(message_string,*) 'km_num_av(',klog,') = ',km_num_sum/nn
           CALL location_message(message_string,.TRUE.)
           WRITE(message_string,*) 'km_den_av(',klog,') = ',km_den_sum/nn

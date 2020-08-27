@@ -1450,6 +1450,7 @@
     LOGICAL ::  spinup = .FALSE.                                 !< perform model spinup without atmosphere code?
     LOGICAL ::  stokes_force = .FALSE.                           !< switch for use of Stokes forces
     LOGICAL ::  stop_dt = .FALSE.                                !< internal switch to stop the time stepping
+    LOGICAL ::  stratification_affects_km = .FALSE.              !< namelist parameter for amd scheme
     LOGICAL ::  surface_flux_diags = .FALSE.                     !< namelist parameter
     LOGICAL ::  synchronous_exchange = .FALSE.                   !< namelist parameter
     LOGICAL ::  syn_turb_gen = .FALSE.                           !< flag for synthetic turbulence generator module

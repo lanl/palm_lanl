@@ -4252,9 +4252,10 @@
         ONLY:  drho_ref_zu, dd2zu, ddzu, pt, sa
 
     USE control_parameters,                                                    &
-        ONLY:  atmos_ocean_sign, cos_alpha_surface, diffusivity_diags,                            &
+        ONLY:  atmos_ocean_sign, cos_alpha_surface, diffusivity_diags,         &
                diffusivity_from_surface_fluxes, e_min, g, les_mw, les_amd,     &
-               message_string, outflow_l, outflow_n, outflow_r, outflow_s
+               message_string, outflow_l, outflow_n, outflow_r, outflow_s,     &
+               stratification_affects_km
     
     USE grid_variables,                                                        &
         ONLY:  dx, dy, ddx, ddy
@@ -4279,12 +4280,12 @@
     REAL(wp)     ::  l                   !< mixing length
     REAL(wp)     ::  ll                  !< adjusted mixing length
     REAL(wp)     ::  var_reference       !< reference temperature
-    REAL(wp)     ::  km_max = 1e0_wp    !< maximum value of km
-    REAL(wp)     ::  kden_min = 1e-10_wp  !< minimum value in denominator of diffusivity
+    REAL(wp)     ::  km_max = 1e0_wp     !< maximum value of km
+    REAL(wp)     ::  kden_min = 1e-10_wp !< minimum value in denominator of diffusivity
     REAL(wp)     ::  km_num = 0.0_wp, kh_num = 0.0_wp, ks_den = 0.0_wp,        &
                      ks_num = 0.0_wp, km_den = 0.0_wp, kh_den = 0.0_wp
                      !< numerator and denominators of diffusivities
-    !REAL(wp)     ::  km_grav = 0.0_wp, km_grav_sum = 0.0_wp 
+    REAL(wp)     ::  km_grav = 0.0_wp
     REAL(wp), DIMENSION(3)   ::  dbdxi, dptdxi, dsadxi !< scalar gradients
     REAL(wp), DIMENSION(3,3) ::  dudxi, S              !< velocity gradients,
                                                        !< strain tensor
@@ -4373,7 +4374,6 @@
              DO  k = nzb+1, nzt
                 
                 km_num = 0.0_wp
-                !km_grav = 0.0_wp
                 km_den = 0.0_wp
                 kh_num = 0.0_wp
                 kh_den = 0.0_wp
@@ -4412,19 +4412,21 @@
                       km_den = km_den + dudxi(jj,kk)**2.0_wp
                       kh_num = kh_num + dudxi(jj,kk) * dptdxi(kk) * dptdxi(jj)
                    ENDDO
-                   !km_grav = km_grav - cos_alpha_surface * atmos_ocean_sign * g * &
-                   !                    dudxi(3,kk) * dbdxi(kk)
                    kh_den = kh_den + dptdxi(kk)**2.0_wp
                 ENDDO
                 
+                IF ( stratification_affects_km ) THEN
+                   km_grav = 0.0_wp
+                   DO kk = 1, 3
+                      km_num = km_num - cos_alpha_surface * atmos_ocean_sign * &
+                                        g * dudxi(3,kk) * dbdxi(kk)
+                   ENDDO
+                ENDIF
 !
 !--             Compute diffusities
                 km(k,j,i) = MIN( km_max,                                       &
-                            C(k) * MAX( -1.0_wp * km_num, 0.0_wp ) *           &
-                            flag / ( km_den + kden_min ) )
-                !km(k,j,i) = MIN( km_max,                                       &
-                !            C(k) * MAX( -1.0_wp * km_num + km_grav, 0.0_wp ) * &
-                !            flag / ( km_den + kden_min ) )
+                            C(k) * MAX( -1.0_wp * km_num, 0.0_wp ) * flag /    &
+                            ( km_den + kden_min ) )
                 kh(k,j,i) = C(k) * MAX( -1.0_wp * kh_num, 0.0_wp ) * flag /    &
                             ( kh_den + kden_min )
                 

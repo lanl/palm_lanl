@@ -643,6 +643,7 @@
              scalar_rayleigh_damping, slope_offset, slope_normal_gradients,    &
              sigma_bulk, spinup_time, spinup_pt_amplitude, spinup_pt_mean,     &
              statistic_regions, stokes_force, stokes_drift_method,             &
+             stratification_affects_km,                                        &
              subs_vertical_gradient,                                           &
              subs_vertical_gradient_level, surface_flux_diags,                 &
              surface_heatflux, surface_pressure,                               &

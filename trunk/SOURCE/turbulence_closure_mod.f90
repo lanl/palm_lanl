@@ -4268,6 +4268,7 @@
     IMPLICIT NONE
 
     INTEGER(iwp) ::  i,j,k,ii,jj,kk,m,n  !< loop index
+    INTEGER(iwp) ::  mm = 0              !< Counter for km cutoff
     INTEGER(iwp) ::  klog
     INTEGER(iwp) ::  omp_get_thread_num  !< opemmp function to get thread number
     INTEGER(iwp) ::  sr                  !< statistic region
@@ -4276,16 +4277,13 @@
     REAL(wp)     ::  axy,axz,ayz         !< anisotropy factor
     REAL(wp)     ::  flag                !< topography flag
     REAL(wp)     ::  l                   !< mixing length
-    REAL(wp)     ::  ll,mm,nn            !< adjusted mixing length
+    REAL(wp)     ::  ll                  !< adjusted mixing length
     REAL(wp)     ::  var_reference       !< reference temperature
     REAL(wp)     ::  km_max = 1e0_wp    !< maximum value of km
     REAL(wp)     ::  kden_min = 1e-10_wp  !< minimum value in denominator of diffusivity
     REAL(wp)     ::  km_num = 0.0_wp, kh_num = 0.0_wp, ks_den = 0.0_wp,        &
-                     ks_num = 0.0_wp, km_den = 0.0_wp, kh_den = 0.0_wp         &
+                     ks_num = 0.0_wp, km_den = 0.0_wp, kh_den = 0.0_wp
                      !< numerator and denominators of diffusivities
-    REAL(wp)     ::  km_num_sum = 0.0_wp, km_den_sum = 0.0_wp,                 &
-                     km_sum = 0.0_wp, kh_sum = 0.0_wp, ks_sum = 0.0_wp
-                     !< variables for diffusivity_diags
     !REAL(wp)     ::  km_grav = 0.0_wp, km_grav_sum = 0.0_wp 
     REAL(wp), DIMENSION(3)   ::  dbdxi, dptdxi, dsadxi !< scalar gradients
     REAL(wp), DIMENSION(3,3) ::  dudxi, S              !< velocity gradients,
@@ -4365,14 +4363,6 @@
        ENDDO
        
        !$OMP DO
-       km_num_sum = 0.0_wp
-       km_den_sum = 0.0_wp
-       !km_grav_sum = 0.0_wp
-       km_sum = 0.0_wp
-       kh_sum = 0.0_wp
-       ks_sum = 0.0_wp
-       mm = 0.0_wp
-       nn = 0.0_wp
        DO  i = nxl, nxr
           DO  j = nys, nyn
              
@@ -4448,35 +4438,16 @@
                    ks(k,j,i) = C(k) * MAX( -1.0_wp * ks_num, 0.0_wp ) * flag /    &
                                ( ks_den + kden_min )
                 ENDIF
-                IF ( k == klog .AND. diffusivity_diags ) THEN
-                   km_sum      = km_sum + km(k,j,i)
-                   kh_sum      = kh_sum + kh(k,j,i)
-                   ks_sum      = ks_sum + ks(k,j,i)
-                   km_num_sum  = km_num_sum + km_num
-                   km_den_sum  = km_den_sum + km_den
-                   !km_grav_sum = km_grav_sum + km_grav
-                   nn = nn + 1
-                   IF ( km_num > 0.0_wp ) mm = mm + 1.0_wp
-                ENDIF
+                
+                IF ( k == klog .AND. diffusivity_diags .AND. km_num > 0.0_wp )    &
+                   mm = mm + 1
 
              ENDDO
           ENDDO
        ENDDO
        
        IF ( diffusivity_diags ) THEN
-          !WRITE(message_string,*) 'km_grav_av(',klog,') = ',km_grav_sum/nn
-          !CALL location_message(message_string,.TRUE.)
-          WRITE(message_string,*) 'km_num_av(',klog,') = ',km_num_sum/nn
-          CALL location_message(message_string,.TRUE.)
-          WRITE(message_string,*) 'km_den_av(',klog,') = ',km_den_sum/nn
-          CALL location_message(message_string,.TRUE.)
-          WRITE(message_string,*) 'km_av(',klog,') = ',km_sum/nn
-          CALL location_message(message_string,.TRUE.)
           WRITE(message_string,*) 'Number of km(',klog,') cutoff = ',mm
-          CALL location_message(message_string,.TRUE.)
-          WRITE(message_string,*) 'kh(',klog,') = ',   kh_sum/nn
-          CALL location_message(message_string,.TRUE.)
-          WRITE(message_string,*) 'ks(',klog,',) = ',   ks_sum/nn
           CALL location_message(message_string,.TRUE.)
        ENDIF
     

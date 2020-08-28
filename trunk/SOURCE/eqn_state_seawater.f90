@@ -19,11 +19,11 @@
 !
 ! Current revisions:
 ! -----------------
-!
+! 
 ! 2018-11-21 cbegeman
-! Added functions for freezing point and derivative of freezing point with
+! Added functions for freezing point and derivative of freezing point with 
 ! respect to salinity
-!
+! 
 ! Former revisions:
 ! -----------------
 ! $Id: eqn_state_seawater.f90 2718 2018-01-02 08:49:38Z maronga $
@@ -122,7 +122,7 @@
                              1.1845857563107403e-11, 1.                   ,    &
                              1.3632481944285909e-6, -3.8493266309172074e-5,    &
                              9.1686537446749641e-10 /)
-
+    
     REAL(wp), DIMENSION(23), PARAMETER ::  tfrnom =                            &
                           (/ 0.002519             , -5.946302841607319    ,    &
                              4.136051661346983    , -1.115150523403847e1  ,    &
@@ -136,7 +136,7 @@
                              -2.812172968619369e-1,  1.877244474023750e-2 ,    &
                              -1.204395563789007e-1,  2.349147739749606e-1 ,    &
                              2.748444541144219e-3  /)
-
+       
     INTERFACE eqn_state_seawater
        MODULE PROCEDURE eqn_state_seawater
        MODULE PROCEDURE eqn_state_seawater_ij
@@ -216,11 +216,11 @@
              DO  j = nys, nyn
                 DO  i = nxl, nxr
                    prho(k,j,i)      = rho_ref*(1.0 -                           &
-                                         alpha_const*(pt_p(k,j,i) - pt_ref  - 273.15_wp) +  &
+                                         alpha_const*(pt_p(k,j,i) - pt_ref) +  &
                                          beta_const*(sa_p(k,j,i) - sa_ref) )
                    rho_ocean(k,j,i) = rho_ref*(1.0 -                           &
-                                         alpha_const*(pt_p(k,j,i) - pt_ref - 273.15_wp) +  &
-                                         beta_const*(sa_p(k,j,i) - sa_ref) +   &
+                                         alpha_const*(pt_p(k,j,i) - pt_ref) +  &
+                                         beta_const*(sa_p(k,j,i) - sa_ref) +   & 
                                          drho_dp_const * hyp(k) * 1E-4_wp     )
                 ENDDO
              ENDDO
@@ -356,7 +356,7 @@
        USE control_parameters,                                                 &
           ONLY :  drho_dp_const, linear_eqnOfState, alpha_const, beta_const, fixed_alpha,     &
                   message_string,surface_pressure, rho_ref, pt_ref, sa_ref
-
+       
        USE indices,                                                            &
            ONLY:  nzb, nzt
 
@@ -400,11 +400,11 @@
        IF (linear_eqnOfState .AND. fixed_alpha) THEN
           DO  k = nzb+1, nzt
              prho(k,j,i)      = rho_ref*(1.0 -                                 &
-                                   alpha_const*(pt_p(k,j,i) - pt_ref - 273.15_wp) + &
-                                   beta_const*(sa_p(k,j,i) - sa_ref)  )
+                                   alpha_const*(pt_p(k,j,i) - pt_ref) +        &
+                                   beta_const*(sa_p(k,j,i) - sa_ref)  )      
              rho_ocean(k,j,i) = rho_ref*(1.0 -                                 &
-                                   alpha_const*(pt_p(k,j,i) - pt_ref - 273.15_wp) + &
-                                   beta_const*(sa_p(k,j,i) - sa_ref) +         &
+                                   alpha_const*(pt_p(k,j,i) - pt_ref) +        &
+                                   beta_const*(sa_p(k,j,i) - sa_ref) +         & 
                                    drho_dp_const * hyp(k) * 1E-4_wp     )
           ENDDO
        ELSE
@@ -434,7 +434,7 @@
                     den(4)*pt3       + den(5)*pt4     + den(6)*sa1     +          &
                     den(7)*sa1*pt1   + den(8)*sa1*pt3 + den(9)*sa15    +          &
                     den(10)*sa15*pt2
-
+             
              IF ( surface_pressure > 1014.0_wp ) THEN
                 pnom_surface =                     nom(8)*p1_surface      + &
                            nom(9)*p1_surface*pt2 + nom(10)*p1_surface*sa1 + &
@@ -499,7 +499,7 @@
 !> To return potential density, set p=0
 !------------------------------------------------------------------------------!
     REAL(wp) FUNCTION eqn_state_seawater_func( p, pt, sa )
-
+       
        USE control_parameters,                                                 &
           ONLY :  alpha_const, beta_const, drho_dp_const, fixed_alpha,         &
                   linear_eqnOfState, rho_ref, pt_ref, sa_ref
@@ -521,8 +521,8 @@
 
        IF (linear_eqnOfState .AND. fixed_alpha) THEN
           eqn_state_seawater_func = rho_ref*(1.0 -                             &
-                                             alpha_const*(pt - pt_ref - 273.15_wp) + &
-                                             beta_const*(sa - sa_ref) +        &
+                                             alpha_const*(pt - pt_ref) +       &
+                                             beta_const*(sa - sa_ref) +        & 
                                              drho_dp_const * p * 1E-4_wp     )
        ELSE
 !
@@ -560,11 +560,11 @@
 ! Description:
 ! ------------
 !> Calculate derivative of in situ temperature freezing point with respect
-!> to absolute salinity at a given pressure and absolute salinity according to
+!> to absolute salinity at a given pressure and absolute salinity according to 
 !> TEOS10 polynomial function.
 !------------------------------------------------------------------------------!
     REAL (wp) FUNCTION T_freezing_SA( p, SA )
-
+    
        IMPLICIT NONE
 
        REAL(wp) :: SA, p, p_r, SA_r, x
@@ -602,7 +602,7 @@
 !------------------------------------------------------------------------------!
 ! Description:
 ! ------------
-!> Calculate potential temperature freezing point at a given pressure and
+!> Calculate potential temperature freezing point at a given pressure and 
 !> absolute salinity according to Jackett et al. (2006).
 !------------------------------------------------------------------------------!
     REAL(wp) FUNCTION pt_freezing( p, SA )
@@ -611,10 +611,10 @@
 
        REAL(wp) ::  p       !< given in dbar
        REAL(wp) ::  SA
-
+       
        pt_freezing  = ( ( ptfrnom(1)        + ptfrnom(2)*SA   +                    &
                           ptfrnom(3)*SA**1.5 +                                     &
-                          ptfrnom(4)*SA**2. + ptfrnom(5)*p    +                    &
+                          ptfrnom(4)*SA**2. + ptfrnom(5)*p    +                    & 
                           ptfrnom(6)*p**2   + ptfrnom(7)*SA*p**2. ) /              &
                         ( ptfrnom(8)        + ptfrnom(9)*SA**2.5 +                 &
                           ptfrnom(10)*p + ptfrnom(11)*p**2.           )            &
@@ -627,7 +627,7 @@
 !------------------------------------------------------------------------------!
 ! Description:
 ! ------------
-!> Calculate potential temperature freezing point at a given pressure and
+!> Calculate potential temperature freezing point at a given pressure and 
 !> absolute salinity according to Jackett et al. (2006).
 !------------------------------------------------------------------------------!
     REAL(wp) FUNCTION pt_freezing_SA( p, SA )
@@ -642,7 +642,7 @@
                  ptfrnom(4)*SA**2. + ptfrnom(5)*p +                              &
                  ptfrnom(6)*p**2   + ptfrnom(7)*SA*p**2. )
        ptden = ( ptfrnom(8)        + ptfrnom(9)*SA**2.5 +                        &
-                 ptfrnom(10)*p     + ptfrnom(11)*p**2.   )
+                 ptfrnom(10)*p     + ptfrnom(11)*p**2.   )    
        dnum_dSA = ptfrnom(2)     + 1.5*ptfrnom(3)*SA**0.5 +                    &
                   ptfrnom(4)*SA  + ptfrnom(7)*p**2.
        dden_dSA = 2.5*ptfrnom(9)*SA**1.5
@@ -655,15 +655,15 @@
 ! Description:
 ! ------------
 !
-!  Calculates the in-situ temperature at which seawater freezes from a
+!  Calculates the in-situ temperature at which seawater freezes from a 
 !  computationally efficient polynomial following TEOS10.
 !
 !  SA  =  Absolute Salinity                                        [ g/kg ]
 !  p   =  sea pressure                                             [ dbar ]
-!         ( i.e. absolute pressure - 10.1325 dbar )
+!         ( i.e. absolute pressure - 10.1325 dbar ) 
 !
 !  t_freezing = in-situ temperature at which seawater freezes.    [ deg C ]
-!               (ITS-90)
+!               (ITS-90)                
 !------------------------------------------------------------------------------!
     REAL(wp) FUNCTION T_freezing( p, SA )
 
@@ -692,7 +692,7 @@
                                          )                                     &
                                  )
        T_freezing = T_freezing + 273.15
-
+   
    END FUNCTION T_freezing
 
  END MODULE eqn_state_seawater_mod

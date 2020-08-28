@@ -23,14 +23,14 @@
 ! 2018-11-15 cbegeman
 ! Add bubble property variables
 !
-! 
+!
 ! 2018-10-25 cbegeman
 ! Add dirichlet bottom boundary conditions for salinity
 
 ! 2018-10-19 cbegeman
 ! Added sa_slope_offset to control_parameters
 ! Added sa_slope_ref to arrays_3d
-! 
+!
 ! Former revisions:
 ! -----------------
 !
@@ -746,7 +746,7 @@
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  mean_inflow_profiles  !< used for turbulent inflow (non-cyclic boundary conditions)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  precipitation_amount  !< precipitation amount due to gravitational settling (bulk microphysics)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  pt_slope_ref          !< potential temperature in rotated coordinate system (in case of sloped surface)
-    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sa_slope_ref          !< salinity in rotated coordinate system (in case of sloped surface) 
+    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  sa_slope_ref          !< salinity in rotated coordinate system (in case of sloped surface)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  ref_ambient           !< reference state for buoyancy calculation
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  total_2d_a            !< horizontal array to store the total domain data, used for atmosphere-ocean coupling (atmosphere data)
     REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  total_2d_o            !< horizontal array to store the total domain data, used for atmosphere-ocean coupling (ocean data)
@@ -979,7 +979,7 @@
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  salinityflux_output_conversion   !< conversion factor array for salinityflux output
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  waterflux_output_conversion     !< conversion factor array for waterflux output
     REAL(wp), DIMENSION(:), ALLOCATABLE ::  momentumflux_output_conversion  !< conversion factor array for momentumflux output
-    
+
     SAVE
 
  END MODULE arrays_3d
@@ -1342,7 +1342,7 @@
     LOGICAL ::  aerosol_c3h4o4 =.FALSE.                          !< malonic acid aerosol for bulk scheme
     LOGICAL ::  aerosol_nh4no3 =.FALSE.                          !< malonic acid aerosol for bulk scheme
     LOGICAL ::  air_chemistry = .FALSE.                          !< chemistry model switch
-    LOGICAL ::  ambient_density_for_buoyancy = .FALSE.           !< namelist parameter, 
+    LOGICAL ::  ambient_density_for_buoyancy = .FALSE.           !< namelist parameter,
                                                                  !< use ambient density instead of reference density in buoyancy term
     LOGICAL ::  bc_lr_cyc =.TRUE.                                !< left-right boundary condition cyclic?
     LOGICAL ::  bc_lr_dirrad = .FALSE.                           !< left-right boundary condition dirichlet/radiation?
@@ -1350,7 +1350,7 @@
     LOGICAL ::  bc_ns_cyc = .TRUE.                               !< north-south boundary condition cyclic?
     LOGICAL ::  bc_ns_dirrad = .FALSE.                           !< north-south boundary condition dirichlet/radiation?
     LOGICAL ::  bc_ns_raddir = .FALSE.                           !< north-south boundary condition radiation/dirichlet?
-    LOGICAL ::  bottom_constant_flux_layer = .FALSE.             !< constant flux layer is at the bottom of the domain 
+    LOGICAL ::  bottom_constant_flux_layer = .FALSE.             !< constant flux layer is at the bottom of the domain
     LOGICAL ::  calc_soil_moisture_during_spinup = .FALSE.       !< namelist parameter
     LOGICAL ::  call_microphysics_at_all_substeps = .FALSE.      !< namelist parameter
     LOGICAL ::  call_psolver_at_all_substeps = .TRUE.            !< namelist parameter
@@ -1398,7 +1398,7 @@
     LOGICAL ::  inflow_n = .FALSE.                               !< north domain boundary has non-cyclic inflow?
     LOGICAL ::  inflow_r = .FALSE.                               !< right domain boundary has non-cyclic inflow?
     LOGICAL ::  inflow_s = .FALSE.                               !< south domain boundary has non-cyclic inflow?
-    LOGICAL ::  initialize_to_geostrophic = .TRUE.               !< namelist parameter, damp to the geostrophic velocity 
+    LOGICAL ::  initialize_to_geostrophic = .TRUE.               !< namelist parameter, damp to the geostrophic velocity
     LOGICAL ::  koff_constant_mcphee = .FALSE.                   !< namelist parameter
     LOGICAL ::  large_scale_forcing = .FALSE.                    !< namelist parameter
     LOGICAL ::  large_scale_subsidence = .FALSE.                 !< namelist parameter
@@ -1438,7 +1438,7 @@
     LOGICAL ::  rans_mode = .FALSE.                              !< switch between RANS and LES mode
     LOGICAL ::  rans_tke_e = .FALSE.                             !< use TKE-e turbulence closure for RANS mode
     LOGICAL ::  rans_tke_l = .FALSE.                             !< use TKE-l turbulence closure for RANS mode
-    LOGICAL ::  rayleigh_damping_geostrophic = .FALSE.            !< namelist parameter, damp to the geostrophic velocity 
+    LOGICAL ::  rayleigh_damping_geostrophic = .FALSE.            !< namelist parameter, damp to the geostrophic velocity
     LOGICAL ::  read_svf = .FALSE.                               !< ENVPAR namelist parameter to steer input of svf (ENVPAR is created by palmrun)
     LOGICAL ::  recycling_yshift = .FALSE.                       !< namelist parameter
     LOGICAL ::  run_control_header = .FALSE.                     !< onetime output of RUN_CONTROL header
@@ -1454,7 +1454,7 @@
     LOGICAL ::  synchronous_exchange = .FALSE.                   !< namelist parameter
     LOGICAL ::  syn_turb_gen = .FALSE.                           !< flag for synthetic turbulence generator module
     LOGICAL ::  terminate_run = .FALSE.                          !< terminate run (cpu-time limit, restarts)?
-    LOGICAL ::  top_constant_flux_layer = .FALSE.                !< constant flux layer is at the top of the domain 
+    LOGICAL ::  top_constant_flux_layer = .FALSE.                !< constant flux layer is at the top of the domain
     LOGICAL ::  topo_no_distinct = .FALSE.                       !< flag controlling classification of topography surfaces
     LOGICAL ::  transpose_compute_overlap = .FALSE.              !< namelist parameter
     LOGICAL ::  turbulent_inflow = .FALSE.                       !< namelist parameter
@@ -1483,17 +1483,17 @@
     LOGICAL ::  data_output_xz(0:1) = .FALSE.                !< output of xz cross-section data?
     LOGICAL ::  data_output_yz(0:1) = .FALSE.                !< output of yz cross-section data?
 
-    REAL(wp) ::  advected_distance_x = 0.0_wp                  !< advected distance of model domain along x 
-                                                               !< (galilei transformation) 
-    REAL(wp) ::  advected_distance_y = 0.0_wp                  !< advected distance of model domain along y 
+    REAL(wp) ::  advected_distance_x = 0.0_wp                  !< advected distance of model domain along x
+                                                               !< (galilei transformation)
+    REAL(wp) ::  advected_distance_y = 0.0_wp                  !< advected distance of model domain along y
                                                                !< (galilei transformation)
     REAL(wp) ::  alpha_surface = 0.0_wp                        !< namelist parameter
     REAL(wp) ::  alpha_const = 2.0E-4                          !< fixed alpha_T value
-    REAL(wp) ::  atmos_ocean_sign = 1.0_wp                     !< vertical-grid conversion factor 
+    REAL(wp) ::  atmos_ocean_sign = 1.0_wp                     !< vertical-grid conversion factor
                                                                !< (=1.0 in atmosphere, =-1.0 in ocean)
     REAL(wp) ::  averaging_interval = 0.0_wp                   !< namelist parameter
     REAL(wp) ::  averaging_interval_pr = 9999999.9_wp          !< namelist parameter
-    REAL(wp) ::  beta_m_businger = -4.8_wp                     !< coefficient for businger stability function, momentum 
+    REAL(wp) ::  beta_m_businger = -4.8_wp                     !< coefficient for businger stability function, momentum
     REAL(wp) ::  beta_h_businger = -5.6_wp                     !< coefficient for businger stability function, heat
                                                                !< -7.8 according to Businger 1971, Stull 1988
     REAL(wp) ::  bc_pt_t_val                                   !< vertical gradient of pt near domain top
@@ -1596,7 +1596,7 @@
     REAL(wp) ::  pt_surface = 300.0_wp                         !< namelist parameter
     REAL(wp) ::  pt_surface_initial_change = 0.0_wp            !< namelist parameter
     REAL(wp) ::  pt_surface_rate_change = 0.0_wp               !< namelist parameter, dpt/dt applied to the k=nzb level with units [K/s]
-    REAL(wp) ::  pt_ref = 15.0_wp                              !< potential temperature reference falue
+    REAL(wp) ::  pt_ref = 288.15_wp                            !< potential temperature reference value in K
     REAL(wp) ::  q_surface = 0.0_wp                            !< namelist parameter
     REAL(wp) ::  q_surface_initial_change = 0.0_wp             !< namelist parameter
     REAL(wp) ::  rayleigh_damping_factor = -1.0_wp             !< namelist parameter
@@ -1611,7 +1611,7 @@
     REAL(wp) ::  roughness_length = 0.1_wp                     !< namelist parameter
     REAL(wp) ::  sa_ref = 35.0_wp                              !< salinity reerence value for fixed linear density equation
     REAL(wp) ::  sa_surface = 35.0_wp                          !< namelist parameter
-    REAL(wp) ::  sa_slope_offset = 0.0_wp                      !< salinity difference between left and right 
+    REAL(wp) ::  sa_slope_offset = 0.0_wp                      !< salinity difference between left and right
     REAL(wp) ::  schmidt_number = 2432_wp                      !< Schmidt number (dimensionless)
     REAL(wp) ::  simulated_time = 0.0_wp                       !< elapsed simulated time
     REAL(wp) ::  simulated_time_at_begin                       !< elapsed simulated time of previous run (job chain)

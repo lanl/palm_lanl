@@ -1182,7 +1182,7 @@
     CHARACTER (LEN=20)   ::  coupling_mode_remote = 'uncoupled'           !< coupling mode of the remote process in case of coupled atmosphere-ocean runs
     CHARACTER (LEN=20)   ::  dissipation_1d = 'detering'                  !< namelist parameter
     CHARACTER (LEN=20)   ::  fft_method = 'temperton-algorithm'           !< namelist parameter
-    CHARACTER (LEN=20)   ::  gamma_mcphee = 'BL-integrated'               !< namelist parameter
+    CHARACTER (LEN=20)   ::  gamma_mcphee = 'depth-dependent'             !< namelist parameter
     CHARACTER (LEN=20)   ::  mixing_length_1d = 'blackadar'               !< namelist parameter
     CHARACTER (LEN=20)   ::  random_generator = 'random-parallel'         !< namelist parameter
     CHARACTER (LEN=20)   ::  reference_state = 'initial_profile'          !< namelist parameter
@@ -1450,6 +1450,7 @@
     LOGICAL ::  spinup = .FALSE.                                 !< perform model spinup without atmosphere code?
     LOGICAL ::  stokes_force = .FALSE.                           !< switch for use of Stokes forces
     LOGICAL ::  stop_dt = .FALSE.                                !< internal switch to stop the time stepping
+    LOGICAL ::  stratification_affects_km = .FALSE.              !< namelist parameter for amd scheme
     LOGICAL ::  surface_flux_diags = .FALSE.                     !< namelist parameter
     LOGICAL ::  synchronous_exchange = .FALSE.                   !< namelist parameter
     LOGICAL ::  syn_turb_gen = .FALSE.                           !< flag for synthetic turbulence generator module
@@ -1487,7 +1488,7 @@
                                                                !< (galilei transformation)
     REAL(wp) ::  advected_distance_y = 0.0_wp                  !< advected distance of model domain along y
                                                                !< (galilei transformation)
-    REAL(wp) ::  alpha_surface = 0.0_wp                        !< namelist parameter
+    REAL(wp) ::  alpha_surface = 0.0_wp                        !< namelist parameter, slope in degrees
     REAL(wp) ::  alpha_const = 2.0E-4                          !< fixed alpha_T value
     REAL(wp) ::  atmos_ocean_sign = 1.0_wp                     !< vertical-grid conversion factor
                                                                !< (=1.0 in atmosphere, =-1.0 in ocean)
@@ -1548,6 +1549,7 @@
     REAL(wp) ::  dt_do3d = 9999999.9_wp                        !< namelist parameter
     REAL(wp) ::  dt_dvrp = 9999999.9_wp                        !< namelist parameter
     REAL(wp) ::  dt_max = 20.0_wp                              !< namelist parameter
+    REAL(wp) ::  dt_min = 0.0020_wp                            !< namelist parameter
     REAL(wp) ::  dt_restart = 9999999.9_wp                     !< namelist parameter
     REAL(wp) ::  dt_run_control = 60.0_wp                      !< namelist parameter
     REAL(wp) ::  dt_spinup = 60.0_wp                           !< namelist parameter

@@ -129,7 +129,7 @@
         ONLY:  dzu, dzw, kh, km, ks, u, v, w
 
     USE control_parameters,                                                    &
-        ONLY:  cfl_factor, coupling_mode, dt_3d, dt_fixed, dt_max,             &
+        ONLY:  cfl_factor, coupling_mode, dt_3d, dt_fixed, dt_max, dt_min,     &
                galilei_transformation, old_dt, message_string, rans_mode,      &
                stop_dt, terminate_coupled, terminate_coupled_remote,           &
                timestep_reason, u_gtrans, use_ug_for_galilei_tr, v_gtrans
@@ -360,7 +360,7 @@
 
 !
 !--    Set flag if the time step becomes too small.
-       IF ( dt_3d < ( 0.00001_wp * dt_max ) )  THEN
+       IF ( dt_3d < ( 0.00001_wp * dt_max ) .OR. dt_3d < dt_min )  THEN
           stop_dt = .TRUE.
 
 !

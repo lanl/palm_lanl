@@ -1658,7 +1658,7 @@
              
              surf%ol(m) = MAX(min_ol,                                          &
                               MIN(max_ol,                                      &
-                                  rho_ocean(k,j,i) * surf%us(m)**3 /           &
+                                  rho_ocean(k,j,i) * surf%us(m)**3.0_wp /      &
                                   ( g * kappa *                                &
                                     ( beta_S(k,j,i)*surf%sasws(m) -            &
                                       alpha_T(k,j,i)*surf%shf(m)    )          &

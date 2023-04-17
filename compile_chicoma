@@ -1,0 +1,42 @@
+#!/bin/bash
+
+repo_path=$PWD
+build_path="/lustre/scratch5/$USER/palm/jobs/test-chicoma-build/"
+compile_debug="False"
+build_flags=""
+test_case="test_oceanml"
+
+if [[ ! -d $build_path ]]; then
+   mkdir -p $build_path
+fi
+
+if [[ ! -f $build_path/${test_case}_p3d ]]; then
+   if [[ -f ${test_case}_p3d ]]; then
+      cp ${test_case}_p3d $build_path/.
+   else
+      echo "${test_case}_p3d is not in $repo_path"
+   fi
+fi
+
+# Save git commit hash to make directory
+git rev-parse HEAD > $build_path"build_commit.txt"
+
+if [[ $compile_debug == "True" ]]; then
+    build_flags="-D"
+fi
+
+export PATH="$repo_path/trunk/SCRIPTS:$PATH"
+module purge
+module load PrgEnv-intel/8.3.3
+module load cray-mpich/8.1.21 # needed for cray-netcdf-hdf5parallel
+module load cmake/3.22.3
+module load cray-python/3.9.13.1
+module load craype-x86-rome
+module load cray-fftw/3.3.10.2
+module load cray-hdf5-parallel/1.12.2.1 # needed for cray-netcdf-hdf5parallel
+module load cray-netcdf-hdf5parallel/4.9.0.1
+
+export PATH=/lustre/scratch5/.mdt0/cbegeman/palm/bin:${PATH}
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CRAY_LD_LIBRARY_PATH}
+
+palm_simple_build -b ifort.chicoma_hdf5 -w $build_path $build_flags

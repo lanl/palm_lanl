@@ -36,10 +36,14 @@
         bc_sa_t = 'neumann', /
 
 &runtime_parameters
+        dt_min                     = 0.05,
         end_time = 3600.0,
+
         create_disturbances = .T.,
-!        disturbance_level_b = -4.,
+        disturbance_amplitude = 1e-2
+        disturbance_level_b = -40.,
         dt_disturb = 150.,
+
         dt_run_control = 0.0,
         dt_data_output = 3600.0,
         dt_dopr = 3600.0,

@@ -571,7 +571,7 @@
              use_subsidence_tendencies, ug_surface, ug_vertical_gradient,      &
              ug_vertical_gradient_level, use_surface_fluxes, use_cmax,         &
              use_top_fluxes, use_ug_for_galilei_tr, use_upstream_for_tke,      &
-             uv_heights, u_bulk, u_profile,                                    &
+             uv_heights, u_bulk, u_profile, u_top, u_bott,                     &
              v0_stk, vg_surface, vg_vertical_gradient,                         &
              vg_vertical_gradient_level, v_bulk, v_profile, ventilation_effect,&
              wall_adjustment, wall_heatflux, wall_humidityflux,                &
@@ -660,7 +660,7 @@
              use_subsidence_tendencies, ug_surface, ug_vertical_gradient,      &
              ug_vertical_gradient_level, use_surface_fluxes, use_cmax,         &
              use_top_fluxes, use_ug_for_galilei_tr, use_upstream_for_tke,      &
-             uv_heights, u_bulk, u_profile,                                    &
+             uv_heights, u_bulk, u_profile, u_top, u_bott,                     &
              v0_stk,  vg_surface, vg_vertical_gradient,                        &
              vg_vertical_gradient_level, v_bulk, v_profile, ventilation_effect,&
              wall_adjustment, wall_heatflux, wall_humidityflux,                &

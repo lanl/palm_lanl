@@ -828,6 +828,12 @@
 
        CALL wrd_write_string( 'u_max_ijk' ) 
        WRITE ( 14 )  u_max_ijk
+       
+       CALL wrd_write_string( 'u_top' )
+       WRITE ( 14 )  u_top
+
+       CALL wrd_write_string( 'u_bott' )
+       WRITE ( 14 )  u_bott
 
        CALL wrd_write_string( 'ug' ) 
        WRITE ( 14 )  ug
@@ -867,6 +873,12 @@
 
        CALL wrd_write_string( 'v_max_ijk' ) 
        WRITE ( 14 )  v_max_ijk
+
+       CALL wrd_write_string( 'v_top' )
+       WRITE ( 14 )  v_top
+
+       CALL wrd_write_string( 'v_bott' )
+       WRITE ( 14 )  v_bott
 
        CALL wrd_write_string( 'ventilation_effect' ) 
        WRITE ( 14 )  ventilation_effect

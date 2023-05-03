@@ -713,6 +713,10 @@
                 READ ( 13 )  u_max
              CASE ( 'u_max_ijk' )
                 READ ( 13 )  u_max_ijk
+             CASE ( 'u_top' )
+                READ ( 13 ) u_top
+             CASE ( 'u_bott' )
+                READ ( 13 ) u_bott
              CASE ( 'ug' )
                 READ ( 13 )  ug
              CASE ( 'ug_surface' )
@@ -739,6 +743,10 @@
                 READ ( 13 )  v_max
              CASE ( 'v_max_ijk' )
                 READ ( 13 )  v_max_ijk
+             CASE ( 'v_top' )
+                READ ( 13 ) v_top
+             CASE ( 'v_bott' )
+                READ ( 13 ) v_bott
              CASE ( 'ventilation_effect' )
                 READ ( 13 )  ventilation_effect
              CASE ( 'vg' )

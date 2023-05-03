@@ -1188,6 +1188,7 @@
     CHARACTER (LEN=20)   ::  reference_state = 'initial_profile'          !< namelist parameter
     CHARACTER (LEN=20)   ::  timestep_scheme = 'runge-kutta-3'            !< namelist parameter
     CHARACTER (LEN=20)   ::  turbulence_closure = 'Moeng_Wyngaard'        !< namelist parameter. Options include 'Moeng_Wyngaard','AMD'
+    CHARACTER (LEN=40)   ::  ice_cover = 'full'                           !< namelist parameter
     CHARACTER (LEN=40)   ::  topography = 'flat'                          !< namelist parameter
     CHARACTER (LEN=64)   ::  host = '????'                                !< hostname on which PALM is running, ENVPAR namelist parameter provided by mrun
     CHARACTER (LEN=80)   ::  log_message                                  !< user-defined message for debugging (sse data_log.f90)

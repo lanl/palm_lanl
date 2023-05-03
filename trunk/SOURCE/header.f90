@@ -1078,6 +1078,12 @@
 
     END SELECT
 
+    IF ( TRIM( ice_cover ) /= 'full' .AND. &
+         TRIM( ice_cover ) /= 'read_from_file')  THEN
+       WRITE(message_string,*) 'Ice cover option is not supported.'
+       CALL message( 'surface_layer_fluxes', 'PA0655', 3, 2, 0, 6, 0 )
+    ENDIF
+
     IF ( TRIM( topography ) /= 'flat' )  THEN
        IF ( TRIM( topography_grid_convention ) == ' ' )  THEN
           IF ( TRIM( topography ) == 'single_building' .OR.  &

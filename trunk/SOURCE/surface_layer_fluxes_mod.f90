@@ -2339,12 +2339,12 @@
 !
 !--       Compute the vertical kinematic heat flux, salt flux, and melt rate 
 !--       according to the 3 equation parameterization (Asay-Davis et al. 2016)
-          IF ( TRIM(most_method) == 'mcphee' .AND. downward ) THEN
+          IF ( TRIM(most_method) == 'mcphee' .AND. downward) THEN
              
              !$OMP PARALLEL DO PRIVATE( i, j, k, s_factor )
              DO  m = 1, surf%ns  
-   
-                i = surf%i(m)            
+                ! TODO check whether m cell is ice covered
+                i = surf%i(m)
                 j = surf%j(m)
                 k = surf%k(m)
                 

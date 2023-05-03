@@ -302,6 +302,7 @@
        LOGICAL, DIMENSION(:), ALLOCATABLE  ::  pavement_surface    !< flag parameter for pavements
        LOGICAL, DIMENSION(:), ALLOCATABLE  ::  water_surface       !< flag parameter for water surfaces
        LOGICAL, DIMENSION(:), ALLOCATABLE  ::  vegetation_surface  !< flag parameter for natural land surfaces
+       LOGICAL, DIMENSION(:), ALLOCATABLE  ::  ice_surface         !< flag parameter indicating an ice surface element
 
        REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  albedo            !< broadband albedo for each surface fraction (LSM: vegetation, water, pavement; USM: wall, green, window)
        REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  emissivity        !< emissivity of the surface, for each fraction  (LSM: vegetation, water, pavement; USM: wall, green, window)
@@ -1238,6 +1239,7 @@
        IF ( most_method == 'mcphee' ) THEN
           ALLOCATE ( surfaces%gamma_T(1:surfaces%ns) )
           ALLOCATE ( surfaces%gamma_S(1:surfaces%ns) )
+          ALLOCATE ( surfaces%ice_surface(1:surfaces%ns) )
           ALLOCATE ( surfaces%melt(1:surfaces%ns) )
        ENDIF
 

@@ -264,6 +264,7 @@
        INTEGER(iwp) ::  nzu       !< number of vertical levels on scalar grid in dynamic input file
        INTEGER(iwp) ::  nzw       !< number of vertical levels on w grid in dynamic input file
 
+       LOGICAL ::  from_file_icecover  = .FALSE. !< flag indicating whether ice cover is already initialized from file
        LOGICAL ::  from_file_msoil  = .FALSE. !< flag indicating whether soil moisture is already initialized from file
        LOGICAL ::  from_file_pt     = .FALSE. !< flag indicating whether pt is already initialized from file
        LOGICAL ::  from_file_q      = .FALSE. !< flag indicating whether q is already initialized from file
@@ -274,6 +275,7 @@
        LOGICAL ::  from_file_vg     = .FALSE. !< flag indicating whether ug is already initialized from file
        LOGICAL ::  from_file_w      = .FALSE. !< flag indicating whether w is already initialized from file
 
+       REAL(wp) ::  fill_icecover    !< fill value for soil moisture
        REAL(wp) ::  fill_msoil       !< fill value for soil moisture
        REAL(wp) ::  fill_pt          !< fill value for pt
        REAL(wp) ::  fill_q           !< fill value for q
@@ -288,6 +290,7 @@
        REAL(wp) ::  origin_z         !< reference height of input data
        REAL(wp) ::  rotation_angle   !< rotation angle of input data
 
+       REAL(wp), DIMENSION(:), ALLOCATABLE ::  icecover_init!< initial horizontal distribution of ice cover
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  msoil_init   !< initial vertical profile of soil moisture
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt_init      !< initial vertical profile of pt
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  q_init       !< initial vertical profile of q

@@ -379,7 +379,7 @@
     REAL(wp) ::  w2               !<
     REAL(wp) ::  pfl, pfl_x, pfl_y, pfl_z
     REAL(wp) ::  ufluc, vfluc, wfluc
-    
+
     REAL(wp) ::  dptdz(nzb+1:nzt+1)    !<
     REAL(wp) ::  sums_ll(nzb:nzt+1,2)  !<
 
@@ -498,7 +498,7 @@
                 sums_l(k,3,tn) = sums_l(k,3,tn) + w(k,j,i) * rmask(j,i,sr)     &
                                                         * flag
                 sums_l(k,40,tn) = sums_l(k,40,tn) + p(k,j,i) * rmask(j,i,sr)   &
-                                                        * flag       
+                                                        * flag
              ENDDO
           ENDDO
        ENDDO
@@ -1127,15 +1127,15 @@
 
                 !x,y pressure fluctuations will live at cell centers
                 pfl_x = (p(k,j,i) - p(k,j,i-1)) * ddx
- 
-                pfl_y = (p(k,j,i) - p(k,j-1,i)) * ddy 
 
-                pfl_z = (p(k,j,i) - hom(k,1,40,sr) - (p(k+1,j,i) - hom(k,1,40,sr))) / ddzu(k) 
+                pfl_y = (p(k,j,i) - p(k,j-1,i)) * ddy
+
+                pfl_z = (p(k,j,i) - hom(k,1,40,sr) - (p(k+1,j,i) - hom(k,1,40,sr))) / ddzu(k)
 
                 ufluc = 0.5_wp * ( u(k,j,i) - hom(k,1,1,sr) + u(k+1,j,i) - hom(k+1,1,1,sr) )
                 vfluc = 0.5_wp * ( v(k,j,i) - hom(k,1,2,sr) + v(k+1,j,i) - hom(k+1,1,2,sr) )
                 sums_l(k,166,tn) =  sums_l(k,166,tn) + pfl_z*ufluc
- 
+
                 sums_l(k,167,tn) =  sums_l(k,167,tn) + pfl_z*vfluc
 
                 ust = 0.5_wp * ( pt(k,j,i) - hom(k,1,4,sr) + pt(k+1,j,i) - hom(k+1,1,4,sr) )

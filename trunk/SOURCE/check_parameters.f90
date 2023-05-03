@@ -3528,7 +3528,7 @@
           CASE ( 'eps')
              dopr_index(i) = 165
              dopr_unit(i)  = 'm3/s3'
-             hom(:,2,165,:) = SPREAD( zw, 2, statistic_regions+1 ) 
+             hom(:,2,165,:) = SPREAD( zw, 2, statistic_regions+1 )
           CASE ( 'u*dp*dz' )
              dopr_index(i) = 166
              dopr_unit(i) = 'm2/s3'

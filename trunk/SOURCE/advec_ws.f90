@@ -1116,7 +1116,7 @@
                   sums_wsnrs_ws_l, sums_wspts_ws_l, sums_wsqcs_ws_l,           &
                   sums_wsqrs_ws_l, sums_wsqs_ws_l, sums_wsss_ws_l,             &
                   sums_wssas_ws_l, sums_wsus_ws_l, sums_wsvs_ws_l,             &
-                  sums_vsus_ws_l      
+                  sums_vsus_ws_l
                    
 
        IMPLICIT NONE
@@ -2091,7 +2091,7 @@
                     *   ABS( w_comp(k) - 2.0_wp * hom(k,1,3,0)           )     &
                     / ( ABS( w_comp(k) ) + 1.0E-20_wp                    )     &
                   ) * weight_substep(intermediate_timestep_count)
- 
+
            sums_vsus_ws_l(k,tn) = sums_vsus_ws_l(k,tn)                    &
                 + ( flux_r(k) * ( v_comp(k) - 2.0_wp * hom(k,1,2,0) )          &
                 / ( v_comp(k) - gv + SIGN( 1.0E-20_wp, v_comp(k) - gv ) )      &
@@ -2215,7 +2215,7 @@
                     *   ABS( w_comp(k) - 2.0_wp * hom(k,1,3,0)              )  &
                     / ( ABS( w_comp(k) ) + 1.0E-20_wp                       )  &
                   ) *   weight_substep(intermediate_timestep_count)
- 
+
            sums_vsus_ws_l(k,tn) = sums_vsus_ws_l(k,tn)                    &
                 + ( flux_r(k) * ( v_comp(k) - 2.0_wp * hom(k,1,2,0) )          &
                 / ( v_comp(k) - gv + SIGN( 1.0E-20_wp, v_comp(k) - gv ) )      &
@@ -4265,7 +4265,7 @@
                     *   ABS( w_comp - 2.0_wp * hom(k,1,3,0)              )     &
                     / ( ABS( w_comp ) + 1.0E-20_wp                       )     &
                   ) * weight_substep(intermediate_timestep_count)
- 
+
                 sums_vsus_ws_l(k,tn) = sums_vsus_ws_l(k,tn)                    &
                 + ( flux_r(k) * ( v_comp - 2.0_wp * hom(k,1,2,0) )          &
                 / ( v_comp - gv + SIGN( 1.0E-20_wp, v_comp - gv ) )      &

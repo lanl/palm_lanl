@@ -51,10 +51,10 @@
         data_output_pr = 'e','e*', '#pt', '#sa', 'p', 'hyp', 'km', 'kh', 'l',
               '#u','#v','w','prho','w"u"','w*u*','w"v"','w*v*','w"pt"','w*pt*',
               'w"sa"','w*sa*','w*e*','u*2','v*2','w*2','pt*2','w*3','Sw',
-              'w*2pt*','w*pt*2','w*u*u*:dz','w*p*:dz','rho_ocean','alpha_T', 
-	      'u*dp*dz','v*dp*dz','pt*dp*dz','sa*dp*dz','w*2T*','w*2sa*',
-              'sa*2','eps', 'w*2T*', 'w*2S*', 'pt*sa*', 'beta_S',
-	      'u*dp*dx','u*dp*dy','v*dp*dx', 'v*dp*dy', 'w*dp*dx',
-	      'w*dp*dy', w*dp*dz','v*u*', /
+              'w*pt*2','w*u*u*:dz','w*p*:dz','rho_ocean','alpha_T', 
+              'u*dp*dz','v*dp*dz','pt*dp*dz','sa*dp*dz','w*2T*','w*2sa*',
+              'sa*2','eps', 'w*2pt*', 'w*2S*', 'pt*sa*', 'beta_S',
+              'u*dp*dx','u*dp*dy','v*dp*dx', 'v*dp*dy', 'w*dp*dx',
+              'w*dp*dy', 'w*dp*dz','v*u*', /
 
 

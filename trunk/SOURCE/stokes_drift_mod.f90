@@ -35,7 +35,8 @@
  MODULE stokes_drift_mod
 
    USE arrays_3d,                                                              &
-      ONLY:  u, v, u_stk, v_stk, u_stk_zw, v_stk_zw, zu, zw, dzu, dzw
+      ONLY:  u, v, u_init, v_init, u_stk, v_stk, u_stk_zw, v_stk_zw,           &
+             zu, zw, dzu, dzw
 
    USE control_parameters,                                                     &
       ONLY:  g, stokes_drift_method, message_string
@@ -149,14 +150,12 @@
          CALL stokes_drift_spec_dhh85
       END SELECT
 !
-!--   Update initial condition for u and v
-      DO  i = nxlg, nxrg
-         DO  j = nysg, nyng
-            DO  k = nzb, nzt
-               u(k,j,i) = u(k,j,i) - u_stk(k)
-               v(k,j,i) = v(k,j,i) - v_stk(k)
-            ENDDO
-         ENDDO
+!--   Update initial condition for u and v,
+!     so that the Eulerian velocity compensates Stokes drift,
+!     otherwise strong inertial oscillation will develop
+      DO  k = nzb, nzt
+         u_init(k) = u_init(k) - u_stk(k)
+         v_init(k) = v_init(k) - v_stk(k)
       ENDDO
 
    END SUBROUTINE init_stokes_drift

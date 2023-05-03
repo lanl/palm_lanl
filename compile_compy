@@ -1,0 +1,16 @@
+#!/bin/bash
+
+repo_path=$PWD
+build_path="/path/to/build/directory"
+compile_debug="False"
+build_flags=""
+
+if [[ $compile_debug == "True" ]]; then
+    build_flags="-D"
+fi
+
+export PATH="$repo_path/trunk/SCRIPTS:$PATH"
+module purge
+module load intel/19.0.5
+module load mvapich2/2.3.2
+palm_simple_build -x -b ifort.compy -w $build_path $build_flags

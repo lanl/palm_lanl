@@ -1095,6 +1095,15 @@
          DEALLOCATE ( surfaces%sas )
        ENDIF
 
+!
+!--
+       IF ( most_method == 'mcphee' ) THEN
+          DEALLOCATE ( surfaces%gamma_T )
+          DEALLOCATE ( surfaces%gamma_S )
+          DEALLOCATE ( surfaces%ice_surface )
+          DEALLOCATE ( surfaces%melt )
+       ENDIF
+
     END SUBROUTINE deallocate_surface_attributes_h
 
 
@@ -1165,6 +1174,9 @@
 !
 !--    Stability parameter
        ALLOCATE ( surfaces%ol(1:surfaces%ns) )
+!
+!--    Whether the surface type is ice
+       ALLOCATE ( surfaces%ice_surface(1:surfaces%ns) )
 !
 !--    Bulk Richardson number
        ALLOCATE ( surfaces%rib(1:surfaces%ns) )
@@ -2229,6 +2241,8 @@
                       surf%shf(num_h) = 0.0_wp
                       surf%melt(num_h) = 0.0_wp
                       surf%sasws(num_h) = 0.0_wp
+                      !TODO assign from netcdf
+                      surf%ice_surface(num_h) = 0.0_wp
                    ENDIF
                    surf%pt_surface(num_h) = pt_surface
                    surf%sa_surface(num_h) = sa_surface
@@ -2698,6 +2712,16 @@
 
 
                 ENDIF
+                IF ( l == 2 ) THEN
+                   IF ( ALLOCATED( surf_def_h(l)%melt ) )                        &
+                         surf_h(l)%melt(mm(l))      = surf_def_h(l)%melt(m)
+                   IF ( ALLOCATED( surf_def_h(l)%gamma_T) )                      &
+                         surf_h(l)%gamma_T(mm(l))   = surf_def_h(l)%gamma_T(m)
+                   IF ( ALLOCATED( surf_def_h(l)%gamma_S) )                      &
+                         surf_h(l)%gamma_S(mm(l))   = surf_def_h(l)%gamma_S(m)
+                   IF ( ALLOCATED( surf_def_h(l)%ice_surface) )                  &
+                         surf_h(l)%ice_surface(mm(l)) = surf_def_h(l)%ice_surface(m)
+                ENDIF
 
              ENDDO
 
@@ -3077,6 +3101,25 @@
              WRITE ( 14 )  surf_h(l)%sasws
           ENDIF     
   
+          IF ( ALLOCATED ( surf_h(l)%melt) )  THEN
+             CALL wrd_write_string( 'surf_h(' // dum // ')%melt' )
+             WRITE ( 14 )  surf_h(l)%melt
+          ENDIF
+
+          IF ( ALLOCATED ( surf_h(l)%gamma_T) )  THEN
+             CALL wrd_write_string( 'surf_h(' // dum // ')%gamma_T' )
+             WRITE ( 14 )  surf_h(l)%gamma_T
+          ENDIF
+
+          IF ( ALLOCATED ( surf_h(l)%gamma_S) )  THEN
+             CALL wrd_write_string( 'surf_h(' // dum // ')%gamma_S' )
+             WRITE ( 14 )  surf_h(l)%gamma_S
+          ENDIF     
+  
+          IF ( ALLOCATED ( surf_h(l)%ice_surface) )  THEN 
+             CALL wrd_write_string( 'surf_h(' // dum // ')%ice_surface' ) 
+             WRITE ( 14 )  surf_h(l)%ice_surface
+          ENDIF     
        ENDDO
 !
 !--    Write vertical surfaces
@@ -3571,6 +3614,18 @@
           CASE ( 'surf_h(2)%sasws' )         
              IF ( ALLOCATED( surf_h(2)%sasws )  .AND.  kk == 1 )               &
                 READ ( 13 )  surf_h(2)%sasws
+          CASE ( 'surf_h(2)%melt' )
+             IF ( ALLOCATED( surf_h(2)%melt )  .AND.  kk == 1 )                &
+                READ ( 13 )  surf_h(2)%melt
+          CASE ( 'surf_h(2)%gamma_T' )
+             IF ( ALLOCATED( surf_h(2)%gamma_T)  .AND.  kk == 1 )              &
+                READ ( 13 )  surf_h(2)%gamma_T
+          CASE ( 'surf_h(2)%gamma_S' )
+             IF ( ALLOCATED( surf_h(2)%gamma_S)  .AND.  kk == 1 )              &
+                READ ( 13 )  surf_h(2)%gamma_S
+          CASE ( 'surf_h(2)%ice_surface' )
+             IF ( ALLOCATED( surf_h(2)%ice_surface)  .AND.  kk == 1 )          &
+                READ ( 13 )  surf_h(2)%ice_surface
 
           CASE ( 'surf_v(0)%start_index' )   
              IF ( kk == 1 )                                                    &
@@ -4186,6 +4241,34 @@
                      ALLOCATED( surf_file%mom_flux_tke   ) )                   & 
                    surf_target%mom_flux_tke(0:1,m_target) =                    &
                                            surf_file%mom_flux_tke(0:1,m_file)
+             ENDIF
+
+             IF ( INDEX( restart_string(1:length), '%melt' ) /= 0 )  THEN
+                IF ( ALLOCATED( surf_target%melt )  .AND.              &
+                     ALLOCATED( surf_file%melt ) )                     &
+                   surf_target%melt(m_target) =                        &
+                                    surf_file%melt(m_file)
+             ENDIF
+
+             IF ( INDEX( restart_string(1:length), '%gamma_T' ) /= 0 )  THEN
+                IF ( ALLOCATED( surf_target%gamma_T )  .AND.              &
+                     ALLOCATED( surf_file%gamma_T ) )                     &
+                   surf_target%gamma_T(m_target) =                        &
+                                       surf_file%gamma_T(m_file)
+             ENDIF
+
+             IF ( INDEX( restart_string(1:length), '%gamma_S' ) /= 0 )  THEN
+                IF ( ALLOCATED( surf_target%gamma_S )  .AND.              &
+                     ALLOCATED( surf_file%gamma_S ) )                     &
+                   surf_target%gamma_S(m_target) =                        &
+                                       surf_file%gamma_S(m_file)
+             ENDIF
+
+             IF ( INDEX( restart_string(1:length), '%ice_surface' ) /= 0 )  THEN 
+                IF ( ALLOCATED( surf_target%ice_surface )  .AND.              &
+                     ALLOCATED( surf_file%ice_surface ) )                     & 
+                   surf_target%ice_surface(0:1,m_target) =                    &
+                                       surf_file%ice_surface(0:1,m_file)
              ENDIF
 
 

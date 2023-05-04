@@ -504,7 +504,8 @@
 !-- Define input variables for soil_type
     TYPE(soil_in)  ::  soil_type_f           !< input variable for soil type
 
-    TYPE(fracs) ::  surface_fraction_f       !< input variable for surface fraction
+    TYPE(fracs) ::  surface_fraction_f       !< input variable for bottom surface fraction
+    TYPE(fracs) ::  top_surface_fraction_f   !< input variable for top surface fraction
 
     TYPE(pars)  ::  albedo_pars_f              !< input variable for albedo parameters
     TYPE(pars)  ::  building_pars_f            !< input variable for building parameters
@@ -607,8 +608,8 @@
            pavement_pars_f, pavement_subsurface_pars_f, pavement_type_f,       &
            root_area_density_lad_f, root_area_density_lsm_f, soil_pars_f,      &
            soil_type_f, street_crossing_f, street_type_f, surface_fraction_f,  &
-           terrain_height_f, vegetation_pars_f, vegetation_type_f,             &
-           water_pars_f, water_type_f
+           terrain_height_f, top_surface_fraction_f, vegetation_pars_f,        &
+           vegetation_type_f, water_pars_f, water_type_f
 
 !
 !-- Public subroutines
@@ -994,6 +995,35 @@
                              0, surface_fraction_f%nf-1 )
        ELSE
           surface_fraction_f%from_file = .FALSE.
+       ENDIF
+!
+!--    Read relative top surface fractions of ice. Where not ice, assumed to be atmosphere
+       IF ( check_existence( var_names, 'top_surface_fraction' ) )  THEN
+          top_surface_fraction_f%from_file = .TRUE.
+          CALL get_attribute( id_surf, char_fill,                              &
+                              top_surface_fraction_f%fill,                     &
+                              .FALSE., 'top_surface_fraction' )
+!
+!--       Inquire number of surface fractions
+          CALL get_dimension_length( id_surf,                                  &
+                                     top_surface_fraction_f%nf,                &
+                                     'ntop_surface_fraction' )
+!
+!--       Allocate dimension array and input array for surface fractions
+          ALLOCATE( top_surface_fraction_f%nfracs(0:top_surface_fraction_f%nf-1) )
+          ALLOCATE( top_surface_fraction_f%frac(0:top_surface_fraction_f%nf-1, &
+                                            nys:nyn,nxl:nxr) )
+!
+!--       Get dimension of surface fractions
+          CALL get_variable( id_surf, 'ntop_surface_fraction',                &
+                             top_surface_fraction_f%nfracs )
+!
+!--       Read surface fractions
+          CALL get_variable( id_surf, 'top_surface_fraction',                  &
+                             top_surface_fraction_f%frac, nxl, nxr, nys, nyn,  &
+                             0, top_surface_fraction_f%nf-1 )
+       ELSE
+          top_surface_fraction_f%from_file = .FALSE.
        ENDIF
 !
 !--    Read building parameters and related information
@@ -1398,6 +1428,22 @@
           DEALLOCATE( var_dum_real_3d )
        ENDIF
 
+       IF ( top_surface_fraction_f%from_file )  THEN
+          ALLOCATE( var_dum_real_3d(0:top_surface_fraction_f%nf-1,nys:nyn,nxl:nxr) )
+          var_dum_real_3d = top_surface_fraction_f%frac
+          DEALLOCATE( top_surface_fraction_f%frac )
+          ALLOCATE( top_surface_fraction_f%frac(0:top_surface_fraction_f%nf-1,   &
+                                                nysg:nyng,nxlg:nxrg) )
+          top_surface_fraction_f%frac = top_surface_fraction_f%fill
+
+          DO  k = 0, top_surface_fraction_f%nf-1
+             var_exchange_real(nys:nyn,nxl:nxr) = var_dum_real_3d(k,nys:nyn,nxl:nxr)
+             CALL exchange_horiz_2d( var_exchange_real, nbgp )
+             top_surface_fraction_f%frac(k,:,:) = var_exchange_real(:,:)
+          ENDDO
+          DEALLOCATE( var_dum_real_3d )
+       ENDIF
+
        IF ( building_pars_f%from_file )  THEN
           ALLOCATE( var_dum_real_3d(0:building_pars_f%np-1,nys:nyn,nxl:nxr) )
           var_dum_real_3d = building_pars_f%pars_xy
@@ -1582,6 +1628,8 @@
                 water_type_f%var(-1,:) = water_type_f%var(0,:)
              IF ( surface_fraction_f%from_file )                               &
                 surface_fraction_f%frac(:,-1,:) = surface_fraction_f%frac(:,0,:)
+             IF ( top_surface_fraction_f%from_file )                           &
+                top_surface_fraction_f%frac(:,-1,:) = top_surface_fraction_f%frac(:,0,:)
              IF ( building_pars_f%from_file )                                  &
                 building_pars_f%pars_xy(:,-1,:) = building_pars_f%pars_xy(:,0,:)
              IF ( albedo_pars_f%from_file )                                    &
@@ -1627,6 +1675,9 @@
              IF ( surface_fraction_f%from_file )                               &
                 surface_fraction_f%frac(:,ny+1,:) =                            &
                                              surface_fraction_f%frac(:,ny,:)
+             IF ( top_surface_fraction_f%from_file )                           &
+                top_surface_fraction_f%frac(:,ny+1,:) =                        &
+                                             top_surface_fraction_f%frac(:,ny,:)
              IF ( building_pars_f%from_file )                                  &
                 building_pars_f%pars_xy(:,ny+1,:) =                            &
                                              building_pars_f%pars_xy(:,ny,:)
@@ -1676,6 +1727,8 @@
                 water_type_f%var(:,-1) = water_type_f%var(:,0)
              IF ( surface_fraction_f%from_file )                               &
                 surface_fraction_f%frac(:,:,-1) = surface_fraction_f%frac(:,:,0)
+             IF ( top_surface_fraction_f%from_file )                           &
+                top_surface_fraction_f%frac(:,:,-1) = top_surface_fraction_f%frac(:,:,0)
              IF ( building_pars_f%from_file )                                  &
                 building_pars_f%pars_xy(:,:,-1) = building_pars_f%pars_xy(:,:,0)
              IF ( albedo_pars_f%from_file )                                    &
@@ -1721,6 +1774,9 @@
              IF ( surface_fraction_f%from_file )                               &
                 surface_fraction_f%frac(:,:,nx+1) =                            &
                                              surface_fraction_f%frac(:,:,nx)
+             IF ( top_surface_fraction_f%from_file )                           &
+                top_surface_fraction_f%frac(:,:,nx+1) =                        &
+                                             top_surface_fraction_f%frac(:,:,nx)
              IF ( building_pars_f%from_file )                                  &
                 building_pars_f%pars_xy(:,:,nx+1) =                            &
                                              building_pars_f%pars_xy(:,:,nx)
@@ -3088,6 +3144,22 @@
                                   2, 2, myid, 6, 0 )
                 ENDIF
              ENDIF
+             IF ( n_surf > 1 )  THEN
+                IF ( .NOT. top_surface_fraction_f%from_file )  THEN
+                   message_string = 'If more than one top_surface type is ' //  &
+                                 'given at a location, top_surface_fraction ' //&
+                                 'must be provided.'
+                   CALL message( 'netcdf_data_input_mod', 'NDI027',             &
+                                  2, 2, myid, 6, 0 )
+                ELSEIF ( ANY ( top_surface_fraction_f%frac(:,j,i) ==            &
+                               top_surface_fraction_f%fill ) )  THEN
+                   message_string = 'If more than one top surface type is ' //  &
+                                 'given at a location, top_surface_fraction ' //&
+                                 'must be provided.'
+                   CALL message( 'netcdf_data_input_mod', 'NDI027',             &
+                                  2, 2, myid, 6, 0 )
+                ENDIF
+             ENDIF
 !
 !--          Check for further mismatches. e.g. relative fractions exceed 1 or
 !--          vegetation_type is set but surface vegetation fraction is zero, 
@@ -3151,6 +3223,15 @@
                              ' ), but surface fraction is not 0 for the ' //   &
                              'given type.'
                    CALL message( 'netcdf_data_input_mod', 'NDI030',            &
+                                  2, 2, myid, 6, 0 )
+                ENDIF
+             ENDIF
+             IF ( top_surface_fraction_f%from_file )  THEN
+!
+!--             Sum of relative fractions must not exceed 1.
+                IF ( SUM ( top_surface_fraction_f%frac(:,j,i) ) > 1.0_wp )  THEN
+                   message_string = 'top_surface_fraction must not exceed 1'
+                   CALL message( 'netcdf_data_input_mod', 'NDI028',            &
                                   2, 2, myid, 6, 0 )
                 ENDIF
              ENDIF

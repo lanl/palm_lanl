@@ -302,7 +302,6 @@
        LOGICAL, DIMENSION(:), ALLOCATABLE  ::  pavement_surface    !< flag parameter for pavements
        LOGICAL, DIMENSION(:), ALLOCATABLE  ::  water_surface       !< flag parameter for water surfaces
        LOGICAL, DIMENSION(:), ALLOCATABLE  ::  vegetation_surface  !< flag parameter for natural land surfaces
-       LOGICAL, DIMENSION(:), ALLOCATABLE  ::  ice_surface         !< flag parameter indicating an ice surface element
 
        REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  albedo            !< broadband albedo for each surface fraction (LSM: vegetation, water, pavement; USM: wall, green, window)
        REAL(wp), DIMENSION(:,:), ALLOCATABLE ::  emissivity        !< emissivity of the surface, for each fraction  (LSM: vegetation, water, pavement; USM: wall, green, window)
@@ -317,6 +316,7 @@
        REAL(wp), DIMENSION(:,:), ALLOCATABLE   ::  rrtm_asdif      !< albedo for shortwave diffusive radiation, solar angle of 60°
        REAL(wp), DIMENSION(:,:), ALLOCATABLE   ::  rrtm_asdir      !< albedo for shortwave direct radiation, solar angle of 60°
 
+       REAL(wp), DIMENSION(:), ALLOCATABLE   ::  ice_fraction      !< fraction of the cell surface that is ice covered
        REAL(wp), DIMENSION(:), ALLOCATABLE   ::  pt_surface        !< skin-surface temperature
        REAL(wp), DIMENSION(:), ALLOCATABLE   ::  sa_surface        !< Salinity at skin surface
        REAL(wp), DIMENSION(:), ALLOCATABLE   ::  rad_net           !< net radiation 
@@ -1100,7 +1100,7 @@
        IF ( most_method == 'mcphee' ) THEN
           DEALLOCATE ( surfaces%gamma_T )
           DEALLOCATE ( surfaces%gamma_S )
-          DEALLOCATE ( surfaces%ice_surface )
+          DEALLOCATE ( surfaces%ice_fraction )
           DEALLOCATE ( surfaces%melt )
        ENDIF
 
@@ -1175,9 +1175,6 @@
 !--    Stability parameter
        ALLOCATE ( surfaces%ol(1:surfaces%ns) )
 !
-!--    Whether the surface type is ice
-       ALLOCATE ( surfaces%ice_surface(1:surfaces%ns) )
-!
 !--    Bulk Richardson number
        ALLOCATE ( surfaces%rib(1:surfaces%ns) )
 !
@@ -1251,7 +1248,7 @@
        IF ( most_method == 'mcphee' ) THEN
           ALLOCATE ( surfaces%gamma_T(1:surfaces%ns) )
           ALLOCATE ( surfaces%gamma_S(1:surfaces%ns) )
-          ALLOCATE ( surfaces%ice_surface(1:surfaces%ns) )
+          ALLOCATE ( surfaces%ice_fraction(1:surfaces%ns) )
           ALLOCATE ( surfaces%melt(1:surfaces%ns) )
        ENDIF
 
@@ -2241,8 +2238,21 @@
                       surf%shf(num_h) = 0.0_wp
                       surf%melt(num_h) = 0.0_wp
                       surf%sasws(num_h) = 0.0_wp
-                      !TODO assign from netcdf
-                      surf%ice_surface(num_h) = 0.0_wp
+                      IF ( TRIM(ice_cover) == 'full' ) THEN
+                         surf%ice_fraction(num_h) = 1.0_wp
+                      ELSEIF ( TRIM(ice_cover) == 'read_from_file' ) THEN
+                         !TODO assign from netcdf
+                         surf%ice_fraction(num_h) = 0.0_wp
+                      ENDIF
+                      IF ( constant_top_heatflux )                                &
+                         surf%shf(num_h) = (1.0_wp - surf%ice_fraction(num_h)) *  &
+                                           top_heatflux *                         &
+                                           heatflux_input_conversion(nzt+1)
+                      IF ( constant_top_salinityflux )                             &
+                         surf%sasws(num_h) = (1.0_wp - surf%ice_fraction(num_h)) * &
+                                             top_salinityflux *                    &
+                                             salinityflux_input_conversion(nzt+1)
+
                    ENDIF
                    surf%pt_surface(num_h) = pt_surface
                    surf%sa_surface(num_h) = sa_surface
@@ -2719,8 +2729,8 @@
                          surf_h(l)%gamma_T(mm(l))   = surf_def_h(l)%gamma_T(m)
                    IF ( ALLOCATED( surf_def_h(l)%gamma_S) )                      &
                          surf_h(l)%gamma_S(mm(l))   = surf_def_h(l)%gamma_S(m)
-                   IF ( ALLOCATED( surf_def_h(l)%ice_surface) )                  &
-                         surf_h(l)%ice_surface(mm(l)) = surf_def_h(l)%ice_surface(m)
+                   IF ( ALLOCATED( surf_def_h(l)%ice_fraction) )                  &
+                         surf_h(l)%ice_fraction(mm(l)) = surf_def_h(l)%ice_fraction(m)
                 ENDIF
 
              ENDDO
@@ -3114,12 +3124,12 @@
           IF ( ALLOCATED ( surf_h(l)%gamma_S) )  THEN
              CALL wrd_write_string( 'surf_h(' // dum // ')%gamma_S' )
              WRITE ( 14 )  surf_h(l)%gamma_S
-          ENDIF     
-  
-          IF ( ALLOCATED ( surf_h(l)%ice_surface) )  THEN 
-             CALL wrd_write_string( 'surf_h(' // dum // ')%ice_surface' ) 
-             WRITE ( 14 )  surf_h(l)%ice_surface
-          ENDIF     
+          ENDIF
+
+          IF ( ALLOCATED ( surf_h(l)%ice_fraction) )  THEN 
+             CALL wrd_write_string( 'surf_h(' // dum // ')%ice_fraction' )
+             WRITE ( 14 )  surf_h(l)%ice_fraction
+          ENDIF
        ENDDO
 !
 !--    Write vertical surfaces
@@ -3623,9 +3633,9 @@
           CASE ( 'surf_h(2)%gamma_S' )
              IF ( ALLOCATED( surf_h(2)%gamma_S)  .AND.  kk == 1 )              &
                 READ ( 13 )  surf_h(2)%gamma_S
-          CASE ( 'surf_h(2)%ice_surface' )
-             IF ( ALLOCATED( surf_h(2)%ice_surface)  .AND.  kk == 1 )          &
-                READ ( 13 )  surf_h(2)%ice_surface
+          CASE ( 'surf_h(2)%ice_fraction' )
+             IF ( ALLOCATED( surf_h(2)%ice_fraction)  .AND.  kk == 1 )          &
+                READ ( 13 )  surf_h(2)%ice_fraction
 
           CASE ( 'surf_v(0)%start_index' )   
              IF ( kk == 1 )                                                    &
@@ -4264,11 +4274,11 @@
                                        surf_file%gamma_S(m_file)
              ENDIF
 
-             IF ( INDEX( restart_string(1:length), '%ice_surface' ) /= 0 )  THEN 
-                IF ( ALLOCATED( surf_target%ice_surface )  .AND.              &
-                     ALLOCATED( surf_file%ice_surface ) )                     & 
-                   surf_target%ice_surface(0:1,m_target) =                    &
-                                       surf_file%ice_surface(0:1,m_file)
+             IF ( INDEX( restart_string(1:length), '%ice_fraction' ) /= 0 )  THEN
+                IF ( ALLOCATED( surf_target%ice_fraction )  .AND.              &
+                     ALLOCATED( surf_file%ice_fraction ) )                     &
+                   surf_target%ice_fraction(m_target) =                        &
+                                       surf_file%ice_fraction(m_file)
              ENDIF
 
 

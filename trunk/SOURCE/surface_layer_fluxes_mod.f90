@@ -212,9 +212,10 @@
  MODULE surface_layer_fluxes_mod
 
     USE arrays_3d,                                                             &
-        ONLY:  alpha_T, beta_S, e, hyp, kh, nc, nr, pt, q, ql, qc, qr,         &
-               rho_ocean, s, sa, u, v, vpt, w, zu, zw,                         &
-               drho_ref_zw, rho_ref_zw, dzu
+        ONLY:  alpha_T, beta_S, drho_ref_zw, dzu, e,                           &
+               heatflux_input_conversion, hyp, kh, nc, nr, pt, q, ql, qc, qr,  &
+               rho_ocean, rho_ref_zw, s, sa, salinityflux_input_conversion, u, &
+               v, vpt, w, zu, zw
 
     USE chem_modules,                                                          &
         ONLY:  constant_csflux, nvar
@@ -230,24 +231,23 @@
     USE control_parameters,                                                    &
         ONLY:  air_chemistry, beta_m_businger, beta_h_businger, c1, c2, c3,    &
                cloud_droplets, cloud_physics, constant_flux_layer,             & 
-                constant_top_heatflux, constant_salinityflux,&
+               constant_top_heatflux, constant_salinityflux,                   &
                constant_bottom_heatflux, constant_top_salinityflux,            &
                constant_bottom_salinityflux, constant_scalarflux,              &
                constant_waterflux, coupling_mode, drag_law, drag_coeff, f, g,  &
                gamma_mcphee, Gamma_T_const, Gamma_S_const, humidity,           &
-               ibc_e_b, ibc_e_t, ibc_pt_b, ibc_pt_t,                           &
-               initializing_actions, intermediate_timestep_count,              &
-               intermediate_timestep_count_max, ij_av_width_mcphee,            &
-               k_offset_mcphee,                                                &
-               k_av_width_mcphee, koff_constant_mcphee, koff_min_mcphee, kappa,&
+               ibc_e_b, ibc_e_t, ibc_pt_b, ibc_pt_t, initializing_actions,     &
+               intermediate_timestep_count, intermediate_timestep_count_max,   &
+               ij_av_width_mcphee, k_av_width_mcphee, k_offset_mcphee,         &
+               koff_constant_mcphee, koff_min_mcphee, kappa,                   &
                l_m, land_surface, large_scale_forcing, lsf_surf,               &
                message_string, microphysics_morrison, microphysics_seifert,    &
                molecular_viscosity, most_method, most_xy_av, neutral, ocean,   &
-               passive_scalar, prandtl_number, pt_surface,                     &
-               q_surface, run_coupled, schmidt_number,                         &
-               surface_flux_diags, surface_pressure, simulated_time,           &
-               terminate_run, time_since_reference_point, urban_surface,       &
-               z_offset_mcphee, zeta_max, zeta_min
+               passive_scalar, prandtl_number, pt_surface, q_surface,          &
+               run_coupled, schmidt_number, surface_flux_diags,                &
+               surface_pressure, simulated_time, terminate_run,                &
+               time_since_reference_point, top_heatflux, top_salinityflux,     &
+               urban_surface, z_offset_mcphee, zeta_max, zeta_min
 
     USE eqn_state_seawater_mod,                                                &
         ONLY: pt_freezing, pt_freezing_SA
@@ -852,6 +852,14 @@
              CALL location_message(message_string,.TRUE.)
              WRITE(message_string,*) 'k_offset_mcphee = ',k_offset_mcphee 
              CALL location_message(message_string,.TRUE.) 
+             WRITE(message_string,*) 'ice_fraction = ',surf%ice_fraction(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'shf = ',surf%shf(m)
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'top_heatflux = ',top_heatflux
+             CALL location_message(message_string,.TRUE.)
+             WRITE(message_string,*) 'heatflux_conversion = ',heatflux_input_conversion(nzt+1)
+             CALL location_message(message_string,.TRUE.)
           ENDIF
        ENDIF
 
@@ -2339,26 +2347,39 @@
 !
 !--       Compute the vertical kinematic heat flux, salt flux, and melt rate 
 !--       according to the 3 equation parameterization (Asay-Davis et al. 2016)
-          IF ( TRIM(most_method) == 'mcphee' .AND. downward) THEN
+          IF ( TRIM(most_method) == 'mcphee' .AND. downward ) THEN
              
              !$OMP PARALLEL DO PRIVATE( i, j, k, s_factor )
              DO  m = 1, surf%ns  
-                ! TODO check whether m cell is ice covered
+
                 i = surf%i(m)
                 j = surf%j(m)
                 k = surf%k(m)
                 
-                s_factor = -1.0_wp * surf%gamma_S(m) *                         &
-                           ( surf%sa_surface(m) - surf%sa1(m) ) /              &
+                s_factor = -1.0_wp * surf%gamma_S(m) *                      &
+                           ( surf%sa_surface(m) - surf%sa1(m) ) /           &
                            surf%sa_surface(m)
 
-                surf%shf(m)   = -1.0_wp * rho_ocean(k,j,i) *                   &
-                                ( surf%gamma_T(m) + s_factor ) *               &
+                surf%shf(m)   = -1.0_wp * surf%ice_fraction(m) *            & 
+                                rho_ocean(k,j,i) *                          &
+                                ( surf%gamma_T(m) + s_factor ) *            &
                                 ( surf%pt_surface(m) - surf%pt1(m) )
-                surf%sasws(m) = -1.0_wp * rho_ocean(k,j,i) *                   &
-                                ( surf%gamma_S(m) + s_factor ) *               &
+                IF ( constant_top_heatflux )                                &
+                   surf%shf(m) = surf%shf(m) +                              &
+                                 (1.0_wp - surf%ice_fraction(m)) *          &
+                                 top_heatflux *                             &
+                                 heatflux_input_conversion(nzt+1)
+                surf%sasws(m) = -1.0_wp * surf%ice_fraction(m) *            & 
+                                rho_ocean(k,j,i) *                          &
+                                ( surf%gamma_S(m) + s_factor ) *            &
                                 ( surf%sa_surface(m) - surf%sa1(m) )
-                surf%melt(m)  = s_factor * rho_ocean(k,j,i)/1.0e3_wp
+                IF ( constant_top_salinityflux )                            &
+                   surf%sasws(m) = surf%sasws(m) +                          &
+                                   (1.0_wp - surf%ice_fraction(m)) *        &
+                                   top_salinityflux *                       &
+                                   salinityflux_input_conversion(nzt+1)
+                surf%melt(m)  = s_factor * surf%ice_fraction(m) *           & 
+                                rho_ocean(k,j,i) / 1.0e3_wp
 
              ENDDO
              

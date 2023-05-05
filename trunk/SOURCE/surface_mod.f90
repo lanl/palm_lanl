@@ -2238,12 +2238,6 @@
                       surf%shf(num_h) = 0.0_wp
                       surf%melt(num_h) = 0.0_wp
                       surf%sasws(num_h) = 0.0_wp
-                      IF ( TRIM(ice_cover) == 'full' ) THEN
-                         surf%ice_fraction(num_h) = 1.0_wp
-                      ELSEIF ( TRIM(ice_cover) == 'read_from_file' ) THEN
-                         !TODO assign from netcdf
-                         surf%ice_fraction(num_h) = 0.0_wp
-                      ENDIF
                       IF ( constant_top_heatflux )                                &
                          surf%shf(num_h) = (1.0_wp - surf%ice_fraction(num_h)) *  &
                                            top_heatflux *                         &
@@ -2252,7 +2246,7 @@
                          surf%sasws(num_h) = (1.0_wp - surf%ice_fraction(num_h)) * &
                                              top_salinityflux *                    &
                                              salinityflux_input_conversion(nzt+1)
-
+                      call initialize_ice_surface(surf, num_h, ice_cover)
                    ENDIF
                    surf%pt_surface(num_h) = pt_surface
                    surf%sa_surface(num_h) = sa_surface

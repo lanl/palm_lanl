@@ -489,6 +489,7 @@ SOURCES = \
 	global_min_max.f90 \
 	gust_mod.f90 \
 	header.f90 \
+	ice_surface_mod.f90 \
 	inflow_turbulence.f90 \
 	init_3d_model.f90 \
 	init_advec.f90 \
@@ -937,6 +938,8 @@ header.o: \
 	subsidence_mod.o \
 	surface_mod.o \
 	virtual_flight_mod.o
+ice_surface_mod.o: \
+	netcdf_data_input_mod.o
 inflow_turbulence.o: \
 	cpulog_mod.o \
 	mod_kinds.o \

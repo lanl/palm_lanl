@@ -264,7 +264,6 @@
        INTEGER(iwp) ::  nzu       !< number of vertical levels on scalar grid in dynamic input file
        INTEGER(iwp) ::  nzw       !< number of vertical levels on w grid in dynamic input file
 
-       LOGICAL ::  from_file_icecover  = .FALSE. !< flag indicating whether ice cover is already initialized from file
        LOGICAL ::  from_file_msoil  = .FALSE. !< flag indicating whether soil moisture is already initialized from file
        LOGICAL ::  from_file_pt     = .FALSE. !< flag indicating whether pt is already initialized from file
        LOGICAL ::  from_file_q      = .FALSE. !< flag indicating whether q is already initialized from file
@@ -275,7 +274,6 @@
        LOGICAL ::  from_file_vg     = .FALSE. !< flag indicating whether ug is already initialized from file
        LOGICAL ::  from_file_w      = .FALSE. !< flag indicating whether w is already initialized from file
 
-       REAL(wp) ::  fill_icecover    !< fill value for soil moisture
        REAL(wp) ::  fill_msoil       !< fill value for soil moisture
        REAL(wp) ::  fill_pt          !< fill value for pt
        REAL(wp) ::  fill_q           !< fill value for q
@@ -290,7 +288,6 @@
        REAL(wp) ::  origin_z         !< reference height of input data
        REAL(wp) ::  rotation_angle   !< rotation angle of input data
 
-       REAL(wp), DIMENSION(:), ALLOCATABLE ::  icecover_init!< initial horizontal distribution of ice cover
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  msoil_init   !< initial vertical profile of soil moisture
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  pt_init      !< initial vertical profile of pt
        REAL(wp), DIMENSION(:), ALLOCATABLE ::  q_init       !< initial vertical profile of q
@@ -630,7 +627,8 @@
     SUBROUTINE netcdf_data_input_inquire_file
 
        USE control_parameters,                                                 &
-           ONLY:  land_surface, message_string, topo_no_distinct, urban_surface
+           ONLY:  ice_cover, land_surface, message_string, topo_no_distinct,   &
+                  urban_surface
 
        IMPLICIT NONE
 
@@ -643,6 +641,11 @@
                 EXIST = input_pids_dynamic )
 #endif
 
+       IF ( TRIM(ice_cover) == 'read_from_file' .AND. .NOT. input_pids_static ) THEN
+          write(message_string, *) 'ice_cover is read_from_file but PIDS_STATIC is not found'
+          CALL message( 'netcdf_data_input_mod', 'NDI000',                     &
+                         1, 2, 0, 6, 0 )
+       ENDIF
 !
 !--    As long as topography can be input via ASCII format, no distinction
 !--    between building and terrain can be made. This case, classify all
@@ -660,6 +663,9 @@
 !> Reads global attributes required for initialization of the model.
 !------------------------------------------------------------------------------!
     SUBROUTINE netcdf_data_input_init
+
+       USE control_parameters,                                                 &
+           ONLY:  message_string
 
        IMPLICIT NONE
 
@@ -734,8 +740,8 @@
     SUBROUTINE netcdf_data_input_surface_data
 
        USE control_parameters,                                                 &
-           ONLY:  bc_lr_cyc, bc_ns_cyc, land_surface, message_string,          &
-                  plant_canopy, urban_surface
+           ONLY:  bc_lr_cyc, bc_ns_cyc, land_surface, ice_cover,               &
+                  message_string, plant_canopy, urban_surface
 
        USE indices,                                                            &
            ONLY:  nbgp, nx, nxl, nxlg, nxr, nxrg, ny, nyn, nyng, nys, nysg
@@ -866,7 +872,8 @@
 !
 !--    Skip the following if no land-surface or urban-surface or ice-surface module are
 !--    applied. This case, no one of the following variables is used anyway.
-       IF (  .NOT. land_surface  .OR.  .NOT. urban_surface )  RETURN
+       IF ( .NOT. land_surface .AND. .NOT. urban_surface .AND. &
+            .NOT. TRIM( ice_cover ) == 'read_from_file' ) RETURN
 !
 !--    Initialize dummy arrays used for ghost-point exchange
        var_exchange_int  = 0
@@ -1024,6 +1031,11 @@
                              0, top_surface_fraction_f%nf-1 )
        ELSE
           top_surface_fraction_f%from_file = .FALSE.
+          IF ( TRIM( ice_cover ) == 'read_from_file' ) THEN
+             write(message_string, *) 'ice_cover is read_from_file but top_surface_fraction variable is not found'
+             CALL message( 'netcdf_data_input_mod', 'NDI000',                     &
+                            1, 2, 0, 6, 0 )
+          ENDIF
        ENDIF
 !
 !--    Read building parameters and related information

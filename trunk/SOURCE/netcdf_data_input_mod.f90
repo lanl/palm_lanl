@@ -864,7 +864,7 @@
 !--    variables are read from file.
        IF ( ALLOCATED( var_names ) )  DEALLOCATE( var_names )
 !
-!--    Skip the following if no land-surface or urban-surface module are
+!--    Skip the following if no land-surface or urban-surface or ice-surface module are
 !--    applied. This case, no one of the following variables is used anyway.
        IF (  .NOT. land_surface  .OR.  .NOT. urban_surface )  RETURN
 !

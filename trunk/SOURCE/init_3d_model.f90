@@ -497,37 +497,40 @@
 
     USE constants,                                                             &
         ONLY:  pi, cpw
-    
+
     USE cpulog,                                                                &
         ONLY: cpu_log, log_point
         
     USE control_parameters
-    
+
     USE cpulog,                                                                &
         ONLY:  cpu_log, log_point, log_point_s
-    
+
     USE eqn_state_seawater_mod,                                                &
         ONLY:  eqn_state_seawater, eqn_state_seawater_func
 
     USE flight_mod,                                                            &
         ONLY:  flight_init
-    
+
     USE grid_variables,                                                        &
         ONLY:  dx, dy, ddx2_mg, ddy2_mg
 
     USE gust_mod,                                                              &
         ONLY:  gust_init, gust_init_arrays, gust_module_enabled
-    
+
+    USE ice_surface_mod,                                                &
+        ONLY:  ice_init
+
     USE indices
 
     USE lpm_init_mod,                                                          &
         ONLY:  lpm_init
-    
+
     USE kinds
 
     USE land_surface_model_mod,                                                &
         ONLY:  lsm_init, lsm_init_arrays
-  
+
     USE lsf_nudging_mod,                                                       &
         ONLY:  lsf_init, ls_forcing_surf, nudge_init
 
@@ -543,12 +546,12 @@
 
     USE netcdf_data_input_mod,                                                 &
         ONLY:  init_3d, netcdf_data_input_interpolate, netcdf_data_input_init_3d
-    
+
     USE particle_attributes,                                                   &
         ONLY:  particle_advection, use_sgs_for_particles, wang_kernel
-    
+
     USE pegrid
-    
+
     USE plant_canopy_model_mod,                                                &
         ONLY:  pcm_init
 
@@ -562,15 +565,15 @@
                radiation_interaction, radiation_interactions,                  &
                radiation_interaction_init, radiation_read_svf,                 &
                radiation_presimulate_solar_pos, radiation_interactions_on
-    
+
     USE random_function_mod 
-    
+
     USE random_generator_parallel,                                             &
         ONLY:  init_parallel_random_generator
 
     USE read_restart_data_mod,                                                 &
         ONLY:  rrd_read_parts_of_global, rrd_local                                      
-    
+
     USE statistics,                                                            &
         ONLY:  hom, hom_sum, mean_surface_level_height, pr_palm, rmask,        &
                statistic_regions, sums, sums_divnew_l, sums_divold_l, sums_l,  &
@@ -586,7 +589,7 @@
     USE surface_mod,                                                           &
         ONLY :  init_surface_arrays, init_surfaces, surf_def_h, surf_lsm_h,    &
                 surf_usm_h, get_topography_top_index_ji, vertical_surfaces_exist
-   
+
     USE transpose_indices
 
     USE turbulence_closure_mod,                                                &
@@ -2446,6 +2449,15 @@
     IF ( land_surface )  THEN
        CALL location_message( 'initializing land surface model', .FALSE. )
        CALL lsm_init
+       CALL location_message( 'finished', .TRUE. )
+    ENDIF
+
+!
+!-- Allocate ice surface model arrays
+    IF ( TRIM( ice_cover ) == 'full' .OR. &
+         TRIM( ice_cover ) == 'read_from_file')  THEN
+       CALL location_message( 'initializing ice surface model', .FALSE. )
+       CALL ice_init
        CALL location_message( 'finished', .TRUE. )
     ENDIF
 

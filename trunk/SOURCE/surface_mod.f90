@@ -2246,7 +2246,6 @@
                          surf%sasws(num_h) = (1.0_wp - surf%ice_fraction(num_h)) * &
                                              top_salinityflux *                    &
                                              salinityflux_input_conversion(nzt+1)
-                      call initialize_ice_surface(surf, num_h, ice_cover)
                    ENDIF
                    surf%pt_surface(num_h) = pt_surface
                    surf%sa_surface(num_h) = sa_surface

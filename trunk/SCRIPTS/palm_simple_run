@@ -254,6 +254,10 @@ else
    else
       rm -r ${execution_dir}
       mkdir -p ${execution_dir}
+      if [[ -f ${working_dir}/PIDS_STATIC ]]
+      then
+         cp ${working_dir}/PIDS_STATIC ${execution_dir}/.
+      fi
    fi
 fi
 echo "*** PALM running in directory ${execution_dir}"

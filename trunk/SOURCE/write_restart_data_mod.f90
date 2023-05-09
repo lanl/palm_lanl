@@ -437,6 +437,9 @@
        CALL wrd_write_string( 'humidity' ) 
        WRITE ( 14 )  humidity
 
+       CALL wrd_write_string( 'ice_cover' ) 
+       WRITE ( 14 )  ice_cover
+
        IF ( ALLOCATED( inflow_damping_factor ) )  THEN
           CALL wrd_write_string( 'inflow_damping_factor' ) 
           WRITE ( 14 )  inflow_damping_factor

@@ -1,0 +1,72 @@
+&initialization_parameters
+        nx = 31, ny = 31, nz=32,
+        dx = 2.5, dy = 2.5, dz = 2.5,
+
+        ocean = .T.,
+
+        initializing_actions = 'set_constant_profiles',
+
+        latitude = 55.6,
+
+        reference_state            = 'single_value',
+
+        rayleigh_damping_factor    = 0.0001,
+        rayleigh_damping_height    = -42.6667,
+
+        drag_law                   = 'businger',
+        drag_coeff                 = 0.003,
+        gamma_mcphee               = 'depth-dependent',
+        k_offset_mcphee            = 1,
+        koff_constant_mcphee       = .T.,
+
+        ug_surface = 0.0,
+        vg_surface = 0.0,
+        pt_surface                 = 293.0,
+        pt_vertical_gradient       = 1.0,
+        pt_vertical_gradient_level = 0.0,
+        sa_surface                 = 35.0,
+        sa_vertical_gradient       = 0.0,
+
+
+        ice_cover                  = 'read_from_file',
+        use_top_fluxes             = .T.,
+        use_surface_fluxes         = .F.,
+        constant_flux_layer        = 'top',
+        most_method                = 'mcphee',
+        surface_flux_diags         = .T.,
+
+        top_momentumflux_u         = 9999999.9,
+        top_momentumflux_v         = 9999999.9,
+
+        top_heatflux               = 1.78e-5,
+        surface_heatflux           = 9999999.9,
+
+        top_salinityflux           = 0.0,
+        bottom_salinityflux        = 9999999.9,
+
+        bc_uv_b = 'neumann', bc_uv_t = 'dirichlet',
+        bc_pt_b = 'dirichlet', bc_pt_t = 'neumann',
+        bc_p_b  = 'neumann',  bc_p_t  = 'neumann',
+        bc_s_b  = 'dirichlet',  bc_s_t  = 'neumann',
+        bc_sa_b = 'dirichlet', bc_sa_t = 'neumann', /
+
+&runtime_parameters
+        end_time = 3600.0,
+        create_disturbances = .T.,
+!        disturbance_level_b = -4.,
+        dt_disturb = 150.,
+        dt_run_control = 0.0,
+        dt_data_output = 3600.0,
+        dt_dopr = 3600.0,
+        dt_data_output_av = 3600.,
+        section_xy = 32,
+
+        data_output = 'melt*_xy', 'shf*_xy', 'sasws*_xy', 'usws*_xy', 'vsws*_xy',
+                      'e', 'pt', 'sa', 'u', 'v', 'w', 'rho_ocean', 'alpha_T',
+
+        data_output_pr = 'e','e*', '#pt', '#sa', 'p', 'hyp', 'km', 'kh', 'l',
+              '#u','#v','w','prho','w"u"','w*u*','w"v"','w*v*','w"pt"','w*pt*',
+              'w"sa"','w*sa*','w*e*','u*2','v*2','w*2','pt*2','w*3','Sw',
+              'w*2pt*','w*pt*2','w*u*u*:dz','w*p*:dz','rho_ocean','alpha_T', /
+
+

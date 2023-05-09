@@ -1,0 +1,66 @@
+#!/bin/bash
+
+#SBATCH  --job-name=PALM_TEST
+#SBATCH  --nodes=2
+#SBATCH  --ntasks-per-node=32
+#SBATCH  --output=PALM_TEST.%j
+#SBATCH  --exclusive
+#SBATCH --qos=debug
+#SBATCH --time=01:00:00
+#SBATCH -A t23_arctic
+
+use_hdf5="True"
+do_restart="False"
+
+do_coupled="False"
+# number of cores for atmosphere and ocean, respectively, only used when do_coupled = True
+# atm_cores + ocn_cores should be equal to $SLURM_NTASKS
+atm_cores=32
+ocn_cores=32
+
+test_case="test_oceanml"
+run_config="srun"
+#run_config="mpirun"
+openmp_threads=1
+repo_path=$PWD
+exec_path="/lustre/scratch5/$USER/palm/jobs/test-chicoma-build/"
+
+cd $SLURM_SUBMIT_DIR
+export PATH="$repo_path/trunk/SCRIPTS:${PATH}"
+
+module purge
+module load PrgEnv-intel/8.3.3
+module load cray-mpich/8.1.21
+module load cmake/3.22.3
+module load cray-python/3.9.13.1
+module load craype-x86-rome
+module load cray-fftw/3.3.10.2
+module load cray-hdf5-parallel/1.12.2.1
+module load cray-netcdf-hdf5parallel/4.9.0.1
+
+#get ntasks and nprocs from SLURM variables
+NTASKS=$SLURM_NTASKS
+nnodes=$SLURM_JOB_NUM_NODES
+NN=$((NTASKS/nnodes))
+
+echo "PROCS = $NN"
+
+timestring=`squeue -h -j $SLURM_JOBID -o "%l"`
+WTIME=`echo $timestring | sed -E 's/(.*):(.+):(.+)/\1*3600+\2*60+\3/;s/(.+):(.+)/\1*60+\2/' | bc`
+
+echo "WTIME = $WTIME"
+
+# set options for palm_simple_run
+palm_options="-w $exec_path -c $run_config -s $test_case -n $NN -p $NTASKS -t $openmp_threads -T $WTIME"
+
+palm_options="$palm_options -b ifort.chicoma_hdf5"
+
+if [[ $do_restart == "True" ]]; then
+    palm_options="$palm_options -r"
+fi
+
+if [[ $do_coupled == "True" ]]; then
+    palm_simple_run $palm_options -Y "$atm_cores $ocn_cores"
+else
+    palm_simple_run $palm_options
+fi

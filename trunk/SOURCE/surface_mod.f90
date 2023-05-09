@@ -316,6 +316,7 @@
        REAL(wp), DIMENSION(:,:), ALLOCATABLE   ::  rrtm_asdif      !< albedo for shortwave diffusive radiation, solar angle of 60°
        REAL(wp), DIMENSION(:,:), ALLOCATABLE   ::  rrtm_asdir      !< albedo for shortwave direct radiation, solar angle of 60°
 
+       REAL(wp), DIMENSION(:), ALLOCATABLE   ::  ice_fraction      !< fraction of the cell surface that is ice covered
        REAL(wp), DIMENSION(:), ALLOCATABLE   ::  pt_surface        !< skin-surface temperature
        REAL(wp), DIMENSION(:), ALLOCATABLE   ::  sa_surface        !< Salinity at skin surface
        REAL(wp), DIMENSION(:), ALLOCATABLE   ::  rad_net           !< net radiation 
@@ -1094,6 +1095,15 @@
          DEALLOCATE ( surfaces%sas )
        ENDIF
 
+!
+!--
+       IF ( most_method == 'mcphee' ) THEN
+          DEALLOCATE ( surfaces%gamma_T )
+          DEALLOCATE ( surfaces%gamma_S )
+          DEALLOCATE ( surfaces%ice_fraction )
+          DEALLOCATE ( surfaces%melt )
+       ENDIF
+
     END SUBROUTINE deallocate_surface_attributes_h
 
 
@@ -1238,6 +1248,7 @@
        IF ( most_method == 'mcphee' ) THEN
           ALLOCATE ( surfaces%gamma_T(1:surfaces%ns) )
           ALLOCATE ( surfaces%gamma_S(1:surfaces%ns) )
+          ALLOCATE ( surfaces%ice_fraction(1:surfaces%ns) )
           ALLOCATE ( surfaces%melt(1:surfaces%ns) )
        ENDIF
 
@@ -2227,6 +2238,14 @@
                       surf%shf(num_h) = 0.0_wp
                       surf%melt(num_h) = 0.0_wp
                       surf%sasws(num_h) = 0.0_wp
+                      IF ( constant_top_heatflux )                                &
+                         surf%shf(num_h) = (1.0_wp - surf%ice_fraction(num_h)) *  &
+                                           top_heatflux *                         &
+                                           heatflux_input_conversion(nzt+1)
+                      IF ( constant_top_salinityflux )                             &
+                         surf%sasws(num_h) = (1.0_wp - surf%ice_fraction(num_h)) * &
+                                             top_salinityflux *                    &
+                                             salinityflux_input_conversion(nzt+1)
                    ENDIF
                    surf%pt_surface(num_h) = pt_surface
                    surf%sa_surface(num_h) = sa_surface
@@ -2696,6 +2715,16 @@
 
 
                 ENDIF
+                IF ( l == 2 ) THEN
+                   IF ( ALLOCATED( surf_def_h(l)%melt ) )                        &
+                         surf_h(l)%melt(mm(l))      = surf_def_h(l)%melt(m)
+                   IF ( ALLOCATED( surf_def_h(l)%gamma_T) )                      &
+                         surf_h(l)%gamma_T(mm(l))   = surf_def_h(l)%gamma_T(m)
+                   IF ( ALLOCATED( surf_def_h(l)%gamma_S) )                      &
+                         surf_h(l)%gamma_S(mm(l))   = surf_def_h(l)%gamma_S(m)
+                   IF ( ALLOCATED( surf_def_h(l)%ice_fraction) )                  &
+                         surf_h(l)%ice_fraction(mm(l)) = surf_def_h(l)%ice_fraction(m)
+                ENDIF
 
              ENDDO
 
@@ -3075,6 +3104,25 @@
              WRITE ( 14 )  surf_h(l)%sasws
           ENDIF     
   
+          IF ( ALLOCATED ( surf_h(l)%melt) )  THEN
+             CALL wrd_write_string( 'surf_h(' // dum // ')%melt' )
+             WRITE ( 14 )  surf_h(l)%melt
+          ENDIF
+
+          IF ( ALLOCATED ( surf_h(l)%gamma_T) )  THEN
+             CALL wrd_write_string( 'surf_h(' // dum // ')%gamma_T' )
+             WRITE ( 14 )  surf_h(l)%gamma_T
+          ENDIF
+
+          IF ( ALLOCATED ( surf_h(l)%gamma_S) )  THEN
+             CALL wrd_write_string( 'surf_h(' // dum // ')%gamma_S' )
+             WRITE ( 14 )  surf_h(l)%gamma_S
+          ENDIF
+
+          IF ( ALLOCATED ( surf_h(l)%ice_fraction) )  THEN 
+             CALL wrd_write_string( 'surf_h(' // dum // ')%ice_fraction' )
+             WRITE ( 14 )  surf_h(l)%ice_fraction
+          ENDIF
        ENDDO
 !
 !--    Write vertical surfaces
@@ -3569,6 +3617,18 @@
           CASE ( 'surf_h(2)%sasws' )         
              IF ( ALLOCATED( surf_h(2)%sasws )  .AND.  kk == 1 )               &
                 READ ( 13 )  surf_h(2)%sasws
+          CASE ( 'surf_h(2)%melt' )
+             IF ( ALLOCATED( surf_h(2)%melt )  .AND.  kk == 1 )                &
+                READ ( 13 )  surf_h(2)%melt
+          CASE ( 'surf_h(2)%gamma_T' )
+             IF ( ALLOCATED( surf_h(2)%gamma_T)  .AND.  kk == 1 )              &
+                READ ( 13 )  surf_h(2)%gamma_T
+          CASE ( 'surf_h(2)%gamma_S' )
+             IF ( ALLOCATED( surf_h(2)%gamma_S)  .AND.  kk == 1 )              &
+                READ ( 13 )  surf_h(2)%gamma_S
+          CASE ( 'surf_h(2)%ice_fraction' )
+             IF ( ALLOCATED( surf_h(2)%ice_fraction)  .AND.  kk == 1 )          &
+                READ ( 13 )  surf_h(2)%ice_fraction
 
           CASE ( 'surf_v(0)%start_index' )   
              IF ( kk == 1 )                                                    &
@@ -4184,6 +4244,34 @@
                      ALLOCATED( surf_file%mom_flux_tke   ) )                   & 
                    surf_target%mom_flux_tke(0:1,m_target) =                    &
                                            surf_file%mom_flux_tke(0:1,m_file)
+             ENDIF
+
+             IF ( INDEX( restart_string(1:length), '%melt' ) /= 0 )  THEN
+                IF ( ALLOCATED( surf_target%melt )  .AND.              &
+                     ALLOCATED( surf_file%melt ) )                     &
+                   surf_target%melt(m_target) =                        &
+                                    surf_file%melt(m_file)
+             ENDIF
+
+             IF ( INDEX( restart_string(1:length), '%gamma_T' ) /= 0 )  THEN
+                IF ( ALLOCATED( surf_target%gamma_T )  .AND.              &
+                     ALLOCATED( surf_file%gamma_T ) )                     &
+                   surf_target%gamma_T(m_target) =                        &
+                                       surf_file%gamma_T(m_file)
+             ENDIF
+
+             IF ( INDEX( restart_string(1:length), '%gamma_S' ) /= 0 )  THEN
+                IF ( ALLOCATED( surf_target%gamma_S )  .AND.              &
+                     ALLOCATED( surf_file%gamma_S ) )                     &
+                   surf_target%gamma_S(m_target) =                        &
+                                       surf_file%gamma_S(m_file)
+             ENDIF
+
+             IF ( INDEX( restart_string(1:length), '%ice_fraction' ) /= 0 )  THEN
+                IF ( ALLOCATED( surf_target%ice_fraction )  .AND.              &
+                     ALLOCATED( surf_file%ice_fraction ) )                     &
+                   surf_target%ice_fraction(m_target) =                        &
+                                       surf_file%ice_fraction(m_file)
              ENDIF
 
 

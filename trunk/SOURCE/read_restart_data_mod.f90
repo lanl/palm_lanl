@@ -441,6 +441,8 @@
                 READ ( 13 )  hom_sum
              CASE ( 'humidity' )
                 READ ( 13 )  humidity
+             CASE ( 'ice_cover' )
+                READ ( 13 )  ice_cover
              CASE ( 'inflow_damping_factor' )
                 IF ( .NOT. ALLOCATED( inflow_damping_factor ) )  THEN
                    ALLOCATE( inflow_damping_factor(0:nz+1) )

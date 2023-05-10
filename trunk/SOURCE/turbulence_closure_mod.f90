@@ -119,7 +119,8 @@
         ONLY:  alpha_T, beta_S, diss, diss_p, dbdx, dbdy, dbdz,                &
                dptdx, dptdy, dptdz, dsadx, dsady, dsadz, dudx, dudy, dudz,     &
                dvdx, dvdy, dvdz, dwdx, dwdy, dwdz, dzu, e, e_p, kh, km, ks,    &
-               mean_inflow_profiles, prho, pt, tdiss_m, te_m, tend, u, v, vpt, w
+               mean_inflow_profiles, prho, pt, tdiss_m, sgs_diss, te_m, tend,  &
+               u, v, vpt, w
 #else
     USE arrays_3d,                                                             &
         ONLY:  alpha_T, beta_S, diss, diss_1, diss_2, diss_3, diss_p,          &
@@ -127,7 +128,7 @@
                dsadx, dsady, dsadz, dudx, dudy, dudz, dvdx, dvdy, dvdz,        &
                dwdx, dwdy, dwdz, dzu, e,                                       &
                e_1, e_2, e_3, e_p, kh, km, ks, mean_inflow_profiles, prho, pt, &
-               tdiss_m, te_m, tend, u, v, vpt, w
+               sgs_diss, tdiss_m, te_m, tend, u, v, vpt, w
 #endif
 
     USE control_parameters,                                                    &
@@ -1062,6 +1063,7 @@
     ALLOCATE( kh(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
     ALLOCATE( ks(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
     ALLOCATE( km(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
+    ALLOCATE( sgs_diss(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
 
     ALLOCATE( dummy1(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )                           !> @todo remove later
     ALLOCATE( dummy2(nzb:nzt+1,nysg:nyng,nxlg:nxrg) )
@@ -3815,6 +3817,8 @@
 
              ENDIF
 
+             sgs_diss(k,j,i) = dissipation(k,j)
+
              tend(k,j,i) = tend(k,j,i) + (                                     &
                                            (                                   &
                        ( km(k,j,i)+km(k,j,i+1) ) * ( e(k,j,i+1)-e(k,j,i) )     &
@@ -3954,6 +3958,7 @@
 
        ENDIF
 
+       sgs_diss(k,j,i) = dissipation(k)
 !
 !--    Calculate the tendency term
        tend(k,j,i) = tend(k,j,i) + (                                           &
